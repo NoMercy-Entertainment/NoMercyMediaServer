@@ -45,7 +45,11 @@ public class SeasonExtrasJob : AbstractShowExtraDataJob<TmdbSeasonAppends, strin
         );
 
         PersonRepository personRepository = new(context);
-        PersonManager personManager = new(personRepository, jobDispatcher);
+        PersonManager personManager = new(
+            personRepository,
+            jobDispatcher,
+            LoggerFactory.CreateLogger<PersonManager>()
+        );
 
         foreach (TmdbSeasonAppends season in Storage)
         {

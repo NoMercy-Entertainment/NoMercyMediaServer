@@ -13,6 +13,7 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.MediaProcessing.People;
 using NoMercy.NmSystem.SystemCalls;
@@ -37,7 +38,11 @@ public class PersonExtrasJob : AbstractShowExtraDataJob<TmdbPersonAppends, strin
         JobDispatcher jobDispatcher = new();
 
         PersonRepository personRepository = new(context);
-        PersonManager personManager = new(personRepository, jobDispatcher);
+        PersonManager personManager = new(
+            personRepository,
+            jobDispatcher,
+            LoggerFactory.CreateLogger<PersonManager>()
+        );
 
         foreach (TmdbPersonAppends person in Storage)
         {

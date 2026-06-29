@@ -14,6 +14,7 @@
 // ---------------------------------------------------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
@@ -45,7 +46,8 @@ public class MovieImportJob : AbstractMediaJob
             movieRepository,
             jobDispatcher,
             StorageFactory,
-            StorageDriver
+            StorageDriver,
+            LoggerFactory.CreateLogger<MovieManager>()
         );
 
         Library? movieLibrary = await context

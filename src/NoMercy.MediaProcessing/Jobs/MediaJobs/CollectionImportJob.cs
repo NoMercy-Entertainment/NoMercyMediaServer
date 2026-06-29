@@ -14,6 +14,7 @@
 // ---------------------------------------------------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
@@ -43,7 +44,8 @@ public class CollectionImportJob : AbstractMediaJob
             movieRepository,
             jobDispatcher,
             StorageFactory,
-            StorageDriver
+            StorageDriver,
+            LoggerFactory.CreateLogger<MovieManager>()
         );
 
         CollectionRepository collectionRepository = new(context);

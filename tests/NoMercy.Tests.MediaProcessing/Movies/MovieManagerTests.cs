@@ -56,7 +56,8 @@ public class MovieManagerTests
             _movieRepositoryMock.Object,
             jobDispatcherMock.Object,
             storageFactory,
-            storageDriver
+            storageDriver,
+        NullLogger<MovieManager>.Instance
         );
         _movieAppends = mockDataProvider.MockMovieAppendsResponse()!;
         _library = new() { Id = new(), Title = "Test Library" };

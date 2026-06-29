@@ -48,7 +48,11 @@ public class ShowExtrasJob : AbstractMediaExraDataJob<TmdbTvShowAppends>
         );
 
         PersonRepository personRepository = new(context);
-        PersonManager personManager = new(personRepository, jobDispatcher);
+        PersonManager personManager = new(
+            personRepository,
+            jobDispatcher,
+            LoggerFactory.CreateLogger<PersonManager>()
+        );
 
         await personManager.Store(Storage);
 

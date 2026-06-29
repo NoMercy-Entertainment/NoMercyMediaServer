@@ -13,6 +13,7 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.MediaProcessing.People;
 
@@ -33,7 +34,11 @@ public class PersonRefreshJob : AbstractMediaJob
         JobDispatcher jobDispatcher = new();
 
         PersonRepository personRepository = new(context);
-        PersonManager personManager = new(personRepository, jobDispatcher);
+        PersonManager personManager = new(
+            personRepository,
+            jobDispatcher,
+            LoggerFactory.CreateLogger<PersonManager>()
+        );
 
         await personManager.UpdatePersonAsync(Id);
     }

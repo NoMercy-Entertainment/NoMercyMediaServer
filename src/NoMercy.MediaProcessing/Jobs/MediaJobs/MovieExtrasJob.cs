@@ -13,6 +13,7 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Events;
 using NoMercy.Events.Library;
@@ -41,11 +42,16 @@ public class MovieExtrasJob : AbstractMediaExraDataJob<TmdbMovieAppends>
             movieRepository,
             jobDispatcher,
             StorageFactory,
-            StorageDriver
+            StorageDriver,
+            LoggerFactory.CreateLogger<MovieManager>()
         );
 
         PersonRepository personRepository = new(context);
-        PersonManager personManager = new(personRepository, jobDispatcher);
+        PersonManager personManager = new(
+            personRepository,
+            jobDispatcher,
+            LoggerFactory.CreateLogger<PersonManager>()
+        );
 
         await personManager.Store(Storage);
 
