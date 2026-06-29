@@ -14,6 +14,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
@@ -45,12 +46,16 @@ public class ArtistsController : BaseController
     private readonly IEventBus _eventBus;
     private readonly IStorageFactory _storageFactory;
 
+    private readonly ILogger<ArtistsController> _logger;
+
     public ArtistsController(
+        ILogger<ArtistsController> logger,
         IMusicRepository musicService,
         IEventBus eventBus,
         IStorageFactory storageFactory
     )
     {
+        _logger = logger;
         _musicRepository = musicService;
         _eventBus = eventBus;
         _storageFactory = storageFactory;
@@ -314,7 +319,7 @@ public class ArtistsController : BaseController
             artist.HostFolder.TrimStart('\\'),
             slug + ".jpg"
         );
-        Logger.App(filePath);
+        _logger.LogInformation(filePath);
         await using (FileStream stream = new(filePath, FileMode.Create))
         {
             await image.CopyToAsync(stream);
@@ -322,7 +327,7 @@ public class ArtistsController : BaseController
 
         // save to app images folder
         string filePath2 = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
-        Logger.App(filePath2);
+        _logger.LogInformation(filePath2);
         await using (FileStream stream = new(filePath2, FileMode.Create))
         {
             await image.CopyToAsync(stream);

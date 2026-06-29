@@ -13,6 +13,7 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
@@ -43,12 +44,16 @@ public class AlbumsController : BaseController
     private readonly IEventBus _eventBus;
     private readonly IStorageFactory _storageFactory;
 
+    private readonly ILogger<AlbumsController> _logger;
+
     public AlbumsController(
+        ILogger<AlbumsController> logger,
         IMusicRepository musicService,
         IEventBus eventBus,
         IStorageFactory storageFactory
     )
     {
+        _logger = logger;
         _musicRepository = musicService;
         _eventBus = eventBus;
         _storageFactory = storageFactory;
@@ -259,7 +264,9 @@ public class AlbumsController : BaseController
             colorPalette
         );
 
-        await _eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["music", "album", id] });
+        await _eventBus.PublishAsync(
+            new LibraryRefreshedEvent { QueryKey = ["music", "album", id] }
+        );
 
         return Ok(
             new StatusResponseDto<string>
@@ -298,7 +305,7 @@ public class AlbumsController : BaseController
             album.HostFolder.TrimStart('\\'),
             "cover.jpg"
         );
-        Logger.App(filePath);
+        _logger.LogInformation(filePath);
         await using (FileStream stream = new(filePath, FileMode.Create))
         {
             await image.CopyToAsync(stream);
@@ -306,7 +313,7 @@ public class AlbumsController : BaseController
 
         // save to app images folder
         string filePath2 = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
-        Logger.App(filePath2);
+        _logger.LogInformation(filePath2);
         await using (FileStream stream = new(filePath2, FileMode.Create))
         {
             await image.CopyToAsync(stream);

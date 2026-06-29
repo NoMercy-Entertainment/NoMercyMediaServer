@@ -14,6 +14,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media.Components;
@@ -42,8 +43,15 @@ public class PlaylistsController : BaseController
     private readonly IMusicRepository _musicRepository;
     private readonly IEventBus _eventBus;
 
-    public PlaylistsController(IMusicRepository musicService, IEventBus eventBus)
+    private readonly ILogger<PlaylistsController> _logger;
+
+    public PlaylistsController(
+        ILogger<PlaylistsController> logger,
+        IMusicRepository musicService,
+        IEventBus eventBus
+    )
     {
+        _logger = logger;
         _musicRepository = musicService;
         _eventBus = eventBus;
     }
@@ -109,7 +117,7 @@ public class PlaylistsController : BaseController
 
         // save to app images folder
         string filePath = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
-        Logger.App(filePath);
+        _logger.LogInformation(filePath);
 
         if (request.Cover is not null)
         {
@@ -137,7 +145,7 @@ public class PlaylistsController : BaseController
             );
         }
 
-        Logger.App(newPlaylist);
+        _logger.LogInformation("{Playlist}", newPlaylist);
 
         await _musicRepository.CreatePlaylistAsync(newPlaylist, request.Tracks);
 
@@ -245,7 +253,7 @@ public class PlaylistsController : BaseController
 
         // save to app images folder
         string filePath2 = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
-        Logger.App(filePath2);
+        _logger.LogInformation(filePath2);
         await using (FileStream stream = new(filePath2, FileMode.Create))
         {
             await image.CopyToAsync(stream);
