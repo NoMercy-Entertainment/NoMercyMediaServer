@@ -373,16 +373,6 @@ public partial class PlatformHardwareDetector(
 
         int maxSessions = ResolveMaxSessions(vendor.Value, name);
 
-        logger.LogInformation(
-            "Detected GPU: {Vendor} {Name} ({VramMb}MB, {CodecCount} codecs, max {Sessions} sessions, driver {Driver})",
-            vendor.Value,
-            name,
-            vramMb,
-            supportedCodecs.Count,
-            maxSessions,
-            driverVersion ?? "unknown"
-        );
-
         return new(vendor.Value, name, vramMb, maxSessions, supportedCodecs, driverVersion);
     }
 

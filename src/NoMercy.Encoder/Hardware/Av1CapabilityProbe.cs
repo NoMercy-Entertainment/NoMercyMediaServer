@@ -33,6 +33,8 @@ namespace NoMercy.Encoder.Hardware;
 /// </summary>
 internal sealed class Av1CapabilityProbe(IProcessRunner processRunner, ILogger logger)
 {
+    private static bool _unavailableLogged;
+
     public Task<bool> SupportsAsync(GpuVendor vendor, string gpuName) =>
         vendor switch
         {
@@ -180,9 +182,13 @@ internal sealed class Av1CapabilityProbe(IProcessRunner processRunner, ILogger l
                     return true;
             }
 
-            logger.LogInformation(
-                "AV1 NVENC unavailable — every Nvidia GPU on the host is below compute capability 8.9 (Ada Lovelace). The encoder block does not exist on Turing / Ampere silicon."
-            );
+            if (!_unavailableLogged)
+            {
+                _unavailableLogged = true;
+                logger.LogInformation(
+                    "AV1 NVENC unavailable — every Nvidia GPU on the host is below compute capability 8.9 (Ada Lovelace). The encoder block does not exist on Turing / Ampere silicon."
+                );
+            }
             return false;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

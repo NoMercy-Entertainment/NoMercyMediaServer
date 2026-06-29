@@ -136,10 +136,39 @@ public class Binaries
             await DownloadTesseractData(tesseractLanguages);
 
             if (_binaryReport.Count > 0)
-                Logger.Setup(
-                    "Binaries up to date: " + string.Join(", ", _binaryReport),
-                    LogEventLevel.Verbose
-                );
+            {
+                const int columns = 3;
+                int rows = (_binaryReport.Count + columns - 1) / columns;
+                int[] columnWidth = new int[columns];
+                for (int i = 0; i < _binaryReport.Count; i++)
+                {
+                    int col = i % columns;
+                    if (_binaryReport[i].Length > columnWidth[col])
+                        columnWidth[col] = _binaryReport[i].Length;
+                }
+
+                System.Text.StringBuilder report = new();
+                report.Append($"Binaries up to date ({_binaryReport.Count}):");
+                for (int row = 0; row < rows; row++)
+                {
+                    report.Append('\n').Append("  ");
+                    for (int col = 0; col < columns; col++)
+                    {
+                        int index = (row * columns) + col;
+                        if (index >= _binaryReport.Count)
+                            break;
+
+                        bool last = col == columns - 1 || index == _binaryReport.Count - 1;
+                        report.Append(
+                            last
+                                ? _binaryReport[index]
+                                : _binaryReport[index].PadRight(columnWidth[col] + 2)
+                        );
+                    }
+                }
+
+                Logger.Setup(report.ToString(), LogEventLevel.Verbose);
+            }
         });
     }
 

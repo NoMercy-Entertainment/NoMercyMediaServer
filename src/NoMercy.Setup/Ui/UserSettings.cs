@@ -109,7 +109,7 @@ public static class UserSettings
 
             if (cells.Count > 0)
             {
-                const int columns = 4;
+                const int columns = 3;
                 int rows = (cells.Count + columns - 1) / columns;
 
                 // Per-column width keeps each column as narrow as its content.

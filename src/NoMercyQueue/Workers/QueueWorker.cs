@@ -76,21 +76,13 @@ public class QueueWorker(
     {
         if (phaseTracker is not null)
         {
+            // Per-worker poll-loop lines were ~one per worker thread; the single
+            // "Queue workers spawned per queue" summary in QueueRunner covers this.
             await phaseTracker.WhenReachedAsync(readyStage, stopToken).ConfigureAwait(false);
-            NoMercy.NmSystem.SystemCalls.Logger.App(
-                $"[QueueWorker {name}] ready stage {readyStage} reached, entering poll loop",
-                Serilog.Events.LogEventLevel.Verbose
-            );
         }
         else if (readinessGate is not null)
         {
-            NoMercy.NmSystem.SystemCalls.Logger.App(
-                $"[QueueWorker {name}] awaiting readiness gate"
-            );
             await readinessGate.WaitForReadyAsync(stopToken).ConfigureAwait(false);
-            NoMercy.NmSystem.SystemCalls.Logger.App(
-                $"[QueueWorker {name}] gate resolved, entering poll loop"
-            );
         }
 
         if (stopToken.IsCancellationRequested)
