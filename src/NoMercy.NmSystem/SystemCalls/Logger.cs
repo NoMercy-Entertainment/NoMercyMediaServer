@@ -17,6 +17,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Lifecycle;
 using NoMercy.NmSystem.LogEnrichers;
 using NoMercy.NmSystem.Logging;
+using NoMercy.NmSystem.Logging.Rendering;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
@@ -260,6 +261,69 @@ public static class Logger
         }
     }
 
+    private static readonly object ConsoleFallbackGate = new();
+
+    /// <summary>Renders a log entry to the console through the unified
+    /// <see cref="ConsoleLineRenderer"/> using the provider's default theme,
+    /// colour and width rules. Used before <see cref="ConsoleSink"/> is wired so
+    /// early-boot output is not stuck on the legacy Serilog format.</summary>
+    private static void WriteConsoleFallback(LogEntry entry)
+    {
+        LogCategory category = LogCategories.Resolve(entry.Type);
+        bool color = !Console.IsOutputRedirected
+            && Environment.GetEnvironmentVariable("NO_COLOR") is null;
+        string line = ConsoleLineRenderer.Render(
+            entry.Time.ToLocalTime(),
+            ToMelLevel(entry.LogLevel),
+            category,
+            entry.Message,
+            null,
+            null,
+            NoMercyConsoleTheme.Dark,
+            color,
+            ConsoleFallbackWidth()
+        );
+
+        lock (ConsoleFallbackGate)
+        {
+            Console.Out.WriteLine(line);
+        }
+    }
+
+    private static int ConsoleFallbackWidth()
+    {
+        try
+        {
+            if (!Console.IsOutputRedirected)
+            {
+                int w = Console.WindowWidth;
+                if (w > 0)
+                    return w;
+            }
+        }
+        catch
+        {
+            // No attached console; fall through to a sensible default.
+        }
+
+        return int.TryParse(Environment.GetEnvironmentVariable("COLUMNS"), out int cols)
+            && cols > 0
+            ? cols
+            : 120;
+    }
+
+    private static Microsoft.Extensions.Logging.LogLevel ToMelLevel(LogEventLevel level) =>
+        level switch
+        {
+            LogEventLevel.Verbose => Microsoft.Extensions.Logging.LogLevel.Trace,
+            LogEventLevel.Debug => Microsoft.Extensions.Logging.LogLevel.Debug,
+            LogEventLevel.Information => Microsoft.Extensions.Logging.LogLevel.Information,
+            LogEventLevel.Warning => Microsoft.Extensions.Logging.LogLevel.Warning,
+            LogEventLevel.Error => Microsoft.Extensions.Logging.LogLevel.Error,
+            LogEventLevel.Fatal => Microsoft.Extensions.Logging.LogLevel.Critical,
+            _ => Microsoft.Extensions.Logging.LogLevel.Information,
+        };
+
     private static void Log<T>(string logType, T message, LogEventLevel? level = null)
         where T : class
     {
@@ -291,13 +355,11 @@ public static class Logger
         }
         else
         {
-            ConsoleLog
-                .ForContext("Type", logType)
-                .ForContext("Color", colorHex)
-                .ForContext("Message", message)
-                .ForContext("Level", logLevel)
-                .ForContext("ConsoleType", type.Name)
-                .Write(logLevel, "{@Message}", message);
+            // No provider bridge yet (early bootstrap, before the host/DI is
+            // built): render through the same ConsoleLineRenderer the provider
+            // uses so pre-host lines match the unified format instead of the
+            // legacy Serilog template.
+            WriteConsoleFallback(entry);
         }
 
         FileLog
