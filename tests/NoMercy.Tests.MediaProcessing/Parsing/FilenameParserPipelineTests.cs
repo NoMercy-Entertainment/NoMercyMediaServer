@@ -297,4 +297,47 @@ public class FilenameParserPipelineTests
         result.Season.Should().Be(4);
         result.Episode.Should().Be(28);
     }
+
+    // ---------------------------------------------------------------------------
+    // Scene-tag title cleanup: derived titles are stripped of quality/source/codec
+    // noise, while real titles that resemble tag substrings survive intact.
+    // ---------------------------------------------------------------------------
+    [Theory]
+    [InlineData("Some Show 1080p WEB-DL - Episode 05.mkv", "Some Show", 5)]
+    [InlineData("Another.Show.720p.HDTV - Episode 12.mp4", "Another Show", 12)]
+    public void Title_cleanup_episode_word(string file, string title, int episode)
+    {
+        MovieFile result = Pipeline().Parse(Context(file));
+        result.IsSeries.Should().BeTrue();
+        result.Title.Should().Be(title);
+        result.Episode.Should().Be(episode);
+        FirstMatchingAdapter(Context(file)).Should().Be("episode-word");
+    }
+
+    [Theory]
+    [InlineData("Some Show 1080p - 12.mkv", "Some Show", 12)]
+    public void Title_cleanup_anime_absolute(string file, string title, int episode)
+    {
+        ParseContext context = Context(file, libraryType: "anime");
+        MovieFile result = Pipeline().Parse(context);
+        result.IsSeries.Should().BeTrue();
+        result.Title.Should().Be(title);
+        result.Episode.Should().Be(episode);
+        FirstMatchingAdapter(context).Should().Be("anime-absolute");
+    }
+
+    [Theory]
+    [InlineData("Reacher.S01E01.1080p.WEB-DL.mkv", "Reacher", 1, 1)]
+    [InlineData("Limitless.S01E05.720p.HDTV.x264.mkv", "Limitless", 1, 5)]
+    [InlineData("Breaking.Bad.S05E14.1080p.BluRay.x265-GROUP.mkv", "Breaking Bad", 5, 14)]
+    public void Title_cleanup_preserves_real_titles_in_season_episode(
+        string file, string title, int season, int episode)
+    {
+        MovieFile result = Pipeline().Parse(Context(file));
+        result.IsSeries.Should().BeTrue();
+        result.Title.Should().Be(title);
+        result.Season.Should().Be(season);
+        result.Episode.Should().Be(episode);
+        FirstMatchingAdapter(Context(file)).Should().Be("season-episode");
+    }
 }

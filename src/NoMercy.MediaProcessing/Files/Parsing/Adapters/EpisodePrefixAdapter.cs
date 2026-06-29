@@ -30,7 +30,7 @@ public sealed class EpisodePrefixAdapter : IFilenameParseAdapter
 
         return new(context.Title)
         {
-            Title = context.FolderTitle,
+            Title = context.FolderTitle.CleanReleaseTitle(),
             Season = int.Parse(match.Groups[1].Value),
             Episode = int.Parse(match.Groups[2].Value),
             IsSeries = true,

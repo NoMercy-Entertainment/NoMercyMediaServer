@@ -12,6 +12,7 @@
 using System.Text.RegularExpressions;
 using MovieFileLibrary;
 using NoMercy.NmSystem.Domain;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.MediaProcessing.Files.Parsing.Adapters;
 
@@ -57,6 +58,8 @@ public sealed partial class AnimeAbsoluteAdapter : IFilenameParseAdapter
             .Replace('_', ' ')
             .TrimEnd('-', ' ')
             .Trim();
+
+        showTitle = showTitle.CleanReleaseTitle();
 
         if (string.IsNullOrWhiteSpace(showTitle) || showTitle.Length <= 1)
             showTitle = context.FolderTitle;

@@ -36,6 +36,8 @@ public sealed class CrossFormatAdapter : IFilenameParseAdapter
             .TrimEnd('-', ' ')
             .Trim();
 
+        showTitle = showTitle.CleanReleaseTitle();
+
         if (string.IsNullOrWhiteSpace(showTitle) || showTitle.Length <= 1)
             showTitle = context.FolderTitle;
 

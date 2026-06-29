@@ -102,6 +102,48 @@ public static partial class StringExtensions
     [GeneratedRegex(@"(?<![A-Za-z0-9])(\d{1,2})[xX×](\d{1,3})(?![0-9])")]
     public static partial Regex MatchCrossFormatEpisode();
 
+    /// <summary>
+    /// Matches the first scene "quality/source/codec/audio/flag" tag in a release
+    /// name. Tokens are bounded by non-alphanumeric characters so real title words
+    /// that merely contain a token as a substring (e.g. "Limitless", "Web Therapy")
+    /// are never matched, and internal separators are tolerated so dotted/hyphenated
+    /// scene forms ("WEB-DL", "H.264", "DDP5.1") match the same as spaced forms.
+    /// </summary>
+    [GeneratedRegex(
+        @"(?<![A-Za-z0-9])(?:" +
+        @"\d{3,4}[pi]|[48]k|uhd|" +
+        @"web[\s.\-]?dl|web[\s.\-]?rip|web[\s.\-]?hd|blu[\s.\-]?ray|bd[\s.\-]?rip|b[rd][\s.\-]?rip|hd[\s.\-]?tv|pd[\s.\-]?tv|dvd[\s.\-]?rip|hd[\s.\-]?rip|hd[\s.\-]?cam|uhd[\s.\-]?bd|remux|" +
+        @"x[\s.\-]?26[45]|h[\s.\-]?26[45]|hevc|xvid|divx|" +
+        @"ddp?[\s.\-]?\d(?:[\s.\-]?\d)?|e?ac[\s.\-]?3|dts(?:[\s.\-]?hd)?(?:[\s.\-]?ma)?|true[\s.\-]?hd|atmos|aac(?:[\s.\-]?\d(?:[\s.\-]?\d)?)?|flac|" +
+        @"\d{1,2}[\s.\-]?bit|hdr10\+?|hdr|do[\s.\-]?vi|dolby[\s.\-]?vision|" +
+        @"repack|multi" +
+        @")(?![A-Za-z0-9])",
+        RegexOptions.IgnoreCase)]
+    public static partial Regex MatchReleaseTag();
+
+    /// <summary>
+    /// Cleans a derived show/movie title by normalizing separators and removing
+    /// everything from the first recognized scene tag onward (resolution, source,
+    /// codec, audio, HDR and release flags). Year extraction is intentionally left
+    /// to the caller. Returns the trimmed leading portion of the title.
+    /// </summary>
+    [Pure]
+    public static string CleanReleaseTitle(this string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return string.Empty;
+
+        string normalized = raw.Replace('.', ' ').Replace('_', ' ');
+        normalized = Regex.Replace(normalized, @"\s+", " ").Trim();
+
+        Match tag = MatchReleaseTag().Match(normalized);
+        string title = tag.Success ? normalized[..tag.Index] : normalized;
+
+        title = title.TrimEnd(' ', '-', '_', '.');
+        return Regex.Replace(title, @"\s+", " ").Trim();
+    }
+
+
     [GeneratedRegex("/[^a-zA-Z0-9]/")]
     public static partial Regex IsAlphaNumeric();
 

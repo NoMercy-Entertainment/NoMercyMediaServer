@@ -39,6 +39,8 @@ public sealed class EpisodeWordAdapter : IFilenameParseAdapter
         if (yearInTitle.Success)
             showTitle = showTitle[..yearInTitle.Index].TrimEnd('-', '.', '_', ' ');
 
+        showTitle = showTitle.CleanReleaseTitle();
+
         if (string.IsNullOrWhiteSpace(showTitle) || showTitle.Length <= 1)
             showTitle = context.FolderTitle;
 
