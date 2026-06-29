@@ -13,6 +13,7 @@ using System.Management;
 using System.Runtime.CompilerServices;
 using System.Runtime.Versioning;
 using System.Threading.Channels;
+using Microsoft.Extensions.Logging;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.SystemCalls;
 
@@ -29,10 +30,13 @@ public sealed class WindowsDriveBackend : IDriveBackend
     private readonly Channel<DriveEvent> _events = Channel.CreateUnbounded<DriveEvent>(
         new UnboundedChannelOptions { SingleReader = true, SingleWriter = true }
     );
+    private readonly ILogger<WindowsDriveBackend> _logger;
     private ManagementEventWatcher? _watcher;
 
-    public WindowsDriveBackend()
+    public WindowsDriveBackend(ILogger<WindowsDriveBackend> logger)
     {
+        _logger = logger;
+
         WqlEventQuery query = new(
             "SELECT * FROM __InstanceModificationEvent WITHIN 2 "
                 + "WHERE TargetInstance ISA 'Win32_LogicalDisk' "
@@ -96,7 +100,7 @@ public sealed class WindowsDriveBackend : IDriveBackend
         }
         catch (Exception ex)
         {
-            Logger.Ripper($"[WindowsDriveBackend] OnDriveChanged: {ex.Message}");
+            _logger.LogInformation("[WindowsDriveBackend] OnDriveChanged: {Error}", ex.Message);
         }
     }
 

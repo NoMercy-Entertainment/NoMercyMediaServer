@@ -12,6 +12,7 @@
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Audio;
 using NoMercy.OpticalMedia.Audio;
 using NoMercy.OpticalMedia.Capabilities;
@@ -29,20 +30,24 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddNoMercyOpticalMedia(this IServiceCollection services)
     {
-        services.TryAddSingleton<IDriveBackend>(_ =>
+        services.TryAddSingleton<IDriveBackend>(sp =>
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 try
                 {
-                    return new WindowsDriveBackend();
+                    return new WindowsDriveBackend(
+                        sp.GetRequiredService<ILogger<WindowsDriveBackend>>()
+                    );
                 }
                 catch
                 {
-                    return new PollingDriveBackend();
+                    return new PollingDriveBackend(
+                        sp.GetRequiredService<ILogger<PollingDriveBackend>>()
+                    );
                 }
             }
-            return new PollingDriveBackend();
+            return new PollingDriveBackend(sp.GetRequiredService<ILogger<PollingDriveBackend>>());
         });
 
         services.TryAddSingleton<IDriveMonitor, DriveMonitor>();
