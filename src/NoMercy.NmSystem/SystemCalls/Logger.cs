@@ -38,6 +38,14 @@ public static class Logger
 
     public static event Action<LogEntry>? LogEmitted;
 
+    /// <summary>
+    /// When set (by the new logging provider's legacy bridge), console output for
+    /// legacy <see cref="Logger"/> entries is rendered through the unified pipeline
+    /// instead of this class's own Serilog console sink. Null before the bridge
+    /// attaches (early startup), where the Serilog console sink is used as fallback.
+    /// </summary>
+    public static Action<LogEntry>? ConsoleSink;
+
     public class LogType
     {
         [JsonProperty("name")]
@@ -267,13 +275,30 @@ public static class Logger
 
         string colorHex = type.ColorHex;
 
-        ConsoleLog
-            .ForContext("Type", logType)
-            .ForContext("Color", colorHex)
-            .ForContext("Message", message)
-            .ForContext("Level", logLevel)
-            .ForContext("ConsoleType", type.Name)
-            .Write(logLevel, "{@Message}", message);
+        LogEntry entry = new()
+        {
+            Type = logType,
+            Color = colorHex,
+            Message = message.ToString() ?? string.Empty,
+            LogLevel = logLevel,
+            Time = DateTime.UtcNow,
+            ThreadId = Environment.CurrentManagedThreadId,
+        };
+
+        if (ConsoleSink is { } sink)
+        {
+            sink(entry);
+        }
+        else
+        {
+            ConsoleLog
+                .ForContext("Type", logType)
+                .ForContext("Color", colorHex)
+                .ForContext("Message", message)
+                .ForContext("Level", logLevel)
+                .ForContext("ConsoleType", type.Name)
+                .Write(logLevel, "{@Message}", message);
+        }
 
         FileLog
             .ForContext("Type", logType)
@@ -283,17 +308,7 @@ public static class Logger
             .ForContext("ConsoleType", type.Name)
             .Write(logLevel, "{@Message}", message.ToJson());
 
-        LogEmitted?.Invoke(
-            new()
-            {
-                Type = logType,
-                Color = colorHex,
-                Message = message.ToString() ?? string.Empty,
-                LogLevel = logLevel,
-                Time = DateTime.UtcNow,
-                ThreadId = Environment.CurrentManagedThreadId,
-            }
-        );
+        LogEmitted?.Invoke(entry);
     }
 
     // Generic entry point

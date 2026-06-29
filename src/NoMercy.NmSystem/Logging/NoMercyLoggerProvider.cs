@@ -20,6 +20,8 @@ using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Logging.Rendering;
 using LegacyLogger = NoMercy.NmSystem.SystemCalls.Logger;
 
+using Serilog.Events;
+
 namespace NoMercy.NmSystem.Logging;
 
 /// <summary>
@@ -66,9 +68,11 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
             PruneRuns(options.LogDirectory, options.MaxRunFiles);
         }
 
-        if (options.BridgeLegacyLogger && _file is not null)
+        if (options.BridgeLegacyLogger)
         {
-            LegacyLogger.LogEmitted += WriteEntry;
+            LegacyLogger.ConsoleSink = RenderLegacyConsole;
+            if (_file is not null)
+                LegacyLogger.LogEmitted += WriteEntry;
             _bridged = true;
         }
     }
@@ -84,7 +88,10 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
     public void Dispose()
     {
         if (_bridged)
+        {
+            LegacyLogger.ConsoleSink = null;
             LegacyLogger.LogEmitted -= WriteEntry;
+        }
 
         lock (_gate)
         {
@@ -123,6 +130,41 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
             _file.WriteLine(JsonSerializer.Serialize(fileLine, JsonOptions));
         }
     }
+
+    /// <summary>Renders a legacy <see cref="LogEntry"/> to the console through the
+    /// unified <see cref="ConsoleLineRenderer"/> so legacy and ILogger output share one format.</summary>
+    private void RenderLegacyConsole(LogEntry entry)
+    {
+        LogCategory category = LogCategories.Resolve(entry.Type);
+        string line = ConsoleLineRenderer.Render(
+            entry.Time.ToLocalTime(),
+            ToMelLevel(entry.LogLevel),
+            category,
+            entry.Message,
+            null,
+            null,
+            _options.Theme,
+            _color,
+            _options.WidthProvider()
+        );
+
+        lock (_gate)
+        {
+            _output.WriteLine(line);
+        }
+    }
+
+    private static LogLevel ToMelLevel(LogEventLevel level) =>
+        level switch
+        {
+            LogEventLevel.Verbose => LogLevel.Trace,
+            LogEventLevel.Debug => LogLevel.Debug,
+            LogEventLevel.Information => LogLevel.Information,
+            LogEventLevel.Warning => LogLevel.Warning,
+            LogEventLevel.Error => LogLevel.Error,
+            LogEventLevel.Fatal => LogLevel.Critical,
+            _ => LogLevel.Information,
+        };
 
     internal void Write(
         DateTime timestamp,
