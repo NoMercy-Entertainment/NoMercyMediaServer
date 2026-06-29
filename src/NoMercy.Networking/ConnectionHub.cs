@@ -144,7 +144,11 @@ public class ConnectionHub : Hub
                         Os = di.Os,
                         Type = di.Type,
                         Version = di.Version,
-                        VolumePercent = di.VolumePercent,
+                        // VolumePercent intentionally NOT updated here: preserve the
+                        // persisted per-device volume across (re)connections. Only an
+                        // explicit SetDeviceVolumeCommand changes it. Otherwise the
+                        // connect-time client_volume query param would clobber the stored
+                        // level (resetting to the player's 100% default) on every reconnect.
                     }
             )
             .RunAsync();
