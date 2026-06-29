@@ -347,3 +347,59 @@ Encoder) to structured templates, 0/0.
   - Bases still needing a `LoggerFactory` hook first: `AbstractEncoderJob` (INJ=1, add property+resolve) for Video/EncodeTask; `AbstractMusicDescriptionJob` (no injector at all → needs `IJobStorageInjector` + InjectStorageServices) for MusicMetadata. Other bases already have `LoggerFactory`.
 
 ### Endgame (unchanged, LAST): delete `Logger.cs`, remove `BridgeLegacyLogger`, drop Serilog packages.
+
+---
+
+## Wave-2 progress update #2 (L12) — jobs, Data, Api emit, residuals
+
+### Newly committed (build clean, pushed) since update #1
+- **Queue jobs' own logging via a base `Log` accessor.** Added
+  `[JsonIgnore] protected ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());`
+  to job base classes (`AbstractMediaJob`, `AbstractShowExtraDataJob`, `AbstractMusicFolderJob`,
+  `AbstractMusicEncoderJob`, `AbstractEncoderJob`, `AbstractMusicDescriptionJob`); converted each job's
+  INSTANCE-context `Logger.X` → `Log.LogX`. Static-method log calls (e.g. `VideoEncodeJob.SummarizeFailures`,
+  line ~1430) intentionally LEFT on the legacy bridge (can't use an instance accessor in a static method).
+  - Bases that needed wiring first: `AbstractEncoderJob` (added `LoggerFactory` property + resolve in its
+    existing `InjectStorageServices`); `AbstractMusicDescriptionJob` (had NO injector → added
+    `IJobStorageInjector` + `InjectStorageServices` resolving `ILoggerFactory`).
+  - `VideoEncodeJob`/`EncodeTaskJob`/`MusicEncodeJob` each had a `public new void InjectStorageServices`
+    that did NOT call base → now call `base.InjectStorageServices(serviceProvider)` first (so
+    StorageFactory/StorageDriver/LoggerFactory get set). Same fix pattern as MusicEncodeJob earlier.
+  - Jobs converted: AudioImportJob, ReleaseImportJob, MusicEncodeJob, MovieImportJob, FileRescanJob,
+    SeasonExtrasJob, PersonExtrasJob, EpisodeExtrasJob, VideoEncodeJob (27/28; 1 static stays),
+    EncodeTaskJob, MusicMetadataJob.
+- **Standalone queue jobs (no shared base)** — per-class `LoggerFactory`+`Log` plumbing (added
+  `IJobStorageInjector` where missing): Data `MusicJob`, `CoverArtImageJob`, `FanArtImagesJob`,
+  `FindMediaFilesJob`; OpticalMedia `DiscRipJob`.
+  - NOTE: `DiscRipJob` used the **MEL-style `Logger.LogWarning/LogError/LogInformation`** form (NOT the
+    category form), which `migrate_logger` does not match — fixed with a literal `Logger.Log` → `Log.Log`
+    rewrite. (Solution-wide scan confirms no other `Logger.LogX` MEL-form callers remain.)
+- **Api emit-only sites → `ILogger<T>` (first primary-ctor param; DI-instantiated, no construction sites):**
+  `ManagementController` (6 `Logger.Setup`), `ServerController` (6 `Logger.App`), `ResourceMonitorService`
+  (4 `Logger.Socket`). The **management-API calls stay** on static `Logger`: `GetLogs`, `LogEmitted +=/-=`,
+  `SetLogLevel`, `LogTypes`.
+- **Data `MovieRepository` + `FileLogic` → `ILogger<T>`.** MovieRepository is DI-by-interface (no src sites)
+  but is `new(...)` (target-typed) in 3 test files (CancellationTokenPropagationTests, QueryOutputTests,
+  MovieRepositoryTests = 11 sites) → supplied `NullLogger<MovieRepository>.Instance` (TvShow/Genre repos
+  untouched). FileLogic: 1 site in `FindMediaFilesJob` → `LoggerFactory.CreateLogger<FileLogic>()`.
+- **Residual bare-exception emit calls** (migrate skips bare-identifier exception args) converted in already-
+  accessor'd files: `VideoEncodeJob:245`, `MusicEncodeJob:195` → `Log.LogError(ex, "…")`;
+  `ServerController:266` → `logger.LogError(e, "…")`.
+
+### Remaining static `Logger.` usage = DEFERRED categories only (need bigger rework; endgame)
+- **Composition roots / static**: `NoMercy.Service` (bootstrap/hosting), `NoMercy.Setup`, `NoMercy.NmSystem`
+  (incl. `Logger.cs` itself + logging core), `NoMercy.Providers` (HTTP clients — also rate-limit-sensitive,
+  must NOT be sped up), `NetworkProbe` (static class). Need M/N/O DI-ification or stay on bridge.
+- **Static log-stream CONSUMERS** (use the static Logger event/query API, not emission): `LogController`,
+  `WebSockets/LogBroadcastService` (`Logger.LogEmitted`), and the kept calls in `ManagementController`
+  (`GetLogs`) / `ServerController` (`SetLogLevel`). These need a redesigned (non-static) log-stream service.
+- **MediaProcessing static seams** (documented in update #1): `FileManager`(+partials), `FileRepository`,
+  `MediaIdentificationService`, `CoverArtImageManagerManager`, `FanArtImageManager`, `LibraryFileWatcher`/
+  `FolderWatcher`/`StowageWatcher`, `Common/MetadataRetry`. Need DI-ification or are intrinsically static.
+
+### Net state
+All cleanly ctor-injectable / DI-threadable code (managers, repositories, services, controllers' emit sites)
+and ALL queue jobs' own logging are now on `ILogger<T>` (or the job `Log` accessor). What remains on the
+static `Logger` is exclusively the deferred composition-root/static-seam/log-consumer set above.
+
+### Endgame (unchanged, LAST): delete `Logger.cs`, remove `BridgeLegacyLogger`, drop Serilog packages — blocked on the deferred set.
