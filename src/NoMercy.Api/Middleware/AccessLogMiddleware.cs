@@ -14,6 +14,7 @@ using System.Text;
 using System.Web;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Authorization;
 using NoMercy.Database;
@@ -26,9 +27,12 @@ public class AccessLogMiddleware
 {
     private readonly RequestDelegate _next;
 
-    public AccessLogMiddleware(RequestDelegate next)
+    private readonly ILogger<AccessLogMiddleware> _logger;
+
+    public AccessLogMiddleware(RequestDelegate next, ILogger<AccessLogMiddleware> logger)
     {
         _next = next;
+        _logger = logger;
     }
 
     private readonly string[] _ignoredStartsWithRoutes =
@@ -115,7 +119,9 @@ public class AccessLogMiddleware
                 return;
             }
 
-            Logger.Http($"Unknown: {context.Connection.RemoteIpAddress}: {path} (No GUID)");
+            _logger.LogInformation(
+                $"Unknown: {context.Connection.RemoteIpAddress}: {path} (No GUID)"
+            );
             await WriteProblemAsync(
                 context,
                 statusCode: 401,
@@ -135,7 +141,7 @@ public class AccessLogMiddleware
                 return;
             }
 
-            Logger.Http(
+            _logger.LogInformation(
                 $"Unknown: {context.Connection.RemoteIpAddress}: {path} (Malformed or empty GUID)"
             );
             await WriteProblemAsync(
@@ -170,7 +176,9 @@ public class AccessLogMiddleware
 
         if (user is null)
         {
-            Logger.Http($"Unknown: {context.Connection.RemoteIpAddress}: {path} (User not found)");
+            _logger.LogInformation(
+                $"Unknown: {context.Connection.RemoteIpAddress}: {path} (User not found)"
+            );
             await WriteProblemAsync(
                 context,
                 statusCode: 401,
@@ -182,7 +190,7 @@ public class AccessLogMiddleware
             return;
         }
 
-        Logger.Http($"{user.Name}: {path}");
+        _logger.LogInformation($"{user.Name}: {path}");
 
         await _next(context);
     }

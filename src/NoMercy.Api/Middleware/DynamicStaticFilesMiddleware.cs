@@ -13,6 +13,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 using MimeMapping;
@@ -28,7 +29,10 @@ namespace NoMercy.Api.Middleware;
 /// </summary>
 public readonly record struct FolderRef(Ulid DriverId, string SubPath);
 
-public class DynamicStaticFilesMiddleware(RequestDelegate next)
+public class DynamicStaticFilesMiddleware(
+    RequestDelegate next,
+    ILogger<DynamicStaticFilesMiddleware> logger
+)
 {
     private static readonly ConcurrentDictionary<Ulid, FolderRef> Folders = new();
 
@@ -101,7 +105,7 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
 
             if (!Folders.TryGetValue(folderId, out FolderRef folderRef))
             {
-                Logger.App(
+                logger.LogInformation(
                     $"[DynamicStaticFiles] folder {folderId} not registered (request: {context.Request.Path})"
                 );
                 await next(context);
@@ -134,7 +138,7 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
             }
             catch (Exception fEx)
             {
-                Logger.App(
+                logger.LogInformation(
                     $"[DynamicStaticFiles] factory.For failed for folder {folderId} driver {folderRef.DriverId} subPath '{folderRef.SubPath}': {fEx.Message}"
                 );
                 await next(context);
@@ -148,7 +152,7 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
             }
             catch (Exception eEx)
             {
-                Logger.App(
+                logger.LogInformation(
                     $"[DynamicStaticFiles] storage.Exists threw on '{relativeWithinFolder}' (folder {folderId}, driver {folderRef.DriverId}): {eEx.Message}"
                 );
                 await next(context);
@@ -157,7 +161,7 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
 
             if (!exists)
             {
-                Logger.App(
+                logger.LogInformation(
                     $"[DynamicStaticFiles] not found: folder={folderId} driver={folderRef.DriverId} subPath='{folderRef.SubPath}' relative='{relativeWithinFolder}'"
                 );
                 await next(context);
@@ -183,26 +187,23 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
             stopwatch.Stop();
 
             if (resolvedAtMs > 1000 || stopwatch.ElapsedMilliseconds > 2000)
-                Logger.App(
+                logger.LogWarning(
                     $"[DynamicStaticFiles] SLOW serve '{relativeWithinFolder}' "
                         + $"prep={resolvedAtMs}ms total={stopwatch.ElapsedMilliseconds}ms "
-                        + $"(driver={storage.GetType().Name})",
-                    Serilog.Events.LogEventLevel.Warning
+                        + $"(driver={storage.GetType().Name})"
                 );
             else
-                Logger.App(
+                logger.LogDebug(
                     $"[DynamicStaticFiles] serve '{relativeWithinFolder}' "
-                        + $"prep={resolvedAtMs}ms total={stopwatch.ElapsedMilliseconds}ms",
-                    Serilog.Events.LogEventLevel.Debug
+                        + $"prep={resolvedAtMs}ms total={stopwatch.ElapsedMilliseconds}ms"
                 );
         }
         catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
         {
             // Race: file or its containing directory vanished between Exists()
             // and Size()/OpenRead(). Translate to 404 instead of an opaque 500.
-            Logger.App(
-                $"[DynamicStaticFiles] file vanished mid-serve for '{context.Request.Path}': {ex.Message}",
-                Serilog.Events.LogEventLevel.Warning
+            logger.LogWarning(
+                $"[DynamicStaticFiles] file vanished mid-serve for '{context.Request.Path}': {ex.Message}"
             );
             if (!context.Response.HasStarted)
                 context.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -212,9 +213,8 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
             // Storage-layer transport failure (NFS hiccup, S3 / WebDAV 5xx, disk
             // error). 502 reflects "we couldn't reach the backend that holds
             // this file" — distinct from "the file doesn't exist."
-            Logger.App(
-                $"[DynamicStaticFiles] storage transport failure for '{context.Request.Path}': {ex.Message}",
-                Serilog.Events.LogEventLevel.Warning
+            logger.LogWarning(
+                $"[DynamicStaticFiles] storage transport failure for '{context.Request.Path}': {ex.Message}"
             );
             if (!context.Response.HasStarted)
                 context.Response.StatusCode = (int)HttpStatusCode.BadGateway;
@@ -230,16 +230,15 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
             // through to the next track gracefully instead of crashing on a
             // 500 with a stack trace body. Logged at Error so genuine bugs
             // remain visible in the sink.
-            Logger.App(
-                $"[DynamicStaticFiles] unhandled exception for path '{context.Request.Path}': {ex}",
-                Serilog.Events.LogEventLevel.Error
+            logger.LogError(
+                $"[DynamicStaticFiles] unhandled exception for path '{context.Request.Path}': {ex}"
             );
             if (!context.Response.HasStarted)
                 context.Response.StatusCode = (int)HttpStatusCode.BadGateway;
         }
     }
 
-    private static async Task ServeFile(HttpContext context, IStorage storage, string relativePath)
+    private async Task ServeFile(HttpContext context, IStorage storage, string relativePath)
     {
         long fileLength = storage.Size(relativePath);
 
@@ -249,9 +248,8 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         // here narrows triage in one step instead of guessing.
         if (fileLength == 0)
         {
-            Logger.App(
-                $"[DynamicStaticFiles] storage reports 0 bytes for '{context.Request.Path}' (driver={storage.GetType().Name})",
-                Serilog.Events.LogEventLevel.Warning
+            logger.LogWarning(
+                $"[DynamicStaticFiles] storage reports 0 bytes for '{context.Request.Path}' (driver={storage.GetType().Name})"
             );
         }
 

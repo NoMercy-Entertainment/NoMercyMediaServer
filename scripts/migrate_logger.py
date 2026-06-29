@@ -93,7 +93,7 @@ def rewrite(s, expr, report):
         if end<0:
             out.append(s[i:m.end()]); i=m.end(); continue
         inner=s[j+1:end]
-        mm=re.search(r',\s*LogEventLevel\.(\w+)\s*$', inner)
+        mm=re.search(r',\s*(?:[\w.]+\.)?LogEventLevel\.(\w+)\s*$', inner)
         if mm: lvl=mm.group(1); newinner=inner[:mm.start()]
         else: lvl=DEFAULT_LEVEL[cat]; newinner=inner
         mel=MEL.get(lvl,'LogInformation')
