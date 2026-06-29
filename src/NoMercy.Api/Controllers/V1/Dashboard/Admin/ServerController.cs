@@ -61,6 +61,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/server", Order = 10)]
 public class ServerController(
+    ResourceMonitor resourceMonitor,
     IUpdateChecker updateChecker,
     IHostApplicationLifetime appLifetime,
     AppDbContext appContext,
@@ -494,7 +495,7 @@ public class ServerController(
         Resource? resource;
         try
         {
-            resource = ResourceMonitor.Monitor();
+            resource = resourceMonitor.Monitor();
         }
         catch (Exception e)
         {

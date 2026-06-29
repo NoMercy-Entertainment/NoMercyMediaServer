@@ -9,25 +9,33 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System;
 using System.Runtime.Versioning;
-using NoMercy.NmSystem.SystemCalls;
+using Microsoft.Extensions.Logging;
 
 namespace NoMercy.Monitoring;
 
-public class ResourceMonitor
+/// <summary>
+/// Collects CPU/GPU/memory resource samples from the OS-appropriate provider.
+/// Resolved from DI as a singleton; the provider is created on construction.
+/// </summary>
+public sealed class ResourceMonitor : IDisposable
 {
-    private static IResourceProvider? _provider;
+    private readonly ILogger<ResourceMonitor> _logger;
+    private IResourceProvider? _provider;
 
-    static ResourceMonitor()
+    public ResourceMonitor(ILogger<ResourceMonitor> logger)
     {
-        Logger.App("Initializing Resource Monitor");
+        _logger = logger;
+        _logger.LogInformation("Initializing Resource Monitor");
         Start();
     }
 
-    public static Resource Monitor()
+    public Resource Monitor()
     {
         if (_provider is null)
             return new();
+
         try
         {
             return _provider.Collect();
@@ -38,21 +46,34 @@ public class ResourceMonitor
         }
     }
 
-    public static void Start()
+    public void Start()
     {
         if (_provider is not null)
             return;
 
         if (OperatingSystem.IsWindows())
-        {
             _provider = CreateWindowsProvider();
-        }
         else if (OperatingSystem.IsLinux())
-        {
             _provider = CreateLinuxProvider();
-        }
 
-        Logger.App("Resource Monitor started");
+        _logger.LogInformation("Resource Monitor started");
+    }
+
+    public void Stop()
+    {
+        if (_provider is IDisposable disposable)
+            disposable.Dispose();
+        _provider = null;
+        _logger.LogInformation("Resource Monitor stopped");
+    }
+
+    public void Dispose()
+    {
+        // Dispose the provider without logging: the logger may already be torn
+        // down during container disposal.
+        if (_provider is IDisposable disposable)
+            disposable.Dispose();
+        _provider = null;
     }
 
     [SupportedOSPlatform("windows")]
@@ -60,17 +81,4 @@ public class ResourceMonitor
 
     [SupportedOSPlatform("linux")]
     private static IResourceProvider CreateLinuxProvider() => new LinuxResourceProvider();
-
-    public static void Stop()
-    {
-        if (_provider is IDisposable disposable)
-            disposable.Dispose();
-        _provider = null;
-        Logger.App("Resource Monitor stopped");
-    }
-
-    ~ResourceMonitor()
-    {
-        Stop();
-    }
 }

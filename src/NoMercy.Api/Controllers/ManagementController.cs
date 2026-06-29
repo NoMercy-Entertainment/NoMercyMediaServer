@@ -42,6 +42,7 @@ namespace NoMercy.Api.Controllers;
 [LocalhostOnly]
 [Tags("Management")]
 public class ManagementController(
+    ResourceMonitor resourceMonitor,
     IHostApplicationLifetime appLifetime,
     AppDbContext appContext,
     QueueRunner queueRunner,
@@ -581,7 +582,7 @@ public class ManagementController(
     {
         try
         {
-            Resource? resource = ResourceMonitor.Monitor();
+            Resource? resource = resourceMonitor.Monitor();
             List<ResourceMonitorDto> storage = StorageMonitor.Main();
 
             return Ok(

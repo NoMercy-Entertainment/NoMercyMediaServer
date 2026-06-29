@@ -15,7 +15,10 @@ using Serilog.Events;
 
 namespace NoMercy.Api.WebSockets;
 
-public class ResourceMonitorService(IClientMessenger clientMessenger) : IResourceMonitorService
+public class ResourceMonitorService(
+    ResourceMonitor resourceMonitor,
+    IClientMessenger clientMessenger
+) : IResourceMonitorService
 {
     private readonly Lock _sync = new();
     private bool _broadcasting;
@@ -79,7 +82,7 @@ public class ResourceMonitorService(IClientMessenger clientMessenger) : IResourc
             DateTime time = DateTime.Now;
             try
             {
-                Resource resourceData = Monitoring.ResourceMonitor.Monitor();
+                Resource resourceData = resourceMonitor.Monitor();
                 await clientMessenger.SendToAll("ResourceUpdate", "dashboardHub", resourceData);
                 int delay = 1000 - (int)(DateTime.Now - time).TotalMilliseconds;
                 if (delay > 0)
