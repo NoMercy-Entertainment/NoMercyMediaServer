@@ -22,6 +22,7 @@ using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 
+using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -46,7 +47,7 @@ public class FileRescanJob : AbstractMediaJob
             jobDispatcher,
             context,
             StorageDriver,
-            StorageFactory
+            StorageFactory, LoggerFactory.CreateLogger<LibraryManager>()
         );
 
         Library? library = await libraryManager.RescanFiles(LibraryId, Id);

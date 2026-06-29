@@ -50,7 +50,7 @@ public class CollectionExtrasJob : AbstractMediaExraDataJob<TmdbCollectionAppend
         CollectionManager collectionManager = new(
             collectionRepository,
             movieManager,
-            jobDispatcher
+            jobDispatcher, LoggerFactory.CreateLogger<CollectionManager>()
         );
 
         await collectionManager.StoreImages(Storage);

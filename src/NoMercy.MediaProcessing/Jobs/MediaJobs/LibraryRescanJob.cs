@@ -17,6 +17,7 @@ using NoMercy.Database;
 using NoMercy.Events;
 using NoMercy.MediaProcessing.Libraries;
 
+using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -42,6 +43,7 @@ public class LibraryRescanJob : AbstractMediaJob
             context,
             StorageDriver,
             StorageFactory,
+            LoggerFactory.CreateLogger<LibraryManager>(),
             eventBus
         );
 

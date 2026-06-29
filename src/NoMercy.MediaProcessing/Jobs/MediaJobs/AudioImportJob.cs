@@ -35,6 +35,7 @@ using NoMercy.Providers.MusicBrainz.Models;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
+using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 public class AudioImportJob : AbstractMusicFolderJob
@@ -540,7 +541,7 @@ public class AudioImportJob : AbstractMusicFolderJob
         Dictionary<Guid, (MusicBrainzReleaseAppends ReleaseAppends, int Count)> releases = new();
 
         ReleaseGroupRepository releaseGroupRepository = new(_mediaContext);
-        ReleaseGroupManager releaseGroupManager = new(releaseGroupRepository, jobDispatcher);
+        ReleaseGroupManager releaseGroupManager = new(releaseGroupRepository, jobDispatcher, LoggerFactory.CreateLogger<ReleaseGroupManager>());
 
         MusicGenreRepository musicGenreRepository = new(_mediaContext);
         MusicGenreManager musicGenreManager = new(musicGenreRepository);
@@ -550,7 +551,7 @@ public class AudioImportJob : AbstractMusicFolderJob
             releaseRepository,
             musicGenreRepository,
             StorageFactory,
-            jobDispatcher
+            jobDispatcher, LoggerFactory.CreateLogger<ReleaseManager>()
         );
 
         ArtistRepository artistRepository = new(_mediaContext);
@@ -558,7 +559,7 @@ public class AudioImportJob : AbstractMusicFolderJob
             artistRepository,
             musicGenreRepository,
             jobDispatcher,
-            StorageFactory
+            StorageFactory, LoggerFactory.CreateLogger<ArtistManager>()
         );
 
         RecordingRepository recordingRepository = new(_mediaContext);
@@ -567,7 +568,7 @@ public class AudioImportJob : AbstractMusicFolderJob
             musicGenreRepository,
             artistRepository,
             StorageDriver,
-            StorageFactory
+            StorageFactory, LoggerFactory.CreateLogger<RecordingManager>()
         );
 
         Library albumLibrary = _mediaContext

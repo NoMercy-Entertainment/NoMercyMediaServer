@@ -36,6 +36,7 @@ using NoMercyQueue;
 using Serilog.Events;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 
+using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
@@ -44,6 +45,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
 
     public new void InjectStorageServices(IServiceProvider serviceProvider)
     {
+        base.InjectStorageServices(serviceProvider);
         _encodingOrchestrator = serviceProvider.GetRequiredService<IEncodingOrchestrator>();
     }
 
@@ -237,7 +239,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
             artistRepository,
             musicGenreRepository,
             jobDispatcher,
-            StorageFactory
+            StorageFactory, LoggerFactory.CreateLogger<ArtistManager>()
         );
 
         RecordingRepository recordingRepository = new(context);
@@ -246,7 +248,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
             musicGenreRepository,
             artistRepository,
             StorageDriver,
-            StorageFactory
+            StorageFactory, LoggerFactory.CreateLogger<RecordingManager>()
         );
 
         await using MediaScan mediaScan = new(StorageDriver);

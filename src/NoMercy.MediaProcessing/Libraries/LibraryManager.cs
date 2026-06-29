@@ -33,6 +33,7 @@ using NoMercy.Storage;
 using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
+using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Libraries;
 
 public class LibraryManager(
@@ -41,6 +42,7 @@ public class LibraryManager(
     MediaContext mediaContext,
     IStorageDriver storageDriver,
     IStorageFactory storageFactory,
+    ILogger<LibraryManager> logger,
     IEventBus? eventBus = null
 ) : BaseManager, ILibraryManager
 {
@@ -85,7 +87,7 @@ public class LibraryManager(
             SystemParallelism.Options,
             async (folder, _) =>
             {
-                Logger.App("Scanning " + folder.Path);
+                logger.LogInformation("Scanning {Path}", folder.Path);
                 switch (_library.Type)
                 {
                     case MediaTypes.MusicMediaType:
@@ -117,7 +119,7 @@ public class LibraryManager(
             );
         }
 
-        Logger.App("Scanning done");
+        logger.LogInformation("Scanning done");
     }
 
     public async Task ProcessNewLibraryItems(Ulid id)
@@ -162,7 +164,7 @@ public class LibraryManager(
             SystemParallelism.Options,
             async (folder, _) =>
             {
-                Logger.App("Scanning for new items in " + folder.Path);
+                logger.LogInformation("Scanning for new items in {Path}", folder.Path);
                 switch (_library.Type)
                 {
                     case MediaTypes.MusicMediaType:
@@ -194,7 +196,7 @@ public class LibraryManager(
             );
         }
 
-        Logger.App($"Scan for new items done — {itemsFound} new items found");
+        logger.LogInformation("Scan for new items done — {ItemsFound} new items found", itemsFound);
     }
 
     private async Task<int> ScanNewVideoFolder(
@@ -240,9 +242,7 @@ public class LibraryManager(
             }
         );
 
-        Logger.App(
-            $"Found {newFolders.Count} new subfolders (skipped {rootFolders.Count - newFolders.Count} existing)"
-        );
+        logger.LogInformation("Found {Count} new subfolders (skipped {Count2} existing)", newFolders.Count, rootFolders.Count - newFolders.Count);
         return newFolders.Count;
     }
 
@@ -293,9 +293,7 @@ public class LibraryManager(
             }
         );
 
-        Logger.App(
-            $"Found {newFolders.Count} new subfolders (skipped {rootFolders.Count - newFolders.Count} existing)"
-        );
+        logger.LogInformation("Found {Count} new subfolders (skipped {Count2} existing)", newFolders.Count, rootFolders.Count - newFolders.Count);
         return newFolders.Count;
     }
 
@@ -334,7 +332,7 @@ public class LibraryManager(
             }
         );
 
-        Logger.App("Found " + rootFolders.Count + " subfolders");
+        logger.LogInformation("Found {Count} subfolders", rootFolders.Count);
         return rootFolders.Count;
     }
 
@@ -377,7 +375,7 @@ public class LibraryManager(
             }
         );
 
-        Logger.App("Found " + rootFolders.Count + " subfolders");
+        logger.LogInformation("Found {Count} subfolders", rootFolders.Count);
         return rootFolders.Count;
     }
 
@@ -406,7 +404,7 @@ public class LibraryManager(
         if (_library is null)
             return;
 
-        Logger.App("Processing movie folder " + folderExtend.Path);
+        logger.LogInformation("Processing movie folder {Path}", folderExtend.Path);
 
         using TmdbSearchClient tmdbSearchClient = new();
         TmdbPaginatedResponse<TmdbMovie>? paginatedMovieResponse = await tmdbSearchClient.Movie(
@@ -430,7 +428,7 @@ public class LibraryManager(
         if (_library is null)
             return;
 
-        Logger.App("Processing tv folder " + folderExtend.Path);
+        logger.LogInformation("Processing tv folder {Path}", folderExtend.Path);
 
         using TmdbSearchClient tmdbSearchClient = new();
         TmdbPaginatedResponse<TmdbTvShow>? paginatedTvShowResponse = await tmdbSearchClient.TvShow(
@@ -485,7 +483,7 @@ public class LibraryManager(
         Library? library = await libraryRepository.GetLibraryByIdWithFolders(libraryId);
         if (library is null)
         {
-            Logger.App("Library with ID " + libraryId + " not found", LogEventLevel.Warning);
+            logger.LogWarning("Library with ID {LibraryId} not found", libraryId);
             return null;
         }
 

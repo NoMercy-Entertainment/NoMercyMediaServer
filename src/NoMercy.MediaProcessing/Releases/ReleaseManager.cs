@@ -26,13 +26,15 @@ using Serilog.Events;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
+using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Releases;
 
 public class ReleaseManager(
     IReleaseRepository releaseRepository,
     IMusicGenreRepository musicGenreRepository,
     IStorageFactory storageFactory,
-    JobDispatcher jobDispatcher
+    JobDispatcher jobDispatcher,
+    ILogger<ReleaseManager> logger
 ) : BaseManager, IReleaseManager
 {
     public async Task<(
@@ -40,10 +42,7 @@ public class ReleaseManager(
         CoverArtImageManagerManager.CoverPalette? coverPalette
     )> Add(Guid id, Library albumLibrary, Folder libraryFolder, MediaFolder mediaFolder)
     {
-        Logger.MusicBrainz(
-            $"Adding Release: {id} to Library: {albumLibrary.Title}",
-            LogEventLevel.Verbose
-        );
+        logger.LogTrace("Adding Release: {Id} to Library: {Title}", id, albumLibrary.Title);
 
         MusicBrainzReleaseClient musicBrainzReleaseClient = new();
         MusicBrainzReleaseAppends? releaseAppends = await musicBrainzReleaseClient.WithAllAppends(
@@ -78,7 +77,7 @@ public class ReleaseManager(
     {
         try
         {
-            Logger.MusicBrainz($"Storing Release: {releaseAppends.Title}", LogEventLevel.Verbose);
+            logger.LogTrace("Storing Release: {Title}", releaseAppends.Title);
 
             string libraryRoot = ResolveLibraryRoot(libraryFolder);
             string folder = mediaFolder.Path.Replace(libraryRoot, "");
@@ -120,20 +119,17 @@ public class ReleaseManager(
 
             await musicGenreRepository.LinkToRelease(genres);
 
-            Logger.MusicBrainz($"Release {releaseAppends.Title} stored", LogEventLevel.Verbose);
+            logger.LogTrace("Release {Title} stored", releaseAppends.Title);
         }
         catch (Exception e)
         {
-            Logger.MusicBrainz(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
         }
     }
 
     private async Task LinkToLibrary(MusicBrainzReleaseAppends releaseAppends, Library library)
     {
-        Logger.MusicBrainz(
-            $"Linking Release to Library: {releaseAppends.Title}",
-            LogEventLevel.Verbose
-        );
+        logger.LogTrace("Linking Release to Library: {Title}", releaseAppends.Title);
 
         AlbumLibrary insert = new() { AlbumId = releaseAppends.Id, LibraryId = library.Id };
 
@@ -150,7 +146,7 @@ public class ReleaseManager(
     {
         try
         {
-            Logger.MusicBrainz($"Storing Release: {releaseAppends.Title}", LogEventLevel.Verbose);
+            logger.LogTrace("Storing Release: {Title}", releaseAppends.Title);
 
             string libraryRoot = ResolveLibraryRoot(libraryFolder);
             string folder = StoragePathHelpers
@@ -186,11 +182,11 @@ public class ReleaseManager(
             await LinkToReleaseGroup(releaseAppends);
             await LinkToGenre(releaseAppends);
 
-            Logger.MusicBrainz($"Release {releaseAppends.Title} stored", LogEventLevel.Verbose);
+            logger.LogTrace("Release {Title} stored", releaseAppends.Title);
         }
         catch (Exception e)
         {
-            Logger.MusicBrainz(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
         }
     }
 
@@ -209,10 +205,7 @@ public class ReleaseManager(
 
     private async Task LinkToReleaseGroup(MusicBrainzReleaseAppends releaseAppends)
     {
-        Logger.MusicBrainz(
-            $"Linking Release to Release Group: {releaseAppends.Title}",
-            LogEventLevel.Verbose
-        );
+        logger.LogTrace("Linking Release to Release Group: {Title}", releaseAppends.Title);
 
         AlbumReleaseGroup insert = new()
         {

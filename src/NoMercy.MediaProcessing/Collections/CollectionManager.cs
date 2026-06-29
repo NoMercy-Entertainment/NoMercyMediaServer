@@ -25,12 +25,14 @@ using NoMercy.Providers.TMDB.Models.Collections;
 using NoMercy.Providers.TMDB.Models.Movies;
 using Serilog.Events;
 
+using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Collections;
 
 public class CollectionManager(
     ICollectionRepository collectionRepository,
     MovieManager movieManager,
-    JobDispatcher jobDispatcher
+    JobDispatcher jobDispatcher,
+    ILogger<CollectionManager> logger
 ) : BaseManager, ICollectionManager
 {
     public async Task<TmdbCollectionAppends?> Add(int id, Library library)
@@ -58,17 +60,14 @@ public class CollectionManager(
 
         await collectionRepository.Store(collection);
 
-        Logger.MovieDb($"Collection: {collection.Title}: Added to Database", LogEventLevel.Debug);
+        logger.LogDebug("Collection: {Title}: Added to Database", collection.Title);
 
         await StoreTranslations(collectionAppends);
 
         jobDispatcher.DispatchColorPaletteJob("collection", collection.Id.ToString());
         jobDispatcher.DispatchJob<CollectionExtrasJob, TmdbCollectionAppends>(collectionAppends);
 
-        Logger.MovieDb(
-            $"Collection: {collectionAppends.Name}: Added to Library {library.Title}",
-            LogEventLevel.Debug
-        );
+        logger.LogDebug("Collection: {Name}: Added to Library {Title}", collectionAppends.Name, library.Title);
 
         return collectionAppends;
     }
@@ -82,7 +81,7 @@ public class CollectionManager(
     public async Task RemoveCollectionAsync(int id, Library library)
     {
         await collectionRepository.Remove(id);
-        Logger.MovieDb($"Collection: {id}: Removed from Database", LogEventLevel.Debug);
+        logger.LogDebug("Collection: {Id}: Removed from Database", id);
     }
 
     private async Task StoreTranslations(TmdbCollectionAppends collection)
@@ -103,7 +102,7 @@ public class CollectionManager(
 
         await collectionRepository.StoreTranslations(translations);
 
-        Logger.MovieDb($"Collection: {collection.Name}: Translations stored", LogEventLevel.Debug);
+        logger.LogDebug("Collection: {Name}: Translations stored", collection.Name);
     }
 
     internal async Task StoreImages(TmdbCollectionAppends collection)
@@ -125,7 +124,7 @@ public class CollectionManager(
             .ToArray();
 
         await collectionRepository.StoreImages(posters);
-        Logger.MovieDb($"Movie: {collection.Name}: Posters stored", LogEventLevel.Debug);
+        logger.LogDebug("Movie: {Name}: Posters stored", collection.Name);
 
         IEnumerable<Image> backdrops = collection
             .Images.Backdrops.Select(image => new Image
@@ -144,7 +143,7 @@ public class CollectionManager(
             .ToArray();
 
         await collectionRepository.StoreImages(backdrops);
-        Logger.MovieDb($"Collection: {collection.Name}: backdrops stored", LogEventLevel.Debug);
+        logger.LogDebug("Collection: {Name}: backdrops stored", collection.Name);
 
         IEnumerable<Image> logos = collection
             .Images.Logos.Select(image => new Image
@@ -163,7 +162,7 @@ public class CollectionManager(
             .ToArray();
 
         await collectionRepository.StoreImages(logos);
-        Logger.MovieDb($"Collection: {collection.Name}: Logos stored", LogEventLevel.Debug);
+        logger.LogDebug("Collection: {Name}: Logos stored", collection.Name);
     }
 
     public async Task AddCollectionMovies(TmdbCollectionAppends collectionAppends, Library library)
@@ -189,6 +188,6 @@ public class CollectionManager(
 
         await collectionRepository.LinkToMovies(collectionAppends);
 
-        Logger.MovieDb($"Collection: {collectionAppends.Name}: Movies added", LogEventLevel.Debug);
+        logger.LogDebug("Collection: {Name}: Movies added", collectionAppends.Name);
     }
 }

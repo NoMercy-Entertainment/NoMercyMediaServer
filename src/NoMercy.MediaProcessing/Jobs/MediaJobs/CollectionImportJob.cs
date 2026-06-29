@@ -52,7 +52,7 @@ public class CollectionImportJob : AbstractMediaJob
         CollectionManager collectionManager = new(
             collectionRepository,
             movieManager,
-            jobDispatcher
+            jobDispatcher, LoggerFactory.CreateLogger<CollectionManager>()
         );
 
         Library collectionLibrary = await context
