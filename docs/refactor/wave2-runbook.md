@@ -403,3 +403,52 @@ and ALL queue jobs' own logging are now on `ILogger<T>` (or the job `Log` access
 static `Logger` is exclusively the deferred composition-root/static-seam/log-consumer set above.
 
 ### Endgame (unchanged, LAST): delete `Logger.cs`, remove `BridgeLegacyLogger`, drop Serilog packages — blocked on the deferred set.
+
+---
+
+## Job DI migration (constructor injection) — in progress
+
+Goal (user request): jobs use full constructor DI so they're easy to set up/extend; remove the `IJobStorageInjector` post-construction hook.
+
+### Mechanism
+- **Stage 1 (committed 417133df):** `QueueWorker.ExecuteWithTransientRetry` now rebuilds the job through
+  `ActivatorUtilities.CreateInstance(scope.ServiceProvider, job.GetType())` + `SerializationHelper.Populate(payload, job)`
+  (new `Populate` = `JsonConvert.PopulateObject` with the queue settings). `IJobStorageInjector` still invoked for
+  not-yet-migrated jobs (back-compat). Enqueue path (`JobDispatcher.DispatchJob<TJob>` → `new TJob{ data }`) is UNCHANGED.
+- Service lifetimes verified: all job services are **singleton/transient** (none scoped), and job ctors take no DbContext,
+  so DI-construction is safe. Jobs keep a trivial `public XJob() { }` for enqueue serialization + a service ctor for execution;
+  `ActivatorUtilities` selects the greediest resolvable ctor (the service ctor) at execution.
+
+### Per-job pattern
+```csharp
+public class MovieImportJob : AbstractMediaJob
+{
+    public MovieImportJob() { }                       // enqueue/serialization
+    public MovieImportJob(IStorageFactory storageFactory, IStorageDriver storageDriver, ILoggerFactory loggerFactory)
+        : base(storageFactory, storageDriver, loggerFactory) { }   // execution (DI)
+}
+```
+Base classes drop `IJobStorageInjector` + `InjectStorageServices`; service props become `{ get; private set; }`, set in a `protected` service ctor (+ a `protected` parameterless ctor). To add a "system feature" to a job → add a param to its service ctor.
+
+### Migrated & committed (build green, pushed)
+- `AbstractMediaJob` family (Stage 2a): FileRescanJob, LibraryScanJob, LibraryRescanJob, CollectionImportJob, PersonRefreshJob, MovieImportJob, ShowImportJob.
+- `AbstractMediaExraDataJob<T>` (Stage 2b): CollectionExtrasJob, MovieExtrasJob, ShowExtrasJob.
+- `AbstractShowExtraDataJob<T,TS>` (Stage 2b): SeasonExtrasJob, PersonExtrasJob, EpisodeExtrasJob.
+- `AbstractMusicFolderJob` (Stage 2b): AudioImportJob, ReleaseImportJob.
+- `AbstractMusicDescriptionJob` + `MusicMetadataJob` (Stage 2b + fix): MusicMetadataJob has DATA ctors
+  (`MusicBrainzArtist` / `MusicBrainzReleaseGroup?`); added `[ActivatorUtilitiesConstructor] public MusicMetadataJob(ILoggerFactory)`
+  so DI selection is unambiguous. **Lesson: jobs with data ctors need an explicit `[ActivatorUtilitiesConstructor]` service ctor.**
+
+### REMAINING
+- **Encoder family (sensitive pipeline — HOLD for runtime smoke-test):** `AbstractMusicEncoderJob`+MusicEncodeJob (extra: IEncodingOrchestrator),
+  `AbstractEncoderJob`+VideoEncodeJob/EncodeTaskJob (extra: IEncodingOrchestrator, IHardwareBenchmark, IHardwareCapabilities,
+  IEncoderProcessRegistry, IMediaAnalyzer, ISubtitleOcrEngine). These currently have `public new void InjectStorageServices`
+  (now calling base) → fold all into the concrete service ctor.
+- **Standalone jobs:** Data MusicJob/CoverArtImageJob/FanArtImagesJob/FindMediaFilesJob, OpticalMedia DiscRipJob
+  (each implements IJobStorageInjector directly → convert to service ctor; watch for data ctors).
+- **Stage 3 (final):** remove `IJobStorageInjector` interface + the worker's `InjectStorageServices` call once no job implements it.
+
+### Runtime verification gap
+The cloud env can't run the server (no FFmpeg/DB/GPU), so build-green ≠ runtime-verified. The MusicMetadataJob null-LoggerFactory
+bug compiled clean and was caught only by reasoning. **A smoke-test (library scan, movie/show import, music import) after the migrated
+families is recommended before finishing the encoder family.**
