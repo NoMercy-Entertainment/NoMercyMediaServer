@@ -12,6 +12,7 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
@@ -22,7 +23,6 @@ using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
-using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.EventHandlers;
 
@@ -41,7 +41,10 @@ public class InboxClassifierEventHandler : IDisposable
 
     private readonly record struct FileContentFingerprint(long SizeBytes, string HashPrefix);
 
+    private readonly ILogger<InboxClassifierEventHandler> _logger;
+
     public InboxClassifierEventHandler(
+        ILogger<InboxClassifierEventHandler> logger,
         IEventBus eventBus,
         InboxClassifier classifier,
         InboxRoutingService routing,
@@ -49,6 +52,7 @@ public class InboxClassifierEventHandler : IDisposable
         IStorageFactory storageFactory
     )
     {
+        _logger = logger;
         _eventBus = eventBus;
         _classifier = classifier;
         _routing = routing;
@@ -86,7 +90,7 @@ public class InboxClassifierEventHandler : IDisposable
         if (@event.LibraryType != MediaTypes.InboxMediaType)
             return;
 
-        Logger.System($"InboxClassifier: Processing drop event in {@event.FolderPath}");
+        _logger.LogInformation($"InboxClassifier: Processing drop event in {@event.FolderPath}");
 
         await using MediaContext context = _contextFactory();
 
@@ -98,9 +102,8 @@ public class InboxClassifierEventHandler : IDisposable
 
         if (library is null)
         {
-            Logger.System(
-                $"InboxClassifier: Library {@event.LibraryId} not found, dropping event",
-                LogEventLevel.Warning
+            _logger.LogWarning(
+                $"InboxClassifier: Library {@event.LibraryId} not found, dropping event"
             );
             return;
         }
@@ -112,10 +115,7 @@ public class InboxClassifierEventHandler : IDisposable
 
         if (folderLibrary is null)
         {
-            Logger.System(
-                $"InboxClassifier: No folder found for library {@event.LibraryId}",
-                LogEventLevel.Warning
-            );
+            _logger.LogWarning($"InboxClassifier: No folder found for library {@event.LibraryId}");
             return;
         }
 
@@ -129,10 +129,7 @@ public class InboxClassifierEventHandler : IDisposable
 
         if (children.Count == 0)
         {
-            Logger.System(
-                $"InboxClassifier: No children found in inbox root {inboxRoot}",
-                LogEventLevel.Warning
-            );
+            _logger.LogWarning($"InboxClassifier: No children found in inbox root {inboxRoot}");
             return;
         }
 
@@ -156,13 +153,13 @@ public class InboxClassifierEventHandler : IDisposable
             );
             if (fingerprint is { } fp && !_seenContent.TryAdd(fp, childPath))
             {
-                Logger.System(
+                _logger.LogInformation(
                     $"InboxClassifier: skipping {childPath} — duplicate content already seen at {_seenContent[fp]}"
                 );
                 continue;
             }
 
-            Logger.System($"InboxClassifier: Classifying inbox child {childPath}");
+            _logger.LogInformation($"InboxClassifier: Classifying inbox child {childPath}");
 
             try
             {
@@ -202,10 +199,7 @@ public class InboxClassifierEventHandler : IDisposable
             }
             catch (Exception ex)
             {
-                Logger.System(
-                    $"InboxClassifier: Error processing {childPath}: {ex.Message}",
-                    LogEventLevel.Error
-                );
+                _logger.LogError($"InboxClassifier: Error processing {childPath}: {ex.Message}");
 
                 InboxItem failedItem = new()
                 {
@@ -225,9 +219,8 @@ public class InboxClassifierEventHandler : IDisposable
                 }
                 catch (Exception saveEx)
                 {
-                    Logger.System(
-                        $"InboxClassifier: Could not persist Failed item for {childPath}: {saveEx.Message}",
-                        LogEventLevel.Error
+                    _logger.LogError(
+                        $"InboxClassifier: Could not persist Failed item for {childPath}: {saveEx.Message}"
                     );
                 }
 

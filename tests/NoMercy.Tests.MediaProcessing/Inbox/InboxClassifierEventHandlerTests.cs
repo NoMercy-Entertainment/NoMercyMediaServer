@@ -123,6 +123,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
         );
 
         return new InboxClassifierEventHandler(
+            NullLogger<InboxClassifierEventHandler>.Instance,
             _eventBusMock.Object,
             classifier,
             routing,
@@ -421,6 +422,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
             }
 
             InboxClassifierEventHandler handler = new(
+                NullLogger<InboxClassifierEventHandler>.Instance,
                 eventBusMock.Object,
                 classifier,
                 routing,

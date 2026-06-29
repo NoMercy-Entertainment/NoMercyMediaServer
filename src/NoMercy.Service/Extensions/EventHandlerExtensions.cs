@@ -150,6 +150,7 @@ public static class EventHandlerExtensions
             InboxRoutingService routing = sp.GetRequiredService<InboxRoutingService>();
             IStorageFactory storageFactory = sp.GetRequiredService<IStorageFactory>();
             return new InboxClassifierEventHandler(
+                sp.GetRequiredService<ILogger<InboxClassifierEventHandler>>(),
                 eventBus,
                 classifier,
                 routing,
