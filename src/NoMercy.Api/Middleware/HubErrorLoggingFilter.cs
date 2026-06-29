@@ -11,6 +11,7 @@
 
 using System.Security.Claims;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
@@ -23,7 +24,7 @@ namespace NoMercy.Api.Middleware;
 /// SignalR hub filter that logs errors for invalid method calls, wrong arguments, and exceptions.
 /// This helps debug client-side calls to hub methods that don't exist or have incorrect parameters.
 /// </summary>
-public class HubErrorLoggingFilter : IHubFilter
+public class HubErrorLoggingFilter(ILogger<HubErrorLoggingFilter> logger) : IHubFilter
 {
     public async ValueTask<object?> InvokeMethodAsync(
         HubInvocationContext invocationContext,
@@ -37,13 +38,15 @@ public class HubErrorLoggingFilter : IHubFilter
         string? guid = invocationContext.Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
         if (guid == null)
         {
-            Logger.Socket($"[Unknown User]: [{hubName}] No user identifier found in claims.");
+            logger.LogInformation(
+                $"[Unknown User]: [{hubName}] No user identifier found in claims."
+            );
             return await next(invocationContext);
         }
 
         if (!Guid.TryParse(guid, out Guid userId))
         {
-            Logger.Socket(
+            logger.LogInformation(
                 $"[{hubName}] Malformed user GUID claim '{guid}' on connection {connectionId}"
             );
             return await next(invocationContext);
@@ -52,7 +55,7 @@ public class HubErrorLoggingFilter : IHubFilter
 
         if (user == null)
         {
-            Logger.Socket($"[Unknown User]: [{hubName}] User with ID {userId} not found.");
+            logger.LogInformation($"[Unknown User]: [{hubName}] User with ID {userId} not found.");
             return await next(invocationContext);
         }
 
@@ -68,16 +71,20 @@ public class HubErrorLoggingFilter : IHubFilter
         catch (HubException hubEx)
         {
             // HubException is thrown intentionally to send error messages to clients
-            Logger.Socket($"{user.Name}: [{hubName}.{methodName}] Hub exception: {hubEx.Message}");
+            logger.LogInformation(
+                $"{user.Name}: [{hubName}.{methodName}] Hub exception: {hubEx.Message}"
+            );
             throw; // Re-throw to send to client
         }
         catch (InvalidOperationException invalidOpEx)
             when (invalidOpEx.Message.Contains("does not exist"))
         {
             // This catches when a client calls a method that doesn't exist
-            Logger.Socket($"{user.Name}: [{hubName}] ERROR: Method '{methodName}' does not exist!");
-            Logger.Socket($"{user.Name}: [{hubName}] Connection: {connectionId}");
-            Logger.Socket(
+            logger.LogInformation(
+                $"{user.Name}: [{hubName}] ERROR: Method '{methodName}' does not exist!"
+            );
+            logger.LogInformation($"{user.Name}: [{hubName}] Connection: {connectionId}");
+            logger.LogInformation(
                 $"{user.Name}: [{hubName}] Available methods should match public Task methods in the hub class"
             );
 
@@ -90,8 +97,12 @@ public class HubErrorLoggingFilter : IHubFilter
         catch (ArgumentException argEx)
         {
             // This catches parameter binding errors (wrong types, missing required params, etc.)
-            Logger.Socket($"{user.Name}: [{hubName}.{methodName}] ERROR: Invalid arguments");
-            Logger.Socket($"{user.Name}: [{hubName}.{methodName}] Details: {argEx.Message}");
+            logger.LogInformation(
+                $"{user.Name}: [{hubName}.{methodName}] ERROR: Invalid arguments"
+            );
+            logger.LogInformation(
+                $"{user.Name}: [{hubName}.{methodName}] Details: {argEx.Message}"
+            );
 
             if (invocationContext.HubMethodArguments.Count > 0)
             {
@@ -101,13 +112,15 @@ public class HubErrorLoggingFilter : IHubFilter
                         (arg, index) => $"arg{index}: {arg?.GetType().Name ?? "null"}"
                     )
                 );
-                Logger.Socket(
+                logger.LogInformation(
                     $"{user.Name}: [{hubName}.{methodName}] Provided arguments: {argsInfo}"
                 );
             }
             else
             {
-                Logger.Socket($"{user.Name}: [{hubName}.{methodName}] No arguments provided");
+                logger.LogInformation(
+                    $"{user.Name}: [{hubName}.{methodName}] No arguments provided"
+                );
             }
 
             throw new HubException(
@@ -119,12 +132,16 @@ public class HubErrorLoggingFilter : IHubFilter
         catch (Exception ex)
         {
             // Catch all other exceptions during method execution
-            Logger.Socket($"{user.Name}: [{hubName}.{methodName}] ERROR: Unhandled exception");
-            Logger.Socket(
+            logger.LogInformation(
+                $"{user.Name}: [{hubName}.{methodName}] ERROR: Unhandled exception"
+            );
+            logger.LogInformation(
                 $"{user.Name}: [{hubName}.{methodName}] Exception type: {ex.GetType().Name}"
             );
-            Logger.Socket($"{user.Name}: [{hubName}.{methodName}] Message: {ex.Message}");
-            Logger.Socket($"{user.Name}: [{hubName}.{methodName}] Stack trace: {ex.StackTrace}");
+            logger.LogInformation($"{user.Name}: [{hubName}.{methodName}] Message: {ex.Message}");
+            logger.LogInformation(
+                $"{user.Name}: [{hubName}.{methodName}] Stack trace: {ex.StackTrace}"
+            );
 
             if (invocationContext.HubMethodArguments.Count > 0)
             {
@@ -134,7 +151,9 @@ public class HubErrorLoggingFilter : IHubFilter
                         (arg, index) => $"arg{index}: {arg?.GetType().Name ?? "null"}"
                     )
                 );
-                Logger.Socket($"{user.Name}: [{hubName}.{methodName}] Arguments: {argsInfo}");
+                logger.LogInformation(
+                    $"{user.Name}: [{hubName}.{methodName}] Arguments: {argsInfo}"
+                );
             }
 
             throw new HubException(
