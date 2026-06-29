@@ -45,6 +45,12 @@ public sealed class NoMercyLoggerOptions
     /// <summary>How many per-run files to keep (oldest are pruned on start). Default 10.</summary>
     public int MaxRunFiles { get; set; } = 10;
 
+    /// <summary>
+    /// When true, entries from the legacy static <c>Logger</c> are also written to the per-run
+    /// file (transitional, until all call sites use ILogger&lt;T&gt;). Off by default.
+    /// </summary>
+    public bool BridgeLegacyLogger { get; set; }
+
     /// <summary>When set, invoked for every entry (dashboard live-log / event bus bridge).</summary>
     public Action<NoMercyLogRecord>? OnRecord { get; set; }
 }

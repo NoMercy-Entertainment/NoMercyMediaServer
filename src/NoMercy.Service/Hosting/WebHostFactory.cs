@@ -69,6 +69,7 @@ public static class WebHostFactory
                 MinimumLevel = Microsoft.Extensions.Logging.LogLevel.Information,
                 LogDirectory = NoMercy.NmSystem.Information.AppFiles.LogPath,
                 MaxRunFiles = 10,
+                BridgeLegacyLogger = true,
                 WidthProvider = static () =>
                 {
                     try

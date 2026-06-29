@@ -16,7 +16,9 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Logging.Rendering;
+using LegacyLogger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.NmSystem.Logging;
 
@@ -24,8 +26,10 @@ namespace NoMercy.NmSystem.Logging;
 /// <see cref="ILoggerProvider"/> that renders every entry through
 /// <see cref="ConsoleLineRenderer"/>, appends a rich JSON line to a per-run file
 /// (one file per process start, oldest pruned), and optionally hands a
-/// <see cref="NoMercyLogRecord"/> to a callback (dashboard / event bus). Colour
-/// auto-detects (off when redirected or NO_COLOR is set). Writes are serialised.
+/// <see cref="NoMercyLogRecord"/> to a callback (dashboard / event bus). When
+/// <see cref="NoMercyLoggerOptions.BridgeLegacyLogger"/> is set it also captures
+/// entries from the legacy static logger into the same per-run file (transitional).
+/// Colour auto-detects (off when redirected or NO_COLOR is set). Writes are serialised.
 /// </summary>
 public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalScope
 {
@@ -36,6 +40,7 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
     private readonly object _gate = new();
     private readonly bool _color;
     private readonly StreamWriter? _file;
+    private readonly bool _bridged;
     private IExternalScopeProvider? _scopes;
 
     public NoMercyLoggerProvider(NoMercyLoggerOptions options, TextWriter? output = null)
@@ -60,6 +65,12 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
             _file = new StreamWriter(runFile, append: true) { AutoFlush = true };
             PruneRuns(options.LogDirectory, options.MaxRunFiles);
         }
+
+        if (options.BridgeLegacyLogger && _file is not null)
+        {
+            LegacyLogger.LogEmitted += WriteEntry;
+            _bridged = true;
+        }
     }
 
     internal NoMercyLoggerOptions Options => _options;
@@ -72,9 +83,44 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
 
     public void Dispose()
     {
+        if (_bridged)
+            LegacyLogger.LogEmitted -= WriteEntry;
+
         lock (_gate)
         {
             _file?.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Writes a legacy <see cref="LogEntry"/> (from the static logger) to the per-run file only.
+    /// Console output for legacy entries is still produced by the legacy logger itself.
+    /// </summary>
+    public void WriteEntry(LogEntry entry)
+    {
+        if (_file is null)
+            return;
+
+        LogCategory category = LogCategories.Resolve(entry.Type);
+        LogFileLine fileLine = new()
+        {
+            Timestamp = entry.Time.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture),
+            Type = category.Key,
+            Category = category.DisplayName,
+            Group = category.Group,
+            Level = entry.Level,
+            LevelValue = (int)entry.LogLevel,
+            Color = string.IsNullOrEmpty(entry.Color) ? category.DarkHex : entry.Color,
+            Message = entry.Message,
+            Scope = null,
+            Source = entry.Type,
+            ThreadId = entry.ThreadId,
+            Exception = null,
+        };
+
+        lock (_gate)
+        {
+            _file.WriteLine(JsonSerializer.Serialize(fileLine, JsonOptions));
         }
     }
 

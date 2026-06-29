@@ -92,6 +92,40 @@ public class NoMercyLoggerSinkTests
     }
 
     [Fact]
+    public void WriteEntry_AppendsLegacyLineToRunFile()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"nm-logdir-{Guid.NewGuid():N}");
+        try
+        {
+            NoMercyLoggerOptions options = new() { Color = false, LogDirectory = dir };
+            using (NoMercyLoggerProvider provider = new(options, new StringWriter()))
+            {
+                provider.WriteEntry(
+                    new NoMercy.NmSystem.Dto.LogEntry
+                    {
+                        Type = "queue",
+                        Message = "legacy line",
+                        Level = "Information",
+                        ThreadId = 7,
+                        Time = DateTime.UtcNow,
+                    }
+                );
+            }
+
+            string[] runs = Directory.GetFiles(dir, "run-*.jsonl");
+            runs.Should().ContainSingle();
+            string line = File.ReadAllLines(runs[0]).Single();
+            line.Should().Contain("\"Type\":\"queue\"");
+            line.Should().Contain("legacy line");
+        }
+        finally
+        {
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, true);
+        }
+    }
+
+    [Fact]
     public void OnRecord_ReceivesStructuredRecord()
     {
         List<NoMercyLogRecord> received = new();
