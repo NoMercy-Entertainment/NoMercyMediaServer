@@ -21,11 +21,26 @@ using NoMercyQueue.Core.Interfaces;
 using Serilog.Events;
 using Image = NoMercy.Database.Models.Media.Image;
 
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using NoMercyQueue;
 namespace NoMercy.Data.Jobs;
 
 [Serializable]
-public class FanArtImagesJob : IShouldQueue
+public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
 {
+    [JsonIgnore]
+    public ILoggerFactory LoggerFactory { get; set; } = null!;
+
+    [JsonIgnore]
+    private ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
+
+    public void InjectStorageServices(IServiceProvider serviceProvider)
+    {
+        LoggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+    }
+
     public string QueueName => "image";
     public int Priority => 2;
 
@@ -172,7 +187,7 @@ public class FanArtImagesJob : IShouldQueue
         {
             if (e.Message.Contains("404"))
                 return;
-            Logger.FanArt(e.Message, LogEventLevel.Verbose);
+            Log.LogTrace(e.Message);
         }
     }
 
@@ -263,7 +278,7 @@ public class FanArtImagesJob : IShouldQueue
         {
             if (e.Message.Contains("404"))
                 return;
-            Logger.FanArt(e.Message, LogEventLevel.Verbose);
+            Log.LogTrace(e.Message);
         }
     }
 }

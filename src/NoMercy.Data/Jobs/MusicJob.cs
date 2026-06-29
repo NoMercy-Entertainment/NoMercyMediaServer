@@ -27,6 +27,12 @@ namespace NoMercy.Data.Jobs;
 [Serializable]
 public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDisposable
 {
+    [JsonIgnore]
+    public ILoggerFactory LoggerFactory { get; set; } = null!;
+
+    [JsonIgnore]
+    private ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
+
     private readonly MediaContext _mediaContext = new();
 
     public string QueueName => "import";
@@ -59,6 +65,7 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
 
     public void InjectStorageServices(IServiceProvider serviceProvider)
     {
+        LoggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
         StorageFactory = serviceProvider.GetRequiredService<IStorageFactory>();
         storageDriver = serviceProvider.GetRequiredService<IStorageDriver>();
         AudioFingerprinter = serviceProvider.GetRequiredService<IAudioFingerprinter>();
@@ -80,7 +87,7 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
 
         foreach (MediaFolderExtend list in mediaFolder)
         {
-            Logger.App($"Music {list.Path}: Processing");
+            Log.LogInformation("Music {Path}: Processing", list.Path);
 
             MusicLogic music = new(
                 _musicLogicLogger,

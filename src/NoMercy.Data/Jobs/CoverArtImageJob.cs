@@ -20,11 +20,26 @@ using NoMercy.Providers.MusicBrainz.Models;
 using NoMercyQueue.Core.Interfaces;
 using Serilog.Events;
 
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using NoMercyQueue;
 namespace NoMercy.Data.Jobs;
 
 [Serializable]
-public class CoverArtImageJob : IShouldQueue
+public class CoverArtImageJob : IShouldQueue, IJobStorageInjector
 {
+    [JsonIgnore]
+    public ILoggerFactory LoggerFactory { get; set; } = null!;
+
+    [JsonIgnore]
+    private ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
+
+    public void InjectStorageServices(IServiceProvider serviceProvider)
+    {
+        LoggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+    }
+
     public string QueueName => "image";
     public int Priority => 3;
 
@@ -76,7 +91,7 @@ public class CoverArtImageJob : IShouldQueue
         {
             if (e.Message.Contains("404"))
                 return;
-            Logger.CoverArt(e.Message, LogEventLevel.Verbose);
+            Log.LogTrace(e.Message);
         }
     }
 

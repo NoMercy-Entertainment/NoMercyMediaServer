@@ -45,6 +45,12 @@ namespace NoMercy.OpticalMedia.Rip;
 [Serializable]
 public class DiscRipJob : IShouldQueue, IJobStorageInjector
 {
+    [JsonIgnore]
+    public ILoggerFactory LoggerFactory { get; set; } = null!;
+
+    [JsonIgnore]
+    private ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
+
     public string QueueName => "import";
     public int Priority => 5;
 
@@ -115,6 +121,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
 
     public void InjectStorageServices(IServiceProvider serviceProvider)
     {
+        LoggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
         DiscRipper = serviceProvider.GetRequiredService<IDiscRipper>();
         IdentificationService = serviceProvider.GetRequiredService<DiscIdentificationService>();
         StorageFactory = serviceProvider.GetRequiredService<IStorageFactory>();

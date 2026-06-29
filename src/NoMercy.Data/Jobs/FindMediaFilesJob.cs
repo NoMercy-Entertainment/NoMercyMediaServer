@@ -26,11 +26,26 @@ using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Factory;
 using NoMercyQueue.Core.Interfaces;
 
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using NoMercyQueue;
 namespace NoMercy.Data.Jobs;
 
 [Serializable]
-public class FindMediaFilesJob : IShouldQueue
+public class FindMediaFilesJob : IShouldQueue, IJobStorageInjector
 {
+    [JsonIgnore]
+    public ILoggerFactory LoggerFactory { get; set; } = null!;
+
+    [JsonIgnore]
+    private ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
+
+    public void InjectStorageServices(IServiceProvider serviceProvider)
+    {
+        LoggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+    }
+
     public string QueueName => "import";
     public int Priority => 5;
 
@@ -53,7 +68,7 @@ public class FindMediaFilesJob : IShouldQueue
         if (Library == null)
             return;
 
-        Logger.Queue($"Finding media files for {Id} in library {Library.Id.ToString()}");
+        Log.LogDebug("Finding media files for {Id} in library {ToString}", Id, Library.Id.ToString());
 
         await using MediaContext context = new();
         Library? library = await context
@@ -82,7 +97,7 @@ public class FindMediaFilesJob : IShouldQueue
 
         if (file.Files.Count > 0)
         {
-            Logger.App($"Found {file.Files.Count} files in {file.Files.FirstOrDefault()?.Path}");
+            Log.LogInformation("Found {Count} files in {Path}", file.Files.Count, file.Files.FirstOrDefault()?.Path);
 
             if (library.LibraryMovies.Count > 0)
             {
