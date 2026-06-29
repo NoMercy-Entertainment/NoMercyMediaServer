@@ -89,23 +89,39 @@ public static class UserSettings
         if (dumpConfig)
             _configDumpLogged = true;
 
+        // Emit the resolved config as a single, aligned block (one log entry,
+        // rendered under the gutter) instead of one line per key. Logged once
+        // per process at Verbose, with secret values redacted.
+        if (dumpConfig && settings.Count > 0)
+        {
+            int width = 0;
+            foreach (string key in settings.Keys)
+                if (key.Length > width)
+                    width = key.Length;
+
+            System.Text.StringBuilder builder = new();
+            builder.Append($"Configuration ({settings.Count} key(s)):");
+            foreach (KeyValuePair<string, string> entry in settings)
+            {
+                bool isSecret =
+                    entry.Key.Contains("token", StringComparison.OrdinalIgnoreCase)
+                    || entry.Key.Contains("ssl_", StringComparison.OrdinalIgnoreCase)
+                    || entry.Key.Contains("fingerprint", StringComparison.OrdinalIgnoreCase)
+                    || entry.Key.Contains("secret", StringComparison.OrdinalIgnoreCase);
+                builder
+                    .Append('\n')
+                    .Append("  ")
+                    .Append(entry.Key.PadRight(width))
+                    .Append(" = ")
+                    .Append(isSecret && !string.IsNullOrEmpty(entry.Value) ? "***" : entry.Value);
+            }
+
+            Logger.App(builder.ToString(), LogEventLevel.Verbose);
+        }
+
         using AppDbContext appContext = new();
         foreach (KeyValuePair<string, string> setting in settings)
         {
-            if (dumpConfig)
-            {
-                bool secret =
-                    setting.Key.Contains("token", StringComparison.OrdinalIgnoreCase)
-                    || setting.Key.Contains("ssl_", StringComparison.OrdinalIgnoreCase)
-                    || setting.Key.Contains("fingerprint", StringComparison.OrdinalIgnoreCase)
-                    || setting.Key.Contains("secret", StringComparison.OrdinalIgnoreCase);
-                Logger.App(
-                    $"Configuration: {setting.Key} = "
-                        + (secret && !string.IsNullOrEmpty(setting.Value) ? "***" : setting.Value),
-                    LogEventLevel.Verbose
-                );
-            }
-
             switch (setting.Key)
             {
                 case "internalPort"
