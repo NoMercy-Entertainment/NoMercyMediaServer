@@ -318,3 +318,32 @@ Edge: a nested interpolated string inside a hole (`{$"driver:{x}"}`) can yield a
 placeholder/arg count mismatch (CA2017) — the build catches it; fix by hand.
 53ac4bb5 retrofitted 50 already-converted files (incl. pre-existing ILogger usage in
 Encoder) to structured templates, 0/0.
+
+---
+
+## Wave-2 progress update (L12 — Pure ILogger<T>) — MediaProcessing pass
+
+### Committed (build clean ERR=0/WARN=0, pushed to refactor/slices)
+- TV managers: Show/Season/Episode managers → `ILogger<T>` (appended last); `EpisodeManager.Collect` made instance.
+- Movie/Person managers → `ILogger<T>`; MovieManagerTests construction site uses `NullLogger<MovieManager>.Instance`.
+- Music/Library managers → `ILogger<T>`: Artist, Release, Collection, Recording, ReleaseGroup, Library
+  (Library: logger inserted BEFORE the optional `IEventBus? eventBus = null`).
+  - Added `[JsonIgnore] public ILoggerFactory LoggerFactory` + injection to `AbstractMusicFolderJob` and
+    `AbstractMusicEncoderJob` (mirrors `AbstractMediaJob`).
+  - `MusicEncodeJob.InjectStorageServices` (a `new`/interface re-impl) now calls
+    `base.InjectStorageServices(serviceProvider)` first (previously skipped base → StorageFactory/Driver/LoggerFactory unset).
+  - Manager construction sites in jobs supply `LoggerFactory.CreateLogger<X>()`; LibraryScan/Rescan insert logger before `eventBus`.
+- `FileListService` + `PersonRepository` → `ILogger<T>` (PersonRepository sites: 6 extras/refresh jobs via `LoggerFactory.CreateLogger<PersonRepository>()`; FileListService test sites via `NullLogger<FileListService>.Instance`).
+- `RecordingManager` leftover `Logger.MusicBrainz(e, …)` (a bare-exception call migrate skipped) → `logger.LogError(e, "Failed to store recording artist metadata")`.
+
+### DEFERRED in MediaProcessing (NOT bridgeable to ctor `ILogger<T>` without bigger rework) — with reasons
+- `MediaIdentificationService`: all 6 log calls are in **static** methods → CS9105 with primary-ctor param. (Reverted; stays on bridge.)
+- Image managers `CoverArtImageManagerManager`, `FanArtImageManager`: logging predominantly in **static** methods (FanArt: 3 instance / 1 static `Add`). Static seam.
+- Watchers `LibraryFileWatcher` (Lazy<> singleton + static stores/methods), `FolderWatcher`, `StowageWatcher`: static singleton subsystem. Static seam.
+- `FileManager` (partial) + `FileRepository`: `new`'d deep in call chains (jobs, `LibraryManager.Process`, **Api `LibrariesController`**, `FileWatcherEventHandler`) and have static helper methods that log. Needs DI-ification (M/N/O) to thread `ILogger<T>` cleanly; LibraryManager would need an `ILoggerFactory`. Deferred.
+- `Common/MetadataRetry`: static. Deferred.
+- **Jobs' own logging** (VideoEncodeJob 28, AudioImportJob 9, EncodeTaskJob 6, MusicEncodeJob 5, ReleaseImportJob 2, MusicMetadataJob 2, MovieImportJob 2, + 1-call extras/rescan jobs): jobs are queue-deserialized → cannot ctor-inject `ILogger<T>`.
+  - **Planned approach when tackled**: add a `protected ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());` accessor to the job base classes (they have/will-have `LoggerFactory`), then convert each job's INSTANCE-context `Logger.X` → `Log.LogX` (migrate expr="Log") + structure. Leave **static-method** log calls (e.g. `VideoEncodeJob.SummarizeFailures`) on the legacy bridge.
+  - Bases still needing a `LoggerFactory` hook first: `AbstractEncoderJob` (INJ=1, add property+resolve) for Video/EncodeTask; `AbstractMusicDescriptionJob` (no injector at all → needs `IJobStorageInjector` + InjectStorageServices) for MusicMetadata. Other bases already have `LoggerFactory`.
+
+### Endgame (unchanged, LAST): delete `Logger.cs`, remove `BridgeLegacyLogger`, drop Serilog packages.
