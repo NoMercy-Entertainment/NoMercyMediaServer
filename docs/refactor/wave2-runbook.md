@@ -90,3 +90,74 @@ Acceptance: `grep -rn "SystemCalls.Logger" src` -> 0 (except its own deletion); 
   BridgeLegacyLogger option/subscription. Drop now-unused Serilog packages.
 - Acceptance: grep -rn "SystemCalls.Logger" src -> 0; full-solution build 0/0; csharpier clean.
 - NOTE: this is a multi-session migration; each session resumes here and continues the next project.
+
+---
+
+## L12 progress log (pure ILogger<T>)
+
+### Accurate per-project `Logger.` site counts (grep `\bLogger\.`, excl bin/obj)
+OpticalMedia 10 (DONE) · Providers 37 · Data 60 · NmSystem 76 · Networking 90 ·
+Service 131 · Setup 155 · Api 167 · MediaProcessing 269.
+(NOTE: earlier counts undercounted — the category/provider methods like
+`MovieDb`, `MusicBrainz`, `Ping`, `Ripper`, `Socket`, `LogEmitted` were missing
+from the regex. Repo-wide top categories: App 276, Setup 253, MovieDb 101,
+Socket 69, System 56, Encoder 53, Auth 35, MusicBrainz 33.)
+
+### KEY DECISION — what the mechanical L12 pass does and does NOT touch
+The legacy `NoMercy.NmSystem.SystemCalls.Logger` is a static class with category
+methods (App/Setup/Socket/Encoder/MovieDb/Ripper/…), each `(<T> message,
+LogEventLevel level)`, plus Debug/Info/Warning/Error/Verbose, plus the
+log-management API (`LogEmitted` event, `GetLogs`, `SetLogLevel`, `LogTypes`,
+`LogType`, `WriteBanner`, `GetColor`). All legacy calls ALREADY render through the
+new logging pipeline via `BridgeLegacyLogger`, so nothing is visually broken today.
+
+- **Mechanical L12 pass = DI-lifecycle classes only** (controllers, SignalR hubs,
+  middleware, hosted/DI-registered services, DI-registered managers). These get a
+  ctor-injected `ILogger<T>` cleanly, and converting them upgrades generic
+  categories (App/Socket) to proper per-type categories/colors (the console goal).
+- **DEFER to the N/O boot/registration slices:** classes that are `new`'d ad-hoc
+  (NOT DI-resolved). Chief example: **all NoMercy.Providers HTTP clients**
+  (`BaseClient`/`ExternalApiClient` derivatives — parameterless / `(Guid id)` ctors,
+  static `HttpClientProvider`/`Queue`, constructed throughout Data/MediaProcessing).
+  Injecting `ILogger<T>` into them forces either a NEW global static factory seam
+  (exactly the "global helper" the user wants killed) or a huge construction
+  cascade. Correct fix = make them DI-resolved in N/O, THEN inject. Until then they
+  keep legacy `Logger.<Provider>` calls (which route via the bridge). Queue jobs
+  (`IShouldQueue`) similarly use service-locator logger (the established pattern,
+  e.g. DiscRipJob/BundleSlugRenamer) — acceptable.
+- **Log-management API consumers** (Api: LogController, LogBroadcastService,
+  WebSockets, ResourceMonitorService, DashboardHub's ILogBroadcastService usage):
+  do NOT convert `GetLogs/SetLogLevel/LogEmitted/LogTypes/LogType` to ILogger.
+  These need equivalent query/subscribe APIs re-provided on NoMercyLoggerProvider
+  first (a dedicated task). Skip those files in the mechanical pass.
+- **Delete `Logger.cs` + remove BridgeLegacyLogger + drop Serilog packages = LAST**,
+  only after providers/jobs are DI-ified and the management API is re-provided.
+
+### Proven per-class pattern (used for hubs)
+Add ctor param `ILogger<TSelf> logger` (insert as FIRST param to dodge trailing
+optional params), `private readonly ILogger<TSelf> _logger;` field, assign in body.
+Partial classes: field in main partial, other partials just use `_logger`. Then
+rewrite calls: `Logger.Cat(msg)` → `_logger.LogInformation(msg)`;
+`Logger.Cat(msg, LogEventLevel.X)` → `_logger.Log{Trace|Debug|Information|Warning|Error|Critical}(msg)`
+(Verbose→Trace, Fatal→Critical). Most categories default to Information; Queue/Request
+default Debug. Remove `using Serilog.Events;` when LogEventLevel drops out; add
+`using Microsoft.Extensions.Logging;`. `Logger.X(ex)` (Exception arg) needs a template:
+`_logger.LogError(ex, "...")` — handle manually, the green gate catches the miscompile.
+Edits via /home/claude/edit_*.py with exact-string replace + count asserts; csharpier
+format changed files; build `NoMercy.Server.sln -p:AllowMissingPrunePackageData=true`;
+commit only if ERR=0 AND WARN=0; push refactor/slices.
+
+### Commits landed this stretch
+- 5f392962 refactor(encoder): BundleSlugRenamer uses ILogger<T> (L12)
+- 8ab3f697 refactor(optical): drive backends use ILogger<T> (L12)
+- d149e019 refactor(api): SignalR hubs use ILogger<T> (L12)  [Cast/Drives/Dashboard/Ripper]
+
+### Next up (Api, mechanical)
+VideoHub (+VideoHub.Playback, has `Logger.App(ex)` + multiline) ; MusicHub
+(+Devices/+Playback) ; then simple controllers (App/Setup/Encoder/Http single-line
+calls): TvShows/Albums/Artists/Collections/Movies/Playlists/Home/Libraries/Drivers/
+Server/Management/Image/Filesystem/Configuration/UserData ; middleware
+(GlobalExceptionHandler/TokenParamAuth/AccessLog/DynamicStaticFiles/
+HubErrorLoggingFilter/EncoderRuntimeException) ; EventHandlers ; Services
+(Encoder/Recommendation/VideoPlayback). SKIP LogController, LogBroadcastService,
+WebSockets/ResourceMonitorService (management-API consumers).
