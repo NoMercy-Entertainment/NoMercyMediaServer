@@ -13,6 +13,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
@@ -28,7 +29,6 @@ using NoMercy.Providers.KitsuIo;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.TV;
 using NoMercyQueue.Core.Interfaces;
-using Serilog.Events;
 using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 
 namespace NoMercy.Api.Controllers.V1.Media;
@@ -42,7 +42,8 @@ public class TvShowsController(
     ITvShowRepository tvShowRepository,
     ILibraryRepository libraryRepository,
     IJobDispatcher jobDispatcher,
-    ITvShowMetadataProvider tvShowMetadataProvider
+    ITvShowMetadataProvider tvShowMetadataProvider,
+    ILogger<TvShowsController> logger
 ) : BaseController
 {
     [HttpGet]
@@ -219,7 +220,7 @@ public class TvShowsController(
         }
         catch (Exception e)
         {
-            Logger.Encoder(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
             return InternalServerErrorResponse(e.Message);
         }
 
@@ -349,7 +350,7 @@ public class TvShowsController(
         }
         catch (Exception e)
         {
-            Logger.Encoder(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
             return InternalServerErrorResponse(e.Message);
         }
 

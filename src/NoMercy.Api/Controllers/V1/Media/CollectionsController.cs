@@ -13,6 +13,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
@@ -29,7 +30,6 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Collections;
 using NoMercyQueue.Core.Interfaces;
-using Serilog.Events;
 using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 
 namespace NoMercy.Api.Controllers.V1.Media;
@@ -43,7 +43,8 @@ public class CollectionsController(
     ICollectionRepository collectionRepository,
     ILibraryRepository libraryRepository,
     IJobDispatcher jobDispatcher,
-    ICollectionMetadataProvider collectionMetadataProvider
+    ICollectionMetadataProvider collectionMetadataProvider,
+    ILogger<CollectionsController> logger
 ) : BaseController
 {
     [HttpGet]
@@ -293,7 +294,7 @@ public class CollectionsController(
         }
         catch (Exception e)
         {
-            Logger.Encoder(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
             return InternalServerErrorResponse(e.Message);
         }
 
@@ -332,7 +333,7 @@ public class CollectionsController(
         }
         catch (Exception e)
         {
-            Logger.Encoder(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
             return InternalServerErrorResponse(e.Message);
         }
 
@@ -379,7 +380,7 @@ public class CollectionsController(
         }
         catch (Exception e)
         {
-            Logger.Encoder(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
             return InternalServerErrorResponse(e.Message);
         }
 

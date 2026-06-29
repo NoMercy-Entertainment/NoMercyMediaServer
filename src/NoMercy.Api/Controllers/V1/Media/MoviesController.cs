@@ -13,6 +13,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Authorization;
@@ -27,7 +28,6 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercyQueue.Core.Interfaces;
-using Serilog.Events;
 using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 
 namespace NoMercy.Api.Controllers.V1.Media;
@@ -42,7 +42,8 @@ public class MoviesController(
     ILibraryRepository libraryRepository,
     IJobDispatcher jobDispatcher,
     IMovieMetadataProvider movieMetadataProvider,
-    IServerConfiguration config
+    IServerConfiguration config,
+    ILogger<MoviesController> logger
 ) : BaseController
 {
     [HttpGet]
@@ -217,7 +218,7 @@ public class MoviesController(
         }
         catch (Exception e)
         {
-            Logger.Encoder(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
             return InternalServerErrorResponse(e.Message);
         }
 
@@ -247,7 +248,7 @@ public class MoviesController(
         }
         catch (Exception e)
         {
-            Logger.Encoder(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
             return InternalServerErrorResponse(e.Message);
         }
 
@@ -297,7 +298,7 @@ public class MoviesController(
         }
         catch (Exception e)
         {
-            Logger.Encoder(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
             return InternalServerErrorResponse(e.Message);
         }
 
