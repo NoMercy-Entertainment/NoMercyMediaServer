@@ -13,12 +13,12 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Authorization;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.SystemCalls;
-using Serilog.Events;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Filesystem;
 
@@ -27,13 +27,15 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Filesystem;
 [ApiVersion(1.0)]
 [Authorize(Policy = "Moderator")]
 [Route("api/v{version:apiVersion}/dashboard/filesystem")]
-public class FilesystemController(FilesystemRepository filesystem) : BaseController
+public class FilesystemController(
+    FilesystemRepository filesystem,
+    ILogger<FilesystemController> logger
+) : BaseController
 {
     [HttpPost]
     [Route("ls")]
     public IActionResult List([FromBody] DirectoryListRequest request)
     {
-
         try
         {
             (string? parent, List<DirectoryTree> entries) = filesystem.List(
@@ -53,7 +55,7 @@ public class FilesystemController(FilesystemRepository filesystem) : BaseControl
         }
         catch (Exception e)
         {
-            Logger.App(e, LogEventLevel.Error);
+            logger.LogError(e, "Filesystem request failed");
             return InternalServerErrorResponse(
                 "Something went wrong retrieving the directory tree"
             );
@@ -64,7 +66,6 @@ public class FilesystemController(FilesystemRepository filesystem) : BaseControl
     [Route("home")]
     public IActionResult Home([FromBody] DirectoryListRequest? request)
     {
-
         bool withEmpty = request?.WithEmpty ?? false;
 
         try
@@ -83,7 +84,7 @@ public class FilesystemController(FilesystemRepository filesystem) : BaseControl
         }
         catch (Exception e)
         {
-            Logger.App(e, LogEventLevel.Error);
+            logger.LogError(e, "Filesystem request failed");
             return InternalServerErrorResponse(
                 "Something went wrong retrieving the home directory"
             );
@@ -94,7 +95,6 @@ public class FilesystemController(FilesystemRepository filesystem) : BaseControl
     [Route("roots")]
     public IActionResult Roots([FromBody] DirectoryListRequest? request)
     {
-
         bool withEmpty = request?.WithEmpty ?? false;
 
         try
@@ -113,7 +113,7 @@ public class FilesystemController(FilesystemRepository filesystem) : BaseControl
         }
         catch (Exception e)
         {
-            Logger.App(e, LogEventLevel.Error);
+            logger.LogError(e, "Filesystem request failed");
             return InternalServerErrorResponse("Something went wrong retrieving the drive list");
         }
     }
@@ -122,7 +122,6 @@ public class FilesystemController(FilesystemRepository filesystem) : BaseControl
     [Route("mkdir")]
     public IActionResult Mkdir([FromBody] MkdirRequest request)
     {
-
         try
         {
             string path = filesystem.Mkdir(request.Parent, request.Name);
@@ -142,7 +141,7 @@ public class FilesystemController(FilesystemRepository filesystem) : BaseControl
         }
         catch (Exception e)
         {
-            Logger.App(e, LogEventLevel.Error);
+            logger.LogError(e, "Filesystem request failed");
             return InternalServerErrorResponse("Something went wrong creating the folder");
         }
     }

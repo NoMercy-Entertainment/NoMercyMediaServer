@@ -12,6 +12,7 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.Controllers.V1.Music;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
@@ -33,7 +34,8 @@ namespace NoMercy.Api.Controllers.V1.Media;
 public class UserDataController(
     IHomeRepository homeRepository,
     IUserDataRepository userDataRepository,
-    IEventBus eventBus
+    IEventBus eventBus,
+    ILogger<UserDataController> logger
 ) : BaseController
 {
     [HttpGet]
@@ -97,7 +99,7 @@ public class UserDataController(
         if (userData.Count == 0)
             return NotFoundResponse("Item not found");
 
-        Logger.Socket(userData);
+        logger.LogInformation("{UserData}", userData);
 
         await userDataRepository.DeleteUserDataAsync(userData);
 

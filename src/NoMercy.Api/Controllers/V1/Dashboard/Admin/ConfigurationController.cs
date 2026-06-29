@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.Controllers.V1.Music;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
@@ -27,7 +28,6 @@ using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercyQueue;
-using Serilog.Events;
 using Configuration = NoMercy.Database.Models.Common.Configuration;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
@@ -42,7 +42,8 @@ public class ConfigurationController(
     QueueRunner queueRunner,
     IActivityLogger activityLogger,
     ILanguageRepository languageRepository,
-    RuntimeServerSettings runtimeSettings
+    RuntimeServerSettings runtimeSettings,
+    ILogger<ConfigurationController> logger
 ) : BaseController
 {
     [HttpGet]
@@ -314,7 +315,7 @@ public class ConfigurationController(
             }
             catch (Exception ex)
             {
-                Logger.Setup($"Failed to log config change: {ex.Message}", LogEventLevel.Warning);
+                logger.LogWarning($"Failed to log config change: {ex.Message}");
             }
         }
 
