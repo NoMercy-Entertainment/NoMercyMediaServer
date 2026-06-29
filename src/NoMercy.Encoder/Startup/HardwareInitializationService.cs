@@ -88,35 +88,30 @@ public class HardwareInitializationService(
             // back to CPU-only so a genuinely GPU-less host still works.
             await ProbeWithRetryAsync(ct).ConfigureAwait(false);
 
-            logger.LogInformation(
-                "FFmpeg: {EncoderCount} encoders, {FilterCount} filters",
-                ffmpegCapabilities.AvailableEncoders.Count,
-                ffmpegCapabilities.AvailableFilters.Count
-            );
-
             IReadOnlyList<GpuDevice> gpus = await hardwareDetector
                 .DetectGpusAsync(ct)
                 .ConfigureAwait(false);
             int cpuCores = await hardwareDetector.DetectCpuCoreCountAsync(ct).ConfigureAwait(false);
 
-            logger.LogInformation(
-                "Detected {GpuCount} GPU(s), {CpuCores} CPU cores",
-                gpus.Count,
-                cpuCores
-            );
-
-            foreach (GpuDevice gpu in gpus)
-                logger.LogInformation(
-                    "GPU: {Vendor} {Name} ({VramMb}MB VRAM, max {Sessions} sessions)",
-                    gpu.Vendor,
-                    gpu.Name,
-                    gpu.VramMb,
-                    gpu.MaxEncoderSessions
-                );
-
             Capabilities = new HardwareCapabilities(gpus, cpuCores);
             IsReady = true;
-            logger.LogInformation("Hardware detection complete. Encoder ready.");
+
+            System.Text.StringBuilder summary = new();
+            summary.Append("Hardware detection complete - encoder ready:");
+            summary.Append(
+                $"\n  FFmpeg : {ffmpegCapabilities.AvailableEncoders.Count} encoders, "
+                    + $"{ffmpegCapabilities.AvailableFilters.Count} filters"
+            );
+            summary.Append($"\n  CPU    : {cpuCores} cores");
+            if (gpus.Count == 0)
+                summary.Append("\n  GPU    : none (software-only)");
+            else
+                foreach (GpuDevice gpu in gpus)
+                    summary.Append(
+                        $"\n  GPU    : {gpu.Vendor} {gpu.Name} "
+                            + $"({gpu.VramMb}MB VRAM, max {gpu.MaxEncoderSessions} sessions)"
+                    );
+            logger.LogInformation("{HardwareSummary}", summary.ToString());
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

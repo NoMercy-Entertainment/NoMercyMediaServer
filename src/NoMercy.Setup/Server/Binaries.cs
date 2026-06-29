@@ -106,6 +106,8 @@ public class Binaries
         return false;
     }
 
+    private readonly List<string> _binaryReport = new();
+
     public Task DownloadAll()
     {
         return Task.Run(async () =>
@@ -132,6 +134,12 @@ public class Binaries
                     tesseractLanguages.Add(currentCulture);
             }
             await DownloadTesseractData(tesseractLanguages);
+
+            if (_binaryReport.Count > 0)
+                Logger.Setup(
+                    "Binaries up to date: " + string.Join(", ", _binaryReport),
+                    LogEventLevel.Verbose
+                );
         });
     }
 
@@ -245,7 +253,7 @@ public class Binaries
 
         if (CheckLocalVersion(releaseInfo, AppFiles.AppExePath, out string version))
         {
-            Logger.Setup($"App is already up to date (version {version})", LogEventLevel.Verbose);
+            _binaryReport.Add($"App = {version}");
             return;
         }
 
@@ -333,10 +341,7 @@ public class Binaries
 
         if (CheckLocalVersion(releaseInfo, AppFiles.LauncherExePath, out string version))
         {
-            Logger.Setup(
-                $"Launcher is already up to date (version {version})",
-                LogEventLevel.Verbose
-            );
+            _binaryReport.Add($"Launcher = {version}");
             return;
         }
 
@@ -427,7 +432,7 @@ public class Binaries
 
         if (CheckLocalVersion(releaseInfo, AppFiles.CliExePath, out string version))
         {
-            Logger.Setup($"CLI is already up to date (version {version})", LogEventLevel.Verbose);
+            _binaryReport.Add($"CLI = {version}");
             return;
         }
 
@@ -512,10 +517,7 @@ public class Binaries
 
         if (string.Equals(latestVersion, currentVersion, StringComparison.OrdinalIgnoreCase))
         {
-            Logger.Setup(
-                $"Server is already up to date (version {currentVersion})",
-                LogEventLevel.Verbose
-            );
+            _binaryReport.Add($"Server = {currentVersion}");
             return ServerUpdateResult.AlreadyUpToDate;
         }
 
@@ -525,10 +527,7 @@ public class Binaries
             && latest <= current
         )
         {
-            Logger.Setup(
-                $"Server is already up to date (running {currentVersion}, latest release {latestVersion})",
-                LogEventLevel.Verbose
-            );
+            _binaryReport.Add($"Server = {currentVersion}");
             return ServerUpdateResult.AlreadyUpToDate;
         }
 
@@ -680,10 +679,7 @@ public class Binaries
 
         if (CheckLocalVersion(releaseInfo, AppFiles.FfmpegPath, out string version))
         {
-            Logger.Setup(
-                $"Ffmpeg is already up to date (version {version})",
-                LogEventLevel.Verbose
-            );
+            _binaryReport.Add($"Ffmpeg = {version}");
             return;
         }
 
@@ -797,10 +793,7 @@ public class Binaries
 
         if (CheckLocalVersion(releaseInfo, AppFiles.YtdlpPath, out string version))
         {
-            Logger.Setup(
-                $"Yt-dlp is already up to date (version {version})",
-                LogEventLevel.Verbose
-            );
+            _binaryReport.Add($"Yt-dlp = {version}");
             return;
         }
 
@@ -883,10 +876,7 @@ public class Binaries
 
         if (CheckLocalVersion(releaseInfo, destinationPath, out string version))
         {
-            Logger.Setup(
-                $"Cloudflared is already up to date (version {version})",
-                LogEventLevel.Verbose
-            );
+            _binaryReport.Add($"Cloudflared = {version}");
             return;
         }
 
@@ -996,10 +986,7 @@ public class Binaries
 
         if (CheckLocalVersion(releaseInfo, destinationPath, out string version))
         {
-            Logger.Setup(
-                $"Whisper LLM model is already up to date (version {version})",
-                LogEventLevel.Verbose
-            );
+            _binaryReport.Add($"Whisper = {version}");
             return;
         }
 
@@ -1101,10 +1088,7 @@ public class Binaries
 
             if (CheckLocalVersion(releaseInfo, destinationPath, out string version))
             {
-                Logger.Setup(
-                    $"Tesseract data for {lang} is already up to date (version {version})",
-                    LogEventLevel.Verbose
-                );
+                _binaryReport.Add($"Tesseract[{lang}] = {version}");
                 continue;
             }
 
