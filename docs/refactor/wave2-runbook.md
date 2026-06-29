@@ -15,11 +15,11 @@ unchecked box. The standing order stays in force across resets.
 4. Explicit types only (never var). Licence header on every new file. No Co-Authored-By.
    No model identifiers anywhere in commits/code/PRs.
 5. Add/adjust tests for the task's Gate; run the relevant tests.
-6. Commit (Conventional Commits, scope per slice). Push to refactor/wave-2 (retry on network err).
+6. Commit (Conventional Commits, scope per slice). Push to refactor/slices (retry on network err).
 7. Tick the box below; go to next. No pausing.
 
 ## Baseline
-- Branch: refactor/wave-2
+- Branch: refactor/slices
 - Build warnings baseline: SEE build-baseline below (filled on first run)
 
 ## Optimized order (adapt only for hard deps: C3<-B2, C4<-B3, E2<-E1, O1<-N2)
