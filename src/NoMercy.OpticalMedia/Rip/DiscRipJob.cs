@@ -129,7 +129,11 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
         DriveLockRegistry = serviceProvider.GetRequiredService<DriveLockRegistry>();
         Logger = serviceProvider.GetRequiredService<ILogger<DiscRipJob>>();
         AudioMetadataWriter = serviceProvider.GetRequiredService<IAudioMetadataWriter>();
-        MusicBrainzReleaseClient = serviceProvider.GetRequiredService<MusicBrainzReleaseClient>();
+        // MusicBrainzReleaseClient is not a registered DI service; it is
+        // constructed on demand everywhere else (ReleaseManager,
+        // FileRepository, AudioImportJob). Resolving it from the provider
+        // threw at activation, so construct it directly like the rest.
+        MusicBrainzReleaseClient = new();
         JobDispatcher = QueueRunner.Current?.Dispatcher;
     }
 
