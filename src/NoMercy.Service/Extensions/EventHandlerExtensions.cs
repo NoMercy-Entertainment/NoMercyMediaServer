@@ -72,7 +72,12 @@ public static class EventHandlerExtensions
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IStorageDriver storageDriver = sp.GetRequiredService<IStorageDriver>();
             IStorageFactory storageFactory = sp.GetRequiredService<IStorageFactory>();
-            return new(eventBus, storageDriver, storageFactory);
+            return new(
+                sp.GetRequiredService<ILogger<FileWatcherEventHandler>>(),
+                eventBus,
+                storageDriver,
+                storageFactory
+            );
         });
 
         services.AddSingleton<FolderPathEventHandler>(sp =>

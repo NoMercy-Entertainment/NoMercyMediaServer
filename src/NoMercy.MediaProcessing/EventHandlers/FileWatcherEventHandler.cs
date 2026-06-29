@@ -11,6 +11,7 @@
 
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
@@ -29,7 +30,6 @@ using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
 using NoMercy.Storage;
-using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.EventHandlers;
 
@@ -40,12 +40,16 @@ public class FileWatcherEventHandler : IDisposable
     private readonly IStorageDriver _storageDriver;
     private readonly IStorageFactory _storageFactory;
 
+    private readonly ILogger<FileWatcherEventHandler> _logger;
+
     public FileWatcherEventHandler(
+        ILogger<FileWatcherEventHandler> logger,
         IEventBus eventBus,
         IStorageDriver storageDriver,
         IStorageFactory storageFactory
     )
     {
+        _logger = logger;
         _storageDriver = storageDriver;
         _storageFactory = storageFactory;
         _subscriptions.Add(eventBus.Subscribe<FileCreatedEvent>(OnFileCreated));
@@ -58,7 +62,9 @@ public class FileWatcherEventHandler : IDisposable
         await _semaphore.WaitAsync(ct);
         try
         {
-            Logger.System($"FileWatcher: Processing new/changed content in {@event.FolderPath}");
+            _logger.LogInformation(
+                $"FileWatcher: Processing new/changed content in {@event.FolderPath}"
+            );
 
             MediaScan mediaScan = new(_storageDriver);
             MediaScan scan = mediaScan.EnableFileListing();
@@ -70,10 +76,7 @@ public class FileWatcherEventHandler : IDisposable
 
             if (mediaFolders.Count == 0)
             {
-                Logger.System(
-                    $"FileWatcher: No media found in {@event.FolderPath}",
-                    LogEventLevel.Warning
-                );
+                _logger.LogWarning($"FileWatcher: No media found in {@event.FolderPath}");
                 return;
             }
 
@@ -97,10 +100,7 @@ public class FileWatcherEventHandler : IDisposable
         }
         catch (Exception ex)
         {
-            Logger.System(
-                $"FileWatcher: Error processing {@event.FolderPath}: {ex.Message}",
-                LogEventLevel.Error
-            );
+            _logger.LogError($"FileWatcher: Error processing {@event.FolderPath}: {ex.Message}");
         }
         finally
         {
@@ -112,7 +112,7 @@ public class FileWatcherEventHandler : IDisposable
     {
         try
         {
-            Logger.System($"FileWatcher: Processing deletion of {@event.FullPath}");
+            _logger.LogInformation($"FileWatcher: Processing deletion of {@event.FullPath}");
 
             string hostFolder = Path.GetDirectoryName(@event.FullPath).OrEmpty();
             string filename = "/" + Path.GetFileName(@event.FullPath);
@@ -125,7 +125,7 @@ public class FileWatcherEventHandler : IDisposable
             );
             int metadataDeleted = await fileRepository.DeleteMetadataByHostFolderAsync(hostFolder);
 
-            Logger.System(
+            _logger.LogInformation(
                 $"FileWatcher: Deleted {videoFilesDeleted} video file(s) and {metadataDeleted} metadata record(s) for {hostFolder}"
             );
 
@@ -138,9 +138,8 @@ public class FileWatcherEventHandler : IDisposable
         }
         catch (Exception ex)
         {
-            Logger.System(
-                $"FileWatcher: Error processing deletion of {@event.FullPath}: {ex.Message}",
-                LogEventLevel.Error
+            _logger.LogError(
+                $"FileWatcher: Error processing deletion of {@event.FullPath}: {ex.Message}"
             );
         }
     }
@@ -149,7 +148,7 @@ public class FileWatcherEventHandler : IDisposable
     {
         try
         {
-            Logger.System(
+            _logger.LogInformation(
                 $"FileWatcher: Processing rename from {@event.OldFullPath} to {@event.NewFullPath}"
             );
 
@@ -170,7 +169,7 @@ public class FileWatcherEventHandler : IDisposable
 
             if (updated > 0)
             {
-                Logger.System(
+                _logger.LogInformation(
                     $"FileWatcher: Updated {updated} video file path(s) from {oldHostFolder} to {newHostFolder}"
                 );
 
@@ -183,9 +182,8 @@ public class FileWatcherEventHandler : IDisposable
             }
             else
             {
-                Logger.System(
-                    "FileWatcher: No matching records found for rename, treating as new content",
-                    LogEventLevel.Debug
+                _logger.LogDebug(
+                    "FileWatcher: No matching records found for rename, treating as new content"
                 );
                 await OnFileCreated(
                     new()
@@ -200,28 +198,21 @@ public class FileWatcherEventHandler : IDisposable
         }
         catch (Exception ex)
         {
-            Logger.System(
-                $"FileWatcher: Error processing rename from {@event.OldFullPath} to {@event.NewFullPath}: {ex.Message}",
-                LogEventLevel.Error
+            _logger.LogError(
+                $"FileWatcher: Error processing rename from {@event.OldFullPath} to {@event.NewFullPath}: {ex.Message}"
             );
         }
     }
 
-    private static async Task HandleMovieFolder(
-        FileCreatedEvent @event,
-        MediaFolderExtend mediaFolder
-    )
+    private async Task HandleMovieFolder(FileCreatedEvent @event, MediaFolderExtend mediaFolder)
     {
         if (mediaFolder.Parsed.Title is null)
         {
-            Logger.System(
-                $"FileWatcher: Could not parse title from {mediaFolder.Path}",
-                LogEventLevel.Warning
-            );
+            _logger.LogWarning($"FileWatcher: Could not parse title from {mediaFolder.Path}");
             return;
         }
 
-        Logger.System(
+        _logger.LogInformation(
             $"FileWatcher: Movie {mediaFolder.Path}: Searching TMDB for '{mediaFolder.Parsed.Title}'"
         );
 
@@ -233,9 +224,8 @@ public class FileWatcherEventHandler : IDisposable
 
         if (response?.Results is null || response.Results.Count == 0)
         {
-            Logger.System(
-                $"FileWatcher: No TMDB results found for movie '{mediaFolder.Parsed.Title}'",
-                LogEventLevel.Warning
+            _logger.LogWarning(
+                $"FileWatcher: No TMDB results found for movie '{mediaFolder.Parsed.Title}'"
             );
             return;
         }
@@ -254,14 +244,13 @@ public class FileWatcherEventHandler : IDisposable
                 < MinMatchConfidence
         )
         {
-            Logger.System(
-                $"FileWatcher: No confident TMDB match for movie '{mediaFolder.Parsed.Title}'",
-                LogEventLevel.Warning
+            _logger.LogWarning(
+                $"FileWatcher: No confident TMDB match for movie '{mediaFolder.Parsed.Title}'"
             );
             return;
         }
 
-        Logger.System(
+        _logger.LogInformation(
             $"FileWatcher: Movie '{movie.Title}' found on TMDB (ID: {movie.Id}), dispatching job"
         );
 
@@ -269,18 +258,15 @@ public class FileWatcherEventHandler : IDisposable
         jobDispatcher.DispatchJob<MovieImportJob>(movie.Id, @event.LibraryId);
     }
 
-    private static async Task HandleTvFolder(FileCreatedEvent @event, MediaFolderExtend mediaFolder)
+    private async Task HandleTvFolder(FileCreatedEvent @event, MediaFolderExtend mediaFolder)
     {
         if (mediaFolder.Parsed.Title is null)
         {
-            Logger.System(
-                $"FileWatcher: Could not parse title from {mediaFolder.Path}",
-                LogEventLevel.Warning
-            );
+            _logger.LogWarning($"FileWatcher: Could not parse title from {mediaFolder.Path}");
             return;
         }
 
-        Logger.System(
+        _logger.LogInformation(
             $"FileWatcher: TV Show {mediaFolder.Path}: Searching TMDB for '{mediaFolder.Parsed.Title}'"
         );
 
@@ -292,9 +278,8 @@ public class FileWatcherEventHandler : IDisposable
 
         if (response?.Results is null || response.Results.Count == 0)
         {
-            Logger.System(
-                $"FileWatcher: No TMDB results found for TV show '{mediaFolder.Parsed.Title}'",
-                LogEventLevel.Warning
+            _logger.LogWarning(
+                $"FileWatcher: No TMDB results found for TV show '{mediaFolder.Parsed.Title}'"
             );
             return;
         }
@@ -313,14 +298,13 @@ public class FileWatcherEventHandler : IDisposable
                 < MinMatchConfidence
         )
         {
-            Logger.System(
-                $"FileWatcher: No confident TMDB match for TV show '{mediaFolder.Parsed.Title}'",
-                LogEventLevel.Warning
+            _logger.LogWarning(
+                $"FileWatcher: No confident TMDB match for TV show '{mediaFolder.Parsed.Title}'"
             );
             return;
         }
 
-        Logger.System(
+        _logger.LogInformation(
             $"FileWatcher: TV Show '{show.Name}' found on TMDB (ID: {show.Id}), dispatching job"
         );
 
@@ -330,7 +314,7 @@ public class FileWatcherEventHandler : IDisposable
 
     private void HandleMusicFolder(FileCreatedEvent @event, MediaFolderExtend mediaFolder)
     {
-        Logger.System($"FileWatcher: Music {mediaFolder.Path}: Processing");
+        _logger.LogInformation($"FileWatcher: Music {mediaFolder.Path}: Processing");
 
         string directoryPath = Path.GetFullPath(mediaFolder.Path);
 
