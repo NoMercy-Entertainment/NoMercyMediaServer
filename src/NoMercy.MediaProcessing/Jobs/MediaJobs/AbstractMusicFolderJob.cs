@@ -27,24 +27,39 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 // Code
 // ---------------------------------------------------------------------------------------------------------------------
 [Serializable]
-public abstract class AbstractMusicFolderJob : IShouldQueue, IJobStorageInjector
+public abstract class AbstractMusicFolderJob : IShouldQueue
 {
+    protected AbstractMusicFolderJob() { }
+
+    protected AbstractMusicFolderJob(
+        IStorageFactory storageFactory,
+        IStorageDriver storageDriver,
+        IAudioFingerprinter audioFingerprinter,
+        ILoggerFactory loggerFactory
+    )
+    {
+        StorageFactory = storageFactory;
+        StorageDriver = storageDriver;
+        AudioFingerprinter = audioFingerprinter;
+        LoggerFactory = loggerFactory;
+    }
+
     public string InputFolder { get; set; } = string.Empty;
     public Ulid LibraryId { get; set; }
     public Ulid FolderId { get; set; }
     public Guid ReleaseId { get; set; }
 
     [JsonIgnore]
-    public IStorageFactory StorageFactory { get; set; } = null!;
+    public IStorageFactory StorageFactory { get; private set; } = null!;
 
     [JsonIgnore]
-    public IStorageDriver StorageDriver { get; set; } = null!;
+    public IStorageDriver StorageDriver { get; private set; } = null!;
 
     [JsonIgnore]
-    public IAudioFingerprinter AudioFingerprinter { get; set; } = null!;
+    public IAudioFingerprinter AudioFingerprinter { get; private set; } = null!;
 
     [JsonIgnore]
-    public ILoggerFactory LoggerFactory { get; set; } = null!;
+    public ILoggerFactory LoggerFactory { get; private set; } = null!;
 
     [JsonIgnore]
     protected ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
@@ -53,14 +68,6 @@ public abstract class AbstractMusicFolderJob : IShouldQueue, IJobStorageInjector
     public abstract int Priority { get; }
 
     public abstract Task Handle();
-
-    public void InjectStorageServices(IServiceProvider serviceProvider)
-    {
-        StorageFactory = serviceProvider.GetRequiredService<IStorageFactory>();
-        StorageDriver = serviceProvider.GetRequiredService<IStorageDriver>();
-        AudioFingerprinter = serviceProvider.GetRequiredService<IAudioFingerprinter>();
-        LoggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
-    }
 
     public void Dispose() { }
 }

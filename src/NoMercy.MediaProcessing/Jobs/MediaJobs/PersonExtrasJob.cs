@@ -28,6 +28,13 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 [Serializable]
 public class PersonExtrasJob : AbstractShowExtraDataJob<TmdbPersonAppends, string>
 {
+    public PersonExtrasJob() { }
+
+    public PersonExtrasJob(
+        ILoggerFactory loggerFactory
+    )
+        : base(loggerFactory) { }
+
     public override string QueueName => "extras";
     public override int Priority => 1;
 

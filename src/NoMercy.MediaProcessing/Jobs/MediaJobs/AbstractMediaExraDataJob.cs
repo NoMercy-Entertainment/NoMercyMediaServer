@@ -26,8 +26,21 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 // Code
 // ---------------------------------------------------------------------------------------------------------------------
 [Serializable]
-public abstract class AbstractMediaExraDataJob<T> : IShouldQueue, IJobStorageInjector
+public abstract class AbstractMediaExraDataJob<T> : IShouldQueue
 {
+    protected AbstractMediaExraDataJob() { }
+
+    protected AbstractMediaExraDataJob(
+        IStorageFactory storageFactory,
+        IStorageDriver storageDriver,
+        ILoggerFactory loggerFactory
+    )
+    {
+        StorageFactory = storageFactory;
+        StorageDriver = storageDriver;
+        LoggerFactory = loggerFactory;
+    }
+
     public abstract string QueueName { get; }
     public abstract int Priority { get; }
 
@@ -40,22 +53,15 @@ public abstract class AbstractMediaExraDataJob<T> : IShouldQueue, IJobStorageInj
     }
 
     [JsonIgnore]
-    public IStorageFactory StorageFactory { get; set; } = null!;
+    public IStorageFactory StorageFactory { get; private set; } = null!;
 
     [JsonIgnore]
-    public IStorageDriver StorageDriver { get; set; } = null!;
+    public IStorageDriver StorageDriver { get; private set; } = null!;
 
     [JsonIgnore]
-    public ILoggerFactory LoggerFactory { get; set; } = null!;
+    public ILoggerFactory LoggerFactory { get; private set; } = null!;
 
     public abstract Task Handle();
-
-    public void InjectStorageServices(IServiceProvider serviceProvider)
-    {
-        StorageFactory = serviceProvider.GetRequiredService<IStorageFactory>();
-        StorageDriver = serviceProvider.GetRequiredService<IStorageDriver>();
-        LoggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
-    }
 
     public void Dispose()
     {

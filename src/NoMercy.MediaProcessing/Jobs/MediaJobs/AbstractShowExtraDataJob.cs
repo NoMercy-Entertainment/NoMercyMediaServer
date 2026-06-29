@@ -25,8 +25,17 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 // Code
 // ---------------------------------------------------------------------------------------------------------------------
 [Serializable]
-public abstract class AbstractShowExtraDataJob<T, TS> : IShouldQueue, IJobStorageInjector
+public abstract class AbstractShowExtraDataJob<T, TS> : IShouldQueue
 {
+    protected AbstractShowExtraDataJob() { }
+
+    protected AbstractShowExtraDataJob(
+        ILoggerFactory loggerFactory
+    )
+    {
+        LoggerFactory = loggerFactory;
+    }
+
     public abstract string QueueName { get; }
     public abstract int Priority { get; }
 
@@ -40,15 +49,10 @@ public abstract class AbstractShowExtraDataJob<T, TS> : IShouldQueue, IJobStorag
     }
 
     [JsonIgnore]
-    public ILoggerFactory LoggerFactory { get; set; } = null!;
+    public ILoggerFactory LoggerFactory { get; private set; } = null!;
 
     [JsonIgnore]
     protected ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
-
-    public void InjectStorageServices(IServiceProvider serviceProvider)
-    {
-        LoggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
-    }
 
     public abstract Task Handle();
 

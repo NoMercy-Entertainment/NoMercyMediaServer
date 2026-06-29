@@ -29,6 +29,13 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 [Serializable]
 public class SeasonExtrasJob : AbstractShowExtraDataJob<TmdbSeasonAppends, string>
 {
+    public SeasonExtrasJob() { }
+
+    public SeasonExtrasJob(
+        ILoggerFactory loggerFactory
+    )
+        : base(loggerFactory) { }
+
     public override string QueueName => "extras";
     public override int Priority => 1;
 

@@ -25,10 +25,19 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 // Code
 // ---------------------------------------------------------------------------------------------------------------------
 [Serializable]
-public abstract class AbstractMusicDescriptionJob : IShouldQueue, IJobStorageInjector
+public abstract class AbstractMusicDescriptionJob : IShouldQueue
 {
+    protected AbstractMusicDescriptionJob() { }
+
+    protected AbstractMusicDescriptionJob(
+        ILoggerFactory loggerFactory
+    )
+    {
+        LoggerFactory = loggerFactory;
+    }
+
     [JsonIgnore]
-    public ILoggerFactory LoggerFactory { get; set; } = null!;
+    public ILoggerFactory LoggerFactory { get; private set; } = null!;
 
     [JsonIgnore]
     protected ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
@@ -37,11 +46,6 @@ public abstract class AbstractMusicDescriptionJob : IShouldQueue, IJobStorageInj
     public abstract int Priority { get; }
 
     public abstract Task Handle();
-
-    public void InjectStorageServices(IServiceProvider serviceProvider)
-    {
-        LoggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
-    }
 
     public void Dispose() { }
 }

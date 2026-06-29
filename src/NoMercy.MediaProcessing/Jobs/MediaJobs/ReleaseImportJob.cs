@@ -24,6 +24,8 @@ using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 using Microsoft.Extensions.Logging;
+using NoMercy.Storage;
+using NoMercy.Providers.AcoustId;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -32,6 +34,16 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 [Serializable]
 public class ReleaseImportJob : AbstractMusicFolderJob
 {
+    public ReleaseImportJob() { }
+
+    public ReleaseImportJob(
+        IStorageFactory storageFactory,
+        IStorageDriver storageDriver,
+        IAudioFingerprinter audioFingerprinter,
+        ILoggerFactory loggerFactory
+    )
+        : base(storageFactory, storageDriver, audioFingerprinter, loggerFactory) { }
+
     public override string QueueName => "import";
     public override int Priority => 4;
 

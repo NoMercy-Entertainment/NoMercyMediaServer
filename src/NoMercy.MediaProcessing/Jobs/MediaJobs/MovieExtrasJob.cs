@@ -21,6 +21,7 @@ using NoMercy.MediaProcessing.Movies;
 using NoMercy.MediaProcessing.People;
 using NoMercy.Providers.TMDB.Models.Movies;
 
+using NoMercy.Storage;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -29,6 +30,15 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 [Serializable]
 public class MovieExtrasJob : AbstractMediaExraDataJob<TmdbMovieAppends>
 {
+    public MovieExtrasJob() { }
+
+    public MovieExtrasJob(
+        IStorageFactory storageFactory,
+        IStorageDriver storageDriver,
+        ILoggerFactory loggerFactory
+    )
+        : base(storageFactory, storageDriver, loggerFactory) { }
+
     public override string QueueName => "extras";
     public override int Priority => 1;
 

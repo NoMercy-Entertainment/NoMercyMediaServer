@@ -36,10 +36,21 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
 using Microsoft.Extensions.Logging;
+using NoMercy.Storage;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 public class AudioImportJob : AbstractMusicFolderJob
 {
+    public AudioImportJob() { }
+
+    public AudioImportJob(
+        IStorageFactory storageFactory,
+        IStorageDriver storageDriver,
+        IAudioFingerprinter audioFingerprinter,
+        ILoggerFactory loggerFactory
+    )
+        : base(storageFactory, storageDriver, audioFingerprinter, loggerFactory) { }
+
     public override string QueueName => "import";
     public override int Priority => 6;
 
