@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.Middleware;
@@ -37,7 +38,6 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 using NoMercyQueue.Core.Interfaces;
-using Serilog.Events;
 using EncoderProfileDto = NoMercy.Data.DTOs.Encoder.EncoderProfileDto;
 using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 
@@ -57,7 +57,8 @@ public class LibrariesController(
     IDbContextFactory<MediaContext> mediaContextFactory,
     IActivityLogger activityLogger,
     IStorageDriver storageDriver,
-    IStorageFactory storageFactory
+    IStorageFactory storageFactory,
+    ILogger<LibrariesController> logger
 ) : BaseController
 {
     [HttpGet]
@@ -127,7 +128,7 @@ public class LibrariesController(
             }
             catch (Exception ex)
             {
-                Logger.App($"Failed to log library created: {ex.Message}", LogEventLevel.Warning);
+                logger.LogWarning($"Failed to log library created: {ex.Message}");
             }
 
             return Ok(
@@ -196,7 +197,7 @@ public class LibrariesController(
         }
         catch (Exception e)
         {
-            Logger.App(e);
+            logger.LogError(e, e.Message);
             return InternalServerErrorResponse(
                 $"Something went wrong updating the library: {e.GetType().Name}: {e.Message}"
             );
@@ -217,10 +218,7 @@ public class LibrariesController(
             }
             catch (Exception ex)
             {
-                Logger.App(
-                    $"Failed to log library scan schedule change: {ex.Message}",
-                    LogEventLevel.Warning
-                );
+                logger.LogWarning($"Failed to log library scan schedule change: {ex.Message}");
             }
         }
 
@@ -244,7 +242,7 @@ public class LibrariesController(
             }
             catch (Exception e)
             {
-                Logger.App(e);
+                logger.LogError(e, e.Message);
                 return InternalServerErrorResponse(
                     $"Something went wrong updating the library folders: {e.GetType().Name}: {e.Message}"
                 );
@@ -287,7 +285,7 @@ public class LibrariesController(
             }
             catch (Exception e)
             {
-                Logger.App(e);
+                logger.LogError(e, e.Message);
                 return InternalServerErrorResponse(
                     $"Something went wrong updating the library encoder profiles: {e.GetType().Name}: {e.Message}"
                 );
@@ -357,7 +355,7 @@ public class LibrariesController(
             }
             catch (Exception ex)
             {
-                Logger.App($"Failed to log library removed: {ex.Message}", LogEventLevel.Warning);
+                logger.LogWarning($"Failed to log library removed: {ex.Message}");
             }
 
             return Ok(
@@ -371,7 +369,7 @@ public class LibrariesController(
         }
         catch (Exception e)
         {
-            Logger.App(e);
+            logger.LogError(e, e.Message);
             return InternalServerErrorResponse("Something went wrong deleting the library");
         }
     }
@@ -595,9 +593,8 @@ public class LibrariesController(
         }
         catch (Exception ex)
         {
-            Logger.App(
-                $"[AddFolder] failed for library={id} driver={request.DriverId} path='{request.Path}': {ex}",
-                LogEventLevel.Error
+            logger.LogError(
+                $"[AddFolder] failed for library={id} driver={request.DriverId} path='{request.Path}': {ex}"
             );
             return InternalServerErrorResponse("Something went wrong adding the folder");
         }
@@ -748,10 +745,7 @@ public class LibrariesController(
             // Surface the underlying failure (FK constraint, missing dep,
             // event-bus crash) so future delete-folder regressions don't
             // require Stoney to grep for a generic 500 in production logs.
-            Logger.App(
-                $"[DeleteFolder] folder={folderId} library={id} failed: {ex}",
-                LogEventLevel.Error
-            );
+            logger.LogError($"[DeleteFolder] folder={folderId} library={id} failed: {ex}");
             return InternalServerErrorResponse("Something went wrong deleting the library folder");
         }
     }

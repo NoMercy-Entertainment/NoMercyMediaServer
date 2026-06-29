@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
@@ -31,7 +32,6 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
-using Serilog.Events;
 
 namespace NoMercy.Api.Controllers.V1.Media;
 
@@ -46,12 +46,16 @@ public class HomeController : BaseController
     private readonly IDbContextFactory<MediaContext> _contextFactory;
     private readonly IStorage _transcodeStorage;
 
+    private readonly ILogger<HomeController> _logger;
+
     public HomeController(
+        ILogger<HomeController> logger,
         HomeService homeService,
         IDbContextFactory<MediaContext> contextFactory,
         [FromKeyedServices("transcode")] IStorage transcodeStorage
     )
     {
+        _logger = logger;
         _homeService = homeService;
         _contextFactory = contextFactory;
         _transcodeStorage = transcodeStorage;
@@ -252,7 +256,7 @@ public class HomeController : BaseController
 
         if (!result.Success || string.IsNullOrEmpty(result.StandardOutput))
         {
-            Logger.Encoder(result.StandardError, LogEventLevel.Error);
+            _logger.LogError(result.StandardError);
             return NotFoundResponse("Trailer not found");
         }
 
@@ -284,7 +288,7 @@ public class HomeController : BaseController
 
         if (trailerInfo is null)
         {
-            Logger.Encoder("Trailer info is null", LogEventLevel.Error);
+            _logger.LogError("Trailer info is null");
             return NotFoundResponse("Trailer not found");
         }
 
@@ -356,7 +360,7 @@ public class HomeController : BaseController
 
                     if (Software.IsWindows)
                     {
-                        Logger.Encoder($"cmd -c \"{sb}\"", LogEventLevel.Debug);
+                        _logger.LogDebug($"cmd -c \"{sb}\"");
                         Shell.ExecSync(
                             "cmd",
                             $"/c \"{sb}\"",
@@ -365,7 +369,7 @@ public class HomeController : BaseController
                     }
                     else
                     {
-                        Logger.Encoder($"/bin/bash -c \"{sb}\"", LogEventLevel.Debug);
+                        _logger.LogDebug($"/bin/bash -c \"{sb}\"");
                         Shell.ExecSync(
                             "/bin/bash",
                             $"-c \"{sb}\"",
@@ -375,10 +379,7 @@ public class HomeController : BaseController
                 }
                 catch (Exception ex)
                 {
-                    Logger.Encoder(
-                        $"Trailer download failed for {trailerId}: {ex.Message}",
-                        LogEventLevel.Error
-                    );
+                    _logger.LogError($"Trailer download failed for {trailerId}: {ex.Message}");
                 }
             },
             ct
@@ -444,14 +445,11 @@ public class HomeController : BaseController
         try
         {
             await _transcodeStorage.DeleteDirectoryAsync(trailerId, recursive: true, ct: ct);
-            Logger.Encoder($"Trailer folder deleted: {trailerAbsPath}");
+            _logger.LogInformation($"Trailer folder deleted: {trailerAbsPath}");
         }
         catch (Exception ex)
         {
-            Logger.Encoder(
-                $"Failed to delete trailer folder {trailerAbsPath}: {ex.Message}",
-                LogEventLevel.Error
-            );
+            _logger.LogError($"Failed to delete trailer folder {trailerAbsPath}: {ex.Message}");
             return InternalServerErrorResponse("Failed to remove trailer");
         }
 

@@ -13,6 +13,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NoMercy.Api.DTOs.Dashboard;
@@ -23,7 +24,6 @@ using NoMercy.Database.Models.Storage;
 using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
-using Serilog.Events;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
@@ -32,8 +32,11 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/drivers", Order = 11)]
-public class DriversController(IDriverRepository driverRepository, IStorageFactory storageFactory)
-    : BaseController
+public class DriversController(
+    IDriverRepository driverRepository,
+    IStorageFactory storageFactory,
+    ILogger<DriversController> logger
+) : BaseController
 {
     // -----------------------------------------------------------------------
     // GET /api/v1/dashboard/drivers
@@ -132,11 +135,10 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
                 password: request.Credentials.SecretKey,
                 apiKey: string.Empty
             );
-            Logger.App(
+            logger.LogInformation(
                 $"[DriversController] Stored credentials for new {normalizedType} driver "
                     + $"(id={newId}, accessKey len={request.Credentials.AccessKey.Length}, "
-                    + $"secret len={request.Credentials.SecretKey.Length})",
-                LogEventLevel.Information
+                    + $"secret len={request.Credentials.SecretKey.Length})"
             );
 
             // Inject credentialsRef into Config so the StorageFactory can resolve it.
@@ -145,10 +147,9 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
         }
         else if (request.Credentials is not null)
         {
-            Logger.App(
+            logger.LogWarning(
                 $"[DriversController] Ignoring blank credentials block on create for {normalizedType} "
-                    + $"(id={newId}); driver will be created without stored credentials.",
-                LogEventLevel.Warning
+                    + $"(id={newId}); driver will be created without stored credentials."
             );
         }
 
@@ -221,15 +222,14 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
         // a UI that submits {credentials: null} vs {credentials: {access_key:"",
         // secret_key:""}} vs flat top-level fields all looked identical from
         // the operator's seat.
-        Logger.App(
+        logger.LogInformation(
             $"[DriversController] Update {id} ({driver.Type}) — credentials block: "
                 + (
                     request.Credentials is null
                         ? "absent"
                         : $"present (access_key len={request.Credentials.AccessKey.Length}, "
                             + $"secret_key len={request.Credentials.SecretKey.Length})"
-                ),
-            LogEventLevel.Information
+                )
         );
 
         if (request.Credentials is not null && HasMeaningfulCredentials(request.Credentials))
@@ -241,11 +241,10 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
                 password: request.Credentials.SecretKey,
                 apiKey: string.Empty
             );
-            Logger.App(
+            logger.LogInformation(
                 $"[DriversController] Updated credentials for driver {id} ({driver.Type}) "
                     + $"(accessKey len={request.Credentials.AccessKey.Length}, "
-                    + $"secret len={request.Credentials.SecretKey.Length})",
-                LogEventLevel.Information
+                    + $"secret len={request.Credentials.SecretKey.Length})"
             );
 
             // Ensure credentialsRef is present in Config.
@@ -260,10 +259,9 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
             // unrelated edit (renaming the driver, toggling a config flag)
             // wiped out the previously-stored access key + secret. Preserve
             // existing credentials when the incoming block is blank.
-            Logger.App(
+            logger.LogInformation(
                 $"[DriversController] Ignoring blank credentials block on update for driver {id} "
-                    + $"({driver.Type}); preserving previously-stored credentials.",
-                LogEventLevel.Information
+                    + $"({driver.Type}); preserving previously-stored credentials."
             );
         }
 
@@ -332,11 +330,10 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
         foreach (Ulid folderId in folderIds)
             storageFactory.Invalidate(folderId);
 
-        Logger.App(
+        logger.LogInformation(
             $"[DriversController] Direct credential write for driver {id} ({driver.Type}) "
                 + $"(accessKey len={request.AccessKey.Length}, secret len={request.SecretKey.Length}); "
-                + $"invalidated {folderIds.Count} cached folder(s).",
-            LogEventLevel.Information
+                + $"invalidated {folderIds.Count} cached folder(s)."
         );
 
         return Ok(MapToDto(driver));

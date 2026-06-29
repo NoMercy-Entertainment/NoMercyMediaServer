@@ -12,6 +12,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using MimeMapping;
 using NoMercy.NmSystem.Images;
 using NoMercy.NmSystem.Information;
@@ -19,14 +20,17 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Storage;
-using Serilog.Events;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace NoMercy.Api.Controllers.File;
 
 [Route("images/{type}/{path}")]
-public class ImageController(IStorage storage, IImageService imageService) : BaseController
+public class ImageController(
+    IStorage storage,
+    IImageService imageService,
+    ILogger<ImageController> logger
+) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Image(
@@ -107,16 +111,13 @@ public class ImageController(IStorage storage, IImageService imageService) : Bas
             }
             catch (Exception e)
             {
-                Logger.App(
-                    $"Image conversion failed for {filePath}: {e.Message}",
-                    LogEventLevel.Warning
-                );
+                logger.LogWarning($"Image conversion failed for {filePath}: {e.Message}");
                 return PhysicalFile(filePath, originalMimeType);
             }
         }
         catch (Exception e)
         {
-            Logger.App(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
             return NotFoundResponse("Image not found");
         }
     }
@@ -148,7 +149,7 @@ public class ImageController(IStorage storage, IImageService imageService) : Bas
         }
         catch (Exception e)
         {
-            Logger.App(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
             return InternalServerErrorResponse("Image cache operation failed");
         }
     }
