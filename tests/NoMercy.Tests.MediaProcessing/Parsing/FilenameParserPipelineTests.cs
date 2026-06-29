@@ -32,14 +32,20 @@ public class FilenameParserPipelineTests
         {
             new EpisodePrefixAdapter(),
             new EpisodeWordAdapter(),
+            new CrossFormatAdapter(),
             new SeasonEpisodeAdapter(),
+            new AnimeAbsoluteAdapter(),
             new MovieDetectorAdapter(),
         };
 
     private static IFilenameParserPipeline Pipeline() =>
         new FilenameParserPipeline(DefaultAdapters());
 
-    private static ParseContext Context(string fileName, string folderTitle = "")
+    private static ParseContext Context(
+        string fileName,
+        string folderTitle = "",
+        string libraryType = "tv"
+    )
     {
         string cleaned = StringExtensions
             .RemoveBracketedString()
@@ -53,6 +59,7 @@ public class FilenameParserPipelineTests
             Title = StringExtensions.RemoveBracketedString().Replace(fileName, string.Empty),
             CleanedFileName = cleaned,
             FolderTitle = folderTitle,
+            LibraryType = libraryType,
         };
     }
 
@@ -138,10 +145,12 @@ public class FilenameParserPipelineTests
     [InlineData("Top.Gun.Maverick.2022.IMAX.1080p.mkv")]
     public void Movies_are_not_classified_as_episodes(string file)
     {
-        ParseContext context = Context(file);
+        ParseContext context = Context(file, libraryType: "movie");
         new EpisodePrefixAdapter().TryParse(context).Should().BeNull();
         new EpisodeWordAdapter().TryParse(context).Should().BeNull();
         new SeasonEpisodeAdapter().TryParse(context).Should().BeNull();
+        new CrossFormatAdapter().TryParse(context).Should().BeNull();
+        new AnimeAbsoluteAdapter().TryParse(context).Should().BeNull();
         FirstMatchingAdapter(context).Should().Be("movie-detector");
     }
 
@@ -229,5 +238,63 @@ public class FilenameParserPipelineTests
         FilenameParsingOptions options = new() { Order = { "movie-detector" } };
         FilenameParserPipeline pipeline = new(DefaultAdapters(), options);
         pipeline.Order.First().Should().Be("movie-detector");
+    }
+
+    // ---------------------------------------------------------------------------
+    // Cross-format "1x05" (and unicode "1×05"). Resolution like 1920x1080 must
+    // NOT match (digits before the separator are preceded by a digit).
+    // ---------------------------------------------------------------------------
+    [Theory]
+    [InlineData("Battlestar.Galactica.3x20.1080p.mkv", 3, 20)]
+    [InlineData("Show Name 1x05.mkv", 1, 5)]
+    [InlineData("Series.12x08.720p.mkv", 12, 8)]
+    [InlineData("Farscape - 1×01 - Pilot.mkv", 1, 1)]
+    public void CrossFormat_resolves(string file, int season, int episode)
+    {
+        MovieFile result = Pipeline().Parse(Context(file));
+        result.IsSeries.Should().BeTrue();
+        result.Season.Should().Be(season);
+        result.Episode.Should().Be(episode);
+        FirstMatchingAdapter(Context(file)).Should().Be("cross-format");
+    }
+
+    [Theory]
+    [InlineData("Show.Name.1920x1080.SBS.mkv")]
+    [InlineData("Clip.1280x720.mkv")]
+    public void CrossFormat_ignores_resolution(string file) =>
+        new CrossFormatAdapter().TryParse(Context(file)).Should().BeNull();
+
+    // ---------------------------------------------------------------------------
+    // Anime absolute numbering (anime/TV libraries only).
+    // ---------------------------------------------------------------------------
+    [Theory]
+    [InlineData("One Piece - 1109.mkv", 1109)]
+    [InlineData("Naruto Shippuuden - 500.mkv", 500)]
+    [InlineData("Bleach - 366 [1080p].mkv", 366)]
+    [InlineData("Fairy Tail 175.mkv", 175)]
+    public void AnimeAbsolute_resolves_for_anime_library(string file, int absolute)
+    {
+        ParseContext context = Context(file, libraryType: "anime");
+        MovieFile result = Pipeline().Parse(context);
+        result.IsSeries.Should().BeTrue();
+        result.Episode.Should().Be(absolute);
+        FirstMatchingAdapter(context).Should().Be("anime-absolute");
+    }
+
+    [Theory]
+    [InlineData("Firefly - 2002.mkv", "anime")]
+    [InlineData("One Piece - 1109.mkv", "movie")]
+    [InlineData("Inception 2010.mkv", "tv")]
+    public void AnimeAbsolute_does_not_fire(string file, string library) =>
+        new AnimeAbsoluteAdapter().TryParse(Context(file, libraryType: library)).Should().BeNull();
+
+    [Fact]
+    public void Explicit_SxxExx_wins_over_anime_absolute_in_anime_library()
+    {
+        ParseContext context = Context("Attack on Titan S04E28 1080p.mkv", libraryType: "anime");
+        FirstMatchingAdapter(context).Should().Be("season-episode");
+        MovieFile result = Pipeline().Parse(context);
+        result.Season.Should().Be(4);
+        result.Episode.Should().Be(28);
     }
 }

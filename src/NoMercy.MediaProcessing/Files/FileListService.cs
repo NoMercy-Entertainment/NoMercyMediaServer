@@ -314,7 +314,7 @@ public class FileListService(
                 ? await FfProbe.CreateAsync(entryPath)
                 : new FfProbeData();
 
-        MovieFile parsed = ParseVideoFileName(fileName, directoryName, title);
+        MovieFile parsed = ParseVideoFileName(fileName, directoryName, title, libraryType);
 
         parsed.Year = extractedYear ?? parsed.Year;
         if (parsed.Title == null)
@@ -434,7 +434,7 @@ public class FileListService(
         title = StringExtensions.RemoveBracketedString().Replace(title, string.Empty);
 
         FfProbeData ffprobeData = await FfProbe.CreateAsync(file.FullName);
-        MovieFile parsed = ParseVideoFileName(file, title);
+        MovieFile parsed = ParseVideoFileName(file, title, libraryType);
 
         parsed.Year = extractedYear ?? parsed.Year;
         if (parsed.Title == null)
@@ -482,13 +482,14 @@ public class FileListService(
         return result != null;
     }
 
-    private MovieFile ParseVideoFileName(FileInfo file, string title) =>
-        ParseVideoFileName(file.Name, file.DirectoryName, title);
+    private MovieFile ParseVideoFileName(FileInfo file, string title, string libraryType) =>
+        ParseVideoFileName(file.Name, file.DirectoryName, title, libraryType);
 
     private MovieFile ParseVideoFileName(
         string fileNameWithExt,
         string? directoryName,
-        string title
+        string title,
+        string libraryType
     )
     {
         string cleanedFileName = StringExtensions
@@ -504,6 +505,7 @@ public class FileListService(
                 Title = title,
                 CleanedFileName = cleanedFileName,
                 FolderTitle = ExtractTitleFromFolder(directoryName),
+                LibraryType = libraryType,
             }
         );
     }

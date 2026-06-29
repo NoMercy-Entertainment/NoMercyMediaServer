@@ -32,4 +32,7 @@ public sealed class ParseContext
 
     /// <summary>Title derived from the containing folder, pre-computed by the caller.</summary>
     public string FolderTitle { get; init; } = string.Empty;
+
+    /// <summary>Library type (movie/tv/anime/music); lets adapters be series-type aware.</summary>
+    public string LibraryType { get; init; } = string.Empty;
 }

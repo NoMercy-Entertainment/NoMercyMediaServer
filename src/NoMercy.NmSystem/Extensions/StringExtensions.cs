@@ -99,6 +99,9 @@ public static partial class StringExtensions
     [GeneratedRegex(@"[\-\.\s]+Episode\s*(\d+)", RegexOptions.IgnoreCase)]
     public static partial Regex MatchEpisodeWord();
 
+    [GeneratedRegex(@"(?<![A-Za-z0-9])(\d{1,2})[xX×](\d{1,3})(?![0-9])")]
+    public static partial Regex MatchCrossFormatEpisode();
+
     [GeneratedRegex("/[^a-zA-Z0-9]/")]
     public static partial Regex IsAlphaNumeric();
 
