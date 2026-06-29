@@ -44,6 +44,7 @@ using NoMercy.Providers.TMDB.Models.TV;
 using NoMercy.Storage;
 using Serilog.Events;
 
+using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Files;
 
 /// <summary>
@@ -54,7 +55,8 @@ namespace NoMercy.MediaProcessing.Files;
 /// </summary>
 public class FileListService(
     IStorageDriver storageDriver,
-    IMediaIdentificationService identification
+    IMediaIdentificationService identification,
+    ILogger<FileListService> logger
 ) : IFileListService
 {
     public FileInfo[] GetVideoFilesInDirectory(string directoryPath)
@@ -154,7 +156,7 @@ public class FileListService(
                 }
                 catch (Exception e)
                 {
-                    Logger.App(e.Message, LogEventLevel.Error);
+                    logger.LogError(e.Message);
                 }
             }
         }
@@ -265,7 +267,7 @@ public class FileListService(
                 }
                 catch (Exception e)
                 {
-                    Logger.App(e.Message, LogEventLevel.Error);
+                    logger.LogError(e.Message);
                 }
             }
         }

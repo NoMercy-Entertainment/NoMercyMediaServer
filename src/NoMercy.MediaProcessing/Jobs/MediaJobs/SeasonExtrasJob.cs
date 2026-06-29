@@ -44,7 +44,7 @@ public class SeasonExtrasJob : AbstractShowExtraDataJob<TmdbSeasonAppends, strin
             LoggerFactory.CreateLogger<SeasonManager>()
         );
 
-        PersonRepository personRepository = new(context);
+        PersonRepository personRepository = new(context, LoggerFactory.CreateLogger<PersonRepository>());
         PersonManager personManager = new(
             personRepository,
             jobDispatcher,

@@ -18,6 +18,7 @@ using NoMercy.Storage.Drivers.Nfs;
 using NoMercy.Storage.Remote;
 using Xunit;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace NoMercy.Tests.MediaProcessing.Files;
 
 // ============================================================================
@@ -162,7 +163,7 @@ public sealed class FileListLiveNasTests
 
         await using MediaContext context = NewContext();
         MediaIdentificationService identification = new(context);
-        FileListService service = new(storage.Driver, identification);
+        FileListService service = new(storage.Driver, identification, NullLogger<FileListService>.Instance);
 
         List<FileItem> files = await service.GetFilesInDirectory(TestDir, LibraryType, storage);
 
@@ -215,7 +216,7 @@ public sealed class FileListLiveNasTests
         }
 
         await using MediaContext context = NewContext();
-        FileListService service = new(storage.Driver, new MediaIdentificationService(context));
+        FileListService service = new(storage.Driver, new MediaIdentificationService(context), NullLogger<FileListService>.Instance);
 
         List<FileItem> files = await service.GetFilesInDirectory(TestDir, LibraryType, storage);
 

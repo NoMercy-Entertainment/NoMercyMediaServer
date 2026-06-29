@@ -18,9 +18,10 @@ using NoMercy.Database.Models.TvShows;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
+using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.People;
 
-public class PersonRepository(MediaContext context) : IPersonRepository
+public class PersonRepository(MediaContext context, ILogger<PersonRepository> logger) : IPersonRepository
 {
     public Task Store(IEnumerable<Person> people)
     {
@@ -284,7 +285,7 @@ public class PersonRepository(MediaContext context) : IPersonRepository
         }
         catch (Exception e)
         {
-            Logger.MovieDb(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
         }
     }
 

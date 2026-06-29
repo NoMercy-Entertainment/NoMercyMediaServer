@@ -402,7 +402,7 @@ public partial class RecordingManager(
             }
             catch (Exception e)
             {
-                Logger.MusicBrainz(e, LogEventLevel.Error);
+                logger.LogError(e, "Failed to store recording artist metadata");
             }
         }
 

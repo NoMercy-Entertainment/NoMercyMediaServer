@@ -15,6 +15,7 @@ using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Storage;
 using Xunit;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace NoMercy.Tests.MediaProcessing.Files;
 
 /// <summary>
@@ -64,7 +65,7 @@ public class FileListServiceTests
             )
             .ReturnsAsync(((MovieOrEpisode match, string? imdbId)?)null);
 
-        FileListService service = new(driver.Object, identification.Object);
+        FileListService service = new(driver.Object, identification.Object, NullLogger<FileListService>.Instance);
 
         List<FileItem> files = await service.GetFilesInDirectory("Movies", "movie", storage.Object);
 

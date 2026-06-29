@@ -33,7 +33,7 @@ public class PersonRefreshJob : AbstractMediaJob
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        PersonRepository personRepository = new(context);
+        PersonRepository personRepository = new(context, LoggerFactory.CreateLogger<PersonRepository>());
         PersonManager personManager = new(
             personRepository,
             jobDispatcher,
