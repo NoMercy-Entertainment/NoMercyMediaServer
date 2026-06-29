@@ -147,7 +147,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
         catch (DiscDriveBusyException)
         {
             PublishProgress("error", "Drive is already in use by another rip job");
-            Logger.LogWarning(
+            Log.LogWarning(
                 "[DiscRipJob] Drive {Drive} is busy — job {JobId} rejected",
                 Request.DrivePath,
                 JobId
@@ -157,7 +157,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
         catch (Exception ex)
         {
             PublishProgress("error", $"Rip failed: {ex.Message}");
-            Logger.LogError(ex, "[DiscRipJob] Rip failed for drive {Drive}", Request.DrivePath);
+            Log.LogError(ex, "[DiscRipJob] Rip failed for drive {Drive}", Request.DrivePath);
             return;
         }
 
@@ -195,7 +195,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
                 "error",
                 "Destination folder or library no longer exists — rip output left in output directory"
             );
-            Logger.LogWarning(
+            Log.LogWarning(
                 "[DiscRipJob] Target folder {FolderId} or library {LibraryId} not found after rip",
                 TargetFolderId,
                 TargetLibraryId
@@ -332,7 +332,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
                     targetFolder.EncodingPresetFolders
                 );
 
-                Logger.LogInformation(
+                Log.LogInformation(
                     "[DiscRipJob] Dispatching VideoEncodeJob for {File} — preset {PresetId}",
                     destinationHostPath,
                     resolvedPresetId.HasValue ? resolvedPresetId.Value.ToString() : "folder-default"
@@ -352,7 +352,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
                 }
                 else
                 {
-                    Logger.LogWarning(
+                    Log.LogWarning(
                         "[DiscRipJob] JobDispatcher is null — falling back to FileCreatedEvent for {File}",
                         destinationHostPath
                     );
@@ -393,7 +393,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
                 // best effort
             }
 
-            Logger.LogInformation(
+            Log.LogInformation(
                 "[DiscRipJob] Title {Index} moved to {Dest}",
                 res.TitleIndex,
                 folderRelative
@@ -435,7 +435,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(
+            Log.LogWarning(
                 ex,
                 "[DiscRipJob] MusicBrainz release fetch failed for {Mbid}: {Message}",
                 releaseMbid,
@@ -445,7 +445,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
 
         if (release is null)
         {
-            Logger.LogWarning(
+            Log.LogWarning(
                 "[DiscRipJob] Release {Mbid} not found — FLAC files will be untagged",
                 releaseMbid
             );
@@ -511,7 +511,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
             try
             {
                 await AudioMetadataWriter.WriteTagsAsync(res.OutputPath, metadata, ct);
-                Logger.LogInformation(
+                Log.LogInformation(
                     "[DiscRipJob] Tagged {Path} — {Artist} / {Title}",
                     res.OutputPath,
                     trackArtist,
@@ -520,7 +520,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
             }
             catch (Exception ex)
             {
-                Logger.LogWarning(
+                Log.LogWarning(
                     ex,
                     "[DiscRipJob] Tag write failed for {Path}: {Message}",
                     res.OutputPath,
