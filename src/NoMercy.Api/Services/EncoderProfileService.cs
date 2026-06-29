@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
@@ -18,7 +19,6 @@ using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Profiles;
 using NoMercy.NmSystem.SystemCalls;
-using Serilog.Events;
 
 namespace NoMercy.Api.Services;
 
@@ -31,7 +31,8 @@ public class EncoderProfileService(
     IEncodingPresetRepository presetRepository,
     IActivityLogger activityLogger,
     IHttpClientFactory httpClientFactory,
-    MediaContext mediaContext
+    MediaContext mediaContext,
+    ILogger<EncoderProfileService> logger
 )
 {
     // -------------------------------------------------------------------------
@@ -457,7 +458,7 @@ public class EncoderProfileService(
         }
         catch (Exception ex)
         {
-            Logger.App($"Failed to log failure.config_save: {ex.Message}", LogEventLevel.Warning);
+            logger.LogWarning($"Failed to log failure.config_save: {ex.Message}");
         }
     }
 
@@ -481,10 +482,7 @@ public class EncoderProfileService(
         }
         catch (Exception ex)
         {
-            Logger.App(
-                $"Failed to log encoder profile config: {ex.Message}",
-                LogEventLevel.Warning
-            );
+            logger.LogWarning($"Failed to log encoder profile config: {ex.Message}");
         }
     }
 }

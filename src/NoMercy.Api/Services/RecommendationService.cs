@@ -11,6 +11,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Data.Repositories;
@@ -24,7 +25,6 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.TV;
-using Serilog.Events;
 
 namespace NoMercy.Api.Services;
 
@@ -36,7 +36,10 @@ public class RecommendationService
     private readonly IMovieMetadataProvider _movieMetadataProvider;
     private readonly ITvShowMetadataProvider _tvShowMetadataProvider;
 
+    private readonly ILogger<RecommendationService> _logger;
+
     public RecommendationService(
+        ILogger<RecommendationService> logger,
         IRecommendationRepository recommendationRepository,
         IDbContextFactory<MediaContext> contextFactory,
         IMemoryCache cache,
@@ -44,6 +47,7 @@ public class RecommendationService
         ITvShowMetadataProvider tvShowMetadataProvider
     )
     {
+        _logger = logger;
         _recommendationRepository = recommendationRepository;
         _contextFactory = contextFactory;
         _cache = cache;
@@ -138,11 +142,10 @@ public class RecommendationService
             affinityTask
         );
 
-        Logger.App(
+        _logger.LogDebug(
             $"Recommendations [{mediaTypeFilter}]: recs={animeRecsTask.Result.Count + movieRecsTask.Result.Count + tvRecsTask.Result.Count}, "
                 + $"similar={animeSimTask.Result.Count + movieSimTask.Result.Count + tvSimTask.Result.Count}, "
-                + $"affinity sources={affinityTask.Result.SourceItems.Count}",
-            LogEventLevel.Debug
+                + $"affinity sources={affinityTask.Result.SourceItems.Count}"
         );
 
         UserAffinityProfile profile = affinityTask.Result;
@@ -313,9 +316,8 @@ public class RecommendationService
             .Select(g => g.OrderByDescending(s => s.Score).First())
             .ToList();
 
-        Logger.App(
-            $"Recommendations [{mediaTypeFilter}]: merged={allCandidates.Count}, scored={scored.Count}, deduped={deduped.Count}",
-            LogEventLevel.Debug
+        _logger.LogDebug(
+            $"Recommendations [{mediaTypeFilter}]: merged={allCandidates.Count}, scored={scored.Count}, deduped={deduped.Count}"
         );
 
         // Phase 5: Diversity selection — guarantee floor representation per media type

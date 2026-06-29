@@ -10,9 +10,9 @@
 // -----------------------------------------------------------------------------
 
 using FlexLabs.EntityFrameworkCore.Upsert;
-using NoMercy.NmSystem.SystemCalls;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Database;
@@ -23,12 +23,14 @@ using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
+using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Services.Video;
 
 public class VideoPlaybackCommandHandler(
     VideoPlaybackService videoPlaybackService,
-    IServiceScopeFactory scopeFactory
+    IServiceScopeFactory scopeFactory,
+    ILogger<VideoPlaybackCommandHandler> logger
 )
 {
     public async Task HandleCommand(
@@ -100,7 +102,7 @@ public class VideoPlaybackCommandHandler(
                 break;
             default:
                 // Handle unknown command or log it
-                Logger.Warning($"Unknown command: {command}");
+                logger.LogWarning($"Unknown command: {command}");
                 break;
         }
     }
