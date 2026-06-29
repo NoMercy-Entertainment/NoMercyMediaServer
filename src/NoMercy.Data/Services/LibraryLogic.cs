@@ -10,13 +10,13 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Data.Jobs;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.NmSystem.Dto;
 using NoMercy.Storage;
 using NoMercyQueue;
-using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.Data.Services;
@@ -25,7 +25,8 @@ public class LibraryLogic(
     Ulid id,
     MediaContext mediaContext,
     IStorageDriver storageDriver,
-    IStorageFactory storageFactory
+    IStorageFactory storageFactory,
+    ILogger<LibraryLogic> logger
 ) : IDisposable, IAsyncDisposable
 {
     private readonly IStorageDriver _storageDriver = storageDriver;
@@ -79,7 +80,7 @@ public class LibraryLogic(
                     break;
             }
 
-        Logger.App("Scanning done");
+        logger.LogInformation("Scanning done");
     }
 
     private async Task ScanAudioFolder(Folder folder)
@@ -101,13 +102,13 @@ public class LibraryLogic(
 
             Titles.Add(rootFolder.Path);
 
-            Logger.App($"Processing {rootFolder.Path}", LogEventLevel.Verbose);
+            logger.LogTrace($"Processing {rootFolder.Path}");
 
             MusicJob musicJob = new(rootFolder.Path, Library);
             QueueRunner.Current!.Dispatcher.Dispatch(musicJob);
         }
 
-        Logger.App("Found " + Titles.Count + " subfolders");
+        logger.LogInformation("Found " + Titles.Count + " subfolders");
     }
 
     public void Dispose()

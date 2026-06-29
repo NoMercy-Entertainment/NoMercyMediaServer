@@ -14,13 +14,14 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Authorization;
-using NoMercy.Data.Services;
 using NoMercy.Data.Repositories;
 using NoMercy.Data.Requests;
+using NoMercy.Data.Services;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
@@ -39,13 +40,13 @@ public class SpecialsController(
     MediaContext mediaContext,
     ISpecialRepository specialRepository,
     IStorageDriver storageDriver,
-    IStorageFactory storageFactory
+    IStorageFactory storageFactory,
+    ILogger<LibraryLogic> libraryLogicLogger
 ) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-
         List<Special> specials = await specialRepository.GetAllSpecialsAdminAsync();
 
         return Ok(
@@ -85,7 +86,6 @@ public class SpecialsController(
     [Route("{id:ulid}")]
     public async Task<IActionResult> Show(Ulid id)
     {
-
         Special? special = await specialRepository.GetSpecialByIdAsync(id);
 
         if (special is null)
@@ -106,7 +106,6 @@ public class SpecialsController(
     [Route("{id:ulid}")]
     public async Task<IActionResult> Update(Ulid id, [FromBody] SpecialUpdateRequest request)
     {
-
         try
         {
             Special? special = await specialRepository.UpdateSpecialAsync(
@@ -140,7 +139,6 @@ public class SpecialsController(
     [Route("{id:ulid}")]
     public async Task<IActionResult> Delete(Ulid id)
     {
-
         try
         {
             Special? special = await specialRepository.DeleteSpecialAsync(id);
@@ -167,7 +165,6 @@ public class SpecialsController(
     [Route("sort")]
     public async Task<IActionResult> Sort(Ulid id, [FromBody] LibrarySortRequest request)
     {
-
         List<Special> specials = await specialRepository.GetAllSpecialsSortableAsync();
 
         if (specials.Count == 0)
@@ -187,7 +184,6 @@ public class SpecialsController(
     [Route("rescan")]
     public async Task<IActionResult> RescanAll()
     {
-
         List<Special> specialsList = await specialRepository.GetAllSpecialsForRescanAsync();
 
         if (specialsList.Count == 0)
@@ -209,10 +205,15 @@ public class SpecialsController(
     [Route("{id:ulid}/rescan")]
     public async Task<IActionResult> Rescan(Ulid id)
     {
-
         // BLOCKER: LibraryLogic requires a raw MediaContext until it is refactored
         // to accept IDbContextFactory. Remove mediaContext from the ctor at that point.
-        LibraryLogic specialLogic = new(id, mediaContext, storageDriver, storageFactory);
+        LibraryLogic specialLogic = new(
+            id,
+            mediaContext,
+            storageDriver,
+            storageFactory,
+            libraryLogicLogger
+        );
 
         if (await specialLogic.Process())
             return Ok(
@@ -232,7 +233,6 @@ public class SpecialsController(
     [Route("{id:ulid}/items")]
     public async Task<IActionResult> GetItems(Ulid id)
     {
-
         List<SpecialItem> items = await specialRepository.GetSpecialItemsAdminAsync(id);
 
         List<SpecialItemResponseDto> result = items
@@ -289,7 +289,6 @@ public class SpecialsController(
         [FromBody] SpecialItemsUpdateRequest request
     )
     {
-
         List<SpecialItemReplacement> replacements = request
             .Items.Select(item => new SpecialItemReplacement(
                 item.MediaType,
@@ -316,7 +315,6 @@ public class SpecialsController(
     [Route("search")]
     public async Task<IActionResult> Search([FromQuery] string q, CancellationToken ct = default)
     {
-
         if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
             return Ok(Array.Empty<SpecialSearchResultDto>());
 
