@@ -21,6 +21,7 @@ using NoMercy.Providers.Tadb.Models;
 using Serilog.Events;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 [Serializable]
@@ -36,6 +37,10 @@ public class MusicMetadataJob : AbstractMusicDescriptionJob
     {
         //
     }
+
+    [ActivatorUtilitiesConstructor]
+    public MusicMetadataJob(ILoggerFactory loggerFactory)
+        : base(loggerFactory) { }
 
     public MusicMetadataJob(MusicBrainzArtist musicBrainzArtist)
     {
