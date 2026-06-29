@@ -300,3 +300,21 @@ The clean mechanical ctor-injection pass is now essentially complete: leaf proje
      RECOMMENDATION: (C) — keep ambient code on the bridge, finish Data/MediaProcessing
      managers now, and fold the ambient conversion into M/N/O. Awaiting user steer; not
      blocking — proceeding with Data/MediaProcessing managers meanwhile.
+
+### REQUIREMENT (user): structured message templates, NOT interpolated strings
+All log calls must use MEL structured logging — named placeholders + values as args:
+  GOOD: _logger.LogInformation("Show {ShowId} -> {Library}", id, library.Title)
+  BAD : _logger.LogInformation($"Show {id} -> {library.Title}")
+Tool: `scripts/structure_logs.py --dry|--apply <files>` (committed 53ac4bb5). It
+converts interpolated strings AND `"x: " + y` concatenations into templates+args,
+derives PascalCase names from the last identifier of each hole expr (dedupes
+collisions), handles multi-arg, `LogError(ex, ...)`, `Log(level, ...)`,
+parens-inside-strings, and ternary `:` in holes. Skips verbatim ($@) strings and is
+idempotent (no-op on already-structured / non-MEL calls). Pipeline is now TWO passes:
+  1) migrate_logger.py  (legacy Logger.X -> _logger.LogX, may emit interpolation)
+  2) structure_logs.py  (interpolation -> structured template)
+After ANY conversion batch, run structure_logs on the changed files before building.
+Edge: a nested interpolated string inside a hole (`{$"driver:{x}"}`) can yield a
+placeholder/arg count mismatch (CA2017) — the build catches it; fix by hand.
+53ac4bb5 retrofitted 50 already-converted files (incl. pre-existing ILogger usage in
+Encoder) to structured templates, 0/0.
