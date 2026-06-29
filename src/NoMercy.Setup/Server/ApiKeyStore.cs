@@ -14,12 +14,17 @@ namespace NoMercy.Setup.Server;
 public class ApiKeyStore : IApiKeyStore
 {
     private static IApiKeyStore? _instance;
-    public static IApiKeyStore Current => _instance ?? throw new InvalidOperationException("ApiKeyStore not initialized");
+
+    // Lazily create a default (empty-keys) store if nothing has constructed one yet, so
+    // early access and the separate Launcher process never crash. The DI singleton replaces
+    // this during boot (its ctor sets _instance) and ApiKeyLoader then fills in the keys.
+    public static IApiKeyStore Current => _instance ??= new ApiKeyStore();
 
     public ApiKeyStore()
     {
         _instance = this;
     }
+
     public string AcousticIdKey { get; internal set; } = string.Empty;
     public string FanArtApiKey { get; internal set; } = string.Empty;
     public string FanArtClientKey { get; internal set; } = string.Empty;
