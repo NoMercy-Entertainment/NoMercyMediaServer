@@ -104,6 +104,12 @@ public static class ConsoleLineRenderer
         if (!color)
             return line;
 
+        // Pre-coloured content (e.g. the startup banner) already carries ANSI
+        // escape sequences. Re-tokenising it would split those sequences and
+        // surface their raw characters, so pass such lines through untouched.
+        if (line.Contains('\u001b'))
+            return line;
+
         string text = ConsoleThemeColors.Text(theme);
         string number = ConsoleThemeColors.Number(theme);
         string str = ConsoleThemeColors.Str(theme);

@@ -74,12 +74,28 @@ public static class WebHostFactory
                 {
                     try
                     {
-                        return System.Console.IsOutputRedirected ? 0 : System.Console.WindowWidth;
+                        if (!System.Console.IsOutputRedirected)
+                        {
+                            int w = System.Console.WindowWidth;
+                            if (w > 0)
+                                return w;
+                        }
                     }
                     catch
                     {
-                        return 0;
+                        // No attached console (piped under the launcher or run
+                        // as a service): fall through to a sensible default.
                     }
+
+                    // Redirected/headless: assume a standard width so long
+                    // lines still wrap and hang under the gutter instead of the
+                    // consumer terminal hard-wrapping them flush-left.
+                    return int.TryParse(
+                        System.Environment.GetEnvironmentVariable("COLUMNS"),
+                        out int cols
+                    ) && cols > 0
+                        ? cols
+                        : 120;
                 },
             }
         );
