@@ -13,6 +13,7 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.MediaProcessing.Episodes;
 using NoMercy.MediaProcessing.People;
@@ -37,7 +38,11 @@ public class EpisodeExtrasJob : AbstractShowExtraDataJob<TmdbEpisodeAppends, str
         JobDispatcher jobDispatcher = new();
 
         EpisodeRepository episodeRepository = new(context);
-        EpisodeManager episodeManager = new(episodeRepository, jobDispatcher);
+        EpisodeManager episodeManager = new(
+            episodeRepository,
+            jobDispatcher,
+            LoggerFactory.CreateLogger<EpisodeManager>()
+        );
 
         PersonRepository personRepository = new(context);
         PersonManager personManager = new(personRepository, jobDispatcher);

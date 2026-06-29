@@ -15,6 +15,7 @@
 
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.TvShows;
@@ -54,14 +55,23 @@ public class ShowImportJob : AbstractMediaJob
             jobDispatcher,
             StorageFactory,
             StorageDriver,
-            new MediaTypeClassifier()
+            new MediaTypeClassifier(),
+            LoggerFactory.CreateLogger<ShowManager>()
         );
 
         SeasonRepository seasonRepository = new(context);
-        SeasonManager seasonManager = new(seasonRepository, jobDispatcher);
+        SeasonManager seasonManager = new(
+            seasonRepository,
+            jobDispatcher,
+            LoggerFactory.CreateLogger<SeasonManager>()
+        );
 
         EpisodeRepository episodeRepository = new(context);
-        EpisodeManager episodeManager = new(episodeRepository, jobDispatcher);
+        EpisodeManager episodeManager = new(
+            episodeRepository,
+            jobDispatcher,
+            LoggerFactory.CreateLogger<EpisodeManager>()
+        );
 
         Library tvLibrary = await context
             .Libraries.Where(f => f.Id == LibraryId)

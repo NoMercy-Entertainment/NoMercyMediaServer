@@ -13,6 +13,10 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -21,7 +25,7 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 // Code
 // ---------------------------------------------------------------------------------------------------------------------
 [Serializable]
-public abstract class AbstractShowExtraDataJob<T, TS> : IShouldQueue
+public abstract class AbstractShowExtraDataJob<T, TS> : IShouldQueue, IJobStorageInjector
 {
     public abstract string QueueName { get; }
     public abstract int Priority { get; }
@@ -33,6 +37,14 @@ public abstract class AbstractShowExtraDataJob<T, TS> : IShouldQueue
     {
         get => _storage ??= [];
         set => _storage = value.ToArray();
+    }
+
+    [JsonIgnore]
+    public ILoggerFactory LoggerFactory { get; set; } = null!;
+
+    public void InjectStorageServices(IServiceProvider serviceProvider)
+    {
+        LoggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
     }
 
     public abstract Task Handle();

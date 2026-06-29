@@ -13,6 +13,7 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.MediaProcessing.People;
 using NoMercy.MediaProcessing.Seasons;
@@ -37,7 +38,11 @@ public class SeasonExtrasJob : AbstractShowExtraDataJob<TmdbSeasonAppends, strin
         JobDispatcher jobDispatcher = new();
 
         SeasonRepository seasonRepository = new(context);
-        SeasonManager seasonManager = new(seasonRepository, jobDispatcher);
+        SeasonManager seasonManager = new(
+            seasonRepository,
+            jobDispatcher,
+            LoggerFactory.CreateLogger<SeasonManager>()
+        );
 
         PersonRepository personRepository = new(context);
         PersonManager personManager = new(personRepository, jobDispatcher);

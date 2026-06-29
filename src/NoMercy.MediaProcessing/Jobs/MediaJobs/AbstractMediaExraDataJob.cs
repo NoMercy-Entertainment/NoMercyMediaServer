@@ -14,6 +14,7 @@
 // ---------------------------------------------------------------------------------------------------------------------
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Storage;
 using NoMercyQueue;
@@ -44,12 +45,16 @@ public abstract class AbstractMediaExraDataJob<T> : IShouldQueue, IJobStorageInj
     [JsonIgnore]
     public IStorageDriver StorageDriver { get; set; } = null!;
 
+    [JsonIgnore]
+    public ILoggerFactory LoggerFactory { get; set; } = null!;
+
     public abstract Task Handle();
 
     public void InjectStorageServices(IServiceProvider serviceProvider)
     {
         StorageFactory = serviceProvider.GetRequiredService<IStorageFactory>();
         StorageDriver = serviceProvider.GetRequiredService<IStorageDriver>();
+        LoggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
     }
 
     public void Dispose()

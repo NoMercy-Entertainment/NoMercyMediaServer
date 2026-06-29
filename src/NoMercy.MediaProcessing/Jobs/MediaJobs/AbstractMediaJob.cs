@@ -14,6 +14,7 @@
 // ---------------------------------------------------------------------------------------------------------------------
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Storage;
 using NoMercyQueue;
@@ -36,6 +37,9 @@ public abstract class AbstractMediaJob : IShouldQueue, IJobStorageInjector
     [JsonIgnore]
     public IStorageDriver StorageDriver { get; set; } = null!;
 
+    [JsonIgnore]
+    public ILoggerFactory LoggerFactory { get; set; } = null!;
+
     public abstract string QueueName { get; }
     public abstract int Priority { get; }
 
@@ -45,6 +49,7 @@ public abstract class AbstractMediaJob : IShouldQueue, IJobStorageInjector
     {
         StorageFactory = serviceProvider.GetRequiredService<IStorageFactory>();
         StorageDriver = serviceProvider.GetRequiredService<IStorageDriver>();
+        LoggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
     }
 
     public void Dispose() { }

@@ -13,6 +13,7 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Events;
 using NoMercy.Events.Library;
@@ -42,7 +43,8 @@ public class ShowExtrasJob : AbstractMediaExraDataJob<TmdbTvShowAppends>
             jobDispatcher,
             StorageFactory,
             StorageDriver,
-            new MediaTypeClassifier()
+            new MediaTypeClassifier(),
+            LoggerFactory.CreateLogger<ShowManager>()
         );
 
         PersonRepository personRepository = new(context);
