@@ -37,7 +37,12 @@ public sealed class S3DriverBuilder : IStorageDriverBuilder
 
     public IReadOnlyCollection<string> SupportedTypes { get; } = ["s3", "r2"];
 
-    public IStorage Build(Ulid folderId, string driverType, string? driverConfigJson, string subPath)
+    public IStorage Build(
+        Ulid folderId,
+        string driverType,
+        string? driverConfigJson,
+        string subPath
+    )
     {
         if (string.IsNullOrWhiteSpace(driverConfigJson))
             throw new ArgumentException(
@@ -169,5 +174,4 @@ public sealed class S3DriverBuilder : IStorageDriverBuilder
 
         return new RemoteStorage(s3Driver);
     }
-
 }

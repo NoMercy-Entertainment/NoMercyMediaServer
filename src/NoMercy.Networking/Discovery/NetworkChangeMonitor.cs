@@ -73,7 +73,7 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
             if (newIp == oldIp)
                 return;
 
-            _logger.LogInformation($"Network address changed: {oldIp} → {newIp}");
+            _logger.LogInformation("Network address changed: {OldIp} → {NewIp}", oldIp, newIp);
             _networkDiscovery.InternalIp = newIp;
 
             // Re-discover external IP (force past the one-shot completion gate)
@@ -87,7 +87,7 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogWarning($"Network change handling failed: {ex.Message}");
+            _logger.LogWarning("Network change handling failed: {Message}", ex.Message);
         }
         finally
         {
@@ -107,7 +107,10 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogWarning($"Network availability change handling failed: {ex.Message}");
+            _logger.LogWarning(
+                "Network availability change handling failed: {Message}",
+                ex.Message
+            );
         }
     }
 
@@ -220,7 +223,7 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogWarning($"Failed to send IP update: {ex.Message}");
+            _logger.LogWarning("Failed to send IP update: {Message}", ex.Message);
         }
     }
 

@@ -115,9 +115,7 @@ public sealed class FfmpegCapabilityProbe(
         );
 
         logger.LogInformation(
-            "Capability probe complete — BluRay={BluRay}, DvdRead={DvdRead}, "
-                + "MissingFilters={FilterCount}, MissingMuxers={MuxerCount}, "
-                + "fpcalc={Fpcalc}, WhisperModel={Whisper}, Tesseract={Tesseract}",
+            "Capability probe complete — BluRay={BluRay}, DvdRead={DvdRead}, MissingFilters={FilterCount}, MissingMuxers={MuxerCount}, fpcalc={Fpcalc}, WhisperModel={Whisper}, Tesseract={Tesseract}",
             bluRay,
             dvdRead,
             missingFilters.Count,

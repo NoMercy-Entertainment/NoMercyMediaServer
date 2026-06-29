@@ -176,7 +176,8 @@ public partial class MusicHub
         if (string.IsNullOrEmpty(deviceId))
         {
             _logger.LogWarning(
-                $"{user.Name}: [MusicHub.ChangeDeviceCommand] ignored — deviceId was null/empty"
+                "{Name}: [MusicHub.ChangeDeviceCommand] ignored — deviceId was null/empty",
+                user.Name
             );
             return;
         }
@@ -252,7 +253,8 @@ public partial class MusicHub
                     if (string.IsNullOrEmpty(receiverName))
                     {
                         _logger.LogWarning(
-                            $"No Chromecast receiver discovered at {targetIp} — panel won't wake via CEC"
+                            "No Chromecast receiver discovered at {TargetIp} — panel won't wake via CEC",
+                            targetIp
                         );
                         return;
                     }
@@ -269,7 +271,8 @@ public partial class MusicHub
                     if (launchData is null)
                     {
                         _logger.LogWarning(
-                            $"Cast token mint failed for {targetIp} — falling back to LAUNCH without customData"
+                            "Cast token mint failed for {TargetIp} — falling back to LAUNCH without customData",
+                            targetIp
                         );
                     }
 
@@ -292,7 +295,9 @@ public partial class MusicHub
                 catch (Exception ex)
                 {
                     _logger.LogWarning(
-                        $"Server-side Cast launch failed for {targetIp}: {ex.Message}"
+                        "Server-side Cast launch failed for {TargetIp}: {Message}",
+                        targetIp,
+                        ex.Message
                     );
                 }
             });
@@ -397,7 +402,10 @@ public partial class MusicHub
             }
             catch (Exception ex)
             {
-                _logger.LogInformation($"SetDeviceVolumeCommand DB persist failed: {ex.Message}");
+                _logger.LogInformation(
+                    "SetDeviceVolumeCommand DB persist failed: {Message}",
+                    ex.Message
+                );
             }
         });
     }

@@ -78,8 +78,7 @@ public static class AutoLadderExpander
         if (reference is null)
         {
             logger.LogWarning(
-                "AutoLadder requires a reference Video output or at least one rung; "
-                    + "profile has neither. Falling back to no video outputs."
+                "AutoLadder requires a reference Video output or at least one rung; profile has neither. Falling back to no video outputs."
             );
             return profile;
         }

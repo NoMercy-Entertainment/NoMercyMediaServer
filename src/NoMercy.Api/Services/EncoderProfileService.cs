@@ -458,7 +458,7 @@ public class EncoderProfileService(
         }
         catch (Exception ex)
         {
-            logger.LogWarning($"Failed to log failure.config_save: {ex.Message}");
+            logger.LogWarning("Failed to log failure.config_save: {Message}", ex.Message);
         }
     }
 
@@ -482,7 +482,7 @@ public class EncoderProfileService(
         }
         catch (Exception ex)
         {
-            logger.LogWarning($"Failed to log encoder profile config: {ex.Message}");
+            logger.LogWarning("Failed to log encoder profile config: {Message}", ex.Message);
         }
     }
 }

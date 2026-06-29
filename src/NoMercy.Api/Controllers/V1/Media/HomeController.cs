@@ -360,7 +360,7 @@ public class HomeController : BaseController
 
                     if (Software.IsWindows)
                     {
-                        _logger.LogDebug($"cmd -c \"{sb}\"");
+                        _logger.LogDebug("cmd -c \"{Sb}\"", sb);
                         Shell.ExecSync(
                             "cmd",
                             $"/c \"{sb}\"",
@@ -369,7 +369,7 @@ public class HomeController : BaseController
                     }
                     else
                     {
-                        _logger.LogDebug($"/bin/bash -c \"{sb}\"");
+                        _logger.LogDebug("/bin/bash -c \"{Sb}\"", sb);
                         Shell.ExecSync(
                             "/bin/bash",
                             $"-c \"{sb}\"",
@@ -379,7 +379,11 @@ public class HomeController : BaseController
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError($"Trailer download failed for {trailerId}: {ex.Message}");
+                    _logger.LogError(
+                        "Trailer download failed for {TrailerId}: {Message}",
+                        trailerId,
+                        ex.Message
+                    );
                 }
             },
             ct
@@ -445,11 +449,15 @@ public class HomeController : BaseController
         try
         {
             await _transcodeStorage.DeleteDirectoryAsync(trailerId, recursive: true, ct: ct);
-            _logger.LogInformation($"Trailer folder deleted: {trailerAbsPath}");
+            _logger.LogInformation("Trailer folder deleted: {TrailerAbsPath}", trailerAbsPath);
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Failed to delete trailer folder {trailerAbsPath}: {ex.Message}");
+            _logger.LogError(
+                "Failed to delete trailer folder {TrailerAbsPath}: {Message}",
+                trailerAbsPath,
+                ex.Message
+            );
             return InternalServerErrorResponse("Failed to remove trailer");
         }
 

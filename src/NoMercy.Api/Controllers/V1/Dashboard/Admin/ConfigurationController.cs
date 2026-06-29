@@ -315,7 +315,7 @@ public class ConfigurationController(
             }
             catch (Exception ex)
             {
-                logger.LogWarning($"Failed to log config change: {ex.Message}");
+                logger.LogWarning("Failed to log config change: {Message}", ex.Message);
             }
         }
 

@@ -60,8 +60,7 @@ public class FfmpegBluRayCapability(
         else
         {
             logger.LogWarning(
-                "[BluRay] ffmpeg bluray: protocol NOT present in this build — "
-                    + "Blu-ray ripping will fail. Rebuild nomercy-ffmpeg with --enable-libbluray."
+                "[BluRay] ffmpeg bluray: protocol NOT present in this build — Blu-ray ripping will fail. Rebuild nomercy-ffmpeg with --enable-libbluray."
             );
         }
 

@@ -312,8 +312,7 @@ public class AbrLadderGenerator : IAbrLadderGenerator
         if (rungs.Count < autoConfig.MinRungs)
         {
             _logger.LogWarning(
-                "AutoLadder produced {Actual} rung(s), which is below MinRungs={Min}. "
-                    + "Emitting as-is — fabricating rungs to meet the floor is not supported.",
+                "AutoLadder produced {Actual} rung(s), which is below MinRungs={Min}. Emitting as-is — fabricating rungs to meet the floor is not supported.",
                 rungs.Count,
                 autoConfig.MinRungs
             );
@@ -349,8 +348,7 @@ public class AbrLadderGenerator : IAbrLadderGenerator
 
                 // Null recommendation → fall through to CrfBased with a warning.
                 _logger.LogWarning(
-                    "Tier '{Label}' has no recommended bitrate for codec {Codec} "
-                        + "and strategy {Strategy}. Falling back to CrfBased.",
+                    "Tier '{Label}' has no recommended bitrate for codec {Codec} and strategy {Strategy}. Falling back to CrfBased.",
                     tier.Label,
                     codec,
                     config.BitrateStrategy

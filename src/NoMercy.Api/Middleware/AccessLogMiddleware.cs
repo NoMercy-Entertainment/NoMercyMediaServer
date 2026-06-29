@@ -120,7 +120,9 @@ public class AccessLogMiddleware
             }
 
             _logger.LogInformation(
-                $"Unknown: {context.Connection.RemoteIpAddress}: {path} (No GUID)"
+                "Unknown: {RemoteIpAddress}: {Path} (No GUID)",
+                context.Connection.RemoteIpAddress,
+                path
             );
             await WriteProblemAsync(
                 context,
@@ -142,7 +144,9 @@ public class AccessLogMiddleware
             }
 
             _logger.LogInformation(
-                $"Unknown: {context.Connection.RemoteIpAddress}: {path} (Malformed or empty GUID)"
+                "Unknown: {RemoteIpAddress}: {Path} (Malformed or empty GUID)",
+                context.Connection.RemoteIpAddress,
+                path
             );
             await WriteProblemAsync(
                 context,
@@ -177,7 +181,9 @@ public class AccessLogMiddleware
         if (user is null)
         {
             _logger.LogInformation(
-                $"Unknown: {context.Connection.RemoteIpAddress}: {path} (User not found)"
+                "Unknown: {RemoteIpAddress}: {Path} (User not found)",
+                context.Connection.RemoteIpAddress,
+                path
             );
             await WriteProblemAsync(
                 context,
@@ -190,7 +196,7 @@ public class AccessLogMiddleware
             return;
         }
 
-        _logger.LogInformation($"{user.Name}: {path}");
+        _logger.LogInformation("{Name}: {Path}", user.Name, path);
 
         await _next(context);
     }

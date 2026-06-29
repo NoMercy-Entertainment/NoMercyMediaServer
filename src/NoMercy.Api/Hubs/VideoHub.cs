@@ -222,7 +222,7 @@ public partial class VideoHub : ConnectionHub
             }
             catch (Exception ex)
             {
-                _logger.LogWarning($"Failed to log playback.stopped: {ex.Message}");
+                _logger.LogWarning("Failed to log playback.stopped: {Message}", ex.Message);
             }
         }
 

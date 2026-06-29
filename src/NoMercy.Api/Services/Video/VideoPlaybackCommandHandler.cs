@@ -102,7 +102,7 @@ public class VideoPlaybackCommandHandler(
                 break;
             default:
                 // Handle unknown command or log it
-                logger.LogWarning($"Unknown command: {command}");
+                logger.LogWarning("Unknown command: {Command}", command);
                 break;
         }
     }

@@ -90,7 +90,10 @@ public class InboxClassifierEventHandler : IDisposable
         if (@event.LibraryType != MediaTypes.InboxMediaType)
             return;
 
-        _logger.LogInformation($"InboxClassifier: Processing drop event in {@event.FolderPath}");
+        _logger.LogInformation(
+            "InboxClassifier: Processing drop event in {FolderPath}",
+            @event.FolderPath
+        );
 
         await using MediaContext context = _contextFactory();
 
@@ -103,7 +106,8 @@ public class InboxClassifierEventHandler : IDisposable
         if (library is null)
         {
             _logger.LogWarning(
-                $"InboxClassifier: Library {@event.LibraryId} not found, dropping event"
+                "InboxClassifier: Library {LibraryId} not found, dropping event",
+                @event.LibraryId
             );
             return;
         }
@@ -115,7 +119,10 @@ public class InboxClassifierEventHandler : IDisposable
 
         if (folderLibrary is null)
         {
-            _logger.LogWarning($"InboxClassifier: No folder found for library {@event.LibraryId}");
+            _logger.LogWarning(
+                "InboxClassifier: No folder found for library {LibraryId}",
+                @event.LibraryId
+            );
             return;
         }
 
@@ -129,7 +136,10 @@ public class InboxClassifierEventHandler : IDisposable
 
         if (children.Count == 0)
         {
-            _logger.LogWarning($"InboxClassifier: No children found in inbox root {inboxRoot}");
+            _logger.LogWarning(
+                "InboxClassifier: No children found in inbox root {InboxRoot}",
+                inboxRoot
+            );
             return;
         }
 
@@ -154,12 +164,17 @@ public class InboxClassifierEventHandler : IDisposable
             if (fingerprint is { } fp && !_seenContent.TryAdd(fp, childPath))
             {
                 _logger.LogInformation(
-                    $"InboxClassifier: skipping {childPath} — duplicate content already seen at {_seenContent[fp]}"
+                    "InboxClassifier: skipping {ChildPath} — duplicate content already seen at {Fp}",
+                    childPath,
+                    _seenContent[fp]
                 );
                 continue;
             }
 
-            _logger.LogInformation($"InboxClassifier: Classifying inbox child {childPath}");
+            _logger.LogInformation(
+                "InboxClassifier: Classifying inbox child {ChildPath}",
+                childPath
+            );
 
             try
             {
@@ -199,7 +214,11 @@ public class InboxClassifierEventHandler : IDisposable
             }
             catch (Exception ex)
             {
-                _logger.LogError($"InboxClassifier: Error processing {childPath}: {ex.Message}");
+                _logger.LogError(
+                    "InboxClassifier: Error processing {ChildPath}: {Message}",
+                    childPath,
+                    ex.Message
+                );
 
                 InboxItem failedItem = new()
                 {
@@ -220,7 +239,9 @@ public class InboxClassifierEventHandler : IDisposable
                 catch (Exception saveEx)
                 {
                     _logger.LogError(
-                        $"InboxClassifier: Could not persist Failed item for {childPath}: {saveEx.Message}"
+                        "InboxClassifier: Could not persist Failed item for {ChildPath}: {Message}",
+                        childPath,
+                        saveEx.Message
                     );
                 }
 

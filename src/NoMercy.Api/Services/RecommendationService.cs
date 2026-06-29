@@ -143,9 +143,11 @@ public class RecommendationService
         );
 
         _logger.LogDebug(
-            $"Recommendations [{mediaTypeFilter}]: recs={animeRecsTask.Result.Count + movieRecsTask.Result.Count + tvRecsTask.Result.Count}, "
-                + $"similar={animeSimTask.Result.Count + movieSimTask.Result.Count + tvSimTask.Result.Count}, "
-                + $"affinity sources={affinityTask.Result.SourceItems.Count}"
+            "Recommendations [{MediaTypeFilter}]: recs={Count}, similar={Count2}, affinity sources={Count3}",
+            mediaTypeFilter,
+            animeRecsTask.Result.Count + movieRecsTask.Result.Count + tvRecsTask.Result.Count,
+            animeSimTask.Result.Count + movieSimTask.Result.Count + tvSimTask.Result.Count,
+            affinityTask.Result.SourceItems.Count
         );
 
         UserAffinityProfile profile = affinityTask.Result;
@@ -317,7 +319,11 @@ public class RecommendationService
             .ToList();
 
         _logger.LogDebug(
-            $"Recommendations [{mediaTypeFilter}]: merged={allCandidates.Count}, scored={scored.Count}, deduped={deduped.Count}"
+            "Recommendations [{MediaTypeFilter}]: merged={Count}, scored={Count2}, deduped={Count3}",
+            mediaTypeFilter,
+            allCandidates.Count,
+            scored.Count,
+            deduped.Count
         );
 
         // Phase 5: Diversity selection — guarantee floor representation per media type

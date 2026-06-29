@@ -111,7 +111,11 @@ public class ImageController(
             }
             catch (Exception e)
             {
-                logger.LogWarning($"Image conversion failed for {filePath}: {e.Message}");
+                logger.LogWarning(
+                    "Image conversion failed for {FilePath}: {Message}",
+                    filePath,
+                    e.Message
+                );
                 return PhysicalFile(filePath, originalMimeType);
             }
         }

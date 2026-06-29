@@ -62,8 +62,7 @@ public class PortForwardStrategy(
         }
 
         logger.LogDebug(
-            "Port forward check failed — router may not support NAT hairpinning, "
-                + "but external clients may still be able to connect."
+            "Port forward check failed — router may not support NAT hairpinning, but external clients may still be able to connect."
         );
         return false;
     }

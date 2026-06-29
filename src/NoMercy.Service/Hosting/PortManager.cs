@@ -54,9 +54,7 @@ public class PortManager : IPortManager
             if (_certificateService.HasValidCertificate())
             {
                 _logger.LogError(
-                    "Port {Port} is in use by an unknown process. "
-                        + "NoMercy is registered on this port and cannot use a different one. "
-                        + "Free the port and restart.",
+                    "Port {Port} is in use by an unknown process. NoMercy is registered on this port and cannot use a different one. Free the port and restart.",
                     port
                 );
             }
@@ -100,9 +98,7 @@ public class PortManager : IPortManager
             if (isRegistered)
             {
                 _logger.LogError(
-                    "Port {Port} is in use by {BlockingProcessName} (PID {BlockingPid}). "
-                        + "NoMercy is registered on this port and cannot use a different one. "
-                        + "Free the port and restart.",
+                    "Port {Port} is in use by {BlockingProcessName} (PID {BlockingPid}). NoMercy is registered on this port and cannot use a different one. Free the port and restart.",
                     port,
                     blockingProcessName,
                     blockingPid
@@ -114,8 +110,7 @@ public class PortManager : IPortManager
 
             int alternativePort = FindNextAvailablePort(port + 1);
             _logger.LogInformation(
-                "Port {Port} is in use by {BlockingProcessName} (PID {BlockingPid}). "
-                    + "Server is not yet registered — using port {AlternativePort} instead.",
+                "Port {Port} is in use by {BlockingProcessName} (PID {BlockingPid}). Server is not yet registered — using port {AlternativePort} instead.",
                 port,
                 blockingProcessName,
                 blockingPid,

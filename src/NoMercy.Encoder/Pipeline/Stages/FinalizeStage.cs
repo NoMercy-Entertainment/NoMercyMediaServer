@@ -146,8 +146,7 @@ public class FinalizeStage(
             // see the same intent on the editor side.
             if (derivatives.SubtitleImsc)
                 logger.LogWarning(
-                    "[{CorrelationId}] HlsDerivatives.SubtitleImsc is true but IMSC subtitle output "
-                        + "is not implemented — flag ignored. Untick it in the encoder profile to silence this warning.",
+                    "[{CorrelationId}] HlsDerivatives.SubtitleImsc is true but IMSC subtitle output is not implemented — flag ignored. Untick it in the encoder profile to silence this warning.",
                     context.CorrelationId
                 );
 

@@ -179,7 +179,10 @@ public class NetworkDiscovery : INetworkDiscovery
                 }
                 catch (Exception e)
                 {
-                    _logger.LogInformation($"Failed to get external IP from API: {e.Message}");
+                    _logger.LogInformation(
+                        "Failed to get external IP from API: {Message}",
+                        e.Message
+                    );
                 }
             }
 
@@ -194,7 +197,7 @@ public class NetworkDiscovery : INetworkDiscovery
                 }
                 catch (Exception e)
                 {
-                    _logger.LogDebug($"Failed to get external IPv6: {e.Message}");
+                    _logger.LogDebug("Failed to get external IPv6: {Message}", e.Message);
                 }
             }
 
@@ -211,7 +214,7 @@ public class NetworkDiscovery : INetworkDiscovery
         if (_hasFoundDevice)
             return;
 
-        _logger.LogInformation("UPNP router Found: " + args.Device.DeviceEndpoint);
+        _logger.LogInformation("UPNP router Found: {DeviceEndpoint}", args.Device.DeviceEndpoint);
 
         _device = args.Device;
         _hasFoundDevice = true;
@@ -253,9 +256,9 @@ public class NetworkDiscovery : INetworkDiscovery
 
             string ip = _device.GetExternalIP().ToString();
 
-            _logger.LogInformation($"IP address obtained from UPNP: {ip}");
+            _logger.LogInformation("IP address obtained from UPNP: {Ip}", ip);
             if (!string.IsNullOrEmpty(_externalIp))
-                _logger.LogInformation($"IP address obtained from API: {_externalIp}");
+                _logger.LogInformation("IP address obtained from API: {_externalIp}", _externalIp);
 
             if (string.IsNullOrEmpty(_externalIp))
             {
@@ -264,7 +267,7 @@ public class NetworkDiscovery : INetworkDiscovery
         }
         catch (Exception e)
         {
-            _logger.LogInformation($"Failed to create UPNP records: {e.Message}");
+            _logger.LogInformation("Failed to create UPNP records: {Message}", e.Message);
             _hasFoundDevice = false;
             _connectivityStatus.NatStatus = NatStatus.Closed;
             return;
@@ -288,7 +291,10 @@ public class NetworkDiscovery : INetworkDiscovery
         if (completedTask == delayTask)
         {
             _logger.LogTrace(
-                $"Timeout checking {ExternalIp}:{RuntimeServerSettings.Current.ExternalServerPort} after {timeoutMilliseconds}ms."
+                "Timeout checking {ExternalIp}:{ExternalServerPort} after {TimeoutMilliseconds}ms.",
+                ExternalIp,
+                RuntimeServerSettings.Current.ExternalServerPort,
+                timeoutMilliseconds
             );
             return false;
         }
@@ -301,14 +307,21 @@ public class NetworkDiscovery : INetworkDiscovery
         catch (SocketException ex)
         {
             _logger.LogDebug(
-                $"SocketException checking {ExternalIp}:{RuntimeServerSettings.Current.ExternalServerPort}: {ex.SocketErrorCode} ({ex.Message})"
+                "SocketException checking {ExternalIp}:{ExternalServerPort}: {SocketErrorCode} ({Message})",
+                ExternalIp,
+                RuntimeServerSettings.Current.ExternalServerPort,
+                ex.SocketErrorCode,
+                ex.Message
             );
             return false;
         }
         catch (Exception ex)
         {
             _logger.LogDebug(
-                $"Exception checking {ExternalIp}:{RuntimeServerSettings.Current.ExternalServerPort}: {ex.Message}"
+                "Exception checking {ExternalIp}:{ExternalServerPort}: {Message}",
+                ExternalIp,
+                RuntimeServerSettings.Current.ExternalServerPort,
+                ex.Message
             );
             return false;
         }
@@ -510,7 +523,7 @@ public class NetworkDiscovery : INetworkDiscovery
             }
             catch (Exception e)
             {
-                _logger.LogWarning($"External IP API unavailable: {e.Message}");
+                _logger.LogWarning("External IP API unavailable: {Message}", e.Message);
             }
         }
 
@@ -528,7 +541,7 @@ public class NetworkDiscovery : INetworkDiscovery
             }
             catch (Exception e)
             {
-                _logger.LogWarning($"UPnP external IP unavailable: {e.Message}");
+                _logger.LogWarning("UPnP external IP unavailable: {Message}", e.Message);
             }
         }
 
@@ -536,7 +549,7 @@ public class NetworkDiscovery : INetworkDiscovery
         string? cached = LoadCachedExternalIp();
         if (cached is not null)
         {
-            _logger.LogInformation($"Using cached external IP: {cached}");
+            _logger.LogInformation("Using cached external IP: {Cached}", cached);
             return cached;
         }
 
@@ -588,7 +601,7 @@ public class NetworkDiscovery : INetworkDiscovery
         }
         catch (Exception e)
         {
-            _logger.LogDebug($"External IPv6 API unavailable: {e.Message}");
+            _logger.LogDebug("External IPv6 API unavailable: {Message}", e.Message);
         }
 
         // 2. Try well-known IPv6 services
@@ -652,7 +665,7 @@ public class NetworkDiscovery : INetworkDiscovery
         }
         catch (Exception e)
         {
-            _logger.LogWarning($"Failed to cache external IP: {e.Message}");
+            _logger.LogWarning("Failed to cache external IP: {Message}", e.Message);
         }
     }
 

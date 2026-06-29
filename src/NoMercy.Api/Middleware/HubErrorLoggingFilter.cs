@@ -39,7 +39,8 @@ public class HubErrorLoggingFilter(ILogger<HubErrorLoggingFilter> logger) : IHub
         if (guid == null)
         {
             logger.LogInformation(
-                $"[Unknown User]: [{hubName}] No user identifier found in claims."
+                "[Unknown User]: [{HubName}] No user identifier found in claims.",
+                hubName
             );
             return await next(invocationContext);
         }
@@ -47,7 +48,10 @@ public class HubErrorLoggingFilter(ILogger<HubErrorLoggingFilter> logger) : IHub
         if (!Guid.TryParse(guid, out Guid userId))
         {
             logger.LogInformation(
-                $"[{hubName}] Malformed user GUID claim '{guid}' on connection {connectionId}"
+                "[{HubName}] Malformed user GUID claim '{Guid}' on connection {ConnectionId}",
+                hubName,
+                guid,
+                connectionId
             );
             return await next(invocationContext);
         }
@@ -55,7 +59,11 @@ public class HubErrorLoggingFilter(ILogger<HubErrorLoggingFilter> logger) : IHub
 
         if (user == null)
         {
-            logger.LogInformation($"[Unknown User]: [{hubName}] User with ID {userId} not found.");
+            logger.LogInformation(
+                "[Unknown User]: [{HubName}] User with ID {UserId} not found.",
+                hubName,
+                userId
+            );
             return await next(invocationContext);
         }
 
@@ -72,7 +80,11 @@ public class HubErrorLoggingFilter(ILogger<HubErrorLoggingFilter> logger) : IHub
         {
             // HubException is thrown intentionally to send error messages to clients
             logger.LogInformation(
-                $"{user.Name}: [{hubName}.{methodName}] Hub exception: {hubEx.Message}"
+                "{Name}: [{HubName}.{MethodName}] Hub exception: {Message}",
+                user.Name,
+                hubName,
+                methodName,
+                hubEx.Message
             );
             throw; // Re-throw to send to client
         }
@@ -81,11 +93,21 @@ public class HubErrorLoggingFilter(ILogger<HubErrorLoggingFilter> logger) : IHub
         {
             // This catches when a client calls a method that doesn't exist
             logger.LogInformation(
-                $"{user.Name}: [{hubName}] ERROR: Method '{methodName}' does not exist!"
+                "{Name}: [{HubName}] ERROR: Method '{MethodName}' does not exist!",
+                user.Name,
+                hubName,
+                methodName
             );
-            logger.LogInformation($"{user.Name}: [{hubName}] Connection: {connectionId}");
             logger.LogInformation(
-                $"{user.Name}: [{hubName}] Available methods should match public Task methods in the hub class"
+                "{Name}: [{HubName}] Connection: {ConnectionId}",
+                user.Name,
+                hubName,
+                connectionId
+            );
+            logger.LogInformation(
+                "{Name}: [{HubName}] Available methods should match public Task methods in the hub class",
+                user.Name,
+                hubName
             );
 
             throw new HubException(
@@ -98,10 +120,17 @@ public class HubErrorLoggingFilter(ILogger<HubErrorLoggingFilter> logger) : IHub
         {
             // This catches parameter binding errors (wrong types, missing required params, etc.)
             logger.LogInformation(
-                $"{user.Name}: [{hubName}.{methodName}] ERROR: Invalid arguments"
+                "{Name}: [{HubName}.{MethodName}] ERROR: Invalid arguments",
+                user.Name,
+                hubName,
+                methodName
             );
             logger.LogInformation(
-                $"{user.Name}: [{hubName}.{methodName}] Details: {argEx.Message}"
+                "{Name}: [{HubName}.{MethodName}] Details: {Message}",
+                user.Name,
+                hubName,
+                methodName,
+                argEx.Message
             );
 
             if (invocationContext.HubMethodArguments.Count > 0)
@@ -113,13 +142,20 @@ public class HubErrorLoggingFilter(ILogger<HubErrorLoggingFilter> logger) : IHub
                     )
                 );
                 logger.LogInformation(
-                    $"{user.Name}: [{hubName}.{methodName}] Provided arguments: {argsInfo}"
+                    "{Name}: [{HubName}.{MethodName}] Provided arguments: {ArgsInfo}",
+                    user.Name,
+                    hubName,
+                    methodName,
+                    argsInfo
                 );
             }
             else
             {
                 logger.LogInformation(
-                    $"{user.Name}: [{hubName}.{methodName}] No arguments provided"
+                    "{Name}: [{HubName}.{MethodName}] No arguments provided",
+                    user.Name,
+                    hubName,
+                    methodName
                 );
             }
 
@@ -133,14 +169,31 @@ public class HubErrorLoggingFilter(ILogger<HubErrorLoggingFilter> logger) : IHub
         {
             // Catch all other exceptions during method execution
             logger.LogInformation(
-                $"{user.Name}: [{hubName}.{methodName}] ERROR: Unhandled exception"
+                "{Name}: [{HubName}.{MethodName}] ERROR: Unhandled exception",
+                user.Name,
+                hubName,
+                methodName
             );
             logger.LogInformation(
-                $"{user.Name}: [{hubName}.{methodName}] Exception type: {ex.GetType().Name}"
+                "{Name}: [{HubName}.{MethodName}] Exception type: {Name2}",
+                user.Name,
+                hubName,
+                methodName,
+                ex.GetType().Name
             );
-            logger.LogInformation($"{user.Name}: [{hubName}.{methodName}] Message: {ex.Message}");
             logger.LogInformation(
-                $"{user.Name}: [{hubName}.{methodName}] Stack trace: {ex.StackTrace}"
+                "{Name}: [{HubName}.{MethodName}] Message: {Message}",
+                user.Name,
+                hubName,
+                methodName,
+                ex.Message
+            );
+            logger.LogInformation(
+                "{Name}: [{HubName}.{MethodName}] Stack trace: {StackTrace}",
+                user.Name,
+                hubName,
+                methodName,
+                ex.StackTrace
             );
 
             if (invocationContext.HubMethodArguments.Count > 0)
@@ -152,7 +205,11 @@ public class HubErrorLoggingFilter(ILogger<HubErrorLoggingFilter> logger) : IHub
                     )
                 );
                 logger.LogInformation(
-                    $"{user.Name}: [{hubName}.{methodName}] Arguments: {argsInfo}"
+                    "{Name}: [{HubName}.{MethodName}] Arguments: {ArgsInfo}",
+                    user.Name,
+                    hubName,
+                    methodName,
+                    argsInfo
                 );
             }
 

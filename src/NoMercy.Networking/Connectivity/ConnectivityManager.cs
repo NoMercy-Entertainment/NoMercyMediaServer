@@ -97,7 +97,7 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
         }
         catch (Exception ex)
         {
-            _logger.LogWarning($"Error in ConnectivityManager: {ex.Message}");
+            _logger.LogWarning("Error in ConnectivityManager: {Message}", ex.Message);
         }
     }
 
@@ -119,7 +119,7 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
 
             try
             {
-                _logger.LogInformation($"Trying connectivity strategy: {strategy.Name}");
+                _logger.LogInformation("Trying connectivity strategy: {Name}", strategy.Name);
                 bool success = await strategy.TryEstablishAsync(ct);
                 if (success)
                 {
@@ -132,15 +132,15 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
                         _ => ConnectivityState.DirectAccess,
                     };
                     SetState(newState);
-                    _logger.LogInformation($"Connectivity established via {strategy.Name}");
+                    _logger.LogInformation("Connectivity established via {Name}", strategy.Name);
                     return;
                 }
 
-                _logger.LogDebug($"Strategy {strategy.Name} did not succeed, trying next...");
+                _logger.LogDebug("Strategy {Name} did not succeed, trying next...", strategy.Name);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning($"Strategy {strategy.Name} failed: {ex.Message}");
+                _logger.LogWarning("Strategy {Name} failed: {Message}", strategy.Name, ex.Message);
             }
         }
 

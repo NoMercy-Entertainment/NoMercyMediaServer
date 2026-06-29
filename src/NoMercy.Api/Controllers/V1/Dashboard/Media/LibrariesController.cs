@@ -128,7 +128,7 @@ public class LibrariesController(
             }
             catch (Exception ex)
             {
-                logger.LogWarning($"Failed to log library created: {ex.Message}");
+                logger.LogWarning("Failed to log library created: {Message}", ex.Message);
             }
 
             return Ok(
@@ -218,7 +218,10 @@ public class LibrariesController(
             }
             catch (Exception ex)
             {
-                logger.LogWarning($"Failed to log library scan schedule change: {ex.Message}");
+                logger.LogWarning(
+                    "Failed to log library scan schedule change: {Message}",
+                    ex.Message
+                );
             }
         }
 
@@ -355,7 +358,7 @@ public class LibrariesController(
             }
             catch (Exception ex)
             {
-                logger.LogWarning($"Failed to log library removed: {ex.Message}");
+                logger.LogWarning("Failed to log library removed: {Message}", ex.Message);
             }
 
             return Ok(
@@ -594,7 +597,11 @@ public class LibrariesController(
         catch (Exception ex)
         {
             logger.LogError(
-                $"[AddFolder] failed for library={id} driver={request.DriverId} path='{request.Path}': {ex}"
+                "[AddFolder] failed for library={Id} driver={DriverId} path='{Path}': {Ex}",
+                id,
+                request.DriverId,
+                request.Path,
+                ex
             );
             return InternalServerErrorResponse("Something went wrong adding the folder");
         }
@@ -745,7 +752,12 @@ public class LibrariesController(
             // Surface the underlying failure (FK constraint, missing dep,
             // event-bus crash) so future delete-folder regressions don't
             // require Stoney to grep for a generic 500 in production logs.
-            logger.LogError($"[DeleteFolder] folder={folderId} library={id} failed: {ex}");
+            logger.LogError(
+                "[DeleteFolder] folder={FolderId} library={Id} failed: {Ex}",
+                folderId,
+                id,
+                ex
+            );
             return InternalServerErrorResponse("Something went wrong deleting the library folder");
         }
     }

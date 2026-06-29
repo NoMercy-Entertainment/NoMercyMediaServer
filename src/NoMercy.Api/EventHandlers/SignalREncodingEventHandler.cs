@@ -57,7 +57,9 @@ public class SignalREncodingEventHandler : IDisposable
             }
         );
         _logger.LogInformation(
-            $"Encoding started: Job={@event.JobId}, Profile={@event.ProfileName}"
+            "Encoding started: Job={JobId}, Profile={ProfileName}",
+            @event.JobId,
+            @event.ProfileName
         );
     }
 
@@ -95,7 +97,7 @@ public class SignalREncodingEventHandler : IDisposable
                 Timestamp = @event.Timestamp,
             }
         );
-        _logger.LogInformation($"Encoding completed: Job={@event.JobId}");
+        _logger.LogInformation("Encoding completed: Job={JobId}", @event.JobId);
     }
 
     internal async Task OnEncodingFailed(EncodingFailedEvent @event, CancellationToken ct)
@@ -112,7 +114,11 @@ public class SignalREncodingEventHandler : IDisposable
                 Timestamp = @event.Timestamp,
             }
         );
-        _logger.LogInformation($"Encoding failed: Job={@event.JobId}, Error={@event.ErrorMessage}");
+        _logger.LogInformation(
+            "Encoding failed: Job={JobId}, Error={ErrorMessage}",
+            @event.JobId,
+            @event.ErrorMessage
+        );
     }
 
     internal async Task OnEncodingStageChanged(

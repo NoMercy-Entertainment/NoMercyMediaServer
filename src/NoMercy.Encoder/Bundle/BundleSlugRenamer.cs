@@ -79,7 +79,9 @@ public class BundleSlugRenamer(
             if (string.IsNullOrWhiteSpace(pair.Key) || string.IsNullOrWhiteSpace(pair.Value))
             {
                 logger.LogWarning(
-                    $"BundleSlugRenamer: skipping empty slug pair '{pair.Key}' → '{pair.Value}'"
+                    "BundleSlugRenamer: skipping empty slug pair '{Key}' → '{Value}'",
+                    pair.Key,
+                    pair.Value
                 );
                 continue;
             }
@@ -95,8 +97,10 @@ public class BundleSlugRenamer(
             if (newExists)
             {
                 logger.LogWarning(
-                    $"BundleSlugRenamer: collision — '{newDir}' already exists in '{folderPath}'. "
-                        + $"Leaving '{oldDir}' untouched."
+                    "BundleSlugRenamer: collision — '{NewDir}' already exists in '{FolderPath}'. Leaving '{OldDir}' untouched.",
+                    newDir,
+                    folderPath,
+                    oldDir
                 );
                 continue;
             }
@@ -105,13 +109,20 @@ public class BundleSlugRenamer(
             {
                 await storage.MoveDirectoryAsync(oldDir, newDir, ct);
                 logger.LogInformation(
-                    $"BundleSlugRenamer: renamed '{oldDir}' → '{newDir}' in '{folderPath}'"
+                    "BundleSlugRenamer: renamed '{OldDir}' → '{NewDir}' in '{FolderPath}'",
+                    oldDir,
+                    newDir,
+                    folderPath
                 );
             }
             catch (Exception ex)
             {
                 logger.LogWarning(
-                    $"BundleSlugRenamer: failed to rename '{oldDir}' → '{newDir}' in '{folderPath}': {ex.Message}"
+                    "BundleSlugRenamer: failed to rename '{OldDir}' → '{NewDir}' in '{FolderPath}': {Message}",
+                    oldDir,
+                    newDir,
+                    folderPath,
+                    ex.Message
                 );
                 continue;
             }
@@ -146,13 +157,17 @@ public class BundleSlugRenamer(
             await storage.WriteAsync(manifestPath, Encoding.UTF8.GetBytes(updated), ct);
 
             logger.LogTrace(
-                $"BundleSlugRenamer: patched manifest.json preset_slug → '{newSlug}' in '{bundleDir}'"
+                "BundleSlugRenamer: patched manifest.json preset_slug → '{NewSlug}' in '{BundleDir}'",
+                newSlug,
+                bundleDir
             );
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                $"BundleSlugRenamer: failed to patch manifest.json in '{bundleDir}': {ex.Message}"
+                "BundleSlugRenamer: failed to patch manifest.json in '{BundleDir}': {Message}",
+                bundleDir,
+                ex.Message
             );
         }
     }

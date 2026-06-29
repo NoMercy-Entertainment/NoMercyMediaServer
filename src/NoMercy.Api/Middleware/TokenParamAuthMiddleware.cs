@@ -63,7 +63,7 @@ public class TokenParamAuthMiddleware(
 
         if (string.IsNullOrEmpty(claim))
         {
-            logger.LogInformation("Unauthorized request, no jwt: " + url);
+            logger.LogInformation("Unauthorized request, no jwt: {Url}", url);
             await WriteProblemAsync(
                 context,
                 statusCode: (int)HttpStatusCode.Unauthorized,
@@ -77,7 +77,7 @@ public class TokenParamAuthMiddleware(
 
         if (!Guid.TryParse(claim, out Guid userId) || userId == Guid.Empty)
         {
-            logger.LogInformation("Unauthorized request, guid malformed or empty: " + url);
+            logger.LogInformation("Unauthorized request, guid malformed or empty: {Url}", url);
             await WriteProblemAsync(
                 context,
                 statusCode: (int)HttpStatusCode.Forbidden,
@@ -93,7 +93,7 @@ public class TokenParamAuthMiddleware(
 
         if (user is null)
         {
-            logger.LogInformation("Unauthorized request, user not found: " + url);
+            logger.LogInformation("Unauthorized request, user not found: {Url}", url);
             await WriteProblemAsync(
                 context,
                 statusCode: (int)HttpStatusCode.Forbidden,

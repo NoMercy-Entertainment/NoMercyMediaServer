@@ -137,8 +137,7 @@ public class Encoder(
         {
             executionResults = [];
             logger.LogInformation(
-                "[{CorrelationId}] FinalizeOnly run — skipping Build + Execute; "
-                    + "finalizing against the existing tempDir contents.",
+                "[{CorrelationId}] FinalizeOnly run — skipping Build + Execute; finalizing against the existing tempDir contents.",
                 context.CorrelationId
             );
         }
@@ -199,8 +198,7 @@ public class Encoder(
         {
             finalizeOutput = new(request.OutputDirectory, 0);
             logger.LogDebug(
-                "[{CorrelationId}] Per-task run — skipping FinalizeStage; coordinator handles "
-                    + "master playlist, chapters, fonts.json, manifest.",
+                "[{CorrelationId}] Per-task run — skipping FinalizeStage; coordinator handles master playlist, chapters, fonts.json, manifest.",
                 context.CorrelationId
             );
         }

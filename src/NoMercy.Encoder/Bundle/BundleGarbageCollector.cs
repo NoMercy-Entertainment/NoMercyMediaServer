@@ -150,8 +150,7 @@ public class BundleGarbageCollector(
 
             if (report.ExtraFiles.Count > 0)
                 logger.LogWarning(
-                    "Bundle {BundleDir} has {Count} extra file(s) not listed in the manifest: {Files}. "
-                        + "These may be user additions — no action taken.",
+                    "Bundle {BundleDir} has {Count} extra file(s) not listed in the manifest: {Files}. These may be user additions — no action taken.",
                     bundleDir,
                     report.ExtraFiles.Count,
                     string.Join(", ", report.ExtraFiles)
@@ -159,8 +158,7 @@ public class BundleGarbageCollector(
 
             if (report.MissingFiles.Count > 0)
                 logger.LogWarning(
-                    "Bundle {BundleDir} is missing {Count} file(s) listed in the manifest: {Files}. "
-                        + "Encode may be incomplete — the user can re-encode to repair.",
+                    "Bundle {BundleDir} is missing {Count} file(s) listed in the manifest: {Files}. Encode may be incomplete — the user can re-encode to repair.",
                     bundleDir,
                     report.MissingFiles.Count,
                     string.Join(", ", report.MissingFiles)

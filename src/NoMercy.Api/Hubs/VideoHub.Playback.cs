@@ -187,8 +187,10 @@ public partial class VideoHub
         if (string.IsNullOrEmpty(type) || listId is null)
         {
             _logger.LogWarning(
-                $"{user.Name}: [VideoHub.StartPlaybackCommand] ignored — null arg "
-                    + $"(type='{type ?? "<null>"}', listId={(listId is null ? "<null>" : "set")})"
+                "{Name}: [VideoHub.StartPlaybackCommand] ignored — null arg (type='{Null}', listId={Set})",
+                user.Name,
+                type ?? "<null>",
+                (listId is null ? "<null>" : "set")
             );
             return;
         }
@@ -217,7 +219,7 @@ public partial class VideoHub
         }
         catch (ArgumentException ex)
         {
-            _logger.LogInformation($"Invalid playlist type: {ex.Message}");
+            _logger.LogInformation("Invalid playlist type: {Message}", ex.Message);
 
             User? user2 = UserCacheService.GetUser(Context.User.UserId());
             if (user2 is not null)
@@ -236,7 +238,10 @@ public partial class VideoHub
                 }
                 catch (Exception logEx)
                 {
-                    _logger.LogWarning($"Failed to log failure.playback_start: {logEx.Message}");
+                    _logger.LogWarning(
+                        "Failed to log failure.playback_start: {Message}",
+                        logEx.Message
+                    );
                 }
             }
         }
@@ -262,7 +267,10 @@ public partial class VideoHub
                 }
                 catch (Exception logEx)
                 {
-                    _logger.LogWarning($"Failed to log failure.playback_start: {logEx.Message}");
+                    _logger.LogWarning(
+                        "Failed to log failure.playback_start: {Message}",
+                        logEx.Message
+                    );
                 }
             }
         }
@@ -326,7 +334,7 @@ public partial class VideoHub
         }
         catch (Exception ex)
         {
-            _logger.LogWarning($"Failed to log playback.started: {ex.Message}");
+            _logger.LogWarning("Failed to log playback.started: {Message}", ex.Message);
         }
     }
 
@@ -405,7 +413,7 @@ public partial class VideoHub
         }
         catch (Exception ex)
         {
-            _logger.LogWarning($"Failed to log playback.started: {ex.Message}");
+            _logger.LogWarning("Failed to log playback.started: {Message}", ex.Message);
         }
     }
 
@@ -468,7 +476,8 @@ public partial class VideoHub
         if (string.IsNullOrEmpty(command))
         {
             _logger.LogWarning(
-                $"{user.Name}: [VideoHub.PlaybackCommand] ignored — command was null/empty"
+                "{Name}: [VideoHub.PlaybackCommand] ignored — command was null/empty",
+                user.Name
             );
             return;
         }
@@ -502,7 +511,8 @@ public partial class VideoHub
         if (string.IsNullOrEmpty(deviceId))
         {
             _logger.LogWarning(
-                $"{user.Name}: [VideoHub.ChangeDeviceCommand] ignored — deviceId was null/empty"
+                "{Name}: [VideoHub.ChangeDeviceCommand] ignored — deviceId was null/empty",
+                user.Name
             );
             return;
         }
@@ -560,7 +570,8 @@ public partial class VideoHub
                     if (string.IsNullOrEmpty(receiverName))
                     {
                         _logger.LogWarning(
-                            $"No Chromecast receiver discovered at {targetIp} — video handoff will not wake panel via CEC"
+                            "No Chromecast receiver discovered at {TargetIp} — video handoff will not wake panel via CEC",
+                            targetIp
                         );
                         return;
                     }
@@ -577,7 +588,8 @@ public partial class VideoHub
                     if (launchData is null)
                     {
                         _logger.LogWarning(
-                            $"Cast token mint failed for video handoff to {targetIp} — falling back to LAUNCH without customData"
+                            "Cast token mint failed for video handoff to {TargetIp} — falling back to LAUNCH without customData",
+                            targetIp
                         );
                     }
 
@@ -592,7 +604,9 @@ public partial class VideoHub
                 catch (Exception ex)
                 {
                     _logger.LogWarning(
-                        $"Server-side video Cast launch failed for {targetIp}: {ex.Message}"
+                        "Server-side video Cast launch failed for {TargetIp}: {Message}",
+                        targetIp,
+                        ex.Message
                     );
                 }
             });

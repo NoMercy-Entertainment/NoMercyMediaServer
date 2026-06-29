@@ -81,7 +81,7 @@ public class ChromeCastService : IChromeCastService
             _lastRediscoveryUtc = DateTime.UtcNow;
 
             foreach (ChromecastReceiver chromecast in _chromecastReceivers)
-                _logger.LogInformation($"Found chromecast: {chromecast.Name}");
+                _logger.LogInformation("Found chromecast: {Name}", chromecast.Name);
         }
         finally
         {
@@ -122,18 +122,20 @@ public class ChromeCastService : IChromeCastService
             if (shouldRescan)
             {
                 _lastRediscoveryUtc = DateTime.UtcNow;
-                _logger.LogInformation($"Chromecast cache miss for {ip} — refreshing mDNS");
+                _logger.LogInformation("Chromecast cache miss for {Ip} — refreshing mDNS", ip);
                 try
                 {
                     _chromecastReceivers = (await Locator.FindReceiversAsync()).ToList();
                     foreach (ChromecastReceiver chromecast in _chromecastReceivers)
                         _logger.LogInformation(
-                            $"Discovered chromecast: {chromecast.Name} @ {chromecast.DeviceUri.Host}"
+                            "Discovered chromecast: {Name} @ {Host}",
+                            chromecast.Name,
+                            chromecast.DeviceUri.Host
                         );
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogInformation($"Chromecast re-discovery failed: {ex.Message}");
+                    _logger.LogInformation("Chromecast re-discovery failed: {Message}", ex.Message);
                 }
             }
         }
@@ -174,7 +176,8 @@ public class ChromeCastService : IChromeCastService
             if (_synthesizedReceivers.TryAdd(ip, candidate))
             {
                 _logger.LogInformation(
-                    $"Synthesized Chromecast receiver for {ip}:8009 — mDNS unavailable, will attempt direct connect"
+                    "Synthesized Chromecast receiver for {Ip}:8009 — mDNS unavailable, will attempt direct connect",
+                    ip
                 );
                 synthetic = candidate;
             }
@@ -320,7 +323,7 @@ public class ChromeCastService : IChromeCastService
         }
         catch (Exception ex)
         {
-            _logger.LogInformation($"DisableSharpcasterHeartbeat failed: {ex.Message}");
+            _logger.LogInformation("DisableSharpcasterHeartbeat failed: {Message}", ex.Message);
         }
     }
 
@@ -372,7 +375,7 @@ public class ChromeCastService : IChromeCastService
     {
         client.Disconnected += (_, _) =>
         {
-            _logger.LogInformation($"Chromecast disconnected: {name} — removing from pool");
+            _logger.LogInformation("Chromecast disconnected: {Name} — removing from pool", name);
             if (ClientPool.TryRemove(name, out ChromecastClient? removed))
             {
                 try
@@ -466,7 +469,7 @@ public class ChromeCastService : IChromeCastService
 
         if (receiver == null)
         {
-            _logger.LogInformation($"Chromecast not found: {name}");
+            _logger.LogInformation("Chromecast not found: {Name}", name);
             return null;
         }
 
@@ -487,7 +490,7 @@ public class ChromeCastService : IChromeCastService
                 return raced;
 
             ChromecastClient newClient = BuildClient(name);
-            _logger.LogInformation($"Connecting to chromecast: {name}");
+            _logger.LogInformation("Connecting to chromecast: {Name}", name);
             await newClient.ConnectChromecast(receiver);
 
             // Disable Sharpcaster's internal heartbeat after Connect — the
@@ -544,7 +547,7 @@ public class ChromeCastService : IChromeCastService
         if (!ClientPool.TryGetValue(target, out ChromecastClient? client))
             return;
 
-        _logger.LogInformation($"Launching chromecast: {target}");
+        _logger.LogInformation("Launching chromecast: {Target}", target);
         _ = await client.LaunchApplicationAsync("925B4C3C");
     }
 
@@ -593,7 +596,9 @@ public class ChromeCastService : IChromeCastService
         catch (Exception ex)
         {
             _logger.LogInformation(
-                $"LaunchAndroidReceiver pre-LAUNCH GET_STATUS failed for {target}: {ex.Message}"
+                "LaunchAndroidReceiver pre-LAUNCH GET_STATUS failed for {Target}: {Message}",
+                target,
+                ex.Message
             );
         }
 
@@ -602,7 +607,10 @@ public class ChromeCastService : IChromeCastService
 
         string flavor = useAndroidReceiver ? "androidReceiverCompatible" : "webReceiverOnly";
         _logger.LogInformation(
-            $"Launching cast-tv ({flavor}{(customData is null ? "" : ", customData")}) on {target}"
+            "Launching cast-tv ({Flavor}{CustomData}) on {Target}",
+            flavor,
+            (customData is null ? "" : ", customData"),
+            target
         );
 
         // Watch for cast_shell's reply on this request id. RECEIVER_STATUS
@@ -644,7 +652,8 @@ public class ChromeCastService : IChromeCastService
             if (!launchAccepted)
             {
                 _logger.LogInformation(
-                    $"LaunchAndroidReceiver: no LAUNCH ack from {target} within 5s — retrying once"
+                    "LaunchAndroidReceiver: no LAUNCH ack from {Target} within 5s — retrying once",
+                    target
                 );
                 int retryRequestId = Interlocked.Increment(ref _androidLaunchRequestId);
                 string retryJson = BuildLaunchJson(retryRequestId, customData, useAndroidReceiver);
@@ -653,7 +662,11 @@ public class ChromeCastService : IChromeCastService
         }
         catch (Exception ex)
         {
-            _logger.LogInformation($"LaunchAndroidReceiver failed for {target}: {ex.Message}");
+            _logger.LogInformation(
+                "LaunchAndroidReceiver failed for {Target}: {Message}",
+                target,
+                ex.Message
+            );
         }
         finally
         {
@@ -745,7 +758,7 @@ public class ChromeCastService : IChromeCastService
         if (!ClientPool.TryGetValue(target, out ChromecastClient? client))
             return;
 
-        _logger.LogInformation($"Casting playlist to {target}: {value}");
+        _logger.LogInformation("Casting playlist to {Target}: {Value}", target, value);
 
         string externalAddress = (_networkDiscovery?.ExternalAddress).OrEmpty();
         string? token = accessToken;

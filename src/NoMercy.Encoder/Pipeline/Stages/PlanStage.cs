@@ -586,8 +586,7 @@ public class PlanStage(
                                 if (requestedDepth >= 10 && !encoder.Supports10Bit)
                                 {
                                     logger.LogWarning(
-                                        "Profile requests 10-bit video_{Index} but encoder {Encoder} "
-                                            + "does not support 10-bit. Downgrading to 8-bit output.",
+                                        "Profile requests 10-bit video_{Index} but encoder {Encoder} does not support 10-bit. Downgrading to 8-bit output.",
                                         i,
                                         encoder.FfmpegName
                                     );

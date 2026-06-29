@@ -219,7 +219,8 @@ public sealed class CertificateService : ICertificateService
             if (_cachedCertificate.NotAfter < DateTime.Now.AddDays(RenewalThresholdDays))
             {
                 _logger.LogInformation(
-                    $"SSL cert expires {_cachedCertificate.NotAfter:yyyy-MM-dd} — will attempt renewal"
+                    "SSL cert expires {NotAfter:yyyy-MM-dd} — will attempt renewal",
+                    _cachedCertificate.NotAfter
                 );
                 return false; // Expiring soon — trigger renewal
             }
@@ -276,7 +277,10 @@ public sealed class CertificateService : ICertificateService
 
                     // null means 202 — cert not ready yet, wait and retry
                     _logger.LogInformation(
-                        $"Certificate not ready, waiting {CertRetryDelaySeconds}s (attempt {attempt}/{maxRetries})"
+                        "Certificate not ready, waiting {CertRetryDelaySeconds}s (attempt {Attempt}/{MaxRetries})",
+                        CertRetryDelaySeconds,
+                        attempt,
+                        maxRetries
                     );
                     await Task.Delay(TimeSpan.FromSeconds(CertRetryDelaySeconds));
                 }
@@ -285,7 +289,7 @@ public sealed class CertificateService : ICertificateService
                     // Permanent (for this attempt window): the API rejected the
                     // renewal request because the cert isn't due yet. Bail out
                     // without retrying — daily cron will try again tomorrow.
-                    _logger.LogInformation($"Skipping renewal: {ex.Message}");
+                    _logger.LogInformation("Skipping renewal: {Message}", ex.Message);
                     return;
                 }
                 catch (Exception ex)
@@ -294,7 +298,11 @@ public sealed class CertificateService : ICertificateService
                     )
                 {
                     _logger.LogInformation(
-                        $"Certificate attempt failed: {ex.Message}, retrying in {CertRetryDelaySeconds}s (attempt {attempt}/{maxRetries})"
+                        "Certificate attempt failed: {Message}, retrying in {CertRetryDelaySeconds}s (attempt {Attempt}/{MaxRetries})",
+                        ex.Message,
+                        CertRetryDelaySeconds,
+                        attempt,
+                        maxRetries
                     );
                     await Task.Delay(TimeSpan.FromSeconds(CertRetryDelaySeconds));
                 }
@@ -304,7 +312,8 @@ public sealed class CertificateService : ICertificateService
             // Cert exists in DB but renewal failed (Cloudflare down, network issue, etc.)
             // The existing cert is usable — don't block boot
             _logger.LogWarning(
-                $"Certificate renewal failed: {ex.Message}. Using existing certificate."
+                "Certificate renewal failed: {Message}. Using existing certificate.",
+                ex.Message
             );
         }
     }

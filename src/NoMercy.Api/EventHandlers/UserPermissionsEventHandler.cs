@@ -49,7 +49,9 @@ public class UserPermissionsEventHandler : IDisposable
         );
 
         _logger.LogInformation(
-            $"User permissions changed: UserId={@event.UserId}, ChangedBy={@event.ChangedBy}"
+            "User permissions changed: UserId={UserId}, ChangedBy={ChangedBy}",
+            @event.UserId,
+            @event.ChangedBy
         );
     }
 

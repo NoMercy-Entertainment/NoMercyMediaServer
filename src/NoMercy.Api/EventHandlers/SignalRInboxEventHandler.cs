@@ -51,7 +51,10 @@ public class SignalRInboxEventHandler : IDisposable
         );
 
         _logger.LogInformation(
-            $"Inbox item detected: {@event.Id} ({@event.DetectedType}, {@event.Confidence})"
+            "Inbox item detected: {Id} ({DetectedType}, {Confidence})",
+            @event.Id,
+            @event.DetectedType,
+            @event.Confidence
         );
     }
 
@@ -63,7 +66,7 @@ public class SignalRInboxEventHandler : IDisposable
             new { @event.Id, @event.Status }
         );
 
-        _logger.LogInformation($"Inbox item updated: {@event.Id} → {@event.Status}");
+        _logger.LogInformation("Inbox item updated: {Id} → {Status}", @event.Id, @event.Status);
     }
 
     public void Dispose()

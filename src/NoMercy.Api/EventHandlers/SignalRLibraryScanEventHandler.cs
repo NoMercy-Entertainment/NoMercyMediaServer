@@ -52,7 +52,7 @@ public class SignalRLibraryScanEventHandler : IDisposable
             }
         );
 
-        _logger.LogInformation($"Library scan started: {@event.LibraryName}");
+        _logger.LogInformation("Library scan started: {LibraryName}", @event.LibraryName);
     }
 
     internal async Task OnScanCompleted(LibraryScanCompletedEvent @event, CancellationToken ct)
@@ -71,7 +71,9 @@ public class SignalRLibraryScanEventHandler : IDisposable
         );
 
         _logger.LogInformation(
-            $"Library scan completed: {@event.LibraryName}, {@event.ItemsFound} items found"
+            "Library scan completed: {LibraryName}, {ItemsFound} items found",
+            @event.LibraryName,
+            @event.ItemsFound
         );
     }
 

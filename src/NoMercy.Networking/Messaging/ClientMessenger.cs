@@ -41,7 +41,7 @@ public class ClientMessenger(ConnectedClients connectedClients, ILogger<ClientMe
             }
             catch (Exception ex)
             {
-                logger.LogDebug($"Broadcast to client failed: {ex.Message}");
+                logger.LogDebug("Broadcast to client failed: {Message}", ex.Message);
                 continue;
             }
         }
@@ -64,7 +64,7 @@ public class ClientMessenger(ConnectedClients connectedClients, ILogger<ClientMe
             }
             catch (Exception ex)
             {
-                logger.LogDebug($"Broadcast to client failed: {ex.Message}");
+                logger.LogDebug("Broadcast to client failed: {Message}", ex.Message);
                 continue;
             }
         }

@@ -102,13 +102,13 @@ public class LibraryLogic(
 
             Titles.Add(rootFolder.Path);
 
-            logger.LogTrace($"Processing {rootFolder.Path}");
+            logger.LogTrace("Processing {Path}", rootFolder.Path);
 
             MusicJob musicJob = new(rootFolder.Path, Library);
             QueueRunner.Current!.Dispatcher.Dispatch(musicJob);
         }
 
-        logger.LogInformation("Found " + Titles.Count + " subfolders");
+        logger.LogInformation("Found {Count} subfolders", Titles.Count);
     }
 
     public void Dispose()

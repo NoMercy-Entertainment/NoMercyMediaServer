@@ -48,9 +48,11 @@ public partial class MusicHub
         if (string.IsNullOrEmpty(type) || listId is null || trackId is null)
         {
             _logger.LogWarning(
-                $"{user.Name}: [MusicHub.StartPlaybackCommand] ignored — null arg "
-                    + $"(type='{type ?? "<null>"}', listId={listId?.ToString() ?? "<null>"}, "
-                    + $"trackId={trackId?.ToString() ?? "<null>"})"
+                "{Name}: [MusicHub.StartPlaybackCommand] ignored — null arg (type='{Null}', listId={Null2}, trackId={Null3})",
+                user.Name,
+                type ?? "<null>",
+                listId?.ToString() ?? "<null>",
+                trackId?.ToString() ?? "<null>"
             );
             return;
         }
@@ -74,15 +76,17 @@ public partial class MusicHub
             playlistStopwatch.Stop();
             _logger.Log(
                 playlistStopwatch.ElapsedMilliseconds > 1000 ? LogLevel.Warning : LogLevel.Debug,
-                $"[MusicHub.StartPlaybackCommand] GetPlaylist({type}) took "
-                    + $"{playlistStopwatch.ElapsedMilliseconds}ms ({playlist.Count} tracks)"
+                "[MusicHub.StartPlaybackCommand] GetPlaylist({Type}) took {ElapsedMilliseconds}ms ({Count} tracks)",
+                type,
+                playlistStopwatch.ElapsedMilliseconds,
+                playlist.Count
             );
 
             await HandlePlaybackState(user, type, listId.Value, item, playlist);
         }
         catch (ArgumentException ex)
         {
-            _logger.LogInformation($"Invalid playlist type: {ex.Message}");
+            _logger.LogInformation("Invalid playlist type: {Message}", ex.Message);
 
             ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client2);
             Ulid deviceId2 = client2?.Id ?? Ulid.Empty;
@@ -98,12 +102,15 @@ public partial class MusicHub
             }
             catch (Exception logEx)
             {
-                _logger.LogWarning($"Failed to log failure.playback_start: {logEx.Message}");
+                _logger.LogWarning(
+                    "Failed to log failure.playback_start: {Message}",
+                    logEx.Message
+                );
             }
         }
         catch (Exception ex)
         {
-            _logger.LogInformation($"Error in StartPlaybackCommand: {ex.Message}");
+            _logger.LogInformation("Error in StartPlaybackCommand: {Message}", ex.Message);
 
             ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client2);
             Ulid deviceId2 = client2?.Id ?? Ulid.Empty;
@@ -119,7 +126,10 @@ public partial class MusicHub
             }
             catch (Exception logEx)
             {
-                _logger.LogWarning($"Failed to log failure.playback_start: {logEx.Message}");
+                _logger.LogWarning(
+                    "Failed to log failure.playback_start: {Message}",
+                    logEx.Message
+                );
             }
         }
         finally
@@ -208,7 +218,7 @@ public partial class MusicHub
         }
         catch (Exception ex)
         {
-            _logger.LogWarning($"Failed to log playback.started: {ex.Message}");
+            _logger.LogWarning("Failed to log playback.started: {Message}", ex.Message);
         }
     }
 
@@ -314,7 +324,7 @@ public partial class MusicHub
             else
             {
                 // Track not found in current queue at all
-                _logger.LogInformation($"Track {item.Id} not found in current queue");
+                _logger.LogInformation("Track {Id} not found in current queue", item.Id);
                 return;
             }
         }
@@ -364,7 +374,7 @@ public partial class MusicHub
         }
         catch (Exception ex)
         {
-            _logger.LogWarning($"Failed to log playback.started: {ex.Message}");
+            _logger.LogWarning("Failed to log playback.started: {Message}", ex.Message);
         }
     }
 
@@ -439,7 +449,8 @@ public partial class MusicHub
         if (string.IsNullOrEmpty(command))
         {
             _logger.LogWarning(
-                $"{user.Name}: [MusicHub.PlaybackCommand] ignored — command was null/empty"
+                "{Name}: [MusicHub.PlaybackCommand] ignored — command was null/empty",
+                user.Name
             );
             return;
         }
@@ -557,7 +568,8 @@ public partial class MusicHub
         if (newTrackId is null)
         {
             _logger.LogWarning(
-                $"{user.Name}: [MusicHub.CrossfadeCompleteCommand] ignored — newTrackId was null"
+                "{Name}: [MusicHub.CrossfadeCompleteCommand] ignored — newTrackId was null",
+                user.Name
             );
             return;
         }

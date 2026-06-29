@@ -217,8 +217,7 @@ public class BuildStage(
                 );
                 input = input with { Plan = input.Plan with { OutputPlan = sliced } };
                 logger.LogInformation(
-                    "[{CorrelationId}] Sliced plan for {Kind} task #{Idx}: "
-                        + "{V} video / {A} audio / {S} sub / thumbs={T}",
+                    "[{CorrelationId}] Sliced plan for {Kind} task #{Idx}: {V} video / {A} audio / {S} sub / thumbs={T}",
                     context.CorrelationId,
                     taskFilter.Kind,
                     taskFilter.OutputIndex,

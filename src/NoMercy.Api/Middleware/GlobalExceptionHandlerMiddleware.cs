@@ -42,19 +42,25 @@ public class GlobalExceptionHandlerMiddleware
         catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
         {
             _logger.LogDebug(
-                $"[{context.TraceIdentifier}] Request cancelled by client: {context.Request.Path}"
+                "[{TraceIdentifier}] Request cancelled by client: {Path}",
+                context.TraceIdentifier,
+                context.Request.Path
             );
         }
         catch (Exception ex) when (IsClientDisconnect(ex, context))
         {
             _logger.LogDebug(
-                $"[{context.TraceIdentifier}] Client disconnected mid-request: {context.Request.Path} ({ex.GetType().Name}: {ex.Message})"
+                "[{TraceIdentifier}] Client disconnected mid-request: {Path} ({Name}: {Message})",
+                context.TraceIdentifier,
+                context.Request.Path,
+                ex.GetType().Name,
+                ex.Message
             );
         }
         catch (Exception ex)
         {
             string traceId = context.TraceIdentifier;
-            _logger.LogError($"[{traceId}] Unhandled exception: {ex}");
+            _logger.LogError("[{TraceId}] Unhandled exception: {Ex}", traceId, ex);
 
             // Headers already flushed (e.g. mid-stream of a media response) —
             // there's nothing more we can do without throwing again from
