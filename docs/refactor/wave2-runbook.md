@@ -51,3 +51,26 @@ unchecked box. The standing order stays in force across resets.
   `csharpier format <files>`. Do NOT rely on `dotnet tool restore` (it fails in this container).
   Run `csharpier format` on every changed/new file before committing.
 - Build flag for this container: `dotnet build -p:AllowMissingPrunePackageData=true`.
+
+## L12 plan (static Logger -> ILogger<T> big-bang) — execute incrementally, green per step
+Scope: ~965 calls in 12 projects (MediaProcessing 269, Api 184, Setup 155, Service 131,
+Networking 92, NmSystem 74, Data 60, Providers 37, OpticalMedia 12, Encoder 6, Monitoring 3,
+Storage 1). Methods are category helpers (App/Setup/MovieDb/Socket/System/Encoder/Auth/...).
+
+Order (one project per commit, build+csharpier+test 0/0 each, push):
+1. Providers (37) -> ILogger<T> via ctor where DI; smallest, isolates the pattern.
+2. Encoder (6), Monitoring (3), Storage (1), OpticalMedia (12) -> quick wins.
+3. Data (60), Networking (92), Providers remainder.
+4. MediaProcessing (269) -> managers already take ctor deps; add ILogger<T>.
+5. Setup (155), Api (184), Service (131).
+Mechanics:
+- DI-resolved classes: add `ILogger<T>` ctor param; map Logger.App->LogInformation,
+  Logger.Warning->LogWarning, Logger.Error->LogError, category helpers (MovieDb/Queue/...) ->
+  LogInformation (category comes from the type's namespace via LogCategories.ResolveSource).
+- Genuinely static utilities: add a static source-generated `Log` (LoggerMessage) bound to the
+  provider, OR thread an ILogger param. Decide per-site; document in the commit.
+- Preserve the few API uses: GetLogs, SetLogLevel, LogEmitted, WriteBanner, LogTypes/GetColor ->
+  reprovide on the new system before deleting the static Logger.
+6. LAST: delete NoMercy.NmSystem/SystemCalls/Logger.cs + remove the BridgeLegacyLogger option/
+   subscription + drop Serilog packages no longer used. Full-solution build 0/0.
+Acceptance: `grep -rn "SystemCalls.Logger" src` -> 0 (except its own deletion); 0/0; csharpier clean.
