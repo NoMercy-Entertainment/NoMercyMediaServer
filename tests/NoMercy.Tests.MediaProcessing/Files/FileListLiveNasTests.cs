@@ -12,6 +12,8 @@ using System.Net.Sockets;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.MediaProcessing.Files;
+using NoMercy.MediaProcessing.Files.Parsing;
+using NoMercy.MediaProcessing.Files.Parsing.Adapters;
 using NoMercy.Setup.Server;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Nfs;
@@ -163,7 +165,7 @@ public sealed class FileListLiveNasTests
 
         await using MediaContext context = NewContext();
         MediaIdentificationService identification = new(context);
-        FileListService service = new(storage.Driver, identification, NullLogger<FileListService>.Instance);
+        FileListService service = new(storage.Driver, identification, new FilenameParserPipeline(new IFilenameParseAdapter[] { new EpisodePrefixAdapter(), new EpisodeWordAdapter(), new SeasonEpisodeAdapter(), new MovieDetectorAdapter() }), NullLogger<FileListService>.Instance);
 
         List<FileItem> files = await service.GetFilesInDirectory(TestDir, LibraryType, storage);
 
@@ -216,7 +218,7 @@ public sealed class FileListLiveNasTests
         }
 
         await using MediaContext context = NewContext();
-        FileListService service = new(storage.Driver, new MediaIdentificationService(context), NullLogger<FileListService>.Instance);
+        FileListService service = new(storage.Driver, new MediaIdentificationService(context), new FilenameParserPipeline(new IFilenameParseAdapter[] { new EpisodePrefixAdapter(), new EpisodeWordAdapter(), new SeasonEpisodeAdapter(), new MovieDetectorAdapter() }), NullLogger<FileListService>.Instance);
 
         List<FileItem> files = await service.GetFilesInDirectory(TestDir, LibraryType, storage);
 

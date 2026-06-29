@@ -11,6 +11,8 @@
 using Moq;
 using MovieFileLibrary;
 using NoMercy.MediaProcessing.Files;
+using NoMercy.MediaProcessing.Files.Parsing;
+using NoMercy.MediaProcessing.Files.Parsing.Adapters;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Storage;
 using Xunit;
@@ -65,7 +67,7 @@ public class FileListServiceTests
             )
             .ReturnsAsync(((MovieOrEpisode match, string? imdbId)?)null);
 
-        FileListService service = new(driver.Object, identification.Object, NullLogger<FileListService>.Instance);
+        FileListService service = new(driver.Object, identification.Object, new FilenameParserPipeline(new IFilenameParseAdapter[] { new EpisodePrefixAdapter(), new EpisodeWordAdapter(), new SeasonEpisodeAdapter(), new MovieDetectorAdapter() }), NullLogger<FileListService>.Instance);
 
         List<FileItem> files = await service.GetFilesInDirectory("Movies", "movie", storage.Object);
 
