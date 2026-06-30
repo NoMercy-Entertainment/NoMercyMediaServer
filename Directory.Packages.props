@@ -123,7 +123,6 @@
     />
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzer.Testing" Version="1.1.2" />
     <PackageVersion Include="Mono.Nat" Version="3.0.4" />
-    <PackageVersion Include="MovieFileLibrary" Version="3.1.0" />
     <PackageVersion Include="NCrontab" Version="3.4.0" />
     <PackageVersion Include="Pastel" Version="7.0.1" />
     <PackageVersion Include="Polly" Version="8.6.6" />

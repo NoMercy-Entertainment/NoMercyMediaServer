@@ -22,7 +22,6 @@
     <PackageReference Include="I18N.DotNet" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
     <PackageReference Include="Microsoft.Extensions.Localization" />
-    <PackageReference Include="MovieFileLibrary" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Pastel" />
     <PackageReference Include="Polly" />
