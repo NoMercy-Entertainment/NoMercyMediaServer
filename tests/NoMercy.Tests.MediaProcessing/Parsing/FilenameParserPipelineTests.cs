@@ -35,6 +35,7 @@ public class FilenameParserPipelineTests
             new CrossFormatAdapter(),
             new SeasonEpisodeAdapter(),
             new AnimeAbsoluteAdapter(),
+            new EpisodeShortFormAdapter(),
             new MovieDetectorAdapter(),
         };
 
@@ -340,4 +341,38 @@ public class FilenameParserPipelineTests
         result.Episode.Should().Be(episode);
         FirstMatchingAdapter(Context(file)).Should().Be("season-episode");
     }
+
+    // ---------------------------------------------------------------------------
+    // Short episode forms (E05 / Ep5 / S01.E05) that omit the contiguous SxxExx.
+    // ---------------------------------------------------------------------------
+    [Theory]
+    [InlineData("Naruto.E12.1080p.WEB-DL.mkv", "Naruto", 1, 12)]
+    [InlineData("Show Name Ep5.mkv", "Show Name", 1, 5)]
+    [InlineData("Show.Name.Ep.05.720p.mkv", "Show Name", 1, 5)]
+    [InlineData("Show.Name.S02.E07.mkv", "Show Name", 2, 7)]
+    public void Episode_short_form(string file, string title, int season, int episode)
+    {
+        ParseContext context = Context(file);
+        MovieFile result = Pipeline().Parse(context);
+        result.IsSeries.Should().BeTrue();
+        result.Title.Should().Be(title);
+        result.Season.Should().Be(season);
+        result.Episode.Should().Be(episode);
+        FirstMatchingAdapter(context).Should().Be("episode-short-form");
+    }
+
+    [Theory]
+    [InlineData("Resident Evil 2.mkv")]
+    [InlineData("iPhone5.review.mkv")]
+    [InlineData("Se7en.1995.mkv")]
+    [InlineData("Route.66.1080p.mkv")]
+    public void Episode_short_form_does_not_over_classify(string file) =>
+        new EpisodeShortFormAdapter().TryParse(Context(file)).Should().BeNull();
+
+    [Fact]
+    public void Episode_short_form_is_skipped_for_movie_libraries() =>
+        new EpisodeShortFormAdapter()
+            .TryParse(Context("Show.E05.mkv", libraryType: "movie"))
+            .Should()
+            .BeNull();
 }

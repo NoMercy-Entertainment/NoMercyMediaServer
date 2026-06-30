@@ -417,6 +417,10 @@ public static partial class ServiceConfiguration
         >();
         services.AddSingleton<
             NoMercy.MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            NoMercy.MediaProcessing.Files.Parsing.Adapters.EpisodeShortFormAdapter
+        >();
+        services.AddSingleton<
+            NoMercy.MediaProcessing.Files.Parsing.IFilenameParseAdapter,
             NoMercy.MediaProcessing.Files.Parsing.Adapters.MovieDetectorAdapter
         >();
         services.AddSingleton<
