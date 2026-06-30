@@ -29,6 +29,11 @@ public sealed class CrossFormatAdapter : IFilenameParseAdapter
         if (!match.Success)
             return null;
 
+        // A cross-format match at the very start is the title itself (e.g. the
+        // film "4x4"); a genuine SxExx tag is always preceded by the show title.
+        if (match.Index == 0)
+            return null;
+
         string showTitle = context
             .CleanedFileName[..match.Index]
             .Replace('.', ' ')
@@ -36,7 +41,7 @@ public sealed class CrossFormatAdapter : IFilenameParseAdapter
             .TrimEnd('-', ' ')
             .Trim();
 
-        showTitle = showTitle.CleanReleaseTitle();
+        showTitle = showTitle.CleanSeriesTitle();
 
         if (string.IsNullOrWhiteSpace(showTitle) || showTitle.Length <= 1)
             showTitle = context.FolderTitle;

@@ -35,11 +35,8 @@ public sealed class EpisodeWordAdapter : IFilenameParseAdapter
         int episodeNumber = int.Parse(match.Groups[1].Value);
         string showTitle = fileNameNoParens[..match.Index].TrimEnd('-', '.', '_', ' ');
 
-        Match yearInTitle = StringExtensions.MatchYearRegex().Match(showTitle);
-        if (yearInTitle.Success)
-            showTitle = showTitle[..yearInTitle.Index].TrimEnd('-', '.', '_', ' ');
 
-        showTitle = showTitle.CleanReleaseTitle();
+        showTitle = showTitle.CleanSeriesTitle();
 
         if (string.IsNullOrWhiteSpace(showTitle) || showTitle.Length <= 1)
             showTitle = context.FolderTitle;

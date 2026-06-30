@@ -53,7 +53,7 @@ public sealed partial class EpisodeShortFormAdapter : IFilenameParseAdapter
             .Replace('_', ' ')
             .TrimEnd('-', ' ')
             .Trim()
-            .CleanReleaseTitle();
+            .CleanSeriesTitle();
 
         if (string.IsNullOrWhiteSpace(showTitle) || showTitle.Length <= 1)
             showTitle = context.FolderTitle;

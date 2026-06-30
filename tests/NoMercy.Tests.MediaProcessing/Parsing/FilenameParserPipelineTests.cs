@@ -435,4 +435,39 @@ public class FilenameParserPipelineTests
         result.Episode.Should().Be(5);
         FirstMatchingAdapter(context).Should().Be("season-episode");
     }
+
+    // ---------------------------------------------------------------------------
+    // Real scene release names (scenerules.org spec; cf. pr0pz/scene-release-parser,
+    // MIT). These lock title/season/episode extraction against names seen in the
+    // wild, including year-in-title and split season.episode forms.
+    // ---------------------------------------------------------------------------
+    [Theory]
+    [InlineData("Halo.2022.S01E06.POLISH.720p.WEB.H264-A4O.mkv", "Halo", 1, 6, "season-episode")]
+    [InlineData("Gilmore.Girls.S05E01.720p.WEB-DL.AAC2.0.H.264-tK.mkv", "Gilmore Girls", 5, 1, "season-episode")]
+    [InlineData("Direct.Talk.S09E09.Mizutani.Yoshihiro.Relief.1080p.HDTV.H264-DARKFLiX.mkv", "Direct Talk", 9, 9, "season-episode")]
+    [InlineData("Dark.Net.S01E06.DOC.SUBFRENCH.720p.WEBRip.x264-TiMELiNE.mkv", "Dark Net", 1, 6, "season-episode")]
+    [InlineData("New.Amsterdam.2018.S02E12.1080p.AMZN.Webrip.x265.10bit.EAC3.5.1.mkv", "New Amsterdam", 2, 12, "season-episode")]
+    [InlineData("Stranger.Things.S04E09.2160p.NF.WEB-DL.DDP5.1.x265-NTb.mkv", "Stranger Things", 4, 9, "season-episode")]
+    [InlineData("The.X-Files.2x14.Die.Hand.Die.Verletzt.DVDRip.XviD.MultiDub-VeLVeT.mkv", "The X-Files", 2, 14, "cross-format")]
+    [InlineData("New.Amsterdam.2018.2x12.1080p.WEBMux.x264-NovaRi.mkv", "New Amsterdam", 2, 12, "cross-format")]
+    [InlineData("24.Twenty.Four.S2.E07.German.DVDRiP.Line.Dubbed.SVCD-SOF.mkv", "24 Twenty Four", 2, 7, "episode-short-form")]
+    [InlineData("1883.S01E04.1080p.WEB.H264.mkv", "1883", 1, 4, "season-episode")]
+    [InlineData("1923.S01E02.720p.HDTV.x264.mkv", "1923", 1, 2, "season-episode")]
+    public void SceneCorpus_real_names(string file, string title, int season, int episode, string adapter)
+    {
+        ParseContext context = Context(file);
+        MovieFile result = Pipeline().Parse(context);
+        result.IsSeries.Should().BeTrue();
+        result.Title.Should().Be(title);
+        result.Season.Should().Be(season);
+        result.Episode.Should().Be(episode);
+        FirstMatchingAdapter(context).Should().Be(adapter);
+    }
+
+    [Theory]
+    // a cross-format token that IS the title must not be read as SxExx
+    [InlineData("4x4.2019.1080p.BluRay.x264-GRP.mkv")]
+    [InlineData("4x4.mkv")]
+    public void CrossFormat_ignores_leading_token(string file) =>
+        new CrossFormatAdapter().TryParse(Context(file)).Should().BeNull();
 }

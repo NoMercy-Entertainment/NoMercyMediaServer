@@ -79,4 +79,32 @@ public class CleanReleaseTitleTests
     [InlineData("   ")]
     public void Handles_empty(string input) =>
         input.CleanReleaseTitle().Should().BeEmpty();
+
+    [Theory]
+    // expanded scene vocabulary (source/streaming/codec/audio/hdr)
+    [InlineData("Show.HDDVD.x264", "Show")]
+    [InlineData("Show.EDTV.XviD", "Show")]
+    [InlineData("Name.AMZN.WEB-DL.DDP5.1", "Name")]
+    [InlineData("Title.DSNP.WEBRip.x265.HDR", "Title")]
+    [InlineData("Movie.IMAX.1080p", "Movie")]
+    [InlineData("Show.HLG.x265", "Show")]
+    [InlineData("Film.VC1.AC3", "Film")]
+    [InlineData("Doc.MPEG2.PAL", "Doc")]
+    [InlineData("Thing.AVC.AAC", "Thing")]
+    [InlineData("Series.ATVP.WEB-DL.x264", "Series")]
+    public void Scene_vocab_strips(string input, string expected) =>
+        input.CleanReleaseTitle().Should().Be(expected);
+
+    [Theory]
+    // ambiguous scene FLAG words double as real titles and must survive
+    [InlineData("Extended Family", "Extended Family")]
+    [InlineData("Final Space", "Final Space")]
+    [InlineData("Internal Affairs", "Internal Affairs")]
+    [InlineData("Anime Crimes Division", "Anime Crimes Division")]
+    [InlineData("WandaVision", "WandaVision")]
+    [InlineData("Vice", "Vice")]
+    [InlineData("Amazon", "Amazon")]
+    [InlineData("Imaximum", "Imaximum")]
+    public void Scene_vocab_preserves_real_titles(string input, string expected) =>
+        input.CleanReleaseTitle().Should().Be(expected);
 }

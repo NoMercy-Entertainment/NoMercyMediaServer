@@ -56,7 +56,7 @@ public sealed partial class SpecialsAdapter : IFilenameParseAdapter
             .Replace('_', ' ')
             .TrimEnd('-', ' ')
             .Trim()
-            .CleanReleaseTitle();
+            .CleanSeriesTitle();
 
         bool isWordMarker = match.Groups["word"].Success;
 

@@ -59,7 +59,7 @@ public sealed partial class AnimeAbsoluteAdapter : IFilenameParseAdapter
             .TrimEnd('-', ' ')
             .Trim();
 
-        showTitle = showTitle.CleanReleaseTitle();
+        showTitle = showTitle.CleanSeriesTitle();
 
         if (string.IsNullOrWhiteSpace(showTitle) || showTitle.Length <= 1)
             showTitle = context.FolderTitle;

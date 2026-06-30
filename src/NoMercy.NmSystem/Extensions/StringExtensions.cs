@@ -103,6 +103,8 @@ public static partial class StringExtensions
     public static partial Regex MatchCrossFormatEpisode();
 
     /// <summary>
+    /// Vocabulary follows the scene rules (scenerules.org); cf. the MIT-licensed
+    /// pr0pz/scene-release-parser for the canonical token tables.
     /// Matches the first scene "quality/source/codec/audio/flag" tag in a release
     /// name. Tokens are bounded by non-alphanumeric characters so real title words
     /// that merely contain a token as a substring (e.g. "Limitless", "Web Therapy")
@@ -116,6 +118,7 @@ public static partial class StringExtensions
         @"x[\s.\-]?26[45]|h[\s.\-]?26[45]|hevc|xvid|divx|" +
         @"ddp?[\s.\-]?\d(?:[\s.\-]?\d)?|e?ac[\s.\-]?3|dts(?:[\s.\-]?hd)?(?:[\s.\-]?ma)?|true[\s.\-]?hd|atmos|aac(?:[\s.\-]?\d(?:[\s.\-]?\d)?)?|flac|" +
         @"\d{1,2}[\s.\-]?bit|hdr10\+?|hdr|do[\s.\-]?vi|dolby[\s.\-]?vision|" +
+        @"hd[\s.\-]?dvd|hd[\s.\-]?tc|ed[\s.\-]?tv|dvd[\s.\-]?scr|dvdscr|dsr|amzn|dsnp|atvp|hmax|hulu|nflx|avc|vc[\s.\-]?1|wmv|mpeg2?|vp[89]|ac3d|eac3d|dts[\s.\-]?(?:es|x)|mp3|hlg|hd[\s.\-]?light|imax|" +
         @"repack|multi" +
         @")(?![A-Za-z0-9])",
         RegexOptions.IgnoreCase)]
@@ -141,6 +144,24 @@ public static partial class StringExtensions
 
         title = title.TrimEnd(' ', '-', '_', '.');
         return Regex.Replace(title, @"\s+", " ").Trim();
+    }
+
+    /// <summary>
+    /// Series-aware title cleanup: applies <see cref="CleanReleaseTitle"/> and then
+    /// drops a trailing release year (e.g. "Halo 2022" -> "Halo", "New Amsterdam
+    /// 2018" -> "New Amsterdam"). A year at the very start is kept so shows that are
+    /// literally named by a year ("1883", "1923", "1899") survive intact.
+    /// </summary>
+    [Pure]
+    public static string CleanSeriesTitle(this string raw)
+    {
+        string title = raw.CleanReleaseTitle();
+
+        Match year = MatchYearRegex().Match(title);
+        if (year.Success && year.Index > 0)
+            title = title[..year.Index];
+
+        return title.TrimEnd('-', '.', '_', ' ').Trim();
     }
 
     /// <summary>Matches a "Season N" / "Series N" (and common localized) folder name.</summary>
