@@ -106,16 +106,8 @@ public class FileListService(
 
         if (audioFiles.Length > 0 && videoFiles.Length == 0)
         {
-            const string pattern =
-                @"(?<library_folder>.+?)[\\\/]((?<letter>.{1})?|\[(?<type>.+?)\])[\\\/](?<artist>.+?)?[\\\/]?(\[(?<year>\d{4})\]|\[(?<releaseType>Singles)\])\s?(?<album>.*)?";
-            Match match = Regex.Match(directoryPath, pattern);
-
-            int year = match.Groups["year"].Success
-                ? Convert.ToInt32(match.Groups["year"].Value)
-                : 0;
-            string albumName = match.Groups["album"].Success
-                ? match.Groups["album"].Value
-                : Regex.Replace(directoryInfo.Name, @"\[\d{4}\]\s?", "");
+            (int year, string albumName, _, _) =
+                MusicPathParser.Parse(directoryPath, directoryInfo.Name);
 
             await Parallel.ForEachAsync(
                 audioFiles,
@@ -215,18 +207,8 @@ public class FileListService(
             // name from the driver-relative directoryPath.
             string folderName = StoragePathHelpers.GetName(directoryPath);
 
-            const string pattern =
-                @"(?<library_folder>.+?)[\\\/]((?<letter>.{1})?|\[(?<type>.+?)\])[\\\/](?<artist>.+?)?[\\\/]?(\[(?<year>\d{4})\]|\[(?<releaseType>Singles)\])\s?(?<album>.*)?";
-
-            Match match = Regex.Match(directoryPath, pattern);
-
-            int year = match.Groups["year"].Success
-                ? Convert.ToInt32(match.Groups["year"].Value)
-                : 0;
-
-            string albumName = match.Groups["album"].Success
-                ? match.Groups["album"].Value
-                : Regex.Replace(folderName, @"\[\d{4}\]\s?", "");
+            (int year, string albumName, _, _) =
+                MusicPathParser.Parse(directoryPath, folderName);
 
             await Parallel.ForEachAsync(
                 audioEntries,
