@@ -308,16 +308,29 @@ public class FileListService(
 
         bool seasonExplicit = parsed.Season.HasValue;
 
+        // Dated daily episode (yyyy.mm.dd): the air date is the key, so discard any
+        // stray number that would otherwise be misread as an episode. The resolver
+        // maps the date to the episode that aired that day.
+        DateOnly? airDate =
+            libraryType is MediaTypes.TvMediaType or MediaTypes.AnimeMediaType
+                ? DailyEpisodeParser.TryGetAirDate(rawFileName)
+                : null;
+        if (airDate.HasValue)
+        {
+            parsed.Season = null;
+            parsed.Episode = null;
+        }
+
         // Plex-style layout: when the file omits the season but lives in a
         // "Season N" folder, take the season from the folder instead of
         // blindly defaulting to 1. seasonExplicit is intentionally left as the
         // filename-derived value so the absolute-index fallback stays available.
         int? folderSeason = directoryName.TryGetFolderSeason();
 
-        if (parsed.Episode.HasValue && !parsed.Season.HasValue)
+        if (!airDate.HasValue && parsed.Episode.HasValue && !parsed.Season.HasValue)
             parsed.Season = folderSeason ?? 1;
 
-        if (!parsed.Season.HasValue && !parsed.Episode.HasValue)
+        if (!airDate.HasValue && !parsed.Season.HasValue && !parsed.Episode.HasValue)
         {
             Regex regex = StringExtensions.MatchNumbers();
             Match numberMatch = regex.Match(parsed.Title);
@@ -334,7 +347,8 @@ public class FileListService(
             libraryType,
             ffprobeData.Format.Duration,
             overrideTmdbId,
-            seasonExplicit
+            seasonExplicit,
+            airDate
         );
 
         MovieOrEpisode match = new();
@@ -436,16 +450,29 @@ public class FileListService(
         // This controls whether the absolute-index fallback is allowed in ResolveShowEpisodeAsync.
         bool seasonExplicit = parsed.Season.HasValue;
 
+        // Dated daily episode (yyyy.mm.dd): the air date is the key, so discard any
+        // stray number that would otherwise be misread as an episode. The resolver
+        // maps the date to the episode that aired that day.
+        DateOnly? airDate =
+            libraryType is MediaTypes.TvMediaType or MediaTypes.AnimeMediaType
+                ? DailyEpisodeParser.TryGetAirDate(rawFileName)
+                : null;
+        if (airDate.HasValue)
+        {
+            parsed.Season = null;
+            parsed.Episode = null;
+        }
+
         // Plex-style layout: when the file omits the season but lives in a
         // "Season N" folder, take the season from the folder instead of
         // blindly defaulting to 1. seasonExplicit is intentionally left as the
         // filename-derived value so the absolute-index fallback stays available.
         int? folderSeason = file.DirectoryName.TryGetFolderSeason();
 
-        if (parsed.Episode.HasValue && !parsed.Season.HasValue)
+        if (!airDate.HasValue && parsed.Episode.HasValue && !parsed.Season.HasValue)
             parsed.Season = folderSeason ?? 1;
 
-        if (!parsed.Season.HasValue && !parsed.Episode.HasValue)
+        if (!airDate.HasValue && !parsed.Season.HasValue && !parsed.Episode.HasValue)
         {
             Regex regex = StringExtensions.MatchNumbers();
             Match numberMatch = regex.Match(parsed.Title);
@@ -462,7 +489,8 @@ public class FileListService(
             libraryType,
             ffprobeData.Format.Duration,
             overrideTmdbId,
-            seasonExplicit
+            seasonExplicit,
+            airDate
         );
 
         MovieOrEpisode match = new();

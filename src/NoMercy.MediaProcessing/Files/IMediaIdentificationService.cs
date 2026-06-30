@@ -24,6 +24,7 @@ public interface IMediaIdentificationService
         TimeSpan? duration,
         int? overrideTmdbId,
         bool seasonExplicit,
+        DateOnly? airDate = null,
         CancellationToken ct = default
     );
 }

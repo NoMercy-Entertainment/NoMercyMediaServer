@@ -62,6 +62,7 @@ public class FileListServiceTests
                     It.IsAny<TimeSpan?>(),
                     It.IsAny<int?>(),
                     It.IsAny<bool>(),
+                    It.IsAny<DateOnly?>(),
                     It.IsAny<CancellationToken>()
                 )
             )

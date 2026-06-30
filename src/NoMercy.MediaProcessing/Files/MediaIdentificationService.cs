@@ -59,6 +59,7 @@ public class MediaIdentificationService(MediaContext context) : IMediaIdentifica
         TimeSpan? duration,
         int? overrideTmdbId,
         bool seasonExplicit,
+        DateOnly? airDate = null,
         CancellationToken ct = default
     )
     {
@@ -70,7 +71,8 @@ public class MediaIdentificationService(MediaContext context) : IMediaIdentifica
                 parsed,
                 duration,
                 overrideTmdbId,
-                seasonExplicit
+                seasonExplicit,
+                airDate
             ),
             MediaTypes.MovieMediaType => await ResolveMovieMatchAsync(
                 context,
@@ -89,7 +91,8 @@ public class MediaIdentificationService(MediaContext context) : IMediaIdentifica
         MovieFile parsed,
         TimeSpan? duration,
         int? overrideTmdbId,
-        bool seasonExplicit = false
+        bool seasonExplicit = false,
+        DateOnly? airDate = null
     )
     {
         TmdbSearchClient searchClient = new();
@@ -112,7 +115,10 @@ public class MediaIdentificationService(MediaContext context) : IMediaIdentifica
             show = shows?.Results.FirstOrDefault();
         }
 
-        if (show == null || !parsed.Season.HasValue || !parsed.Episode.HasValue)
+        if (show == null)
+            return null;
+
+        if ((!parsed.Season.HasValue || !parsed.Episode.HasValue) && !airDate.HasValue)
             return null;
 
         Ulid libraryId = await ctx
@@ -121,6 +127,28 @@ public class MediaIdentificationService(MediaContext context) : IMediaIdentifica
             .FirstOrDefaultAsync();
 
         await EnsureShowInLibraryAsync(ctx, show.Id, show.Name, libraryId);
+
+        // Daily/dated episode (yyyy.mm.dd): map the air date to the episode that
+        // aired that day, then fall through to the normal season/episode resolution.
+        if (airDate.HasValue && (!parsed.Season.HasValue || !parsed.Episode.HasValue))
+        {
+            Episode? datedEpisode = await ctx
+                .Episodes.Where(item =>
+                    item.TvId == show.Id
+                    && item.AirDate.HasValue
+                    && item.AirDate.Value.Year == airDate.Value.Year
+                    && item.AirDate.Value.Month == airDate.Value.Month
+                    && item.AirDate.Value.Day == airDate.Value.Day)
+                .OrderBy(item => item.SeasonNumber)
+                .ThenBy(item => item.EpisodeNumber)
+                .FirstOrDefaultAsync();
+
+            if (datedEpisode == null)
+                return null;
+
+            parsed.Season = datedEpisode.SeasonNumber;
+            parsed.Episode = datedEpisode.EpisodeNumber;
+        }
 
         Episode? episode = ctx
             .Episodes.Where(item => item.TvId == show.Id)
