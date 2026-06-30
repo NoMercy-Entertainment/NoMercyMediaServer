@@ -191,7 +191,16 @@ public class TvShowRepository(IDbContextFactory<MediaContext> contextFactory) : 
             .Tvs.AsNoTracking()
             .ForUser(userId)
             .Where(tv => tv.Id == id)
-            .AnyAsync(tv => tv.Episodes.Any(e => (e.VideoFiles.Any(v => v.Folder != null) || e.Tv.Episodes.Any(o => o.SeasonNumber == e.SeasonNumber && o.VideoFiles.Any(w => w.Folder != null && w.LastEpisodeNumber != null && o.EpisodeNumber <= e.EpisodeNumber && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0))))), ct);
+            .AnyAsync(tv => tv.Episodes.Any(e => (
+                e.VideoFiles.Any(v => v.Folder != null)
+                || e.Tv.Episodes.Any(o =>
+                    o.SeasonNumber == e.SeasonNumber
+                    && o.VideoFiles.Any(w =>
+                        w.Folder != null
+                        && w.LastEpisodeNumber != null
+                        && o.EpisodeNumber <= e.EpisodeNumber
+                        && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))
+            )), ct);
     }
 
     public async Task<Tv?> GetPlaylistAsync(

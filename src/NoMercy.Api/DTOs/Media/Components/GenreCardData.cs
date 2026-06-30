@@ -82,7 +82,16 @@ public record GenreCardData
         HaveItems =
             genre.GenreMovies.Count(gm => gm.Movie.VideoFiles.Any(v => v.Folder != null))
             + genre.GenreTvShows.Count(gt =>
-                gt.Tv.Episodes.Any(e => (e.VideoFiles.Any(v => v.Folder != null) || e.Tv.Episodes.Any(o => o.SeasonNumber == e.SeasonNumber && o.VideoFiles.Any(w => w.Folder != null && w.LastEpisodeNumber != null && o.EpisodeNumber <= e.EpisodeNumber && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))))
+                gt.Tv.Episodes.Any(e => (
+                    e.VideoFiles.Any(v => v.Folder != null)
+                    || e.Tv.Episodes.Any(o =>
+                        o.SeasonNumber == e.SeasonNumber
+                        && o.VideoFiles.Any(w =>
+                            w.Folder != null
+                            && w.LastEpisodeNumber != null
+                            && o.EpisodeNumber <= e.EpisodeNumber
+                            && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))
+                ))
             );
     }
 
