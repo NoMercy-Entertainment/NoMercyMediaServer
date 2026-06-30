@@ -36,6 +36,7 @@ public class FilenameParserPipelineTests
             new SeasonEpisodeAdapter(),
             new AnimeAbsoluteAdapter(),
             new EpisodeShortFormAdapter(),
+            new SpecialsAdapter(),
             new MovieDetectorAdapter(),
         };
 
@@ -375,4 +376,63 @@ public class FilenameParserPipelineTests
             .TryParse(Context("Show.E05.mkv", libraryType: "movie"))
             .Should()
             .BeNull();
+
+    // ---------------------------------------------------------------------------
+    // Specials / season-zero: labelled (OVA/SP/NCED/Special) rather than numbered.
+    // ---------------------------------------------------------------------------
+    [Theory]
+    [InlineData("One Piece - OVA 3.mkv", "anime", "One Piece", 3)]
+    [InlineData("Bleach.SP01.mkv", "tv", "Bleach", 1)]
+    [InlineData("Show.Name.NCED.mkv", "tv", "Show Name", 1)]
+    [InlineData("My Show - Special 2.mkv", "tv", "My Show", 2)]
+    [InlineData("My Show - Specials.mkv", "tv", "My Show", 1)]
+    public void Specials_season_zero(string file, string lib, string title, int episode)
+    {
+        ParseContext context = Context(file, libraryType: lib);
+        MovieFile result = Pipeline().Parse(context);
+        result.IsSeries.Should().BeTrue();
+        result.Title.Should().Be(title);
+        result.Season.Should().Be(0);
+        result.Episode.Should().Be(episode);
+        FirstMatchingAdapter(context).Should().Be("specials");
+    }
+
+    [Fact]
+    public void Specials_uses_folder_for_bare_anime_marker()
+    {
+        ParseContext context = Context("OVA 2.mkv", "One Piece", "anime");
+        MovieFile result = Pipeline().Parse(context);
+        result.Title.Should().Be("One Piece");
+        result.Season.Should().Be(0);
+        result.Episode.Should().Be(2);
+        FirstMatchingAdapter(context).Should().Be("specials");
+    }
+
+    [Theory]
+    // word markers never steal a real title, substrings never match
+    [InlineData("Special.mkv")]
+    [InlineData("Extras.mkv")]
+    [InlineData("Spectre.2015.1080p.mkv")]
+    [InlineData("Casanova.1981.mkv")]
+    [InlineData("Extraction.2020.1080p.mkv")]
+    [InlineData("Nova.2021.mkv")]
+    public void Specials_does_not_over_classify(string file) =>
+        new SpecialsAdapter().TryParse(Context(file)).Should().BeNull();
+
+    [Fact]
+    public void Specials_skipped_for_movie_libraries() =>
+        new SpecialsAdapter()
+            .TryParse(Context("Show - OVA 1.mkv", libraryType: "movie"))
+            .Should()
+            .BeNull();
+
+    [Fact]
+    public void S00Exx_still_owned_by_season_episode()
+    {
+        ParseContext context = Context("Bleach.S00E05.1080p.mkv");
+        MovieFile result = Pipeline().Parse(context);
+        result.Season.Should().Be(0);
+        result.Episode.Should().Be(5);
+        FirstMatchingAdapter(context).Should().Be("season-episode");
+    }
 }
