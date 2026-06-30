@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <RunSettings>
   <RunConfiguration>
-    <!-- Run test assemblies sequentially to prevent SQLite disk I/O contention -->
-    <MaxCpuCount>1</MaxCpuCount>
+    <!-- Run test assemblies in parallel. Each test-host process gets its own
+         isolated app-data root via TestEnvironmentSetup.EnsureIsolatedAppData(),
+         so there is no shared-SQLite / shared-path contention across assemblies. -->
+    <MaxCpuCount>0</MaxCpuCount>
   </RunConfiguration>
 </RunSettings>
