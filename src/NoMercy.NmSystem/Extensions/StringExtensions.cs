@@ -103,26 +103,97 @@ public static partial class StringExtensions
     public static partial Regex MatchCrossFormatEpisode();
 
     /// <summary>
-    /// Vocabulary follows the scene rules (scenerules.org); cf. the MIT-licensed
-    /// pr0pz/scene-release-parser for the canonical token tables.
-    /// Matches the first scene "quality/source/codec/audio/flag" tag in a release
-    /// name. Tokens are bounded by non-alphanumeric characters so real title words
-    /// that merely contain a token as a substring (e.g. "Limitless", "Web Therapy")
-    /// are never matched, and internal separators are tolerated so dotted/hyphenated
-    /// scene forms ("WEB-DL", "H.264", "DDP5.1") match the same as spaced forms.
+    /// Scene "quality" vocabulary, split per category so each table is named and
+    /// individually testable. Vocabulary follows the scene rules (scenerules.org);
+    /// cf. the MIT-licensed pr0pz/scene-release-parser for the canonical tables.
+    /// Every token is bounded by non-alphanumeric characters so a real title word
+    /// that merely contains a token as a substring ("Limitless", "Web Therapy") is
+    /// never matched, and internal separators are tolerated so dotted/hyphenated
+    /// forms ("WEB-DL", "H.264", "DDP5.1") match the same as spaced forms.
     /// </summary>
-    [GeneratedRegex(
-        @"(?<![A-Za-z0-9])(?:" +
-        @"\d{3,4}[pi]|[48]k|uhd|" +
-        @"web[\s.\-]?dl|web[\s.\-]?rip|web[\s.\-]?hd|blu[\s.\-]?ray|bd[\s.\-]?rip|b[rd][\s.\-]?rip|hd[\s.\-]?tv|pd[\s.\-]?tv|dvd[\s.\-]?rip|hd[\s.\-]?rip|hd[\s.\-]?cam|uhd[\s.\-]?bd|remux|" +
-        @"x[\s.\-]?26[45]|h[\s.\-]?26[45]|hevc|xvid|divx|" +
-        @"ddp?[\s.\-]?\d(?:[\s.\-]?\d)?|e?ac[\s.\-]?3|dts(?:[\s.\-]?hd)?(?:[\s.\-]?ma)?|true[\s.\-]?hd|atmos|aac(?:[\s.\-]?\d(?:[\s.\-]?\d)?)?|flac|" +
-        @"\d{1,2}[\s.\-]?bit|hdr10\+?|hdr|do[\s.\-]?vi|dolby[\s.\-]?vision|" +
-        @"hd[\s.\-]?dvd|hd[\s.\-]?tc|ed[\s.\-]?tv|dvd[\s.\-]?scr|dvdscr|dsr|amzn|dsnp|atvp|hmax|hulu|nflx|avc|vc[\s.\-]?1|wmv|mpeg2?|vp[89]|ac3d|eac3d|dts[\s.\-]?(?:es|x)|mp3|hlg|hd[\s.\-]?light|imax|" +
-        @"repack|multi" +
-        @")(?![A-Za-z0-9])",
-        RegexOptions.IgnoreCase)]
-    public static partial Regex MatchReleaseTag();
+
+    /// <summary>Resolution tags: 480p/720p/1080p/2160p (interlaced too), 4k/8k, uhd.</summary>
+    [GeneratedRegex(@"(?<![A-Za-z0-9])(?:\d{3,4}[pi]|[48]k|uhd)(?![A-Za-z0-9])", RegexOptions.IgnoreCase)]
+    public static partial Regex MatchResolutionTag();
+
+    /// <summary>Source / medium tags (web-dl, web-rip, bluray, hdtv, dvd*, remux, streaming services, ...).</summary>
+    [GeneratedRegex(@"(?<![A-Za-z0-9])(?:web[\s.\-]?dl|web[\s.\-]?rip|web[\s.\-]?hd|blu[\s.\-]?ray|bd[\s.\-]?rip|b[rd][\s.\-]?rip|hd[\s.\-]?tv|pd[\s.\-]?tv|dvd[\s.\-]?rip|hd[\s.\-]?rip|hd[\s.\-]?cam|uhd[\s.\-]?bd|remux|hd[\s.\-]?dvd|hd[\s.\-]?tc|ed[\s.\-]?tv|dvd[\s.\-]?scr|dvdscr|dsr|amzn|dsnp|atvp|hmax|hulu|nflx|hd[\s.\-]?light)(?![A-Za-z0-9])", RegexOptions.IgnoreCase)]
+    public static partial Regex MatchSourceTag();
+
+    /// <summary>Video codec tags (x264/5, h264/5, hevc, xvid, divx, avc, vc-1, wmv, mpeg(2), vp8/9).</summary>
+    [GeneratedRegex(@"(?<![A-Za-z0-9])(?:x[\s.\-]?26[45]|h[\s.\-]?26[45]|hevc|xvid|divx|avc|vc[\s.\-]?1|wmv|mpeg2?|vp[89])(?![A-Za-z0-9])", RegexOptions.IgnoreCase)]
+    public static partial Regex MatchCodecTag();
+
+    /// <summary>Audio tags (ddp5.1, eac3, dts(-hd/ma/es/x), truehd, atmos, aac, flac, ac3d, mp3).</summary>
+    [GeneratedRegex(@"(?<![A-Za-z0-9])(?:ddp?[\s.\-]?\d(?:[\s.\-]?\d)?|e?ac[\s.\-]?3|dts(?:[\s.\-]?hd)?(?:[\s.\-]?ma)?|dts[\s.\-]?(?:es|x)|true[\s.\-]?hd|atmos|aac(?:[\s.\-]?\d(?:[\s.\-]?\d)?)?|flac|ac3d|eac3d|mp3)(?![A-Za-z0-9])", RegexOptions.IgnoreCase)]
+    public static partial Regex MatchAudioTag();
+
+    /// <summary>HDR / bit-depth tags (10bit, hdr10+, hdr, dovi, dolby vision, hlg).</summary>
+    [GeneratedRegex(@"(?<![A-Za-z0-9])(?:\d{1,2}[\s.\-]?bit|hdr10\+?|hdr|do[\s.\-]?vi|dolby[\s.\-]?vision|hlg)(?![A-Za-z0-9])", RegexOptions.IgnoreCase)]
+    public static partial Regex MatchHdrTag();
+
+    /// <summary>Release flags / editions (repack, multi, imax).</summary>
+    [GeneratedRegex(@"(?<![A-Za-z0-9])(?:repack|multi|imax)(?![A-Za-z0-9])", RegexOptions.IgnoreCase)]
+    public static partial Regex MatchFlagTag();
+
+    /// <summary>The scene tag categories recognised by the per-category release regexes.</summary>
+    public enum ReleaseTagCategory
+    {
+        Resolution,
+        Source,
+        Codec,
+        Audio,
+        Hdr,
+        Flag,
+    }
+
+    /// <summary>
+    /// Finds the earliest (left-most) scene tag of any category in <paramref name="text"/>,
+    /// returning its start index plus the matched category/value, or -1 when none match.
+    /// </summary>
+    private static int EarliestReleaseTag(string text, out ReleaseTagCategory category, out string value)
+    {
+        int best = int.MaxValue;
+        ReleaseTagCategory bestCat = default;
+        string bestVal = string.Empty;
+
+        void Take(Match m, ReleaseTagCategory cat)
+        {
+            if (m.Success && m.Index < best)
+            {
+                best = m.Index;
+                bestCat = cat;
+                bestVal = m.Value;
+            }
+        }
+
+        Take(MatchResolutionTag().Match(text), ReleaseTagCategory.Resolution);
+        Take(MatchSourceTag().Match(text), ReleaseTagCategory.Source);
+        Take(MatchCodecTag().Match(text), ReleaseTagCategory.Codec);
+        Take(MatchAudioTag().Match(text), ReleaseTagCategory.Audio);
+        Take(MatchHdrTag().Match(text), ReleaseTagCategory.Hdr);
+        Take(MatchFlagTag().Match(text), ReleaseTagCategory.Flag);
+
+        category = bestCat;
+        value = bestVal;
+        return best == int.MaxValue ? -1 : best;
+    }
+
+    /// <summary>
+    /// Attempts to find the first scene quality/source/codec/audio/HDR/flag tag in a
+    /// release name, reporting the matched <paramref name="value"/> and its category.
+    /// </summary>
+    [Pure]
+    public static bool TryGetReleaseTag(this string raw, out string value, out ReleaseTagCategory category)
+    {
+        category = default;
+        value = string.Empty;
+        if (string.IsNullOrWhiteSpace(raw))
+            return false;
+
+        string normalized = Regex.Replace(raw.Replace('.', ' ').Replace('_', ' '), @"\s+", " ").Trim();
+        return EarliestReleaseTag(normalized, out category, out value) >= 0;
+    }
 
     /// <summary>
     /// Cleans a derived show/movie title by normalizing separators and removing
@@ -139,8 +210,8 @@ public static partial class StringExtensions
         string normalized = raw.Replace('.', ' ').Replace('_', ' ');
         normalized = Regex.Replace(normalized, @"\s+", " ").Trim();
 
-        Match tag = MatchReleaseTag().Match(normalized);
-        string title = tag.Success ? normalized[..tag.Index] : normalized;
+        int cut = EarliestReleaseTag(normalized, out _, out _);
+        string title = cut >= 0 ? normalized[..cut] : normalized;
 
         title = title.TrimEnd(' ', '-', '_', '.');
         return Regex.Replace(title, @"\s+", " ").Trim();
