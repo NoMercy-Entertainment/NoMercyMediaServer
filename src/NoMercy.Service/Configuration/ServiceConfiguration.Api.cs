@@ -53,6 +53,13 @@ public static partial class ServiceConfiguration
         services.AddEndpointsApiExplorer();
 
         services.AddHttpContextAccessor();
+        // Align SignalR per-user routing with Device.OwnerUserId so per-user
+        // pushes never leak across accounts.
+        services.AddSingleton<
+            Microsoft.AspNetCore.SignalR.IUserIdProvider,
+            NoMercy.Api.Hubs.NoMercyUserIdProvider
+        >();
+
         services
             .AddSignalR(o =>
             {

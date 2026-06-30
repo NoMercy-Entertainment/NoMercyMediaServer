@@ -194,8 +194,13 @@ public sealed class DeviceBusEndpoint(
         // for legacy device-bus rows that pre-date the ID alignment. Either way,
         // upsert by setting both columns + ownership so the row is whole.
         Device? device = await ctx.Devices.FirstOrDefaultAsync(d =>
-            d.DeviceId == fingerprint || (d.Fingerprint == fingerprint && d.OwnerUserId == user.Id)
+            d.DeviceId == fingerprint || d.Fingerprint == fingerprint
         );
+
+        // Ownership follows the authenticated device session: whoever the device is
+        // logged in as now owns it. Capture the prior owner so that, on a transfer,
+        // the previous account's device list can be refreshed (no cross-account leak).
+        Guid? previousOwner = device?.OwnerUserId;
 
         if (device is null)
         {
@@ -214,7 +219,7 @@ public sealed class DeviceBusEndpoint(
         {
             // Existing MusicHub-registered row — backfill the device-bus columns.
             device.Fingerprint = fingerprint;
-            device.OwnerUserId ??= user.Id;
+            device.OwnerUserId = user.Id;
             if (string.IsNullOrEmpty(device.Type))
                 device.Type = deviceType;
         }
@@ -224,6 +229,11 @@ public sealed class DeviceBusEndpoint(
         await ctx.SaveChangesAsync();
 
         await registry.Register(device.Id, ws);
+
+        // If the device just moved to a different account, refresh the previous
+        // owner so the device disappears from their list immediately.
+        if (previousOwner is { } previous && previous != user.Id)
+            await registry.BroadcastChange(previous);
         return device;
     }
 }
