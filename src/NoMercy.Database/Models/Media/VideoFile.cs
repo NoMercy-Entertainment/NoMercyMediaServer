@@ -74,6 +74,9 @@ public class VideoFile : VideoTracks
     public int? EpisodeId { get; set; }
     public Episode? Episode { get; set; }
 
+    [JsonProperty("last_episode_number")]
+    public int? LastEpisodeNumber { get; set; }
+
     [JsonProperty("movie_id")]
     public int? MovieId { get; set; }
     public Movie? Movie { get; set; }

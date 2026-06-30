@@ -145,7 +145,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                 NumberOfEpisodes = tv.NumberOfEpisodes,
                 EpisodesWithVideo = tv
                     .Episodes.Where(e => e.SeasonNumber > 0)
-                    .Count(e => e.VideoFiles.Any(v => v.Folder != null)),
+                    .Count(e => (e.VideoFiles.Any(v => v.Folder != null) || e.Tv.Episodes.Any(o => o.SeasonNumber == e.SeasonNumber && o.VideoFiles.Any(w => w.Folder != null && w.LastEpisodeNumber != null && o.EpisodeNumber <= e.EpisodeNumber && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0))))),
                 CertificationRating = tv
                     .CertificationTvs.Where(c =>
                         c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country

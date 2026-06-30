@@ -152,9 +152,22 @@ public partial class FileManager
         Ulid metadataId = await fileRepository.StoreMetadata(metadata);
 
         Logger.App($"Storing video file: {episode?.Id}, {Movie?.Id}", LogEventLevel.Verbose);
+
+        // Joined multi-episode file (e.g. S01E01-E04): record the last covered
+        // episode so every episode in the range counts as present, while a single
+        // VideoFile keeps it from being listed twice in playlists.
+        int? lastEpisodeNumber = null;
+        if (episode is not null)
+        {
+            IReadOnlyList<int> covered = Parsing.EpisodeRangeParser.Expand(
+                fileName, episode.SeasonNumber, episode.EpisodeNumber);
+            if (covered.Count > 1)
+                lastEpisodeNumber = covered[^1];
+        }
         VideoFile videoFile = new()
         {
             EpisodeId = episode?.Id,
+            LastEpisodeNumber = lastEpisodeNumber,
             MovieId = Movie?.Id,
             Folder = baseFolder.Replace("\\", "/"),
             HostFolder = hostFolder.Replace("\\", "/"),

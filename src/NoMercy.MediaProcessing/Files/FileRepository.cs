@@ -74,6 +74,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         }
 
         existing.EpisodeId = videoFile.EpisodeId;
+        existing.LastEpisodeNumber = videoFile.LastEpisodeNumber;
         existing.MovieId = videoFile.MovieId;
         existing.Folder = videoFile.Folder;
         existing.HostFolder = videoFile.HostFolder;
