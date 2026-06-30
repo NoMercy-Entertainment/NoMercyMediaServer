@@ -11,6 +11,7 @@
 
 using NoMercy.Storage.Drivers.Nfs;
 using NoMercy.Storage.Drivers.S3;
+using NoMercy.Storage.Drivers.Smb;
 using NoMercy.Storage.Drivers.WebDav;
 
 namespace NoMercy.Tests.Storage.Container;
@@ -55,6 +56,25 @@ public sealed class StorageBackendsSmokeTests(StorageBackendsFixture fix)
         await r.CopyToAsync(ms);
         ms.ToArray().Should().Equal(data);
         driver.DeleteFile(path);
+    }
+
+    [SkippableFact]
+    public async Task Smb_round_trips()
+    {
+        Require();
+        using SmbStorageDriver driver = fix.BuildSmbDriver();
+        string path = $"smoke-{Ulid.NewUlid()}.bin";
+        byte[] data = "hello smb"u8.ToArray();
+
+        await using (Stream w = driver.OpenWrite(path, overwrite: true))
+            await w.WriteAsync(data);
+        driver.FileExists(path).Should().BeTrue();
+        await using Stream r = driver.OpenRead(path);
+        using MemoryStream ms = new();
+        await r.CopyToAsync(ms);
+        ms.ToArray().Should().Equal(data);
+        driver.DeleteFile(path);
+        driver.FileExists(path).Should().BeFalse();
     }
 
     [SkippableFact]

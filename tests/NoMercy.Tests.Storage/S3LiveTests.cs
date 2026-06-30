@@ -9,57 +9,29 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.Net.Sockets;
 using NoMercy.Storage.Drivers.S3;
+using NoMercy.Tests.Storage.Container;
 
 namespace NoMercy.Tests.Storage;
 
 // ============================================================================
-// Live integration tests for the S3 (MinIO/Vliegtuig) driver.
-//
-// Same pattern as R2LiveTests — see that file for comment conventions.
-// The S3 driver row in the live system has a malformed bucket field (a full
-// console URL instead of a bucket name). The fixture extracts just the name
-// segment from the URL so the driver can be constructed cleanly. If that
-// extraction fails the fixture sets SkipReason before any test runs.
+// Production-driver integration tests for the S3 driver, run against REAL S3
+// storage: the MinIO server in the all-in-one StorageBackends container. MinIO
+// speaks the genuine S3 wire protocol, so this exercises the same code paths a
+// production AWS S3 / MinIO / Vliegtuig backend would. The container is started
+// once for the whole assembly and torn down after the last test.
 // ============================================================================
 
-public sealed class S3LiveTests(S3LiveFixture fix) : IClassFixture<S3LiveFixture>
+[Collection("StorageBackends")]
+public sealed class S3LiveTests(StorageBackendsFixture fix)
 {
     private S3StorageDriver Driver()
     {
-        Skip.If(fix.SkipReason is not null, fix.SkipReason ?? string.Empty);
-
-        S3StorageDriver? driver = fix.BuildDriver(null, null);
-        Skip.If(driver is null, "S3 driver could not be constructed from config");
-        return driver!;
-    }
-
-    private static bool IsTransportError(Exception ex) =>
-        ex is HttpRequestException or SocketException
-        || ex.InnerException is HttpRequestException or SocketException;
-
-    private void SkipIfUnreachable(Action probe)
-    {
-        try
-        {
-            probe();
-        }
-        catch (Exception ex) when (IsTransportError(ex))
-        {
-            Skip.If(
-                true,
-                $"S3 endpoint unreachable — check VPN/network or that the bucket exists ({ex.Message})"
-            );
-            throw;
-        }
+        Skip.If(!fix.Available, fix.StartupError ?? "storage container not available");
+        return fix.BuildS3Driver();
     }
 
     private static string ScratchName() => $"nmtest-{Ulid.NewUlid()}";
-
-    // -----------------------------------------------------------------------
-    // Op 1
-    // -----------------------------------------------------------------------
 
     [SkippableFact]
     public void Mount_succeeds()
@@ -68,124 +40,83 @@ public sealed class S3LiveTests(S3LiveFixture fix) : IClassFixture<S3LiveFixture
         driver.Should().NotBeNull();
     }
 
-    // -----------------------------------------------------------------------
-    // Op 2
-    // -----------------------------------------------------------------------
-
     [SkippableFact]
     public void EnumerateRoot_returns_entries_or_empty_listing()
     {
         using S3StorageDriver driver = Driver();
-        List<string> entries = [];
-        SkipIfUnreachable(() =>
-        {
-            entries = driver
-                .EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly)
-                .ToList();
-        });
+        List<string> entries = driver
+            .EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly)
+            .ToList();
         Console.WriteLine($"[S3] root entry count: {entries.Count}");
     }
 
-    // -----------------------------------------------------------------------
-    // Op 3
-    // -----------------------------------------------------------------------
-
     [SkippableFact]
-    public void EnumerateRoot_paths_are_driver_relative()
+    public async Task EnumerateRoot_paths_are_driver_relative()
     {
         using S3StorageDriver driver = Driver();
-        List<string> entries = [];
-        SkipIfUnreachable(() =>
+        string marker = $"{ScratchName()}.bin";
+        await using (Stream w = driver.OpenWrite(marker, overwrite: true))
+            await w.WriteAsync(new byte[4]);
+
+        try
         {
-            entries = driver
+            List<string> entries = driver
                 .EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly)
                 .ToList();
-        });
 
-        string? prefix = fix.Driver?.Prefix;
-        if (!string.IsNullOrEmpty(prefix))
+            // Entries are driver-relative — never prefixed with a leading slash
+            // or the bucket name.
+            entries.Should().NotContain(e => e.StartsWith('/'));
+            entries.Should().Contain(e => e.EndsWith(marker, StringComparison.Ordinal));
+        }
+        finally
         {
-            string trimmed = prefix.TrimEnd('/');
-            entries
-                .Should()
-                .NotContain(
-                    e => e.StartsWith(trimmed, StringComparison.Ordinal),
-                    $"paths must be driver-relative, not start with the configured prefix '{trimmed}'"
-                );
+            driver.DeleteFile(marker);
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Op 4
-    // -----------------------------------------------------------------------
-
     [SkippableFact]
-    public void DirectoryExists_round_trip()
+    public async Task DirectoryExists_round_trip()
     {
         using S3StorageDriver driver = Driver();
-        List<string> entries = [];
-        SkipIfUnreachable(() =>
+        string dir = ScratchName();
+        string file = $"{dir}/item.bin";
+        await using (Stream w = driver.OpenWrite(file, overwrite: true))
+            await w.WriteAsync(new byte[4]);
+
+        try
         {
-            entries = driver
-                .EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly)
-                .ToList();
-        });
-
-        List<string> dirs = entries
-            .Where(e =>
-            {
-                try
-                {
-                    driver
-                        .EnumerateFileSystemEntries(e, "*", SearchOption.TopDirectoryOnly)
-                        .Take(1)
-                        .ToList();
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
-            })
-            .ToList();
-
-        foreach (string dir in dirs)
             driver.DirectoryExists(dir).Should().BeTrue($"DirectoryExists('{dir}') must be true");
+        }
+        finally
+        {
+            driver.DeleteDirectory(dir, recursive: true);
+        }
     }
-
-    // -----------------------------------------------------------------------
-    // Op 5
-    // -----------------------------------------------------------------------
 
     [SkippableFact]
-    public void FileExists_round_trip()
+    public async Task FileExists_round_trip()
     {
         using S3StorageDriver driver = Driver();
-        List<string> entries = [];
-        SkipIfUnreachable(() =>
+        string file = $"{ScratchName()}.bin";
+        await using (Stream w = driver.OpenWrite(file, overwrite: true))
+            await w.WriteAsync(new byte[8]);
+
+        try
         {
-            entries = driver
-                .EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly)
-                .ToList();
-        });
-
-        string? file = entries.FirstOrDefault(e => !driver.DirectoryExists(e));
-        Skip.If(file is null, "No file entries at root — skipping FileExists round-trip");
-
-        driver.FileExists(file!).Should().BeTrue();
+            driver.FileExists(file).Should().BeTrue();
+        }
+        finally
+        {
+            driver.DeleteFile(file);
+        }
     }
-
-    // -----------------------------------------------------------------------
-    // Op 6
-    // -----------------------------------------------------------------------
 
     [SkippableFact]
     public async Task CreateDirectory_then_DirectoryExists_then_DeleteDirectory()
     {
         using S3StorageDriver driver = Driver();
         string scratch = ScratchName();
-
-        SkipIfUnreachable(() => driver.DirectoryExists(scratch));
 
         try
         {
@@ -207,10 +138,6 @@ public sealed class S3LiveTests(S3LiveFixture fix) : IClassFixture<S3LiveFixture
         await Task.CompletedTask;
     }
 
-    // -----------------------------------------------------------------------
-    // Op 7
-    // -----------------------------------------------------------------------
-
     [SkippableFact]
     public async Task OpenWrite_then_OpenRead_round_trip()
     {
@@ -218,8 +145,6 @@ public sealed class S3LiveTests(S3LiveFixture fix) : IClassFixture<S3LiveFixture
         string scratch = $"{ScratchName()}.bin";
         byte[] expected = new byte[16 * 1024];
         new Random(1337).NextBytes(expected);
-
-        SkipIfUnreachable(() => driver.FileExists(scratch));
 
         try
         {
@@ -244,10 +169,6 @@ public sealed class S3LiveTests(S3LiveFixture fix) : IClassFixture<S3LiveFixture
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Op 8
-    // -----------------------------------------------------------------------
-
     [SkippableFact]
     public async Task GetFileSize_after_write()
     {
@@ -255,8 +176,6 @@ public sealed class S3LiveTests(S3LiveFixture fix) : IClassFixture<S3LiveFixture
         string scratch = $"{ScratchName()}.bin";
         byte[] data = new byte[256];
         new Random(42).NextBytes(data);
-
-        SkipIfUnreachable(() => driver.FileExists(scratch));
 
         try
         {
@@ -278,18 +197,12 @@ public sealed class S3LiveTests(S3LiveFixture fix) : IClassFixture<S3LiveFixture
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Op 9
-    // -----------------------------------------------------------------------
-
     [SkippableFact]
     public async Task GetLastWriteTimeUtc_recent()
     {
         using S3StorageDriver driver = Driver();
         string scratch = $"{ScratchName()}.bin";
         byte[] data = new byte[32];
-
-        SkipIfUnreachable(() => driver.FileExists(scratch));
 
         try
         {
@@ -312,10 +225,6 @@ public sealed class S3LiveTests(S3LiveFixture fix) : IClassFixture<S3LiveFixture
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Op 10
-    // -----------------------------------------------------------------------
-
     [SkippableFact]
     public async Task MoveFile_renames_path()
     {
@@ -324,8 +233,6 @@ public sealed class S3LiveTests(S3LiveFixture fix) : IClassFixture<S3LiveFixture
         string dst = $"{ScratchName()}-dst.bin";
         byte[] data = new byte[64];
         new Random(7).NextBytes(data);
-
-        SkipIfUnreachable(() => driver.FileExists(src));
 
         try
         {
@@ -355,10 +262,6 @@ public sealed class S3LiveTests(S3LiveFixture fix) : IClassFixture<S3LiveFixture
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Op 11
-    // -----------------------------------------------------------------------
-
     [SkippableFact]
     public async Task CopyFile_duplicates_content()
     {
@@ -367,8 +270,6 @@ public sealed class S3LiveTests(S3LiveFixture fix) : IClassFixture<S3LiveFixture
         string dst = $"{ScratchName()}-dst.bin";
         byte[] data = new byte[64];
         new Random(99).NextBytes(data);
-
-        SkipIfUnreachable(() => driver.FileExists(src));
 
         try
         {
@@ -402,18 +303,12 @@ public sealed class S3LiveTests(S3LiveFixture fix) : IClassFixture<S3LiveFixture
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Op 12
-    // -----------------------------------------------------------------------
-
     [SkippableFact]
     public async Task OpenWrite_overwrite_false_throws_on_existing()
     {
         using S3StorageDriver driver = Driver();
         string scratch = $"{ScratchName()}.bin";
         byte[] data = new byte[16];
-
-        SkipIfUnreachable(() => driver.FileExists(scratch));
 
         try
         {
@@ -436,10 +331,6 @@ public sealed class S3LiveTests(S3LiveFixture fix) : IClassFixture<S3LiveFixture
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Op 13
-    // -----------------------------------------------------------------------
-
     [SkippableFact]
     public async Task EnumerateFileSystemEntries_with_pattern()
     {
@@ -449,8 +340,6 @@ public sealed class S3LiveTests(S3LiveFixture fix) : IClassFixture<S3LiveFixture
         string fileB = $"{dir}/b.txt";
         string fileC = $"{dir}/c.bin";
         byte[] bytes = new byte[4];
-
-        SkipIfUnreachable(() => driver.DirectoryExists(dir));
 
         try
         {
@@ -486,10 +375,6 @@ public sealed class S3LiveTests(S3LiveFixture fix) : IClassFixture<S3LiveFixture
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Op 14
-    // -----------------------------------------------------------------------
-
     [SkippableFact]
     public void IsHidden_dotfiles_are_hidden()
     {
@@ -497,10 +382,6 @@ public sealed class S3LiveTests(S3LiveFixture fix) : IClassFixture<S3LiveFixture
         bool result = driver.IsHidden(".hidden-file");
         result.Should().BeFalse("S3 has no hidden attribute — IsHidden always returns false");
     }
-
-    // -----------------------------------------------------------------------
-    // Op 15
-    // -----------------------------------------------------------------------
 
     [SkippableFact]
     public async Task MoveDirectory_renames_collection()
@@ -510,8 +391,6 @@ public sealed class S3LiveTests(S3LiveFixture fix) : IClassFixture<S3LiveFixture
         string dst = ScratchName();
         string file = $"{src}/item.bin";
         byte[] data = new byte[16];
-
-        SkipIfUnreachable(() => driver.DirectoryExists(src));
 
         try
         {
@@ -529,7 +408,10 @@ public sealed class S3LiveTests(S3LiveFixture fix) : IClassFixture<S3LiveFixture
             {
                 driver.DeleteDirectory(src, recursive: true);
             }
-            catch { }
+            catch
+            {
+                // Best effort.
+            }
 
             try
             {

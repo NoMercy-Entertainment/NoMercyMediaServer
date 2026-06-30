@@ -43,7 +43,6 @@ public sealed class StorageFactory : IStorageFactory
     /// Resolves a <c>credentialsRef</c> key to an (accessKey, secretKey) pair.
     /// When null, the AWS default credential chain is used for S3/R2.
     /// </summary>
-
     // Cache key = "{folderId}:{driverType}:{sha256 of resolved configJson}".
     private readonly ConcurrentDictionary<string, IStorage> _cache = new();
 
@@ -59,7 +58,11 @@ public sealed class StorageFactory : IStorageFactory
         ArgumentNullException.ThrowIfNull(builders);
         _builders = builders
             .SelectMany(builder => builder.SupportedTypes.Select(type => (type, builder)))
-            .ToDictionary(pair => pair.type, pair => pair.builder, StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(
+                pair => pair.type,
+                pair => pair.builder,
+                StringComparer.OrdinalIgnoreCase
+            );
         _driverConfigResolver = driverConfigResolver;
     }
 
@@ -79,6 +82,7 @@ public sealed class StorageFactory : IStorageFactory
             new NfsDriverBuilder(logger),
             new S3DriverBuilder(logger, credentialResolver),
             new WebDavDriverBuilder(logger, credentialResolver),
+            new SmbDriverBuilder(logger, credentialResolver),
         ];
 
     /// <summary>
@@ -92,7 +96,8 @@ public sealed class StorageFactory : IStorageFactory
         IDriverConfigResolver? driverConfigResolver = null,
         ICredentialResolver? credentialResolver = null
     )
-        : this(logger, DefaultBuilders(driver, logger, credentialResolver), driverConfigResolver) { }
+        : this(logger, DefaultBuilders(driver, logger, credentialResolver), driverConfigResolver)
+    { }
 
     public IStorage For(Ulid folderId, Ulid driverId, string subPath)
     {
@@ -172,6 +177,7 @@ public sealed class StorageFactory : IStorageFactory
             case "s3":
             case "r2":
             case "webdav":
+            case "smb":
             {
                 // Remote drivers always speak forward slashes. Replace any
                 // Windows backslashes the caller may have introduced via
@@ -207,16 +213,6 @@ public sealed class StorageFactory : IStorageFactory
 
         return builder.Build(folderId, normalizedType, driverConfigJson, subPath);
     }
-
-
-
-
-
-
-
-
-
-
 
     private static string BuildCacheKey(
         Ulid folderId,

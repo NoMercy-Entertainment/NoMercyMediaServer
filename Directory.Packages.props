@@ -143,6 +143,9 @@
     <PackageVersion Include="AWSSDK.S3" Version="3.7.413.3" />
     <!-- WebDAV -->
     <PackageVersion Include="WebDav.Client" Version="2.5.0" />
+    <!-- SMB / CIFS: NoMercy fork of SMBLibrary, referenced directly from        -->
+    <!-- packages/nomercy-smblibrary/output/managed (adds an explicit-port        -->
+    <!-- Connect overload). No NuGet PackageVersion entry needed.                 -->
     <!-- Testing -->
     <PackageVersion Include="coverlet.collector" Version="8.0.1" />
     <PackageVersion Include="Testcontainers" Version="4.4.0" />

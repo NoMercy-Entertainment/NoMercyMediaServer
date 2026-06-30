@@ -224,12 +224,21 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
 
         if (HasRawCredentials)
         {
+            // A child under the prefix proves the directory exists. ParseListXml
+            // filters the trailing-slash marker key out of its results, so an
+            // empty directory created via CreateDirectory (which writes just a
+            // "prefix/" marker object) needs a direct HEAD on the marker too.
             IEnumerable<(string key, bool isDir)> page = ListOnePage(
                 prefix,
                 delimiter: "/",
                 maxKeys: 1
             );
-            return page.Any();
+            if (page.Any())
+                return true;
+
+            using HttpRequestMessage marker = SignedRequest(HttpMethod.Head, prefix);
+            using HttpResponseMessage markerRes = Http.Send(marker);
+            return markerRes.IsSuccessStatusCode;
         }
 
         ListObjectsV2Request request = new()

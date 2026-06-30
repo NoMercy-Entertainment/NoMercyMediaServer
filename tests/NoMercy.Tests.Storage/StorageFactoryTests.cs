@@ -55,7 +55,7 @@ public class StorageFactoryTests
             .SelectMany(builder => builder.SupportedTypes)
             .ToList();
 
-        keys.Should().BeEquivalentTo(["local", "nfs", "s3", "r2", "webdav"]);
+        keys.Should().BeEquivalentTo(["local", "nfs", "s3", "r2", "webdav", "smb"]);
         keys.Should().OnlyHaveUniqueItems();
     }
 

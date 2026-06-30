@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
 # -----------------------------------------------------------------------------
-# Starts the three storage backends (MinIO/S3, Apache/WebDAV, Ganesha/NFS) over
-# a shared /data root and keeps the container alive. The fixture waits on each
-# mapped port before running tests; readiness here is best-effort logging.
+# Starts the four storage backends (MinIO/S3, Apache/WebDAV, kernel nfsd/NFS,
+# Samba/SMB) over a shared /data root and keeps the container alive. The fixture
+# waits on each port before running tests; readiness here is best-effort logging.
 # -----------------------------------------------------------------------------
 set -u
 
 WEBDAV_USER="${WEBDAV_USER:-testuser}"
 WEBDAV_PASS="${WEBDAV_PASS:-testpass}"
+SMB_USER="${SMB_USER:-testuser}"
+SMB_PASS="${SMB_PASS:-testpass}"
 
-mkdir -p /data/nfs /data/webdav /data/minio /media
+mkdir -p /data/nfs /data/webdav /data/minio /data/smb /media
 chmod -R 0777 /data
 
 # Seed the NAS-shaped layout BEFORE nfsd exports it. Generic names that still
@@ -66,7 +68,23 @@ rpc.nfsd --no-udp 8 2>/dev/null || rpc.nfsd 8 2>/dev/null || true
 rpc.mountd --no-udp --port 20048 2>/dev/null || true
 exportfs -a 2>/dev/null || true
 
-echo "storage-backends container started (s3:9000 webdav:80 nfs:2049)"
+# --- Samba (SMB) ------------------------------------------------------------
+# Provision the standalone domain before adding the user. Without a domain SID
+# the user's group-SID lookup fails ("SID ...-514 belongs to our domain, but
+# there is no corresponding object") and every login returns LOGON_FAILURE even
+# though the password is correct.
+mkdir -p /var/lib/samba/private /var/cache/samba /run/samba /var/log/samba
+# Fixed domain SID so the standalone domain is fully resolvable.
+net setdomainsid S-1-5-21-1111111111-2222222222-3333333333 2>/dev/null || true
+# Create the Unix user + its own primary group so Samba can map the group SID.
+groupadd -f "$SMB_USER" 2>/dev/null || true
+id "$SMB_USER" >/dev/null 2>&1 \
+    || useradd -M -s /usr/sbin/nologin -g "$SMB_USER" "$SMB_USER" 2>/dev/null || true
+printf '%s\n%s\n' "$SMB_PASS" "$SMB_PASS" | smbpasswd -s -a "$SMB_USER" >/dev/null 2>&1 || true
+smbpasswd -e "$SMB_USER" >/dev/null 2>&1 || true
+smbd --daemon --no-process-group >/var/log/smbd.log 2>&1 || smbd -D >/var/log/smbd.log 2>&1 || true
+
+echo "storage-backends container started (s3:9000 webdav:8080 nfs:2049 smb:1445)"
 
 # Keep the container in the foreground.
 tail -f /dev/null

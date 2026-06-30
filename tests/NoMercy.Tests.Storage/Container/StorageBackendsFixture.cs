@@ -18,6 +18,7 @@ using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Images;
 using NoMercy.Storage.Drivers.Nfs;
 using NoMercy.Storage.Drivers.S3;
+using NoMercy.Storage.Drivers.Smb;
 using NoMercy.Storage.Drivers.WebDav;
 using WebDav;
 
@@ -55,6 +56,16 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
     public const string WebDavUser = "testuser";
     public const string WebDavPassword = "testpass";
     public string WebDavBaseUrl { get; private set; } = string.Empty;
+
+    // ── SMB (Samba) ──────────────────────────────────────────────────────────
+    public const string SmbHost = "127.0.0.1";
+
+    // Samba listens on 1445, not 445: on Windows the OS SMB server owns
+    // 127.0.0.1:445, so a host-network container's Samba must use a free port.
+    public const int SmbPort = 1445;
+    public const string SmbShare = "share";
+    public const string SmbUser = "testuser";
+    public const string SmbPassword = "testpass";
 
     // ── NFS (kernel nfsd) ────────────────────────────────────────────────────
     // libnfs resolves the host itself and rejects "localhost" on Windows
@@ -149,6 +160,8 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
                 expectAnyResponse: true
             );
             await SeedAsync();
+            // Samba listens on 1445 (445 is taken by the Windows SMB server).
+            await WaitForTcpAsync(SmbPort, TimeSpan.FromSeconds(20));
             // NFS readiness can't be proven by a TCP probe alone — nfsd may
             // accept the connection before the export is serviceable. Retry an
             // actual libnfs mount until it succeeds (or libnfs is absent).
@@ -233,6 +246,19 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
             }
         );
         return new WebDavStorageDriver(client, WebDavBaseUrl);
+    }
+
+    public SmbStorageDriver BuildSmbDriver(string basePath = "")
+    {
+        SmbDriverConfig config = SmbDriverConfig.For(
+            host: SmbHost,
+            share: SmbShare,
+            username: SmbUser,
+            password: SmbPassword,
+            port: SmbPort,
+            basePath: basePath
+        );
+        return new SmbStorageDriver(config);
     }
 
     /// <summary>

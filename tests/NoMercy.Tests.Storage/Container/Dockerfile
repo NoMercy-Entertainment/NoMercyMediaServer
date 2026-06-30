@@ -9,17 +9,17 @@
 #  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 # -----------------------------------------------------------------------------
 #
-# One all-in-one backend image for the storage test suite. Serves three real
+# One all-in-one backend image for the storage test suite. Serves four real
 # remote-storage protocols from a single container over a shared /data root, so
 # any dev machine runs the full suite identically with one deploy/teardown:
 #
-#   - MinIO            S3            :9000   (creds minioadmin/minioadmin)
-#   - Apache mod_dav   WebDAV        :80     (root /data/webdav)
-#   - NFS Ganesha      NFSv4         :2049   (export /data/nfs, userspace -> no
-#                                             kernel modules, no --privileged)
+#   - MinIO            S3      :9000   (creds minioadmin/minioadmin)
+#   - Apache mod_dav   WebDAV  :8080   (root /data/webdav, Basic auth)
+#   - Linux kernel nfsd NFSv4  :2049   (export /data/nfs, needs --privileged)
+#   - Samba (smbd)     SMB     :445    (share "share" -> /data/smb, user/pass)
 #
-# ffmpeg is included so the container can also generate the encoder test media
-# (HDR10, SD, 1080p, audio-only) into /data/media on demand via `docker exec`.
+# Runs with host networking + --privileged (kernel nfsd needs it). ffmpeg is
+# included so the container can also generate the encoder test media into /media.
 
 FROM debian:bookworm-slim
 
@@ -31,6 +31,7 @@ RUN apt-get update \
         ca-certificates curl wget \
         apache2 apache2-utils \
         nfs-kernel-server nfs-common rpcbind \
+        samba samba-common-bin \
         ffmpeg \
         netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
@@ -57,9 +58,16 @@ COPY webdav.conf /etc/apache2/sites-available/000-default.conf
 RUN mkdir -p /data/nfs \
     && echo "/data/nfs *(rw,sync,no_subtree_check,all_squash,anonuid=0,anongid=0,insecure,fsid=0)" > /etc/exports
 
+# Samba share "share" -> /data/smb, force-mapped to root so any client identity
+# can read/write (throwaway test backend, no real ACLs to honour).
+RUN mkdir -p /data/smb
+COPY smb.conf /etc/samba/smb.conf
+
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-EXPOSE 9000 80 2049
+# No EXPOSE: the container runs with --network host (kernel nfsd needs it), so
+# every service listens directly on the host's network stack — there is no
+# port mapping to declare.
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
