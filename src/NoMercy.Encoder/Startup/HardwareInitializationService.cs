@@ -51,8 +51,8 @@ public class HardwareInitializationService(
     /// <summary>
     /// Returns immediately so the hosted-service start pipeline is never
     /// blocked. Hardware detection runs on a background task and gates on
-    /// <see cref="BootStage.Binaries"/> so the ffmpeg binary is guaranteed
-    /// to be on disk before the probe runs.
+    /// <see cref="BootStage.All"/> so the ffmpeg binary is on disk and the
+    /// server is fully ready before the deferred probe competes for CPU/GPU.
     /// </summary>
     public Task StartAsync(CancellationToken cancellationToken)
     {

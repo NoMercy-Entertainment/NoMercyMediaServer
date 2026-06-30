@@ -82,9 +82,6 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
     public DriveLockRegistry DriveLockRegistry { get; set; } = null!;
 
     [JsonIgnore]
-    public ILogger<DiscRipJob> Logger { get; set; } = null!;
-
-    [JsonIgnore]
     public IAudioMetadataWriter AudioMetadataWriter { get; set; } = null!;
 
     [JsonIgnore]
@@ -127,7 +124,6 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
         StorageFactory = serviceProvider.GetRequiredService<IStorageFactory>();
         StorageDriver = serviceProvider.GetRequiredService<IStorageDriver>();
         DriveLockRegistry = serviceProvider.GetRequiredService<DriveLockRegistry>();
-        Logger = serviceProvider.GetRequiredService<ILogger<DiscRipJob>>();
         AudioMetadataWriter = serviceProvider.GetRequiredService<IAudioMetadataWriter>();
         // MusicBrainzReleaseClient is not a registered DI service; it is
         // constructed on demand everywhere else (ReleaseManager,
@@ -304,13 +300,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
             if (!string.IsNullOrEmpty(parentRelative))
                 await folderStorage.CreateDirectoryAsync(parentRelative, CancellationToken.None);
 
-            await using (
-                FileStream src = new(
-                    res.OutputPath,
-                    FileMode.Open,
-                    FileAccess.Read
-                )
-            )
+            await using (FileStream src = new(res.OutputPath, FileMode.Open, FileAccess.Read))
             await using (
                 Stream dst = await folderStorage.OpenWriteAsync(
                     folderRelative,

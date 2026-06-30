@@ -44,14 +44,21 @@ public class HardwareInitializationServiceTests
     }
 
     /// <summary>
-    /// Creates a <see cref="ServerPhaseTracker"/> with <see cref="BootStage.Binaries"/>
-    /// already marked complete so HIS does not block in tests that do not
-    /// care about the gate timing.
+    /// Creates a <see cref="ServerPhaseTracker"/> with every stage in
+    /// <see cref="BootStage.All"/> marked complete so HIS's detection task —
+    /// which gates on <see cref="BootStage.All"/> — runs straight through in
+    /// tests that do not care about the gate timing. Marking only
+    /// <see cref="BootStage.Binaries"/> would leave the await on All hanging
+    /// forever (Essential/Auth/Network/Registered never fire in a unit test).
     /// </summary>
-    private static ServerPhaseTracker BinariesReadyTracker()
+    private static ServerPhaseTracker ServerReadyTracker()
     {
         ServerPhaseTracker tracker = new();
+        tracker.MarkComplete(BootStage.Essential);
+        tracker.MarkComplete(BootStage.Auth);
         tracker.MarkComplete(BootStage.Binaries);
+        tracker.MarkComplete(BootStage.Network);
+        tracker.MarkComplete(BootStage.Registered);
         return tracker;
     }
 
@@ -79,7 +86,7 @@ public class HardwareInitializationServiceTests
             Mock.Of<IBenchmarkJobTracker>(),
             new HardwareCapabilitiesHolder(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
-            BinariesReadyTracker(),
+            ServerReadyTracker(),
             probeRetryDelayMs: 0
         );
 
@@ -112,7 +119,7 @@ public class HardwareInitializationServiceTests
             Mock.Of<IBenchmarkJobTracker>(),
             new HardwareCapabilitiesHolder(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
-            BinariesReadyTracker(),
+            ServerReadyTracker(),
             probeRetryDelayMs: 0
         );
 
@@ -141,7 +148,7 @@ public class HardwareInitializationServiceTests
             Mock.Of<IBenchmarkJobTracker>(),
             new HardwareCapabilitiesHolder(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
-            BinariesReadyTracker(),
+            ServerReadyTracker(),
             probeRetryDelayMs: 0
         );
 
@@ -174,7 +181,7 @@ public class HardwareInitializationServiceTests
             Mock.Of<IBenchmarkJobTracker>(),
             new HardwareCapabilitiesHolder(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
-            BinariesReadyTracker(),
+            ServerReadyTracker(),
             probeRetryDelayMs: 0
         );
 
@@ -197,8 +204,8 @@ public class HardwareInitializationServiceTests
     [Fact]
     public async Task StartAsync_ReturnsImmediately_WithoutAwaitingDetection()
     {
-        // Binaries stage is NOT yet marked — detection would block indefinitely
-        // if StartAsync awaited it directly.
+        // No stage is marked yet — detection gates on BootStage.All and would
+        // block indefinitely if StartAsync awaited it directly.
         ServerPhaseTracker tracker = new();
 
         Mock<IHardwareDetector> detector = new();
@@ -227,11 +234,15 @@ public class HardwareInitializationServiceTests
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
         await service.StartAsync(cts.Token);
 
-        // Service is not yet ready — detection is gated on Binaries.
+        // Service is not yet ready — detection is gated on BootStage.All.
         service.IsReady.Should().BeFalse();
 
-        // Now unblock the gate and let detection finish.
+        // Now unblock the gate (every stage in BootStage.All) and let detection finish.
+        tracker.MarkComplete(BootStage.Essential);
+        tracker.MarkComplete(BootStage.Auth);
         tracker.MarkComplete(BootStage.Binaries);
+        tracker.MarkComplete(BootStage.Network);
+        tracker.MarkComplete(BootStage.Registered);
         await service.DetectionTask;
 
         service.IsReady.Should().BeTrue();
@@ -292,7 +303,7 @@ public class HardwareInitializationServiceTests
             Mock.Of<IBenchmarkJobTracker>(),
             new HardwareCapabilitiesHolder(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
-            BinariesReadyTracker(),
+            ServerReadyTracker(),
             probeRetryDelayMs: 0
         );
 
@@ -329,7 +340,7 @@ public class HardwareInitializationServiceTests
             Mock.Of<IBenchmarkJobTracker>(),
             new HardwareCapabilitiesHolder(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
-            BinariesReadyTracker(),
+            ServerReadyTracker(),
             probeRetryDelayMs: 0
         );
 
@@ -371,7 +382,7 @@ public class HardwareInitializationServiceTests
             Mock.Of<IBenchmarkJobTracker>(),
             new HardwareCapabilitiesHolder(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
-            BinariesReadyTracker(),
+            ServerReadyTracker(),
             probeRetryDelayMs: 0
         );
 

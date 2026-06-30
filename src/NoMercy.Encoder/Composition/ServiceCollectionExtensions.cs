@@ -49,6 +49,7 @@ using NoMercy.Encoder.Strategies.Mp4;
 using NoMercy.Encoder.Subscribers;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Lifecycle;
 using NoMercy.Resources;
 using NoMercy.Storage;
 
@@ -426,6 +427,13 @@ public static class ServiceCollectionExtensions
         // validates required FFmpeg filters/muxers. Reuses FfmpegCapabilities
         // for filters/protocols to avoid duplicate shell calls.
         services.AddSingleton<IFfmpegCapabilityProbe, FfmpegCapabilityProbe>();
+        // The probe's hosted service gates on boot completion via
+        // IServerPhaseTracker. TryAdd a default so the encoder module is
+        // self-contained; the Service host registers the process-wide shared
+        // tracker (same instance) and wins last in production.
+        services.TryAddSingleton<IServerPhaseTracker>(sp =>
+            ServerPhaseTracker.Shared(sp.GetService<ILogger<ServerPhaseTracker>>())
+        );
         services.AddHostedService<FfmpegCapabilityProbeBackgroundService>();
 
         // BuiltinPresetSeeder retired — Service-side EncodingPresetsSeed
