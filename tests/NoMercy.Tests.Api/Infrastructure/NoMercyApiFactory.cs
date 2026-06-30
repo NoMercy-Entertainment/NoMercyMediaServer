@@ -122,6 +122,13 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
                     DefaultApiVersionDescriptionProvider
                 >();
 
+                // CustomLogger<T> depends on NoMercyLoggerProvider (which needs
+                // NoMercyLoggerOptions); production wires all three in WebHostFactory.
+                // The test host registers the logger itself, so it must register the
+                // provider + options too, or activating any ILogger<T> throws.
+                // LogDirectory defaults to null here, so tests write no log files.
+                services.AddSingleton(new NoMercy.NmSystem.Logging.NoMercyLoggerOptions());
+                services.AddSingleton<NoMercy.NmSystem.Logging.NoMercyLoggerProvider>();
                 services.AddSingleton(typeof(ILogger<>), typeof(CustomLogger<>));
 
                 // Register the shared ConnectedClients instance early.  Because
