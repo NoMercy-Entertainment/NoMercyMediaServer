@@ -28,8 +28,14 @@ public static class AppFiles
             )
             : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
+    // An explicit NOMERCY_APP_PATH override lets each process (notably each
+    // parallel test assembly) use a fully isolated app-data root — its own
+    // database, cache and logs — so concurrent test processes never collide
+    // on shared on-disk state. Unset in production, so behaviour is unchanged.
     public static string AppPath =>
-        Config.IsTest ? Path.Combine(AppDataPath, "NoMercy_test")
+        Environment.GetEnvironmentVariable("NOMERCY_APP_PATH") is { Length: > 0 } appPathOverride
+            ? appPathOverride
+        : Config.IsTest ? Path.Combine(AppDataPath, "NoMercy_test")
         : Config.IsDev ? Path.Combine(AppDataPath, "NoMercy_dev")
         : Path.Combine(AppDataPath, "NoMercy");
 
