@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Storage.Drivers.Nfs;
+using NoMercy.Tests.Storage.Container;
 
 namespace NoMercy.Tests.Storage;
 
@@ -101,19 +102,21 @@ public class NfsExportDiscoveryTests
 
 // ============================================================================
 // Integration tests — skipped when NFS / Docker not available.
-// Reuses NfsFixture from NfsStorageDriverTests.cs (same assembly).
+// Reuses StorageBackendsFixture from the shared StorageBackends collection.
 // ============================================================================
 
-[Collection("NfsIntegration")]
-public class NfsListDirectoriesIntegrationTests(NfsFixture nfs) : IClassFixture<NfsFixture>
+[Collection("StorageBackends")]
+public class NfsListDirectoriesIntegrationTests(StorageBackendsFixture fix)
 {
-    private const string SkipReason =
-        "Docker not available, NFS container failed to start, or libnfs native library not installed";
+    private string SkipReason =>
+        fix.NfsUnavailableReason
+        ?? fix.StartupError
+        ?? "storage container not available or libnfs native library not installed";
 
     [SkippableFact]
     public void ListDirectories_export_root_returns_entries()
     {
-        NfsStorageDriver? driver = nfs.TryBuildBackend();
+        NfsStorageDriver? driver = fix.TryBuildNfsDriver();
         Skip.If(driver is null, SkipReason);
         using NfsStorageDriver d = driver!;
 
@@ -126,7 +129,7 @@ public class NfsListDirectoriesIntegrationTests(NfsFixture nfs) : IClassFixture<
     [SkippableFact]
     public async Task ListDirectories_hides_dot_entries()
     {
-        NfsStorageDriver? driver = nfs.TryBuildBackend();
+        NfsStorageDriver? driver = fix.TryBuildNfsDriver();
         Skip.If(driver is null, SkipReason);
         using NfsStorageDriver d = driver!;
 
@@ -147,10 +150,10 @@ public class NfsListDirectoriesIntegrationTests(NfsFixture nfs) : IClassFixture<
     [SkippableFact]
     public async Task GetExportsAsync_running_server_returns_export_list()
     {
-        Skip.If(!nfs.Available || nfs.ServerIp is null, SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
         List<string>? exports = await NfsStorageDriver.GetExportsAsync(
-            nfs.ServerIp!,
+            StorageBackendsFixture.NfsHost,
             timeoutMs: 5_000
         );
 

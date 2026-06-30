@@ -114,6 +114,11 @@ public static class AppFiles
     public static string FfProbePath => Path.Combine(FfmpegFolder, "ffprobe" + Info.ExecSuffix);
     public static string FfPlayPath => Path.Combine(FfmpegFolder, "ffplay" + Info.ExecSuffix);
 
+    // shaka-packager lives alongside ffmpeg so EncoderOptions resolves it as the
+    // "packager" sibling of the ffmpeg path for CENC/raw-key DRM packaging.
+    public static string ShakaPackagerPath =>
+        Path.Combine(FfmpegFolder, "packager" + Info.ExecSuffix);
+
     public static string YtdlpPath => Path.Combine(DependenciesPath, "yt-dlp" + Info.ExecSuffix);
 
     public static string TesseractFolder => Path.Combine(DependenciesPath, "tesseract");

@@ -44,6 +44,41 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     private readonly ILibNfs _libNfs;
     private bool _disposed;
 
+    // Per-instance NFSv4 client identity. libnfs defaults the client-id to the
+    // hostname, so two drivers in one process share open-owner seqid state and
+    // collide with NFS4ERR_BAD_SEQID. A unique id per driver makes them coexist.
+    private readonly string _clientId = $"nomercy-{Environment.ProcessId}-{Guid.NewGuid():N}";
+
+    // On Windows the libnfs build resolves hostnames with getaddrinfo, which
+    // only works once Winsock has been initialised (WSAStartup) for the
+    // process. The .NET socket stack calls WSAStartup the first time
+    // System.Net.Sockets is touched and never tears it down, so forcing a
+    // throwaway Socket here guarantees libnfs can resolve the server. Without
+    // it, every mount fails with "Can not resolv into IPv4/v6 structure" before
+    // a single packet is sent — i.e. NFS is unusable on Windows.
+    private static int _winsockReady;
+
+    private static void EnsureWinsockInitialized()
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            return;
+        if (Interlocked.Exchange(ref _winsockReady, 1) == 1)
+            return;
+
+        try
+        {
+            using System.Net.Sockets.Socket socket = new(
+                System.Net.Sockets.AddressFamily.InterNetwork,
+                System.Net.Sockets.SocketType.Stream,
+                System.Net.Sockets.ProtocolType.Tcp
+            );
+        }
+        catch
+        {
+            // Even a failed construction has run the static Winsock init.
+        }
+    }
+
     public NfsStorageDriver(NfsDriverConfig config, ILogger? log = null)
         : this(config, LibNfsPInvoke.Instance, log) { }
 
@@ -57,6 +92,10 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         _config = config ?? throw new ArgumentNullException(nameof(config));
         _libNfs = libNfs ?? throw new ArgumentNullException(nameof(libNfs));
         _log = log ?? NullLogger.Instance;
+
+        // Guarantee Winsock is up before libnfs resolves the server (Windows).
+        EnsureWinsockInitialized();
+
         _nfs = _libNfs.InitContext();
         if (_nfs == IntPtr.Zero)
             throw new InvalidOperationException(
@@ -79,6 +118,8 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             _libNfs.SetUid(_nfs, config.Uid.Value);
         if (config.Gid.HasValue)
             _libNfs.SetGid(_nfs, config.Gid.Value);
+
+        ApplyClientIdentity();
 
         int rc = _libNfs.Mount(_nfs, config.Server, config.Export);
         if (rc != 0)
@@ -154,11 +195,23 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
     // NFSv4 reaps idle client state after the lease (~90s). When that happens,
     // libnfs starts returning NFS4ERR_EXPIRED(-11), NFS4ERR_BAD_SESSION,
-    // NFS4ERR_BAD_STATEID, or NFS4ERR_STALE_CLIENTID for every operation. The
-    // keep-alive timer prevents this most of the time, but a paused client
-    // (laptop sleep, network blip) can still trip it. Detect the expired-state
-    // family of errors and tear down + remount the libnfs context so the next
-    // attempt succeeds with a fresh client id.
+    // NFS4ERR_BAD_STATEID, NFS4ERR_STALE_CLIENTID, or NFS4ERR_BAD_SEQID for every
+    // operation. The keep-alive timer prevents this most of the time, but a
+    // paused client (laptop sleep, network blip) — or a server still settling
+    // its client table just after (re)mount — can still trip it. Detect the
+    // stale-client-state family and tear down + remount the libnfs context so the
+    // next attempt succeeds with a fresh client id and sequence.
+    // Give this libnfs context a unique NFSv4 client name + verifier before
+    // mount so concurrent/sequential drivers in one process don't share seqid
+    // state. NFSv4 only — libnfs ignores these for v3.
+    private void ApplyClientIdentity()
+    {
+        if (_config.Version != 4)
+            return;
+        _libNfs.SetClientName(_nfs, _clientId);
+        _libNfs.SetVerifier(_nfs, _clientId);
+    }
+
     private static bool IsExpiredStateError(int rc, string err)
     {
         if (rc == -11)
@@ -166,7 +219,8 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         return err.Contains("NFS4ERR_EXPIRED", StringComparison.OrdinalIgnoreCase)
             || err.Contains("NFS4ERR_BAD_SESSION", StringComparison.OrdinalIgnoreCase)
             || err.Contains("NFS4ERR_BAD_STATEID", StringComparison.OrdinalIgnoreCase)
-            || err.Contains("NFS4ERR_STALE_CLIENTID", StringComparison.OrdinalIgnoreCase);
+            || err.Contains("NFS4ERR_STALE_CLIENTID", StringComparison.OrdinalIgnoreCase)
+            || err.Contains("NFS4ERR_BAD_SEQID", StringComparison.OrdinalIgnoreCase);
     }
 
     // Caller MUST hold _lock. Disposes the existing context and re-runs the
@@ -199,6 +253,14 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             _libNfs.SetUid(ctx, _config.Uid.Value);
         if (_config.Gid.HasValue)
             _libNfs.SetGid(ctx, _config.Gid.Value);
+
+        if (_config.Version == 4)
+        {
+            // Reuse this driver's stable client id so the server sees the same
+            // client across the remount (recovers the lease cleanly).
+            _libNfs.SetClientName(ctx, _clientId);
+            _libNfs.SetVerifier(ctx, _clientId);
+        }
 
         int rc = _libNfs.Mount(ctx, _config.Server, _config.Export);
         if (rc != 0)

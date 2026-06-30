@@ -206,6 +206,10 @@ internal sealed class FaultyLibNfs : ILibNfs
         return 0;
     }
 
+    public void SetClientName(IntPtr nfs, string id) { }
+
+    public void SetVerifier(IntPtr nfs, string verifier) { }
+
     public string GetError(IntPtr nfs) => CurrentError;
 
     public int Stat64(IntPtr nfs, string path, out LibNfs.NfsStat64 stat)

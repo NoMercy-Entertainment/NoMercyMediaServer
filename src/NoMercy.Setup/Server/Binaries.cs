@@ -13,9 +13,9 @@ using System.Globalization;
 using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.FileSystem;
-using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -56,6 +56,8 @@ public class Binaries
         "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest";
     private const string GithubCloudflaredApiUrl =
         "https://api.github.com/repos/cloudflare/cloudflared/releases/latest";
+    private const string GithubShakaPackagerApiUrl =
+        "https://api.github.com/repos/shaka-project/shaka-packager/releases/latest";
 
     public Binaries(IStorageDriver driver, IStorage storage)
     {
@@ -69,7 +71,10 @@ public class Binaries
             // instead of pinning the setup phase forever.
             Timeout = TimeSpan.FromMinutes(10),
         };
-        _httpClient.DefaultRequestHeaders.Add("User-Agent", ExternalServicesConfig.Current.UserAgent);
+        _httpClient.DefaultRequestHeaders.Add(
+            "User-Agent",
+            ExternalServicesConfig.Current.UserAgent
+        );
     }
 
     /// <summary>
@@ -121,6 +126,7 @@ public class Binaries
             await DownloadFfmpeg();
             await DownloadCloudflared();
             await DownloadYtdlp();
+            await DownloadShakaPackager();
             await DownloadWhisperModels(AppFiles.WhisperModel);
 
             List<string> tesseractLanguages = ["eng", "jpn"];
@@ -890,6 +896,68 @@ public class Binaries
         await FilePermissions.SetExecutionPermissions(outputPath);
 
         Logger.Setup($"Downloaded yt-dlp to {outputPath}");
+    }
+
+    private async Task DownloadShakaPackager()
+    {
+        GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubShakaPackagerApiUrl);
+        if (releaseInfo.Assets.Length == 0)
+        {
+            Logger.Setup("No assets found for shaka-packager release.", LogEventLevel.Warning);
+            return;
+        }
+
+        if (CheckLocalVersion(releaseInfo, AppFiles.ShakaPackagerPath, out string version))
+        {
+            _binaryReport.Add($"shaka-packager = {version}");
+            return;
+        }
+
+        await Downloader.DeleteSourceDownload(_storage, AppFiles.ShakaPackagerPath);
+
+        // shaka-project release asset names per platform.
+        string? assetName = null;
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            assetName = "packager-win-x64.exe";
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            assetName =
+                RuntimeInformation.ProcessArchitecture == Architecture.Arm64
+                    ? "packager-linux-arm64"
+                    : "packager-linux-x64";
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            assetName =
+                RuntimeInformation.ProcessArchitecture == Architecture.Arm64
+                    ? "packager-osx-arm64"
+                    : "packager-osx-x64";
+
+        Uri? downloadUrl = assetName is null
+            ? null
+            : releaseInfo
+                .Assets.FirstOrDefault(a =>
+                    a.Name.Equals(assetName, StringComparison.OrdinalIgnoreCase)
+                )
+                ?.BrowserDownloadUrl;
+
+        if (downloadUrl is null)
+        {
+            Logger.Setup(
+                "No suitable shaka-packager asset found for the current platform.",
+                LogEventLevel.Warning
+            );
+            return;
+        }
+
+        string outputPath = await Downloader.DownloadFile(
+            _storage,
+            "shaka-packager",
+            downloadUrl,
+            AppFiles.ShakaPackagerPath
+        );
+
+        await FileAttributes.SetCreatedAttribute(outputPath, releaseInfo.PublishedAt);
+        await FilePermissions.SetExecutionPermissions(outputPath);
+
+        Logger.Setup($"Downloaded shaka-packager to {outputPath}");
     }
 
     private async Task DownloadCloudflared()

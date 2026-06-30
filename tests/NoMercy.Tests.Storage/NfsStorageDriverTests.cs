@@ -10,12 +10,11 @@
 // -----------------------------------------------------------------------------
 
 using System.Text;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Drivers.Nfs;
 using NoMercy.Storage.Factory;
+using NoMercy.Tests.Storage.Container;
 
 namespace NoMercy.Tests.Storage;
 
@@ -171,132 +170,18 @@ public class NfsDriverConfigParsingTests
 }
 
 // ============================================================================
-// Integration tests — require Docker + ganesha-nfs or similar NFS container
+// Integration tests — run against the shared all-in-one storage container
+// (NFS). The container is started once for the whole assembly by the
+// StorageBackends collection fixture and torn down after the last test.
 // ============================================================================
 
-/// <summary>
-/// Starts an NFS-kernel-server container once per test class.
-/// Tests are skipped when Docker is not reachable or the container fails to start.
-/// Image: itsthenetwork/nfs-server-alpine (NFS3, no additional tools needed).
-/// </summary>
-public sealed class NfsFixture : IAsyncLifetime
+[Collection("StorageBackends")]
+public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
 {
-    private IContainer? _container;
-    public bool Available { get; private set; }
-    public string? ServerIp { get; private set; }
-    public const string Export = "/nfsshare";
-
-    public async Task InitializeAsync()
-    {
-        if (!await DockerAvailableAsync())
-        {
-            Available = false;
-            return;
-        }
-
-        try
-        {
-            // itsthenetwork/nfs-server-alpine runs an NFS3 kernel server.
-            // It exports /nfsshare and needs --privileged (or at minimum
-            // the NET_ADMIN capability) to set up the kernel NFS server.
-            _container = new ContainerBuilder()
-                .WithImage("itsthenetwork/nfs-server-alpine:latest")
-                .WithPrivileged(true)
-                .WithEnvironment("SHARED_DIRECTORY", "/nfsshare")
-                .WithPortBinding(2049, assignRandomHostPort: true)
-                .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(2049))
-                .Build();
-
-            await _container.StartAsync();
-
-            // Give the NFS server a moment to initialise exports
-            await Task.Delay(2000);
-
-            ServerIp = "localhost";
-            Available = true;
-        }
-        catch (Exception)
-        {
-            Available = false;
-        }
-    }
-
-    public async Task DisposeAsync()
-    {
-        if (_container is not null)
-        {
-            try
-            {
-                await _container.DisposeAsync();
-            }
-            catch
-            {
-                // NFS containers using --privileged can resist normal Docker kill/rm;
-                // silently swallow — the container will be cleaned up by Docker GC.
-            }
-        }
-    }
-
-    public NfsStorageDriver? TryBuildBackend()
-    {
-        if (!Available || ServerIp is null)
-            return null;
-
-        NfsDriverConfig config = NfsDriverConfig.For(ServerIp, Export);
-        try
-        {
-            return new NfsStorageDriver(config);
-        }
-        catch (DllNotFoundException)
-        {
-            // libnfs native library not present on this machine
-            Available = false;
-            return null;
-        }
-        catch (Exception)
-        {
-            Available = false;
-            return null;
-        }
-    }
-
-    private static async Task<bool> DockerAvailableAsync()
-    {
-        try
-        {
-            using HttpClient http = new();
-            http.Timeout = TimeSpan.FromSeconds(3);
-            HttpResponseMessage response = await http.GetAsync("http://localhost:2375/info");
-            return response.IsSuccessStatusCode;
-        }
-        catch
-        {
-            try
-            {
-                using System.Diagnostics.Process proc = new();
-                proc.StartInfo = new System.Diagnostics.ProcessStartInfo("docker", "info")
-                {
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                };
-                proc.Start();
-                await proc.WaitForExitAsync();
-                return proc.ExitCode == 0;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-    }
-}
-
-[Collection("NfsIntegration")]
-public class NfsStorageDriverIntegrationTests(NfsFixture nfs) : IClassFixture<NfsFixture>
-{
-    private const string SkipReason =
-        "Docker not available, NFS container failed to start, or libnfs native library not installed";
+    private string SkipReason =>
+        fix.NfsUnavailableReason
+        ?? fix.StartupError
+        ?? "storage container not available or libnfs native library not installed";
 
     /// <summary>
     /// Returns a backend instance, or signals skip if the fixture is unavailable
@@ -304,7 +189,7 @@ public class NfsStorageDriverIntegrationTests(NfsFixture nfs) : IClassFixture<Nf
     /// </summary>
     private NfsStorageDriver RequireBackend()
     {
-        NfsStorageDriver? backend = nfs.TryBuildBackend();
+        NfsStorageDriver? backend = fix.TryBuildNfsDriver();
         Skip.If(backend is null, SkipReason);
         return backend!;
     }
@@ -491,14 +376,15 @@ public class NfsStorageDriverIntegrationTests(NfsFixture nfs) : IClassFixture<Nf
     [SkippableFact]
     public void Auth_with_uid_gid_connects_successfully()
     {
-        Skip.If(!nfs.Available, SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
+        // The shared container exports NFSv4 at "/" with all_squash — everyone
+        // maps to root, so uid/gid specifics don't apply. Connect with the
+        // fixture defaults and assert the mount is visible.
         NfsDriverConfig config = NfsDriverConfig.For(
-            nfs.ServerIp!,
-            NfsFixture.Export,
-            version: 3,
-            uid: 65534, // nobody
-            gid: 65534
+            StorageBackendsFixture.NfsHost,
+            StorageBackendsFixture.NfsExport,
+            version: 4
         );
 
         NfsStorageDriver? backend;
@@ -563,6 +449,3 @@ public class NfsStorageDriverIntegrationTests(NfsFixture nfs) : IClassFixture<Nf
         }
     }
 }
-
-[CollectionDefinition("NfsIntegration")]
-public class NfsIntegrationCollection : ICollectionFixture<NfsFixture> { }

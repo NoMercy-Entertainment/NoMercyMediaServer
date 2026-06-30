@@ -827,7 +827,21 @@ public class RealEncodeTests : IAsyncLifetime
     //   ~/.local/share/NoMercy_dev/test-fixtures (Linux).
     // -------------------------------------------------------------------------
 
-    private static string? ResolveFixture(string relativeFileName)
+    // Resolves a fixture by name. Prefers a real media file on disk
+    // (NOMERCY_TEST_FIXTURES_PATH or the NoMercy_dev/test-fixtures dirs); when
+    // none is present, synthesizes a deterministic stand-in with the resolved
+    // fork ffmpeg so the regression test runs everywhere instead of skipping.
+    // Generic file names — these are lavfi-generated, not real titles.
+    private string ResolveOrGenerateFixture(string relativeFileName)
+    {
+        string? real = ResolveRealFixture(relativeFileName);
+        if (real is not null)
+            return real;
+
+        return GenerateSyntheticFixture(relativeFileName);
+    }
+
+    private static string? ResolveRealFixture(string relativeFileName)
     {
         string? envRoot = Environment.GetEnvironmentVariable("NOMERCY_TEST_FIXTURES_PATH");
         if (!string.IsNullOrWhiteSpace(envRoot))
@@ -837,7 +851,6 @@ public class RealEncodeTests : IAsyncLifetime
                 return candidate;
         }
 
-        string binaryName = OperatingSystem.IsWindows() ? ".exe" : string.Empty;
         string? localAppData = Environment.GetFolderPath(
             Environment.SpecialFolder.LocalApplicationData
         );
@@ -866,17 +879,126 @@ public class RealEncodeTests : IAsyncLifetime
         return null;
     }
 
+    // lavfi recipes per fixture name. Each is a short, deterministic clip that
+    // exercises the content class the test cares about (SD, 1080p, HDR10 PQ,
+    // audio-only) without depending on real media.
+    private string GenerateSyntheticFixture(string relativeFileName)
+    {
+        string outPath = Path.Combine(_testDir, relativeFileName);
+        if (File.Exists(outPath))
+            return outPath;
+
+        List<string> args = relativeFileName switch
+        {
+            "video-sd480p.mkv" =>
+            [
+                "-f",
+                "lavfi",
+                "-i",
+                "testsrc2=size=854x480:rate=25:duration=5",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=440:duration=5",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "ultrafast",
+                "-crf",
+                "30",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "96k",
+            ],
+            "video-1080p.mkv" =>
+            [
+                "-f",
+                "lavfi",
+                "-i",
+                "testsrc2=size=1920x1080:rate=25:duration=5",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=440:duration=5",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "ultrafast",
+                "-crf",
+                "30",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "96k",
+            ],
+            "video-hdr10.mkv" =>
+            [
+                "-f",
+                "lavfi",
+                "-i",
+                "testsrc2=size=1920x1080:rate=25:duration=5",
+                "-vf",
+                "format=yuv420p10le,setparams=color_primaries=bt2020:color_trc=smpte2084:colorspace=bt2020nc",
+                "-c:v",
+                "libx265",
+                "-preset",
+                "ultrafast",
+                "-x265-params",
+                "hdr10=1:colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc",
+                "-color_primaries",
+                "bt2020",
+                "-color_trc",
+                "smpte2084",
+                "-colorspace",
+                "bt2020nc",
+            ],
+            "audio-only.flac" =>
+            [
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=440:duration=5",
+                "-c:a",
+                "flac",
+            ],
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(relativeFileName),
+                $"No synthetic recipe for fixture '{relativeFileName}'"
+            ),
+        };
+
+        ProcessStartInfo psi = new()
+        {
+            FileName = _ffmpegPath ?? "ffmpeg",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        psi.ArgumentList.Add("-y");
+        foreach (string arg in args)
+            psi.ArgumentList.Add(arg);
+        psi.ArgumentList.Add(outPath);
+
+        using Process process = Process.Start(psi)!;
+        string stderr = process.StandardError.ReadToEnd();
+        process.StandardOutput.ReadToEnd();
+        process.WaitForExit();
+        if (process.ExitCode != 0)
+            throw new InvalidOperationException(
+                $"Synthetic fixture generation failed for '{relativeFileName}': {stderr}"
+            );
+
+        return outPath;
+    }
+
     [SkippableFact]
     public async Task EncodeAsync_Sd480p_DarkwingDuck_ProducesPlaylistAndSegments()
     {
         Skip.IfNot(_forkSupportsSpritevtt, ForkRequiredSkipReason);
 
-        string? fixture = ResolveFixture("darkwing-duck-sd480p.mkv");
-        Skip.If(
-            fixture is null,
-            "SD 480p fixture (darkwing-duck-sd480p.mkv) not present — "
-                + "set NOMERCY_TEST_FIXTURES_PATH or drop the file under NoMercy_dev/test-fixtures/."
-        );
+        string fixture = ResolveOrGenerateFixture("video-sd480p.mkv");
 
         using CancellationTokenSource cts = new(TimeSpan.FromMinutes(10));
 
@@ -939,7 +1061,7 @@ public class RealEncodeTests : IAsyncLifetime
         };
 
         EncodingRequest request = new(
-            InputPath: fixture!,
+            InputPath: fixture,
             OutputDirectory: outputDir,
             Profile: profile
         );
@@ -978,12 +1100,7 @@ public class RealEncodeTests : IAsyncLifetime
     {
         Skip.IfNot(_forkSupportsSpritevtt, ForkRequiredSkipReason);
 
-        string? fixture = ResolveFixture("no-game-no-life-1080p.mkv");
-        Skip.If(
-            fixture is null,
-            "1080p anime fixture (no-game-no-life-1080p.mkv) not present — "
-                + "set NOMERCY_TEST_FIXTURES_PATH or drop the file under NoMercy_dev/test-fixtures/."
-        );
+        string fixture = ResolveOrGenerateFixture("video-1080p.mkv");
 
         using CancellationTokenSource cts = new(TimeSpan.FromMinutes(15));
 
@@ -1046,7 +1163,7 @@ public class RealEncodeTests : IAsyncLifetime
         };
 
         EncodingRequest request = new(
-            InputPath: fixture!,
+            InputPath: fixture,
             OutputDirectory: outputDir,
             Profile: profile
         );
@@ -1086,12 +1203,7 @@ public class RealEncodeTests : IAsyncLifetime
     {
         Skip.IfNot(_forkSupportsSpritevtt, ForkRequiredSkipReason);
 
-        string? fixture = ResolveFixture("hdr-test-hdr10.mkv");
-        Skip.If(
-            fixture is null,
-            "HDR fixture (hdr-test-hdr10.mkv) not present — "
-                + "set NOMERCY_TEST_FIXTURES_PATH or drop the file under NoMercy_dev/test-fixtures/."
-        );
+        string fixture = ResolveOrGenerateFixture("video-hdr10.mkv");
 
         using CancellationTokenSource cts = new(TimeSpan.FromMinutes(15));
 
@@ -1154,7 +1266,7 @@ public class RealEncodeTests : IAsyncLifetime
         };
 
         EncodingRequest request = new(
-            InputPath: fixture!,
+            InputPath: fixture,
             OutputDirectory: outputDir,
             Profile: profile
         );
@@ -1197,12 +1309,7 @@ public class RealEncodeTests : IAsyncLifetime
     {
         Skip.IfNot(_forkSupportsSpritevtt, ForkRequiredSkipReason);
 
-        string? fixture = ResolveFixture("audio-only-test.flac");
-        Skip.If(
-            fixture is null,
-            "Audio-only fixture (audio-only-test.flac) not present — "
-                + "set NOMERCY_TEST_FIXTURES_PATH or drop the file under NoMercy_dev/test-fixtures/."
-        );
+        string fixture = ResolveOrGenerateFixture("audio-only.flac");
 
         using CancellationTokenSource cts = new(TimeSpan.FromMinutes(5));
 
@@ -1245,7 +1352,7 @@ public class RealEncodeTests : IAsyncLifetime
         };
 
         EncodingRequest request = new(
-            InputPath: fixture!,
+            InputPath: fixture,
             OutputDirectory: outputDir,
             Profile: profile
         );

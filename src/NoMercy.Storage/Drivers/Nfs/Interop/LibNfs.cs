@@ -151,6 +151,38 @@ internal static class LibNfs
     )]
     internal static extern int SetVersion(IntPtr nfs, int version);
 
+    /// <summary>
+    /// Set the NFSv4 client name (the client-id string the server keys open-owner
+    /// and lock-owner sequence state on). libnfs derives this from the hostname by
+    /// default, so two contexts in the same process share one client id and their
+    /// open-owner seqids collide (NFS4ERR_BAD_SEQID). Giving each context a unique
+    /// name before mount makes multiple NFS drivers coexist. NFSv4 only — a no-op
+    /// for v3. Must be called before <c>nfs_mount</c>.
+    /// </summary>
+    [DllImport(
+        LibName,
+        EntryPoint = "nfs4_set_client_name",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    internal static extern void SetClientName(
+        IntPtr nfs,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string id
+    );
+
+    /// <summary>
+    /// Set the NFSv4 client verifier — paired with the client name to uniquely
+    /// identify this client instance to the server. NFSv4 only.
+    /// </summary>
+    [DllImport(
+        LibName,
+        EntryPoint = "nfs4_set_verifier",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    internal static extern void SetVerifier(
+        IntPtr nfs,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string verifier
+    );
+
     // -----------------------------------------------------------------------
     // Error
     // -----------------------------------------------------------------------

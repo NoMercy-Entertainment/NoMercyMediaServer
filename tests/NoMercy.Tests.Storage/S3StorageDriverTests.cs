@@ -11,13 +11,12 @@
 
 using Amazon.S3;
 using Amazon.S3.Model;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Drivers.S3;
 using NoMercy.Storage.Factory;
 using NoMercy.Storage.Remote;
+using NoMercy.Tests.Storage.Container;
 
 namespace NoMercy.Tests.Storage;
 
@@ -146,128 +145,22 @@ public class S3DriverConfigParsingTests
 }
 
 // ============================================================================
-// Integration tests — require Docker + MinIO
+// Integration tests — run against the shared all-in-one storage container
+// (MinIO S3). The container is started once for the whole assembly by the
+// StorageBackends collection fixture and torn down after the last test.
 // ============================================================================
 
-/// <summary>
-/// Starts a MinIO container once per test class (class fixture).
-/// Tests are skipped when Docker is not reachable.
-/// </summary>
-public sealed class MinioFixture : IAsyncLifetime
+[Collection("StorageBackends")]
+public class S3StorageDriverIntegrationTests(StorageBackendsFixture fix)
 {
-    private IContainer? _container;
-    public bool Available { get; private set; }
-    public string? Endpoint { get; private set; }
-    public const string AccessKey = "minioadmin";
-    public const string SecretKey = "minioadmin";
-    public const string BucketName = "nomercy-test";
-
-    public async Task InitializeAsync()
-    {
-        if (!await DockerAvailableAsync())
-        {
-            Available = false;
-            return;
-        }
-
-        try
-        {
-            _container = new ContainerBuilder()
-                .WithImage("minio/minio:latest")
-                .WithPortBinding(9000, assignRandomHostPort: true)
-                .WithEnvironment("MINIO_ROOT_USER", AccessKey)
-                .WithEnvironment("MINIO_ROOT_PASSWORD", SecretKey)
-                .WithCommand("server", "/data")
-                .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(9000))
-                .Build();
-
-            await _container.StartAsync();
-
-            int port = _container.GetMappedPublicPort(9000);
-            Endpoint = $"http://localhost:{port}";
-            Available = true;
-
-            // Create the test bucket
-            using AmazonS3Client client = BuildClient();
-            await client.PutBucketAsync(BucketName);
-        }
-        catch (Exception)
-        {
-            Available = false;
-        }
-    }
-
-    public async Task DisposeAsync()
-    {
-        if (_container is not null)
-            await _container.DisposeAsync();
-    }
-
-    public AmazonS3Client BuildClient()
-    {
-        AmazonS3Config cfg = new() { ServiceURL = Endpoint, ForcePathStyle = true };
-        return new AmazonS3Client(
-            new Amazon.Runtime.BasicAWSCredentials(AccessKey, SecretKey),
-            cfg
-        );
-    }
-
-    public S3StorageDriver BuildBackend(string? prefix = null)
-    {
-        return new S3StorageDriver(
-            bucket: BucketName,
-            region: "us-east-1",
-            prefix: prefix,
-            endpoint: Endpoint,
-            accessKey: AccessKey,
-            secretKey: SecretKey
-        );
-    }
-
-    private static async Task<bool> DockerAvailableAsync()
-    {
-        try
-        {
-            using HttpClient http = new();
-            http.Timeout = TimeSpan.FromSeconds(3);
-            HttpResponseMessage response = await http.GetAsync("http://localhost:2375/info");
-            return response.IsSuccessStatusCode;
-        }
-        catch
-        {
-            // Also try named pipe / socket probe via Docker CLI
-            try
-            {
-                using System.Diagnostics.Process proc = new();
-                proc.StartInfo = new System.Diagnostics.ProcessStartInfo("docker", "info")
-                {
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                };
-                proc.Start();
-                await proc.WaitForExitAsync();
-                return proc.ExitCode == 0;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-    }
-}
-
-[Collection("MinioIntegration")]
-public class S3StorageDriverIntegrationTests(MinioFixture minio) : IClassFixture<MinioFixture>
-{
-    private const string SkipReason = "Docker not available";
+    private string SkipReason => fix.StartupError ?? "storage container not available";
 
     [SkippableFact]
     public async Task RoundTrip_write_read_delete()
     {
-        Skip.If(!minio.Available, SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
-        S3StorageDriver backend = minio.BuildBackend();
+        S3StorageDriver backend = fix.BuildS3Driver();
         string path = $"roundtrip/{Ulid.NewUlid()}.txt";
         byte[] data = "hello s3"u8.ToArray();
 
@@ -291,9 +184,9 @@ public class S3StorageDriverIntegrationTests(MinioFixture minio) : IClassFixture
     [SkippableFact]
     public async Task Multipart_upload_large_file()
     {
-        Skip.If(!minio.Available, SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
-        S3StorageDriver backend = minio.BuildBackend();
+        S3StorageDriver backend = fix.BuildS3Driver();
         string path = $"large/{Ulid.NewUlid()}.bin";
 
         // 6 MB — exceeds the 5 MB multipart threshold
@@ -314,9 +207,9 @@ public class S3StorageDriverIntegrationTests(MinioFixture minio) : IClassFixture
     [SkippableFact]
     public async Task EnumerateFileSystemEntries_with_prefix()
     {
-        Skip.If(!minio.Available, SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
-        S3StorageDriver backend = minio.BuildBackend("enum-test");
+        S3StorageDriver backend = fix.BuildS3Driver("enum-test");
         string prefix = $"dir-{Ulid.NewUlid()}";
 
         // Write two files under the prefix
@@ -343,9 +236,9 @@ public class S3StorageDriverIntegrationTests(MinioFixture minio) : IClassFixture
     [SkippableFact]
     public async Task MoveFile_renames_key()
     {
-        Skip.If(!minio.Available, SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
-        S3StorageDriver backend = minio.BuildBackend();
+        S3StorageDriver backend = fix.BuildS3Driver();
         string src = $"move/{Ulid.NewUlid()}-src.txt";
         string dst = $"move/{Ulid.NewUlid()}-dst.txt";
         byte[] data = "move me"u8.ToArray();
@@ -364,9 +257,9 @@ public class S3StorageDriverIntegrationTests(MinioFixture minio) : IClassFixture
     [SkippableFact]
     public async Task CopyFile_duplicates_key()
     {
-        Skip.If(!minio.Available, SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
-        S3StorageDriver backend = minio.BuildBackend();
+        S3StorageDriver backend = fix.BuildS3Driver();
         string src = $"copy/{Ulid.NewUlid()}-src.txt";
         string dst = $"copy/{Ulid.NewUlid()}-dst.txt";
         byte[] data = "copy me"u8.ToArray();
@@ -386,9 +279,9 @@ public class S3StorageDriverIntegrationTests(MinioFixture minio) : IClassFixture
     [SkippableFact]
     public async Task OpenRead_large_file_streams_correctly()
     {
-        Skip.If(!minio.Available, SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
-        S3StorageDriver backend = minio.BuildBackend();
+        S3StorageDriver backend = fix.BuildS3Driver();
         string path = $"stream/{Ulid.NewUlid()}.bin";
         byte[] data = new byte[2 * 1024 * 1024];
         new Random(7).NextBytes(data);
@@ -407,9 +300,9 @@ public class S3StorageDriverIntegrationTests(MinioFixture minio) : IClassFixture
     [SkippableFact]
     public async Task OpenWrite_overwrite_false_rejects_existing()
     {
-        Skip.If(!minio.Available, SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
-        S3StorageDriver backend = minio.BuildBackend();
+        S3StorageDriver backend = fix.BuildS3Driver();
         string path = $"nooverwrite/{Ulid.NewUlid()}.txt";
         byte[] data = "original"u8.ToArray();
 
@@ -424,8 +317,6 @@ public class S3StorageDriverIntegrationTests(MinioFixture minio) : IClassFixture
 }
 
 // Required by xUnit to share the fixture across the collection
-[CollectionDefinition("MinioIntegration")]
-public class MinioIntegrationCollection : ICollectionFixture<MinioFixture> { }
 
 // ============================================================================
 // Unit tests — EnumerateFileSystemEntries contract (no Docker)
