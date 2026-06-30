@@ -46,7 +46,7 @@
                 {
                     // The Legend of 1900 (1998)
                     // 2001: A Space Odyssey (1968)
-                    string lastYear = words.Skip(1)
+                    string? lastYear = words.Skip(1)
                         .Where(x => IsYear(x) && x != item)
                         .LastOrDefault();
 

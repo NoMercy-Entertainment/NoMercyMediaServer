@@ -470,4 +470,53 @@ public class FilenameParserPipelineTests
     [InlineData("4x4.mkv")]
     public void CrossFormat_ignores_leading_token(string file) =>
         new CrossFormatAdapter().TryParse(Context(file)).Should().BeNull();
+
+    // ---------------------------------------------------------------------------
+    // Hard real-world corpus (harvested from the MIT pr0pz/scene-release-parser
+    // fixtures). These assert the *parse outcome* of long, messy, real scene names
+    // — not the tokens a regex was built from — so they prove behaviour rather than
+    // restating vocabulary. Several are adversarial (a title that opens with "4x4",
+    // stray "9.00" numbers, a year before the SxxExx, an "x" inside the title).
+    // ---------------------------------------------------------------------------
+    [Theory]
+    [InlineData("24.S02E02.9.00.Uhr.bis.10.00.Uhr.German.DL.TV.Dubbed.DVDRip.SVCD.READ.NFO-c0nFuSed", 2, 2)]
+    [InlineData("4x4.Ule.ja.Umber.Autoga.Colombias.S01E09.EE.1080p.WEB.h264-EMX", 1, 9)]
+    [InlineData("72.Cutest.Animals.S01E0.German.DL.Doku.1080p.WEB.x264-BiGiNT", 1, 0)]
+    [InlineData("Dark.Net.S01E06.DOC.SUBFRENCH.720p.WEBRip.x264-TiMELiNE", 1, 6)]
+    [InlineData("Direct.Talk.S09E09.Mizutani.Yoshihiro.Relief.Beds.Made.of.Cardboard.1080p.HDTV.H264-DARKFLiX", 9, 9)]
+    [InlineData("Gilmore.Girls.S05E01.720p.WEB-DL.AAC2.0.H.264-tK", 5, 1)]
+    [InlineData("Halo.2022.S01E06.POLISH.720p.WEB.H264-A4O", 1, 6)]
+    [InlineData("New.Amsterdam.2018.S02E12.14.Years.mkv", 2, 12)]
+    [InlineData("New.Amsterdam.2018.2x12.14.Anni.2.Mesi.8.Giorni.ITA-ENG.1080p.WEBMux.x264-NovaRi", 2, 12)]
+    public void Pipeline_ExtractsSeasonEpisode_FromHardRealNames(string file, int season, int episode)
+    {
+        MovieFile result = Pipeline().Parse(Context(file));
+        result.Season.Should().Be(season);
+        result.Episode.Should().Be(episode);
+    }
+
+    [Theory]
+    [InlineData("Spy.x.Family.E04.Elterngespraech.an.der.Eliteschule.German.2022.ANiME.DL.BDRiP.x264-STARS", 4)]
+    public void Pipeline_ExtractsEpisode_WhenNoSeason(string file, int episode)
+    {
+        MovieFile result = Pipeline().Parse(Context(file));
+        result.Episode.Should().Be(episode);
+    }
+
+    [Theory]
+    [InlineData("Gegen.den.Strom.2018.German.AC3D.DL.1080p.BluRay.x264-SAVASTANOS", "2018")]
+    [InlineData("Batman.v.Superman.Dawn.of.Justice.2016.IMAX.German.DL.TrueHD.Atmos.DUBBED.2160p.UHD.BluRay.x265-GSG9", "2016")]
+    [InlineData("Cloudy.With.A.Chance.Of.Meatballs.2009.NORDIC.DTS-HD.DTS.AC3.NORDICSUBS.1080p.BluRay.x264-TUSAHD", "2009")]
+    [InlineData("Pay.the.Ghost.2015.1080p.HULU.WEB-DL.DDP.5.1.H.264-PiRaTeS", "2015")]
+    [InlineData("Angel.Heart.1987.German.DTSMAD.5.1.DL.2160p.UHD.BluRay.HDR.DV.HEVC.Remux-HDSource", "1987")]
+    [InlineData("Burial.Ground.The.Nights.Of.Terror.1981.DUBBED.GRINDHOUSE.VERSION.1080P.BLURAY.X264-WATCHABLE", "1981")]
+    [InlineData("Intruders.Die.Aliens.Sind.Unter.Uns.1992.Uncut.German.AC3.DVDRiP.XviD", "1992")]
+    [InlineData("V.H.S.94.2021.BluRay.1080p.DTS-HD.MA.5.1.AVC-GROUPNAME", "2021")]
+    public void Pipeline_ClassifiesMovies_NotSeries(string file, string year)
+    {
+        MovieFile result = Pipeline().Parse(Context(file, "", "movies"));
+        result.IsSeries.Should().BeFalse();
+        result.Year.Should().Be(year);
+    }
+
 }
