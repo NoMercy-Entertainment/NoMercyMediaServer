@@ -143,6 +143,42 @@ public static partial class StringExtensions
         return Regex.Replace(title, @"\s+", " ").Trim();
     }
 
+    /// <summary>Matches a "Season N" / "Series N" (and common localized) folder name.</summary>
+    [GeneratedRegex(
+        @"(?<![A-Za-z])(?:season|series|saison|staffel|temporada|stagione)[\s\.\-_]*0*(\d{1,3})(?![0-9])",
+        RegexOptions.IgnoreCase)]
+    public static partial Regex MatchFolderSeasonWord();
+
+    /// <summary>Matches a bare "S2" / "S02" folder name (whole string).</summary>
+    [GeneratedRegex(@"^[Ss]0*(\d{1,3})$")]
+    public static partial Regex MatchSeasonFolderShort();
+
+    /// <summary>
+    /// Extracts a season number from a directory path's leaf folder, e.g.
+    /// "/media/Show/Season 02" -> 2, "Show/S2" -> 2, "X/Season 0" -> 0. Returns
+    /// <see langword="null"/> when the folder is not a season folder, so a flat
+    /// show folder never spuriously supplies a season.
+    /// </summary>
+    public static int? TryGetFolderSeason(this string? directory)
+    {
+        if (string.IsNullOrWhiteSpace(directory))
+            return null;
+
+        string folder = Path.GetFileName(directory.TrimEnd('/', '\\'));
+        if (string.IsNullOrEmpty(folder))
+            folder = directory;
+
+        Match word = MatchFolderSeasonWord().Match(folder);
+        if (word.Success)
+            return int.Parse(word.Groups[1].Value);
+
+        Match shortForm = MatchSeasonFolderShort().Match(folder);
+        if (shortForm.Success)
+            return int.Parse(shortForm.Groups[1].Value);
+
+        return null;
+    }
+
 
     [GeneratedRegex("/[^a-zA-Z0-9]/")]
     public static partial Regex IsAlphaNumeric();

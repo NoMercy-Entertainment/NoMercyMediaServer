@@ -326,8 +326,14 @@ public class FileListService(
 
         bool seasonExplicit = parsed.Season.HasValue;
 
+        // Plex-style layout: when the file omits the season but lives in a
+        // "Season N" folder, take the season from the folder instead of
+        // blindly defaulting to 1. seasonExplicit is intentionally left as the
+        // filename-derived value so the absolute-index fallback stays available.
+        int? folderSeason = directoryName.TryGetFolderSeason();
+
         if (parsed.Episode.HasValue && !parsed.Season.HasValue)
-            parsed.Season = 1;
+            parsed.Season = folderSeason ?? 1;
 
         if (!parsed.Season.HasValue && !parsed.Episode.HasValue)
         {
@@ -335,7 +341,7 @@ public class FileListService(
             Match numberMatch = regex.Match(parsed.Title);
             if (numberMatch.Success)
             {
-                parsed.Season = 1;
+                parsed.Season = folderSeason ?? 1;
                 parsed.Episode = int.Parse(numberMatch.Value);
                 parsed.Title = regex.Split(parsed.Title).FirstOrDefault();
             }
@@ -448,8 +454,14 @@ public class FileListService(
         // This controls whether the absolute-index fallback is allowed in ResolveShowEpisodeAsync.
         bool seasonExplicit = parsed.Season.HasValue;
 
+        // Plex-style layout: when the file omits the season but lives in a
+        // "Season N" folder, take the season from the folder instead of
+        // blindly defaulting to 1. seasonExplicit is intentionally left as the
+        // filename-derived value so the absolute-index fallback stays available.
+        int? folderSeason = file.DirectoryName.TryGetFolderSeason();
+
         if (parsed.Episode.HasValue && !parsed.Season.HasValue)
-            parsed.Season = 1;
+            parsed.Season = folderSeason ?? 1;
 
         if (!parsed.Season.HasValue && !parsed.Episode.HasValue)
         {
@@ -457,7 +469,7 @@ public class FileListService(
             Match numberMatch = regex.Match(parsed.Title);
             if (numberMatch.Success)
             {
-                parsed.Season = 1;
+                parsed.Season = folderSeason ?? 1;
                 parsed.Episode = int.Parse(numberMatch.Value);
                 parsed.Title = regex.Split(parsed.Title).FirstOrDefault();
             }
