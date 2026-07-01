@@ -16,6 +16,7 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Events;
 using NoMercy.Events.Media;
+using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
@@ -34,7 +35,8 @@ namespace NoMercy.MediaProcessing.Files;
 /// Extracted from FileRepository so file enumeration no longer depends on TMDB.
 /// A null return means "unidentified" — callers must NOT treat that as "drop".
 /// </summary>
-public class MediaIdentificationService(MediaContext context) : IMediaIdentificationService
+public class MediaIdentificationService(MediaContext context, IJobDispatcher jobDispatcher)
+    : IMediaIdentificationService
 {
     public async Task<(MovieOrEpisode match, string? imdbId)?> IdentifyAsync(
         MovieFile parsed,
@@ -68,7 +70,7 @@ public class MediaIdentificationService(MediaContext context) : IMediaIdentifica
         };
     }
 
-    private static async Task<(MovieOrEpisode match, string? imdbId)?> ResolveShowEpisodeAsync(
+    private async Task<(MovieOrEpisode match, string? imdbId)?> ResolveShowEpisodeAsync(
         MediaContext ctx,
         string libraryType,
         MovieFile parsed,
@@ -121,7 +123,8 @@ public class MediaIdentificationService(MediaContext context) : IMediaIdentifica
                     && item.AirDate.HasValue
                     && item.AirDate.Value.Year == airDate.Value.Year
                     && item.AirDate.Value.Month == airDate.Value.Month
-                    && item.AirDate.Value.Day == airDate.Value.Day)
+                    && item.AirDate.Value.Day == airDate.Value.Day
+                )
                 .OrderBy(item => item.SeasonNumber)
                 .ThenBy(item => item.EpisodeNumber)
                 .FirstOrDefaultAsync();
@@ -273,7 +276,7 @@ public class MediaIdentificationService(MediaContext context) : IMediaIdentifica
         return (match, episode.ImdbId);
     }
 
-    private static async Task<(MovieOrEpisode match, string? imdbId)?> ResolveMovieMatchAsync(
+    private async Task<(MovieOrEpisode match, string? imdbId)?> ResolveMovieMatchAsync(
         MediaContext ctx,
         string libraryType,
         MovieFile parsed,
@@ -331,8 +334,7 @@ public class MediaIdentificationService(MediaContext context) : IMediaIdentifica
                         }
                     );
                 }
-                MovieImportJob job = new() { LibraryId = libraryId, Id = movie.Id };
-                await job.Handle();
+                jobDispatcher.Dispatch(new MovieImportJob { LibraryId = libraryId, Id = movie.Id });
             }
 
             movieItem = new()
@@ -356,7 +358,7 @@ public class MediaIdentificationService(MediaContext context) : IMediaIdentifica
         return (match, movieItem.ImdbId);
     }
 
-    private static async Task EnsureShowInLibraryAsync(
+    private async Task EnsureShowInLibraryAsync(
         MediaContext ctx,
         int showId,
         string showName,
@@ -379,13 +381,14 @@ public class MediaIdentificationService(MediaContext context) : IMediaIdentifica
             );
         }
 
-        ShowImportJob job = new()
-        {
-            LibraryId = libraryId,
-            Id = showId,
-            HighPriority = true,
-        };
-        await job.Handle();
+        jobDispatcher.Dispatch(
+            new ShowImportJob
+            {
+                LibraryId = libraryId,
+                Id = showId,
+                HighPriority = true,
+            }
+        );
     }
 
     private static async Task<Episode?> ResolveAbsoluteEpisodeAsync(
