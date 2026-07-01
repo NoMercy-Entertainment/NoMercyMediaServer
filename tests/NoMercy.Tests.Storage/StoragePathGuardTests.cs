@@ -361,4 +361,520 @@ public class StoragePathGuardTests
         Action act = () => StoragePathGuard.RejectAbsolutePath(path);
         act.Should().NotThrow("scope-relative and empty paths must pass RejectAbsolutePath");
     }
+
+    [Fact]
+    public void StructuralValidate_NullByte_fires_on_embedded_null()
+    {
+        Action act = () => StoragePathGuard.StructuralValidate("file\0name.txt");
+
+        act.Should()
+            .Throw<StoragePathNotAllowedException>()
+            .Where(e => e.Reason == "null byte in path");
+    }
+
+    [Fact]
+    public void StructuralValidate_NullByte_silent_on_valid_filename()
+    {
+        Action act = () => StoragePathGuard.StructuralValidate("filename.txt");
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void StructuralValidate_DotDotStandalone_fires_on_double_dot_alone()
+    {
+        Action act = () => StoragePathGuard.StructuralValidate("..");
+
+        act.Should()
+            .Throw<StoragePathNotAllowedException>()
+            .Where(e => e.Reason == ".. traversal is not allowed");
+    }
+
+    [Fact]
+    public void StructuralValidate_DotDotStandalone_silent_on_single_dot()
+    {
+        Action act = () => StoragePathGuard.StructuralValidate(".");
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void StructuralValidate_DotDotStartSlash_fires_on_traversal_at_start_forward()
+    {
+        Action act = () => StoragePathGuard.StructuralValidate("../escape.txt");
+
+        act.Should()
+            .Throw<StoragePathNotAllowedException>()
+            .Where(e => e.Reason == ".. traversal is not allowed");
+    }
+
+    [Fact]
+    public void StructuralValidate_DotDotStartSlash_fires_on_traversal_at_start_backward()
+    {
+        Action act = () => StoragePathGuard.StructuralValidate("..\\ escape.txt");
+
+        act.Should()
+            .Throw<StoragePathNotAllowedException>()
+            .Where(e => e.Reason == ".. traversal is not allowed");
+    }
+
+    [Fact]
+    public void StructuralValidate_DotDotStartSlash_silent_on_relative_inside_root()
+    {
+        Action act = () => StoragePathGuard.StructuralValidate("subdir/file.txt");
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void StructuralValidate_DotDotEndSlash_fires_on_traversal_at_end_forward()
+    {
+        Action act = () => StoragePathGuard.StructuralValidate("subdir/..");
+
+        act.Should()
+            .Throw<StoragePathNotAllowedException>()
+            .Where(e => e.Reason == ".. traversal is not allowed");
+    }
+
+    [Fact]
+    public void StructuralValidate_DotDotEndSlash_fires_on_traversal_at_end_backward()
+    {
+        Action act = () => StoragePathGuard.StructuralValidate("subdir\\..");
+
+        act.Should()
+            .Throw<StoragePathNotAllowedException>()
+            .Where(e => e.Reason == ".. traversal is not allowed");
+    }
+
+    [Fact]
+    public void StructuralValidate_DotDotEndSlash_silent_on_directory_at_end()
+    {
+        Action act = () => StoragePathGuard.StructuralValidate("subdir/leaf");
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void StructuralValidate_DotDotMiddleForward_fires_on_traversal_in_middle_forward()
+    {
+        Action act = () => StoragePathGuard.StructuralValidate("a/../b/c.txt");
+
+        act.Should()
+            .Throw<StoragePathNotAllowedException>()
+            .Where(e => e.Reason == ".. traversal is not allowed");
+    }
+
+    [Fact]
+    public void StructuralValidate_DotDotMiddleBackward_fires_on_traversal_in_middle_backward()
+    {
+        Action act = () => StoragePathGuard.StructuralValidate("a\\..\\ b/c.txt");
+
+        act.Should()
+            .Throw<StoragePathNotAllowedException>()
+            .Where(e => e.Reason == ".. traversal is not allowed");
+    }
+
+    [Fact]
+    public void StructuralValidate_DotDotMiddleForward_silent_on_dot_in_filename()
+    {
+        Action act = () => StoragePathGuard.StructuralValidate("v1.2/file-v2.3.txt");
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void StructuralValidate_DotDotMiddleBackward_silent_on_dot_in_filename()
+    {
+        Action act = () => StoragePathGuard.StructuralValidate("v1.2\\file-v2.3.txt");
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void StructuralValidate_WindowsDeviceQuestionMark_fires_on_question_mark_prefix()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        Action act = () => StoragePathGuard.StructuralValidate(@"\\?\C:\Windows");
+
+        act.Should()
+            .Throw<StoragePathNotAllowedException>()
+            .Where(e => e.Reason == "device paths are not allowed");
+    }
+
+    [Fact]
+    public void StructuralValidate_WindowsDeviceDot_fires_on_dot_prefix()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        Action act = () => StoragePathGuard.StructuralValidate(@"\\.\COM1");
+
+        act.Should()
+            .Throw<StoragePathNotAllowedException>()
+            .Where(e => e.Reason == "device paths are not allowed");
+    }
+
+    [Fact]
+    public void StructuralValidate_WindowsDeviceQuestionMark_silent_on_regular_unc_path()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        Action act = () => StoragePathGuard.StructuralValidate(@"\\server\share\file.txt");
+
+        act.Should().NotThrow("regular UNC paths are allowed by StructuralValidate");
+    }
+
+    [Fact]
+    public void StructuralValidate_WindowsDeviceDot_silent_on_regular_unc_path()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        Action act = () => StoragePathGuard.StructuralValidate(@"\\server\share\file.txt");
+
+        act.Should().NotThrow("regular UNC paths are allowed by StructuralValidate");
+    }
+
+    [Fact]
+    public void RejectAbsolutePath_UnixAbsoluteSlash_fires_on_leading_slash()
+    {
+        Action act = () => StoragePathGuard.RejectAbsolutePath("/mnt/media/file.mkv");
+
+        act.Should()
+            .Throw<StoragePathNotAllowedException>()
+            .Where(e => e.Reason == "absolute paths are not allowed as scope-relative keys");
+    }
+
+    [Fact]
+    public void RejectAbsolutePath_UnixAbsoluteSlash_silent_on_relative_forward_slash()
+    {
+        Action act = () => StoragePathGuard.RejectAbsolutePath("mnt/media/file.mkv");
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void RejectAbsolutePath_WindowsBackslashRoot_fires_on_leading_backslash()
+    {
+        Action act = () => StoragePathGuard.RejectAbsolutePath(@"\Windows\System32");
+
+        act.Should()
+            .Throw<StoragePathNotAllowedException>()
+            .Where(e => e.Reason == "absolute paths are not allowed as scope-relative keys");
+    }
+
+    [Fact]
+    public void RejectAbsolutePath_WindowsBackslashRoot_silent_on_relative_path()
+    {
+        Action act = () => StoragePathGuard.RejectAbsolutePath("Windows/System32");
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void RejectAbsolutePath_WindowsDriveLetter_fires_on_drive_colon_prefix()
+    {
+        Action act = () => StoragePathGuard.RejectAbsolutePath("C:\\Media\\file.mkv");
+
+        act.Should()
+            .Throw<StoragePathNotAllowedException>()
+            .Where(e => e.Reason == "absolute paths are not allowed as scope-relative keys");
+    }
+
+    [Fact]
+    public void RejectAbsolutePath_WindowsDriveLetter_fires_on_drive_colon_forward()
+    {
+        Action act = () => StoragePathGuard.RejectAbsolutePath("D:/Media/file.mkv");
+
+        act.Should()
+            .Throw<StoragePathNotAllowedException>()
+            .Where(e => e.Reason == "absolute paths are not allowed as scope-relative keys");
+    }
+
+    [Fact]
+    public void RejectAbsolutePath_WindowsDriveLetter_silent_on_colon_in_middle()
+    {
+        Action act = () => StoragePathGuard.RejectAbsolutePath("movies/title:variant.mkv");
+
+        act.Should().NotThrow("colon in middle of path is fine");
+    }
+
+    [Fact]
+    public void RejectAbsolutePath_EmptyPath_silent_on_empty()
+    {
+        Action act = () => StoragePathGuard.RejectAbsolutePath("");
+
+        act.Should().NotThrow("empty path is valid (Rule 3 — empty = scope root)");
+    }
+
+    [Fact]
+    public void Validate_EmptyPath_fires_on_empty()
+    {
+        StoragePathGuard guard = new([], NewBackend().Object);
+
+        Action act = () => guard.Validate("");
+
+        act.Should()
+            .Throw<StoragePathNotAllowedException>()
+            .Where(e => e.Reason == "path is empty");
+    }
+
+    [Fact]
+    public void Validate_EmptyPath_silent_on_nonempty_path()
+    {
+        StoragePathGuard guard = new([], NewBackend().Object);
+
+        string result = guard.Validate(Path.GetFullPath("file.txt"));
+
+        result.Should().NotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public void Validate_WhitespaceOnly_fires_on_spaces()
+    {
+        StoragePathGuard guard = new([], NewBackend().Object);
+
+        Action act = () => guard.Validate("   ");
+
+        act.Should()
+            .Throw<StoragePathNotAllowedException>()
+            .Where(e => e.Reason == "path is empty");
+    }
+
+    [Fact]
+    public void Validate_AllowlistEnforced_fires_on_path_outside_all_roots()
+    {
+        string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-test-outside-root"));
+        StoragePathGuard guard = new([root], NewBackend().Object);
+
+        string outside = Path.GetFullPath(
+            Path.Combine(Path.GetTempPath(), "different-location", "file.txt")
+        );
+
+        Action act = () => guard.Validate(outside);
+
+        act.Should()
+            .Throw<StoragePathNotAllowedException>()
+            .Where(e => e.Reason.StartsWith("path is not under any allowed root"));
+    }
+
+    [Fact]
+    public void Validate_AllowlistEnforced_silent_on_path_inside_root()
+    {
+        string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-test-inside-root"));
+        StoragePathGuard guard = new([root], NewBackend().Object);
+
+        string inside = Path.Combine(root, "subdir", "file.txt");
+
+        string result = guard.Validate(inside);
+
+        result.Should().Be(Path.GetFullPath(inside));
+    }
+
+    [Fact]
+    public void Validate_AllowlistNotEnforced_silent_on_any_relative_path()
+    {
+        StoragePathGuard guard = new([], NewBackend().Object);
+
+        string arbitrary = Path.GetFullPath("some/random/path.txt");
+
+        string result = guard.Validate(arbitrary);
+
+        result.Should().Be(arbitrary);
+    }
+
+    [Fact]
+    public void Validate_SymlinkEscape_fires_when_symlink_target_outside_root()
+    {
+        string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-test-symlink-root"));
+        string linkPath = Path.Combine(root, "mylink");
+        string targetOutside = Path.GetFullPath(
+            Path.Combine(Path.GetTempPath(), "outside", "target.txt")
+        );
+
+        Mock<IStorageDriver> driver = NewBackend();
+        driver.Setup(b => b.ResolveLinkTarget(Path.GetFullPath(linkPath))).Returns(targetOutside);
+
+        StoragePathGuard guard = new([root], driver.Object);
+
+        Action act = () => guard.Validate(linkPath);
+
+        act.Should()
+            .Throw<StoragePathNotAllowedException>()
+            .Where(e => e.Reason.StartsWith("path is not under any allowed root"));
+    }
+
+    [Fact]
+    public void Validate_SymlinkEscape_silent_when_symlink_target_inside_root()
+    {
+        string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-test-symlink-ok"));
+        string linkPath = Path.Combine(root, "mylink");
+        string targetInside = Path.Combine(root, "actual-file.txt");
+
+        Mock<IStorageDriver> driver = NewBackend();
+        driver
+            .Setup(b => b.ResolveLinkTarget(Path.GetFullPath(linkPath)))
+            .Returns(Path.GetFullPath(targetInside));
+
+        StoragePathGuard guard = new([root], driver.Object);
+
+        string result = guard.Validate(linkPath);
+
+        result.Should().Be(Path.GetFullPath(linkPath));
+    }
+
+    [Fact]
+    public void Validate_MultipleRoots_fires_when_outside_all_roots()
+    {
+        string rootA = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-test-multi-a"));
+        string rootB = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-test-multi-b"));
+        StoragePathGuard guard = new([rootA, rootB], NewBackend().Object);
+
+        string outside = Path.GetFullPath(
+            Path.Combine(Path.GetTempPath(), "nm-test-multi-c", "file.txt")
+        );
+
+        Action act = () => guard.Validate(outside);
+
+        act.Should()
+            .Throw<StoragePathNotAllowedException>()
+            .Where(e => e.Reason.StartsWith("path is not under any allowed root"));
+    }
+
+    [Fact]
+    public void Validate_MultipleRoots_silent_when_under_any_root()
+    {
+        string rootA = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-test-multi-ok-a"));
+        string rootB = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-test-multi-ok-b"));
+        StoragePathGuard guard = new([rootA, rootB], NewBackend().Object);
+
+        string underB = Path.Combine(rootB, "nested", "file.txt");
+
+        string result = guard.Validate(underB);
+
+        result.Should().Be(Path.GetFullPath(underB));
+    }
+
+    [Fact]
+    public void Validate_RootMatchesExactly_fires_when_path_is_inside_root_but_not_exact()
+    {
+        string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-test-root-not-exact"));
+        StoragePathGuard guard = new([root], NewBackend().Object);
+
+        string inside = Path.Combine(root, "subdir", "file.txt");
+        string result = guard.Validate(inside);
+
+        result.Should().NotBe(root);
+        result.Should().StartWith(root);
+    }
+
+    [Fact]
+    public void Validate_RootMatchesExactly_silent_when_path_equals_root()
+    {
+        string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-test-root-exact"));
+        StoragePathGuard guard = new([root], NewBackend().Object);
+
+        string result = guard.Validate(root);
+
+        result.Should().Be(root);
+    }
+
+    [Fact]
+    public void Validate_RootPrefixWithoutSeparator_fires_when_path_is_root_name_plus_extra()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-test-prefix-match"));
+        StoragePathGuard guard = new([root], NewBackend().Object);
+
+        string sibling = root + "-extra\\file.txt";
+
+        Action act = () => guard.Validate(sibling);
+
+        act.Should()
+            .Throw<StoragePathNotAllowedException>()
+            .Where(e => e.Reason.StartsWith("path is not under any allowed root"));
+    }
+
+    [Fact]
+    public void Validate_CanonicalizationFailure_fires_with_appropriate_message()
+    {
+        Mock<IStorageDriver> driver = new(MockBehavior.Strict);
+        driver
+            .Setup(b => b.GetFullPath(It.IsAny<string>()))
+            .Throws(new InvalidOperationException("Cannot resolve path"));
+
+        StoragePathGuard guard = new([], driver.Object);
+
+        Action act = () => guard.Validate("bad/path");
+
+        act.Should()
+            .Throw<StoragePathNotAllowedException>()
+            .Where(e => e.Reason.StartsWith("cannot canonicalize"));
+    }
+
+    [Fact]
+    public void Validate_CanonicalizationFailure_silent_when_path_canonicalizes_successfully()
+    {
+        StoragePathGuard guard = new([], NewBackend().Object);
+
+        string valid = Path.GetFullPath("some/relative/path.txt");
+
+        string result = guard.Validate(valid);
+
+        result.Should().Be(valid);
+    }
+
+    [Fact]
+    public void Catalogue_completeness_check()
+    {
+        string[] catalogueRules =
+        [
+            "StructuralValidate_NullByte",
+            "StructuralValidate_DotDotStandalone",
+            "StructuralValidate_DotDotStartSlash",
+            "StructuralValidate_DotDotEndSlash",
+            "StructuralValidate_DotDotMiddleForward",
+            "StructuralValidate_DotDotMiddleBackward",
+            "StructuralValidate_WindowsDeviceQuestionMark",
+            "StructuralValidate_WindowsDeviceDot",
+            "RejectAbsolutePath_UnixAbsoluteSlash",
+            "RejectAbsolutePath_WindowsBackslashRoot",
+            "RejectAbsolutePath_WindowsDriveLetter",
+            "Validate_EmptyPath",
+            "Validate_AllowlistEnforced",
+            "Validate_SymlinkEscape",
+            "Validate_MultipleRoots",
+            "Validate_RootMatchesExactly",
+            "Validate_CanonicalizationFailure",
+        ];
+
+        HashSet<string> testMethods = typeof(StoragePathGuardTests)
+            .GetMethods(
+                System.Reflection.BindingFlags.Public
+                    | System.Reflection.BindingFlags.Instance
+                    | System.Reflection.BindingFlags.DeclaredOnly
+            )
+            .Where(m => m.GetCustomAttributes(typeof(FactAttribute), false).Length > 0)
+            .Select(m => m.Name)
+            .ToHashSet(StringComparer.Ordinal);
+
+        foreach (string rule in catalogueRules)
+        {
+            List<string> matchingTests = testMethods.Where(t => t.Contains(rule)).ToList();
+
+            matchingTests
+                .Should()
+                .HaveCountGreaterThanOrEqualTo(
+                    2,
+                    "rule '{0}' must have at least a fires-on and a silent-on test; "
+                        + "when a new guard rule is added to the catalogue, add both forms here",
+                    rule
+                );
+        }
+    }
 }
