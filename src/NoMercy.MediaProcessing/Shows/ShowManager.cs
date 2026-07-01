@@ -35,7 +35,6 @@ public class ShowManager(
     IShowRepository showRepository,
     JobDispatcher jobDispatcher,
     IStorageFactory storageFactory,
-    IStorageDriver storageDriver,
     IMediaTypeClassifier mediaTypeClassifier,
     ILogger<ShowManager> logger
 ) : BaseManager, IShowManager
@@ -72,13 +71,13 @@ public class ShowManager(
                 folderLibrary.Folder.DriverId,
                 string.Empty
             );
-            string folderRoot = folderStorage.GetFullPath(folderLibrary.Folder.Path);
+            string folderRoot = FolderRootPath(folderStorage, folderLibrary.Folder.Path);
             string folderName = folderStorage.CombinePath(folderRoot, baseUrl.Replace("/", ""));
 
             if (!folderStorage.Exists(folderName))
             {
                 string? match = FileNameSanitizer.FindMatchingDirectory(
-                    storageDriver,
+                    folderStorage.Driver,
                     folderRoot,
                     baseUrl.Replace("/", "")
                 );

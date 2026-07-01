@@ -20,8 +20,8 @@ using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Collections;
 using NoMercy.MediaProcessing.Movies;
 using NoMercy.Providers.TMDB.Models.Collections;
-
 using NoMercy.Storage;
+
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -52,7 +52,6 @@ public class CollectionExtrasJob : AbstractMediaExraDataJob<TmdbCollectionAppend
             movieRepository,
             jobDispatcher,
             StorageFactory,
-            StorageDriver,
             LoggerFactory.CreateLogger<MovieManager>()
         );
 
@@ -60,7 +59,8 @@ public class CollectionExtrasJob : AbstractMediaExraDataJob<TmdbCollectionAppend
         CollectionManager collectionManager = new(
             collectionRepository,
             movieManager,
-            jobDispatcher, LoggerFactory.CreateLogger<CollectionManager>()
+            jobDispatcher,
+            LoggerFactory.CreateLogger<CollectionManager>()
         );
 
         await collectionManager.StoreImages(Storage);

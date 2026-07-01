@@ -20,8 +20,8 @@ using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Movies;
 using NoMercy.MediaProcessing.People;
 using NoMercy.Providers.TMDB.Models.Movies;
-
 using NoMercy.Storage;
+
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -52,11 +52,13 @@ public class MovieExtrasJob : AbstractMediaExraDataJob<TmdbMovieAppends>
             movieRepository,
             jobDispatcher,
             StorageFactory,
-            StorageDriver,
             LoggerFactory.CreateLogger<MovieManager>()
         );
 
-        PersonRepository personRepository = new(context, LoggerFactory.CreateLogger<PersonRepository>());
+        PersonRepository personRepository = new(
+            context,
+            LoggerFactory.CreateLogger<PersonRepository>()
+        );
         PersonManager personManager = new(
             personRepository,
             jobDispatcher,

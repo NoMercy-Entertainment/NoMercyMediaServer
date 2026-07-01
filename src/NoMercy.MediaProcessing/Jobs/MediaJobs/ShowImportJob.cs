@@ -29,8 +29,8 @@ using NoMercy.MediaProcessing.Shows;
 using NoMercy.NmSystem;
 using NoMercy.Providers.TMDB.Models.Season;
 using NoMercy.Providers.TMDB.Models.TV;
-
 using NoMercy.Storage;
+
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -63,7 +63,6 @@ public class ShowImportJob : AbstractMediaJob
             showRepository,
             jobDispatcher,
             StorageFactory,
-            StorageDriver,
             new MediaTypeClassifier(),
             LoggerFactory.CreateLogger<ShowManager>()
         );

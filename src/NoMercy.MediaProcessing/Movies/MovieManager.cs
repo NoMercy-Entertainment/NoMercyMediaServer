@@ -34,7 +34,6 @@ public class MovieManager(
     IMovieRepository movieRepository,
     JobDispatcher jobDispatcher,
     IStorageFactory storageFactory,
-    IStorageDriver storageDriver,
     ILogger<MovieManager> logger
 ) : BaseManager, IMovieManager
 {
@@ -72,13 +71,13 @@ public class MovieManager(
                 folderLibrary.Folder.DriverId,
                 string.Empty
             );
-            string folderRoot = folderStorage.GetFullPath(folderLibrary.Folder.Path);
+            string folderRoot = FolderRootPath(folderStorage, folderLibrary.Folder.Path);
             string folderName = folderStorage.CombinePath(folderRoot, baseUrl.Replace("/", ""));
 
             if (!folderStorage.Exists(folderName))
             {
                 string? match = FileNameSanitizer.FindMatchingDirectory(
-                    storageDriver,
+                    folderStorage.Driver,
                     folderRoot,
                     baseUrl.Replace("/", "")
                 );

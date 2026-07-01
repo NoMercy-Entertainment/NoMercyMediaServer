@@ -11,6 +11,7 @@
 
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Music;
 using NoMercy.MediaProcessing.Artists;
@@ -26,7 +27,7 @@ using NoMercy.Providers.MusicBrainz.Models;
 using NoMercy.Storage;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using Microsoft.Extensions.Logging;
+
 namespace NoMercy.MediaProcessing.Recordings;
 
 public partial class RecordingManager(
@@ -47,7 +48,13 @@ public partial class RecordingManager(
         CoverArtImageManagerManager.CoverPalette? releaseCoverPalette
     )
     {
-        logger.LogTrace("Storing Recording: {Title} - {Position}-{Position2} {Title2}", releaseAppends.Title, musicBrainzMedia.Position, musicBrainzTrack.Position, musicBrainzTrack.Title);
+        logger.LogTrace(
+            "Storing Recording: {Title} - {Position}-{Position2} {Title2}",
+            releaseAppends.Title,
+            musicBrainzMedia.Position,
+            musicBrainzTrack.Position,
+            musicBrainzTrack.Title
+        );
 
         MediaScan mediaScan = new(storageDriver);
         ConcurrentBag<MediaFolderExtend> folders = await mediaScan
@@ -159,7 +166,11 @@ public partial class RecordingManager(
         MusicBrainzReleaseAppends releaseAppends
     )
     {
-        logger.LogTrace("Linking Recording to Artist: {Title} - {Title2}", musicBrainzTrack.Title, releaseAppends.MusicBrainzReleaseGroup.Title);
+        logger.LogTrace(
+            "Linking Recording to Artist: {Title} - {Title2}",
+            musicBrainzTrack.Title,
+            releaseAppends.MusicBrainzReleaseGroup.Title
+        );
 
         foreach (ReleaseArtistCredit credit in releaseAppends.ArtistCredit)
         {
@@ -336,7 +347,7 @@ public partial class RecordingManager(
             libraryFolder.DriverId,
             string.Empty
         );
-        return folderStorage.GetFullPath(libraryFolder.Path);
+        return FolderRootPath(folderStorage, libraryFolder.Path);
     }
 
     [GeneratedRegex("^00:")]

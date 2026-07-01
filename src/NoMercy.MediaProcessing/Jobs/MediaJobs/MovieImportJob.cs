@@ -23,8 +23,8 @@ using NoMercy.Events.Media;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Movies;
 using NoMercy.Providers.TMDB.Models.Movies;
-
 using NoMercy.Storage;
+
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -55,7 +55,6 @@ public class MovieImportJob : AbstractMediaJob
             movieRepository,
             jobDispatcher,
             StorageFactory,
-            StorageDriver,
             LoggerFactory.CreateLogger<MovieManager>()
         );
 
@@ -67,7 +66,11 @@ public class MovieImportJob : AbstractMediaJob
 
         if (movieLibrary is null)
         {
-            Log.LogInformation("MovieImportJob: library {LibraryId} not found, skipping movie {Id}", LibraryId, Id);
+            Log.LogInformation(
+                "MovieImportJob: library {LibraryId} not found, skipping movie {Id}",
+                LibraryId,
+                Id
+            );
             return;
         }
 
@@ -107,7 +110,10 @@ public class MovieImportJob : AbstractMediaJob
 
         jobDispatcher.DispatchJob<FileRescanJob>(Id, movieLibrary);
 
-        Log.LogInformation("Movie {Id} added to library, extra data will be added in the background", Id);
+        Log.LogInformation(
+            "Movie {Id} added to library, extra data will be added in the background",
+            Id
+        );
 
         if (EventBusProvider.IsConfigured)
         {

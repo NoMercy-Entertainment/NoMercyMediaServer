@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Music;
 using NoMercy.Events;
@@ -26,7 +27,6 @@ using NoMercy.Storage;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
-using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Artists;
 
 public class ArtistManager(
@@ -335,6 +335,6 @@ public class ArtistManager(
             libraryFolder.DriverId,
             string.Empty
         );
-        return folderStorage.GetFullPath(libraryFolder.Path);
+        return FolderRootPath(folderStorage, libraryFolder.Path);
     }
 }
