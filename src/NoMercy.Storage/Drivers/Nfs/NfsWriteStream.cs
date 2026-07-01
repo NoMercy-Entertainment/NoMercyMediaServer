@@ -23,12 +23,14 @@ namespace NoMercy.Storage.Drivers.Nfs;
 /// </summary>
 internal sealed class NfsWriteStream : Stream
 {
-    // One native write per MiB. libnfs clamps a larger request to the mount's
+    // One native write per chunk. libnfs clamps a larger request to the mount's
     // negotiated wsize internally and the loop below advances on the short
-    // write, so this trades ~163k lock+pin cycles for a 5 GB file down to
-    // ~5k. 1 MiB matches the SMB driver's chunk for parity.
-    private const int ChunkSize = 1024 * 1024;
+    // write, so at 1 MiB a 5 GB file trades ~163k lock+pin cycles for ~5k. The
+    // default is set from the throughput sweep; the ctor accepts an override so
+    // the sweep can measure the curve.
+    private const int DefaultChunkSize = 1024 * 1024;
 
+    private readonly int _chunkSize;
     private readonly IntPtr _nfs;
     private readonly IntPtr _fh;
     private readonly SemaphoreSlim _lock;
@@ -38,12 +40,19 @@ internal sealed class NfsWriteStream : Stream
     internal NfsWriteStream(IntPtr nfs, IntPtr fh, SemaphoreSlim driverLock)
         : this(nfs, fh, driverLock, LibNfsPInvoke.Instance) { }
 
-    internal NfsWriteStream(IntPtr nfs, IntPtr fh, SemaphoreSlim driverLock, ILibNfs libNfs)
+    internal NfsWriteStream(
+        IntPtr nfs,
+        IntPtr fh,
+        SemaphoreSlim driverLock,
+        ILibNfs libNfs,
+        int chunkSize = DefaultChunkSize
+    )
     {
         _nfs = nfs;
         _fh = fh;
         _lock = driverLock;
         _libNfs = libNfs;
+        _chunkSize = chunkSize;
     }
 
     public override bool CanRead => false;
@@ -63,7 +72,7 @@ internal sealed class NfsWriteStream : Stream
         int written = 0;
         while (written < count)
         {
-            int chunk = Math.Min(ChunkSize, count - written);
+            int chunk = Math.Min(_chunkSize, count - written);
             IntPtr pinned = Marshal.AllocHGlobal(chunk);
             try
             {

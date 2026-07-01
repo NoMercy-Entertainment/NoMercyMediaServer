@@ -22,10 +22,14 @@ namespace NoMercy.Storage.Drivers.Smb;
 /// </summary>
 internal sealed class SmbReadStream : Stream
 {
-    // Per-request read size; the server caps at the negotiated MaxReadSize, 1 MiB
-    // is a safe, widely-supported request that keeps round-trips low.
-    private const int ChunkSize = 1024 * 1024;
+    // Per-request read size. The SMB2 client caps a single ReadFile at the
+    // negotiated MaxReadSize; requesting more than that is clamped there, so this
+    // trades managed round-trips for larger ones up to that ceiling. Default set
+    // from the throughput sweep; the ctor accepts an override so the sweep can
+    // measure the curve.
+    private const int DefaultChunkSize = 1024 * 1024;
 
+    private readonly int _chunkSize;
     private readonly SmbSession _session;
     private readonly object _handle;
     private readonly string _path;
@@ -35,11 +39,17 @@ internal sealed class SmbReadStream : Stream
     private bool _eof;
     private bool _disposed;
 
-    internal SmbReadStream(SmbSession session, object handle, string path)
+    internal SmbReadStream(
+        SmbSession session,
+        object handle,
+        string path,
+        int chunkSize = DefaultChunkSize
+    )
     {
         _session = session;
         _handle = handle;
         _path = path;
+        _chunkSize = chunkSize;
     }
 
     public override bool CanRead => true;
@@ -64,7 +74,7 @@ internal sealed class SmbReadStream : Stream
         if (_eof)
             return 0;
 
-        NTStatus st = _session.Store.ReadFile(out byte[] chunk, _handle, _serverOffset, ChunkSize);
+        NTStatus st = _session.Store.ReadFile(out byte[] chunk, _handle, _serverOffset, _chunkSize);
         if (st == NTStatus.STATUS_END_OF_FILE || chunk is null || chunk.Length == 0)
         {
             _eof = true;

@@ -21,21 +21,30 @@ namespace NoMercy.Storage.Drivers.Smb;
 /// </summary>
 internal sealed class SmbWriteStream : Stream
 {
-    // SMB2 write payloads are capped by the negotiated MaxWriteSize; 1 MiB is a
-    // safe, widely-supported chunk that keeps round-trips low without exceeding it.
-    private const int ChunkSize = 1024 * 1024;
+    // SMB2 write payloads are capped by the negotiated MaxWriteSize; a larger
+    // chunk is clamped there, so this trades managed round-trips for larger ones
+    // up to that ceiling. Default set from the throughput sweep; the ctor accepts
+    // an override so the sweep can measure the curve.
+    private const int DefaultChunkSize = 1024 * 1024;
 
+    private readonly int _chunkSize;
     private readonly SmbSession _session;
     private readonly object _handle;
     private readonly string _path;
     private long _position;
     private bool _disposed;
 
-    internal SmbWriteStream(SmbSession session, object handle, string path)
+    internal SmbWriteStream(
+        SmbSession session,
+        object handle,
+        string path,
+        int chunkSize = DefaultChunkSize
+    )
     {
         _session = session;
         _handle = handle;
         _path = path;
+        _chunkSize = chunkSize;
     }
 
     public override bool CanRead => false;
@@ -53,7 +62,7 @@ internal sealed class SmbWriteStream : Stream
         int sent = 0;
         while (sent < count)
         {
-            int len = Math.Min(ChunkSize, count - sent);
+            int len = Math.Min(_chunkSize, count - sent);
             byte[] chunk = new byte[len];
             Array.Copy(buffer, offset + sent, chunk, 0, len);
             NTStatus st = _session.Store.WriteFile(out int written, _handle, _position, chunk);

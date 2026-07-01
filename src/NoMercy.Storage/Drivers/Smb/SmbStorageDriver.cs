@@ -36,6 +36,12 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
     private readonly object _lock = new();
     private bool _disposed;
 
+    // Per-request transfer size handed to the read/write streams, clamped by the
+    // SMB2 client's negotiated MaxRead/WriteSize. Defaults to the streams' own
+    // default; the throughput sweep sets it to measure the curve. Not exposed on
+    // IStorageDriver — an internal tuning seam only.
+    internal int StreamChunkSize { get; set; } = 1024 * 1024;
+
     public SmbStorageDriver(SmbDriverConfig config, ILogger? log = null)
     {
         _config = config ?? throw new ArgumentNullException(nameof(config));
@@ -221,7 +227,7 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
         try
         {
             OpenForRead(session, ToSmbPath(path), out object handle);
-            return new SmbReadStream(session, handle, path);
+            return new SmbReadStream(session, handle, path, StreamChunkSize);
         }
         catch
         {
@@ -260,7 +266,7 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
                 null
             );
             SmbStatus.EnsureSuccess(st, $"create '{path}'");
-            return new SmbWriteStream(session, handle, path);
+            return new SmbWriteStream(session, handle, path, StreamChunkSize);
         }
         catch
         {

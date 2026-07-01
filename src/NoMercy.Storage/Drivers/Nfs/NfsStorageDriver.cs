@@ -44,6 +44,11 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     private readonly ILibNfs _libNfs;
     private bool _disposed;
 
+    // Per-native-call transfer size handed to the read/write streams. Defaults to
+    // the streams' own default; the throughput sweep sets it to measure the curve.
+    // Not exposed on IStorageDriver — an internal tuning seam only.
+    internal int StreamChunkSize { get; set; } = 1024 * 1024;
+
     // Per-instance NFSv4 client identity. libnfs defaults the client-id to the
     // hostname, so two drivers in one process share open-owner seqid state and
     // collide with NFS4ERR_BAD_SEQID. A unique id per driver makes them coexist.
@@ -653,7 +658,14 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
                 try
                 {
-                    return new NfsReadStream(_nfs, fh, (long)stat.Size, _lock, _libNfs);
+                    return new NfsReadStream(
+                        _nfs,
+                        fh,
+                        (long)stat.Size,
+                        _lock,
+                        _libNfs,
+                        StreamChunkSize
+                    );
                 }
                 catch
                 {
@@ -812,7 +824,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
             try
             {
-                return new NfsWriteStream(_nfs, fh, _lock, _libNfs);
+                return new NfsWriteStream(_nfs, fh, _lock, _libNfs, StreamChunkSize);
             }
             catch
             {

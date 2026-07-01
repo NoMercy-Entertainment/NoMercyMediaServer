@@ -39,6 +39,12 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
     private readonly string _bucket;
     private readonly string _prefix;
 
+    // Multipart part size handed to the write stream. Larger parts mean fewer HTTP
+    // round-trips at the cost of a bigger in-flight buffer. Defaults to the write
+    // stream's own default; the throughput sweep sets it to measure the curve.
+    // Not exposed on IStorageDriver — an internal tuning seam only.
+    internal int StreamPartSize { get; set; } = 8 * 1024 * 1024;
+
     private readonly string? _endpoint;
     private readonly string? _region;
     private readonly string? _accessKey;
@@ -351,7 +357,8 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
             _endpoint,
             _region!,
             _accessKey,
-            _secretKey
+            _secretKey,
+            partSize: StreamPartSize
         );
     }
 

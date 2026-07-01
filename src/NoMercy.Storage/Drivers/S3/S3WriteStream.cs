@@ -18,7 +18,7 @@ namespace NoMercy.Storage.Drivers.S3;
 /// <summary>
 /// Write-only stream that uploads to S3 using a streaming multipart upload so a
 /// large object is never buffered whole in RAM. Parts are flushed as the stream
-/// fills (10 MB each — comfortably above S3's 5 MB minimum); objects that never
+/// fills (8 MB each — comfortably above S3's 5 MB minimum); objects that never
 /// cross the threshold fall back to a single PUT, which avoids both the
 /// multipart round-trip and the minimum-part-size rule.
 ///
@@ -29,12 +29,15 @@ namespace NoMercy.Storage.Drivers.S3;
 /// </summary>
 internal sealed class S3WriteStream : Stream
 {
-    // S3 requires every part except the last to be at least 5 MB. 10 MB keeps a
-    // buffered part well above that floor while bounding peak memory.
-    private const int PartSize = 10 * 1024 * 1024;
+    // S3 requires every part except the last to be at least 5 MB. 8 MB was the
+    // fastest in the throughput sweep (write and read both peaked there; larger
+    // parts only grew the per-part buffer copy without cutting round-trips enough
+    // to pay for it). The ctor accepts an override so the sweep can re-measure.
+    private const int DefaultPartSize = 8 * 1024 * 1024;
 
     private static readonly HttpClient SharedHttpClient = new();
 
+    private readonly int _partSize;
     private readonly HttpClient _http;
     private readonly string _bucket;
     private readonly string _key;
@@ -58,7 +61,8 @@ internal sealed class S3WriteStream : Stream
         string region,
         string accessKey,
         string secretKey,
-        HttpClient? httpClient = null
+        HttpClient? httpClient = null,
+        int partSize = DefaultPartSize
     )
     {
         _bucket = bucket ?? throw new ArgumentNullException(nameof(bucket));
@@ -68,6 +72,7 @@ internal sealed class S3WriteStream : Stream
         _accessKey = accessKey ?? throw new ArgumentNullException(nameof(accessKey));
         _secretKey = secretKey ?? throw new ArgumentNullException(nameof(secretKey));
         _http = httpClient ?? SharedHttpClient;
+        _partSize = partSize;
     }
 
     public override bool CanRead => false;
@@ -87,7 +92,7 @@ internal sealed class S3WriteStream : Stream
     public override void Write(ReadOnlySpan<byte> buffer)
     {
         _part.Write(buffer);
-        if (_part.Length >= PartSize)
+        if (_part.Length >= _partSize)
             DrainFullPartsAsync(CancellationToken.None).GetAwaiter().GetResult();
     }
 
@@ -104,7 +109,7 @@ internal sealed class S3WriteStream : Stream
     )
     {
         await _part.WriteAsync(buffer, cancellationToken);
-        if (_part.Length >= PartSize)
+        if (_part.Length >= _partSize)
             await DrainFullPartsAsync(cancellationToken);
     }
 
@@ -148,15 +153,15 @@ internal sealed class S3WriteStream : Stream
 
     private async Task DrainFullPartsAsync(CancellationToken ct)
     {
-        while (_part.Length >= PartSize)
+        while (_part.Length >= _partSize)
         {
             byte[] all = _part.ToArray();
-            await UploadOnePartAsync(all[..PartSize], ct);
+            await UploadOnePartAsync(all[.._partSize], ct);
 
             _part.SetLength(0);
             _part.Position = 0;
-            if (all.Length > PartSize)
-                _part.Write(all, PartSize, all.Length - PartSize);
+            if (all.Length > _partSize)
+                _part.Write(all, _partSize, all.Length - _partSize);
         }
     }
 

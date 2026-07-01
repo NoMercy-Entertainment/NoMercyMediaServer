@@ -67,6 +67,9 @@ public class S3WriteStreamMultipartTests
         RecordingHandler handler = new();
         using HttpClient http = new(handler);
 
+        // Pin a 10 MiB part size so the assertion is about the multipart protocol
+        // (part count + sizes) at a known size, independent of the production
+        // default (which is tuned by the throughput sweep).
         await using (
             S3WriteStream stream = new(
                 null!,
@@ -76,7 +79,8 @@ public class S3WriteStreamMultipartTests
                 "us-east-1",
                 "AK",
                 "SK",
-                http
+                http,
+                partSize: 10 * 1024 * 1024
             )
         )
         {
