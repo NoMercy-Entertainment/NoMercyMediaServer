@@ -23,6 +23,8 @@ using AudioOutput = NoMercy.Encoder.Profiles.AudioOutput;
 using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
 using Container = NoMercy.Encoder.Profiles.Container;
 using ContainerCompatibility = NoMercy.Encoder.Profiles.ContainerCompatibility;
+using DownmixConfig = NoMercy.Encoder.Profiles.DownmixConfig;
+using DownmixMode = NoMercy.Encoder.Profiles.DownmixMode;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 using HardwarePreference = NoMercy.Encoder.Profiles.HardwarePreference;
 using HlsDerivatives = NoMercy.Encoder.Profiles.HlsDerivatives;
@@ -30,6 +32,8 @@ using LoudnessConfig = NoMercy.Encoder.Profiles.LoudnessConfig;
 using LoudnessMode = NoMercy.Encoder.Profiles.LoudnessMode;
 using RateControlMode = NoMercy.Encoder.Profiles.RateControlMode;
 using StreamPolicy = NoMercy.Encoder.Profiles.StreamPolicy;
+using SubtitleOutput = NoMercy.Encoder.Profiles.SubtitleOutput;
+using SubtitlePolicy = NoMercy.Encoder.Profiles.SubtitlePolicy;
 using VideoOutput = NoMercy.Encoder.Profiles.VideoOutput;
 
 namespace NoMercy.Tests.Encoder.Integration;
@@ -53,6 +57,8 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
 {
     private string _testDir = string.Empty;
     private string _inputFile = string.Empty;
+    private string _surroundInputFile = string.Empty;
+    private string _subtitleInputFile = string.Empty;
     private ServiceProvider _serviceProvider = null!;
     private string? _ffmpegPath;
     private string? _ffprobePath;
@@ -96,6 +102,69 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
         ]);
         if (exit != 0)
             throw new InvalidOperationException("Oracle test-clip generation failed.");
+
+        // A 5.1 source so the downmix pan matrix and channel-reduction paths have
+        // real surround channels to fold — a stereo source would make -ac 6 an
+        // upmix and mask the downmix behaviour the tests mean to exercise.
+        _surroundInputFile = Path.Combine(_testDir, "src51.mkv");
+        int surroundExit = await RunFfmpegAsync([
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=320x180:rate=25:duration=1",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:duration=1:sample_rate=48000,aformat=channel_layouts=5.1",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "ultrafast",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            _surroundInputFile,
+        ]);
+        if (surroundExit != 0)
+            throw new InvalidOperationException("Oracle 5.1 test-clip generation failed.");
+
+        // A source carrying a real text (SRT) subtitle stream so the extract /
+        // copy / text-burn-in paths run against an actual subtitle the pipeline
+        // maps by index — not a profile that references a stream that isn't there.
+        string srtPath = Path.Combine(_testDir, "sub.srt");
+        await File.WriteAllTextAsync(
+            srtPath,
+            "1\n00:00:00,000 --> 00:00:01,000\nOracle subtitle line\n"
+        );
+        _subtitleInputFile = Path.Combine(_testDir, "src_sub.mkv");
+        int subExit = await RunFfmpegAsync([
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=320x180:rate=25:duration=1",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:duration=1:sample_rate=48000",
+            "-i",
+            srtPath,
+            "-c:v",
+            "libx264",
+            "-preset",
+            "ultrafast",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-c:s",
+            "srt",
+            _subtitleInputFile,
+        ]);
+        if (subExit != 0)
+            throw new InvalidOperationException("Oracle subtitle test-clip generation failed.");
 
         _availableEncoders = await ProbeAvailableEncodersAsync();
 
@@ -285,6 +354,196 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
                 $"ffmpeg must accept {video} {bitDepth}-bit profile={codecProfile}. "
                     + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
+    }
+
+    // Rate-control axis. CBR needs a matched -maxrate/-bufsize ceiling and VBR a
+    // -b:v with no -crf; a two-pass encode runs the whole first-pass/second-pass
+    // machinery. Each mode is driven through a full encode so ffmpeg rules on the
+    // emitted rate-control flag SET, not just one flag in isolation.
+    public static IEnumerable<object[]> RateControlMatrix()
+    {
+        foreach (RateControlMode rc in new[] { RateControlMode.Cbr, RateControlMode.Vbr })
+        foreach (EncodeMode mode in new[] { EncodeMode.SinglePass, EncodeMode.TwoPass })
+            yield return [rc, mode];
+    }
+
+    [SkippableTheory]
+    [MemberData(nameof(RateControlMatrix))]
+    public async Task RateControl_FfmpegAcceptsTheGeneratedCommand(
+        RateControlMode rateControl,
+        EncodeMode encodeMode
+    )
+    {
+        Skip.IfNot(
+            _availableEncoders.Contains("libx264"),
+            "libx264 not available in this ffmpeg build"
+        );
+
+        string outputDir = Path.Combine(_testDir, $"rc_{rateControl}_{encodeMode}");
+        Directory.CreateDirectory(outputDir);
+
+        EncodingProfile profile = BuildProfile(
+            Container.Mp4,
+            VideoCodecType.H264,
+            AudioCodecType.Aac
+        ) with
+        {
+            EncodeMode = encodeMode,
+            Video = BuildProfile(Container.Mp4, VideoCodecType.H264, AudioCodecType.Aac).Video! with
+            {
+                RateControl = rateControl,
+                Crf = 0,
+                BitrateKbps = 1500,
+                MaxBitrateKbps = rateControl == RateControlMode.Cbr ? 1500 : 3000,
+                BufferSizeKbps = 3000,
+            },
+        };
+
+        EncodingResult result = await RunEncodeAsync(profile, _inputFile, outputDir);
+
+        result
+            .Success.Should()
+            .BeTrue(
+                $"ffmpeg must accept rate_control={rateControl} encode_mode={encodeMode}. "
+                    + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+            );
+    }
+
+    // Audio-processing axis: loudness normalisation (EBU R128 / ReplayGain) and
+    // channel downmix (5.1 -> stereo/mono, Auto matrix and explicit pan). These
+    // build -af / filter_complex chains; only running ffmpeg proves the chain is
+    // syntactically valid and the codec accepts the resulting channel count.
+    public static IEnumerable<object[]> AudioProcessingMatrix()
+    {
+        // (loudness, downmix, targetChannels) — run against the 5.1 source.
+        yield return [LoudnessMode.EbuR128, DownmixMode.Auto, 2];
+        yield return [LoudnessMode.ReplayGain, DownmixMode.Auto, 2];
+        yield return [LoudnessMode.None, DownmixMode.StereoItuR128, 2];
+        yield return [LoudnessMode.None, DownmixMode.Mono, 1];
+        yield return [LoudnessMode.EbuR128, DownmixMode.StereoItuR128, 2];
+        yield return [LoudnessMode.None, DownmixMode.Auto, 6];
+    }
+
+    [SkippableTheory]
+    [MemberData(nameof(AudioProcessingMatrix))]
+    public async Task AudioProcessing_FfmpegAcceptsTheGeneratedCommand(
+        LoudnessMode loudness,
+        DownmixMode downmix,
+        int channels
+    )
+    {
+        Skip.IfNot(
+            _availableEncoders.Contains("libx264"),
+            "libx264 not available in this ffmpeg build"
+        );
+
+        string outputDir = Path.Combine(_testDir, $"audio_{loudness}_{downmix}_{channels}");
+        Directory.CreateDirectory(outputDir);
+
+        EncodingProfile baseProfile = BuildProfile(
+            Container.Mkv,
+            VideoCodecType.H264,
+            AudioCodecType.Aac
+        );
+        EncodingProfile profile = baseProfile with
+        {
+            Audio =
+            [
+                baseProfile.Audio[0] with
+                {
+                    Channels = channels,
+                    Loudness = new LoudnessConfig(
+                        loudness,
+                        TargetLufs: loudness == LoudnessMode.EbuR128 ? -16 : null,
+                        TruePeakDb: loudness == LoudnessMode.EbuR128 ? -1.5 : null
+                    ),
+                    Downmix = downmix == DownmixMode.Auto ? null : new DownmixConfig(downmix),
+                },
+            ],
+        };
+
+        EncodingResult result = await RunEncodeAsync(profile, _surroundInputFile, outputDir);
+
+        result
+            .Success.Should()
+            .BeTrue(
+                $"ffmpeg must accept loudness={loudness} downmix={downmix} channels={channels}. "
+                    + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+            );
+    }
+
+    // Subtitle axis. Text-subtitle extract (-> WebVTT / SRT), stream copy, and
+    // text burn-in (the subtitles/ass filter) each run against a source that
+    // actually carries an SRT stream. PGS image-subtitle burn-in needs a bitmap
+    // source that cannot be cheaply synthesised here; it is covered by the
+    // PgsBurnInFilterBuilder unit tests and left as documented residue.
+    public static IEnumerable<object[]> SubtitleMatrix()
+    {
+        yield return [SubtitlePolicy.Extract, SubtitleCodecType.WebVtt];
+        yield return [SubtitlePolicy.Extract, SubtitleCodecType.Srt];
+        yield return [SubtitlePolicy.Copy, SubtitleCodecType.Copy];
+        yield return [SubtitlePolicy.BurnIn, SubtitleCodecType.WebVtt];
+    }
+
+    [SkippableTheory]
+    [MemberData(nameof(SubtitleMatrix))]
+    public async Task Subtitle_FfmpegAcceptsTheGeneratedCommand(
+        SubtitlePolicy policy,
+        SubtitleCodecType codec
+    )
+    {
+        Skip.IfNot(
+            _availableEncoders.Contains("libx264"),
+            "libx264 not available in this ffmpeg build"
+        );
+
+        string outputDir = Path.Combine(_testDir, $"sub_{policy}_{codec}");
+        Directory.CreateDirectory(outputDir);
+
+        EncodingProfile baseProfile = BuildProfile(
+            Container.Mkv,
+            VideoCodecType.H264,
+            AudioCodecType.Aac
+        );
+        EncodingProfile profile = baseProfile with
+        {
+            Subtitles =
+            [
+                new SubtitleOutput(
+                    Policy: policy,
+                    Codec: codec,
+                    AllowedLanguages: ["und", "eng"],
+                    IncludeForced: false,
+                    OcrLanguage: null,
+                    PlaylistNameTemplate: "subs/:language:"
+                ),
+            ],
+        };
+
+        EncodingResult result = await RunEncodeAsync(profile, _subtitleInputFile, outputDir);
+
+        result
+            .Success.Should()
+            .BeTrue(
+                $"ffmpeg must accept subtitle policy={policy} codec={codec}. "
+                    + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+            );
+    }
+
+    private async Task<EncodingResult> RunEncodeAsync(
+        EncodingProfile profile,
+        string inputPath,
+        string outputDir
+    )
+    {
+        EncodingRequest request = new(
+            InputPath: inputPath,
+            OutputDirectory: outputDir,
+            Profile: profile
+        );
+        using CancellationTokenSource cts = new(TimeSpan.FromMinutes(2));
+        IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
+        return await encoder.EncodeAsync(request, progress: null, cts.Token);
     }
 
     private static EncodingProfile BuildProfile(

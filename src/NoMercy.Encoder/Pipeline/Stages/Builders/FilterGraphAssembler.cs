@@ -60,10 +60,16 @@ public static class FilterGraphAssembler
         AssBurnInFilterBuilder? assBurnInFilterBuilder
     )
     {
-        VideoOutputPlan[] videoOutputs = plan.VideoOutputs;
+        // Only outputs with a bracketed filter_complex label participate in the
+        // graph. Copy outputs carry a direct stream reference ("0:v:0") and must
+        // not be routed through filter_complex — ffmpeg rejects streamcopy fed
+        // from a filtergraph with exit -22.
+        VideoOutputPlan[] videoOutputs = plan
+            .VideoOutputs.Where(v => v.MapLabel.StartsWith('['))
+            .ToArray();
 
         // No video outputs or no filter-graph labels — nothing to build
-        if (videoOutputs.Length == 0 || !videoOutputs.Any(v => v.MapLabel.StartsWith('[')))
+        if (videoOutputs.Length == 0)
             return null;
 
         // Source dimensions are required to decide copy vs. scale

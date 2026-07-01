@@ -641,7 +641,12 @@ public class PlanStage(
                                 Level: v.Level,
                                 TenBit: outputTenBit,
                                 PixelFormat: outputPixelFormat,
-                                MapLabel: $"[v{i}]",
+                                // Copy outputs must map directly from the input stream.
+                                // A bracketed label like [v0] forces ffmpeg to route the
+                                // stream through filter_complex, which is forbidden when
+                                // the output codec is "copy" (exit -22). Direct stream
+                                // references (0:v:0) bypass filter_complex entirely.
+                                MapLabel: v.Policy == StreamPolicy.Copy ? "0:v:0" : $"[v{i}]",
                                 ExtraFlags: extraFlags,
                                 FrameRate: media.VideoStreams[0].FrameRate,
                                 SegmentNameTemplate: v.SegmentNameTemplate,
