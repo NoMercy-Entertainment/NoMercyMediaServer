@@ -16,14 +16,19 @@ namespace NoMercy.Storage.Drivers.Nfs;
 
 /// <summary>
 /// Read-only <see cref="Stream"/> over a libnfs file handle.
-/// Issues chunked <c>nfs_read</c> calls (32 KB per chunk).
+/// Issues chunked <c>nfs_read</c> calls (1 MiB per chunk).
 /// Every native call is gated on the driver's lock — the libnfs context is
 /// shared across streams and is not re-entrant; concurrent reads without
 /// the lock cause access violations inside libnfs.
 /// </summary>
 internal sealed class NfsReadStream : Stream
 {
-    private const int ChunkSize = 32 * 1024;
+    // One request per MiB. libnfs clamps a larger request to the mount's
+    // negotiated rsize internally and the loop below handles the short read,
+    // so this only trades a smaller managed↔native round-trip (lock + heap
+    // pin) count for a larger one — a 5 GB file drops from ~163k native
+    // read cycles to ~5k. 1 MiB matches the SMB driver's chunk for parity.
+    private const int ChunkSize = 1024 * 1024;
 
     private readonly IntPtr _nfs;
     private readonly IntPtr _fh;

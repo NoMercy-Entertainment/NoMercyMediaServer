@@ -16,14 +16,18 @@ namespace NoMercy.Storage.Drivers.Nfs;
 
 /// <summary>
 /// Write-only <see cref="Stream"/> over a libnfs file handle.
-/// Buffers in 32 KB chunks and flushes via <c>nfs_write</c>.
+/// Buffers in 1 MiB chunks and flushes via <c>nfs_write</c>.
 /// The handle is closed (implicitly synced) on <see cref="Dispose"/>.
 /// Every native call is gated on the driver's lock — the libnfs context is
 /// shared across streams and is not re-entrant.
 /// </summary>
 internal sealed class NfsWriteStream : Stream
 {
-    private const int ChunkSize = 32 * 1024;
+    // One native write per MiB. libnfs clamps a larger request to the mount's
+    // negotiated wsize internally and the loop below advances on the short
+    // write, so this trades ~163k lock+pin cycles for a 5 GB file down to
+    // ~5k. 1 MiB matches the SMB driver's chunk for parity.
+    private const int ChunkSize = 1024 * 1024;
 
     private readonly IntPtr _nfs;
     private readonly IntPtr _fh;
