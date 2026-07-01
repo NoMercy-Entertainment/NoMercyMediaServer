@@ -213,7 +213,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
         EnsureParentCollection(path);
 
         string uri = ToUri(path);
-        return new WebDavUploadStream(_client, uri, overwrite);
+        return new WebDavWriteStream(_client, uri, overwrite);
     }
 
     /// <summary>

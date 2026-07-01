@@ -341,10 +341,10 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
         string key = ToKey(path);
         if (_endpoint is null || _accessKey is null || _secretKey is null)
             throw new InvalidOperationException(
-                "S3UploadStream requires an explicit endpoint + accessKey + secretKey. "
+                "S3WriteStream requires an explicit endpoint + accessKey + secretKey. "
                     + "OpenWrite is currently not supported on the default-credential-chain path."
             );
-        return new S3UploadStream(
+        return new S3WriteStream(
             _client!,
             _bucket,
             key,

@@ -20,10 +20,12 @@ namespace NoMercy.Storage.Drivers.Smb;
 
 /// <summary>
 /// <see cref="IStorageDriver"/> backed by SMBLibrary — a pure-C# SMB2/3 client,
-/// so SMB shares work cross-platform with no native dependency. The SMBLibrary
-/// session is not re-entrant, so every operation runs under a single lock and
-/// connects/logs-in/tree-connects on demand (cheap on a LAN; the simplest path
-/// to correctness — matching how the NFS driver serialises its context).
+/// so SMB shares work cross-platform with no native dependency. A SMBLibrary
+/// session is not re-entrant, so short metadata operations run under a single
+/// lock over one throwaway session. Read/write streams instead take their own
+/// dedicated session (its own connection + open handle) for the whole transfer,
+/// so a multi-GB read or write streams in fixed-size chunks and never buffers the
+/// file in memory.
 /// </summary>
 public sealed class SmbStorageDriver : IStorageDriver, IDisposable
 {
@@ -68,41 +70,7 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
 
     // ── connection ───────────────────────────────────────────────────────────
 
-    private sealed class Session : IDisposable
-    {
-        public required SMB2Client Client { get; init; }
-        public required ISMBFileStore Store { get; init; }
-
-        public void Dispose()
-        {
-            try
-            {
-                Store.Disconnect();
-            }
-            catch
-            {
-                // ignore
-            }
-            try
-            {
-                Client.Logoff();
-            }
-            catch
-            {
-                // ignore
-            }
-            try
-            {
-                Client.Disconnect();
-            }
-            catch
-            {
-                // ignore
-            }
-        }
-    }
-
-    private Session Connect()
+    private SmbSession Connect()
     {
         SMB2Client client = new();
         bool connected = client.Connect(
@@ -134,7 +102,7 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
             );
         }
 
-        return new Session { Client = client, Store = store };
+        return new SmbSession { Client = client, Store = store };
     }
 
     private static IPAddress ResolveHost(string host)
@@ -147,11 +115,11 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
             ) ?? addresses.First();
     }
 
-    private T WithSession<T>(Func<Session, T> action)
+    private T WithSession<T>(Func<SmbSession, T> action)
     {
         lock (_lock)
         {
-            using Session session = Connect();
+            using SmbSession session = Connect();
             return action(session);
         }
     }
@@ -184,7 +152,7 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
                     handle,
                     FileInformationClass.FileStandardInformation
                 );
-                EnsureSuccess(st, $"stat '{path}'");
+                SmbStatus.EnsureSuccess(st, $"stat '{path}'");
                 return ((FileStandardInformation)info).EndOfFile;
             }
             finally
@@ -212,7 +180,7 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
                     handle,
                     FileInformationClass.FileBasicInformation
                 );
-                EnsureSuccess(st, $"stat '{path}'");
+                SmbStatus.EnsureSuccess(st, $"stat '{path}'");
                 FileBasicInformation b = (FileBasicInformation)info;
                 return (
                     (b.CreationTime.Time ?? DateTime.MinValue).ToUniversalTime(),
@@ -246,33 +214,20 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
 
     public Stream OpenRead(string path)
     {
-        // Read the whole object into memory under the lock — keeps the SMB
-        // session single-threaded and matches the small-object access pattern
-        // of metadata scans. Large media reads go through AcquireLocalPathAsync.
-        byte[] data = WithSession(s =>
+        // A dedicated connection + open handle streamed for the caller's lifetime
+        // (not under the shared metadata lock, and not buffered in memory) — a
+        // multi-GB media read stays flat in memory. The stream owns the session.
+        SmbSession session = Connect();
+        try
         {
-            OpenForRead(s, ToSmbPath(path), out object handle);
-            try
-            {
-                using MemoryStream ms = new();
-                long offset = 0;
-                while (true)
-                {
-                    NTStatus st = s.Store.ReadFile(out byte[] chunk, handle, offset, 65536);
-                    if (st == NTStatus.STATUS_END_OF_FILE || chunk is null || chunk.Length == 0)
-                        break;
-                    EnsureSuccess(st, $"read '{path}'");
-                    ms.Write(chunk, 0, chunk.Length);
-                    offset += chunk.Length;
-                }
-                return ms.ToArray();
-            }
-            finally
-            {
-                s.Store.CloseFile(handle);
-            }
-        });
-        return new MemoryStream(data, writable: false);
+            OpenForRead(session, ToSmbPath(path), out object handle);
+            return new SmbReadStream(session, handle, path);
+        }
+        catch
+        {
+            session.Dispose();
+            throw;
+        }
     }
 
     public Stream OpenWrite(string path, bool overwrite)
@@ -281,24 +236,22 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
             throw new IOException(
                 $"Cannot write to '{path}': file already exists and overwrite is false."
             );
-        return new SmbUploadStream(this, path);
-    }
 
-    // Called by SmbUploadStream on dispose with the fully-buffered bytes.
-    internal void WriteAllBytes(string path, byte[] content)
-    {
         // Match the other drivers: writing a nested path creates its parents.
         string parent = ParentOf(path);
         if (parent.Length > 0)
             CreateDirectory(parent);
 
-        WithSession(s =>
+        // A dedicated connection + open handle streamed for the caller's lifetime
+        // — bytes go straight to the share via WriteFile at an advancing offset,
+        // so a multi-GB write never buffers in memory. The stream owns the session.
+        SmbSession session = Connect();
+        try
         {
-            string smb = ToSmbPath(path);
-            NTStatus st = s.Store.CreateFile(
+            NTStatus st = session.Store.CreateFile(
                 out object handle,
                 out FileStatus _,
-                smb,
+                ToSmbPath(path),
                 AccessMask.GENERIC_WRITE | AccessMask.SYNCHRONIZE,
                 FileAttributes.Normal,
                 ShareAccess.None,
@@ -306,26 +259,14 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
                 CreateOptions.FILE_NON_DIRECTORY_FILE | CreateOptions.FILE_SYNCHRONOUS_IO_NONALERT,
                 null
             );
-            EnsureSuccess(st, $"create '{path}'");
-            try
-            {
-                long offset = 0;
-                while (offset < content.Length)
-                {
-                    int len = Math.Min(65536, content.Length - (int)offset);
-                    byte[] chunk = new byte[len];
-                    Array.Copy(content, offset, chunk, 0, len);
-                    NTStatus wst = s.Store.WriteFile(out int written, handle, offset, chunk);
-                    EnsureSuccess(wst, $"write '{path}'");
-                    offset += written;
-                }
-                return 0;
-            }
-            finally
-            {
-                s.Store.CloseFile(handle);
-            }
-        });
+            SmbStatus.EnsureSuccess(st, $"create '{path}'");
+            return new SmbWriteStream(session, handle, path);
+        }
+        catch
+        {
+            session.Dispose();
+            throw;
+        }
     }
 
     // ── mutations ──────────────────────────────────────────────────────────────
@@ -353,7 +294,7 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
                 if (st == NTStatus.STATUS_SUCCESS)
                     s.Store.CloseFile(handle);
                 else if (st != NTStatus.STATUS_OBJECT_NAME_COLLISION)
-                    EnsureSuccess(st, $"mkdir '{current}'");
+                    SmbStatus.EnsureSuccess(st, $"mkdir '{current}'");
             }
             return 0;
         });
@@ -384,19 +325,24 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
                 smbPath,
                 AccessMask.DELETE,
                 directory ? FileAttributes.Directory : FileAttributes.Normal,
-                ShareAccess.None,
+                // Tolerate a still-open read stream (which shares Read | Delete):
+                // the delete-open must itself allow those to coexist, otherwise a
+                // delete-while-reading raises SHARING_VIOLATION.
+                ShareAccess.Read
+                    | ShareAccess.Write
+                    | ShareAccess.Delete,
                 CreateDisposition.FILE_OPEN,
                 directory
                     ? CreateOptions.FILE_DIRECTORY_FILE
                     : CreateOptions.FILE_NON_DIRECTORY_FILE,
                 null
             );
-            EnsureSuccess(st, $"open-for-delete '{FromSmbPath(smbPath)}'");
+            SmbStatus.EnsureSuccess(st, $"open-for-delete '{FromSmbPath(smbPath)}'");
             try
             {
                 FileDispositionInformation disposition = new() { DeletePending = true };
                 NTStatus dst = s.Store.SetFileInformation(handle, disposition);
-                EnsureSuccess(dst, $"delete '{FromSmbPath(smbPath)}'");
+                SmbStatus.EnsureSuccess(dst, $"delete '{FromSmbPath(smbPath)}'");
             }
             finally
             {
@@ -431,7 +377,7 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
                 CreateOptions.FILE_SYNCHRONOUS_IO_NONALERT,
                 null
             );
-            EnsureSuccess(st, $"open-for-rename '{source}'");
+            SmbStatus.EnsureSuccess(st, $"open-for-rename '{source}'");
             try
             {
                 FileRenameInformationType2 rename = new()
@@ -440,7 +386,7 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
                     FileName = ToSmbPath(destination),
                 };
                 NTStatus rst = s.Store.SetFileInformation(handle, rename);
-                EnsureSuccess(rst, $"rename '{source}' -> '{destination}'");
+                SmbStatus.EnsureSuccess(rst, $"rename '{source}' -> '{destination}'");
             }
             finally
             {
@@ -452,15 +398,11 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
 
     public void CopyFile(string source, string destination, bool overwrite)
     {
-        if (!overwrite && FileExists(destination))
-            throw new IOException(
-                $"Cannot copy to '{destination}': already exists and overwrite is false."
-            );
-        // SMB has no server-side copy in SMBLibrary's surface — round-trip bytes.
+        // SMB has no server-side copy in SMBLibrary's surface — stream the bytes
+        // from source to destination without buffering the whole file.
         using Stream r = OpenRead(source);
-        using MemoryStream ms = new();
-        r.CopyTo(ms);
-        WriteAllBytes(destination, ms.ToArray());
+        using Stream w = OpenWrite(destination, overwrite);
+        r.CopyTo(w);
     }
 
     // ── enumeration ────────────────────────────────────────────────────────────
@@ -504,7 +446,7 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
                 st is NTStatus.STATUS_OBJECT_NAME_NOT_FOUND or NTStatus.STATUS_OBJECT_PATH_NOT_FOUND
             )
                 return [];
-            EnsureSuccess(st, $"open-dir '{directory}'");
+            SmbStatus.EnsureSuccess(st, $"open-dir '{directory}'");
             try
             {
                 NTStatus qst = s.Store.QueryDirectory(
@@ -514,7 +456,7 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
                     FileInformationClass.FileDirectoryInformation
                 );
                 if (qst != NTStatus.STATUS_SUCCESS && qst != NTStatus.STATUS_NO_MORE_FILES)
-                    EnsureSuccess(qst, $"list '{directory}'");
+                    SmbStatus.EnsureSuccess(qst, $"list '{directory}'");
 
                 List<(string, bool)> found = [];
                 foreach (QueryDirectoryFileInformation entry in entries)
@@ -544,7 +486,7 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
 
     // ── internals ──────────────────────────────────────────────────────────────
 
-    private static void OpenForRead(Session s, string smbPath, out object handle)
+    private static void OpenForRead(SmbSession s, string smbPath, out object handle)
     {
         NTStatus st = s.Store.CreateFile(
             out handle,
@@ -552,16 +494,19 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
             smbPath,
             AccessMask.GENERIC_READ | AccessMask.SYNCHRONIZE,
             FileAttributes.Normal,
-            ShareAccess.Read,
+            // Allow a concurrent delete/rename while a read stream holds the file
+            // open — the streaming read keeps the handle for its whole lifetime,
+            // so without share-delete a delete-after-read raises SHARING_VIOLATION.
+            ShareAccess.Read | ShareAccess.Delete,
             CreateDisposition.FILE_OPEN,
             CreateOptions.FILE_SYNCHRONOUS_IO_NONALERT,
             null
         );
-        EnsureSuccess(st, $"open '{FromSmbPath(smbPath)}'");
+        SmbStatus.EnsureSuccess(st, $"open '{FromSmbPath(smbPath)}'");
     }
 
     private static bool TryGetInfo(
-        Session s,
+        SmbSession s,
         string smbPath,
         out FileBasicInformation? info,
         out bool isDirectory
@@ -599,12 +544,6 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
         {
             s.Store.CloseFile(handle);
         }
-    }
-
-    private static void EnsureSuccess(NTStatus status, string what)
-    {
-        if (status != NTStatus.STATUS_SUCCESS)
-            throw new IOException($"SMB {what} failed (status {status}).");
     }
 
     public void Dispose()

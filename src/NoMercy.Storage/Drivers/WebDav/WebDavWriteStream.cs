@@ -15,9 +15,9 @@ namespace NoMercy.Storage.Drivers.WebDav;
 
 /// <summary>
 /// Write-only stream that buffers data on disk and PUTs it to a WebDAV
-/// server on <see cref="Dispose"/>. Mirrors <c>S3UploadStream</c>'s shape.
+/// server on <see cref="Dispose"/>. Mirrors <c>S3WriteStream</c>'s shape.
 /// </summary>
-internal sealed class WebDavUploadStream : Stream
+internal sealed class WebDavWriteStream : Stream
 {
     private readonly IWebDavClient _client;
     private readonly string _uri;
@@ -25,7 +25,7 @@ internal sealed class WebDavUploadStream : Stream
     private readonly FileStream _buffer;
     private bool _disposed;
 
-    internal WebDavUploadStream(IWebDavClient client, string uri, bool overwrite)
+    internal WebDavWriteStream(IWebDavClient client, string uri, bool overwrite)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
         _uri = uri ?? throw new ArgumentNullException(nameof(uri));

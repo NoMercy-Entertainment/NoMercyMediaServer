@@ -17,7 +17,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Storage;
 
-public class WebDavUploadStreamTests
+public class WebDavWriteStreamTests
 {
     [Fact]
     public async Task Upload_writes_full_body_to_PutFile()
@@ -41,7 +41,7 @@ public class WebDavUploadStreamTests
         byte[] payload = Enumerable.Range(0, 5000).Select(i => (byte)i).ToArray();
 
         await using (
-            WebDavUploadStream upload = new(
+            WebDavWriteStream upload = new(
                 client.Object,
                 "https://nas.local/dav/f.bin",
                 overwrite: true
@@ -72,7 +72,7 @@ public class WebDavUploadStreamTests
             );
 
         await using (
-            WebDavUploadStream upload = new(
+            WebDavWriteStream upload = new(
                 client.Object,
                 "https://nas.local/dav/f.bin",
                 overwrite: false

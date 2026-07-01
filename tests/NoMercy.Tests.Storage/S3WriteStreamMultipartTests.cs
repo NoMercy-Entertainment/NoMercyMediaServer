@@ -14,10 +14,10 @@ using NoMercy.Storage.Drivers.S3;
 namespace NoMercy.Tests.Storage;
 
 /// <summary>
-/// Verifies <see cref="S3UploadStream"/> follows the AWS S3 multipart REST
+/// Verifies <see cref="S3WriteStream"/> follows the AWS S3 multipart REST
 /// protocol against a mocked transport — no live S3/MinIO required.
 /// </summary>
-public class S3UploadStreamMultipartTests
+public class S3WriteStreamMultipartTests
 {
     private sealed class RecordingHandler : HttpMessageHandler
     {
@@ -68,7 +68,7 @@ public class S3UploadStreamMultipartTests
         using HttpClient http = new(handler);
 
         await using (
-            S3UploadStream stream = new(
+            S3WriteStream stream = new(
                 null!,
                 "bucket",
                 "object.bin",
@@ -104,7 +104,7 @@ public class S3UploadStreamMultipartTests
         using HttpClient http = new(handler);
 
         await using (
-            S3UploadStream stream = new(
+            S3WriteStream stream = new(
                 null!,
                 "bucket",
                 "object.bin",

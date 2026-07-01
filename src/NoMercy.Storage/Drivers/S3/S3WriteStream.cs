@@ -27,7 +27,7 @@ namespace NoMercy.Storage.Drivers.S3;
 /// and payload signing disabled — produces requests MinIO and several other
 /// S3-compatible servers reject with <c>SignatureDoesNotMatch</c>.</para>
 /// </summary>
-internal sealed class S3UploadStream : Stream
+internal sealed class S3WriteStream : Stream
 {
     // S3 requires every part except the last to be at least 5 MB. 10 MB keeps a
     // buffered part well above that floor while bounding peak memory.
@@ -49,7 +49,7 @@ internal sealed class S3UploadStream : Stream
     private int _partNumber;
     private bool _disposed;
 
-    internal S3UploadStream(
+    internal S3WriteStream(
         IAmazonS3 _ /* kept for ABI compat with the previous ctor; unused */
         ,
         string bucket,
