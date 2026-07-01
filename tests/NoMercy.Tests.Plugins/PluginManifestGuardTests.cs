@@ -131,6 +131,26 @@ public class PluginManifestGuardTests
     }
 
     [Fact]
+    public void Parse_WhitespaceOnlyDescription_Fires_RejectsManifest()
+    {
+        string json = BuildJson(description: "   ");
+
+        Action act = () => PluginManifestParser.Parse(json);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*description*");
+    }
+
+    [Fact]
+    public void Parse_NonEmptyDescription_Silent_AcceptsManifest()
+    {
+        string json = BuildJson(description: "A valid description");
+
+        PluginManifest manifest = PluginManifestParser.Parse(json);
+
+        manifest.Description.Should().Be("A valid description");
+    }
+
+    [Fact]
     public void Parse_WhitespaceOnlyAssembly_Fires_RejectsManifest()
     {
         string json = BuildJson(assembly: "\t  \t");
@@ -234,6 +254,7 @@ public class PluginManifestGuardTests
             "Rule_G_MissingNameField",
             "Rule_H_MissingDescriptionField",
             "Rule_I_MissingAssemblyField",
+            "Rule_J_WhitespaceDescription",
         ];
 
         string[] testedDecisions =
@@ -247,6 +268,7 @@ public class PluginManifestGuardTests
             "Rule_G_MissingNameField",
             "Rule_H_MissingDescriptionField",
             "Rule_I_MissingAssemblyField",
+            "Rule_J_WhitespaceDescription",
         ];
 
         cataloguedRules

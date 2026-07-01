@@ -107,6 +107,11 @@ public static class PluginManifestParser
             );
         }
 
+        if (string.IsNullOrWhiteSpace(manifest.Description))
+        {
+            throw new InvalidOperationException("Plugin manifest 'description' is required.");
+        }
+
         if (string.IsNullOrWhiteSpace(manifest.Assembly))
         {
             throw new InvalidOperationException("Plugin manifest 'assembly' is required.");
