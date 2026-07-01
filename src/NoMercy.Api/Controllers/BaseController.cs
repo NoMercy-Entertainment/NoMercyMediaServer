@@ -13,6 +13,7 @@ using System.Globalization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Authorization;
@@ -34,8 +35,32 @@ public class BaseController : Controller
     protected IUserCache UserCacheService =>
         HttpContext?.RequestServices?.GetService<IUserCache>() ?? UserCache.Current;
 
-    private IActionResult ProblemWithTrace(string title, string detail, int statusCode, string type)
+    private IActionResult ProblemWithTrace(
+        string title,
+        string detail,
+        int statusCode,
+        string type,
+        [System.Runtime.CompilerServices.CallerMemberName] string caller = ""
+    )
     {
+        // A returned 5xx never reaches GlobalExceptionHandlerMiddleware, so without
+        // this it produces a ProblemDetails the server never logs — an invisible
+        // server error. Log the caller + trace so every 5xx is diagnosable.
+        if (statusCode >= 500)
+        {
+            ILogger? log = HttpContext
+                ?.RequestServices?.GetService<ILoggerFactory>()
+                ?.CreateLogger("NoMercy.Api.ServerError");
+            log?.LogError(
+                "[{TraceId}] {Status} returned from {Caller} for {Path}: {Detail}",
+                HttpContext?.TraceIdentifier,
+                statusCode,
+                caller,
+                HttpContext?.Request.Path.Value,
+                detail
+            );
+        }
+
         ProblemDetails problemDetails = new()
         {
             Type = type,
