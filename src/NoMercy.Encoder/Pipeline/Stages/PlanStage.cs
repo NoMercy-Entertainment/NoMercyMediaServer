@@ -564,12 +564,12 @@ public class PlanStage(
                                     encoder = resolved.EncoderInfo;
                                 }
 
-                                if (bdResult.Warning is not null)
+                                foreach (EncoderRule bdWarning in bdResult.Warnings)
                                 {
                                     logger.LogWarning(
                                         "Bit-depth policy [{Id}]: {Message}",
-                                        bdResult.Warning.Id,
-                                        bdResult.Warning.Message
+                                        bdWarning.Id,
+                                        bdWarning.Message
                                     );
                                 }
 

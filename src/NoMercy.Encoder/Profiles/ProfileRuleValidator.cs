@@ -60,6 +60,7 @@ public static class ProfileRuleValidator
         EmitSubtitlesBurnInPermanent(profile, rules);
         EmitSubtitlesAssNeedsCapableClient(profile, rules);
         EmitHdrInverseTonemapUnsupported(profile, rules);
+        EmitBitDepthVp9ProfileMismatch(profile, rules);
         EmitCustomArgsReservedFlag(profile, rules);
         EmitDrmHttpNotHttps(profile, rules);
         EmitDrmKeyMissing(profile, rules);
@@ -1106,6 +1107,51 @@ public static class ProfileRuleValidator
                     + "synthesise HDR from an SDR-shaped pipeline; no inverse-tonemap is provided.",
                 Fix: "Either raise video.bit_depth to 10+ on an HDR-capable codec (H.265 / AV1 / VP9), "
                     + "or change hdr_policy to PassthroughWhenPossible / AlwaysTonemap."
+            )
+        );
+    }
+
+    private static void EmitBitDepthVp9ProfileMismatch(
+        EncodingProfile profile,
+        List<EncoderRule> rules
+    )
+    {
+        // libvpx-vp9 profile numbering ties chroma subsampling AND bit-depth together:
+        //   profile0 = 8-bit 4:2:0  | profile1 = 8-bit 4:2:2/4:4:4
+        //   profile2 = 10/12-bit 4:2:0 | profile3 = 10/12-bit 4:2:2/4:4:4
+        // In the NoMercy CodecProfile enum the H.264/H.265 naming is reused:
+        //   Baseline / Main / High   → 8-bit profiles (profile0 / profile1)
+        //   Main10  / High10         → 10-bit profiles (profile2 / profile3)
+        // Setting e.g. Main10 with BitDepth=8 (or Main with BitDepth=10) is
+        // structurally impossible — VP9 would silently ignore the mismatched flag.
+        if (profile.Video is not { Policy: StreamPolicy.Transcode } video)
+            return;
+        if (video.Codec != VideoCodecType.Vp9)
+            return;
+        if (video.CodecProfile == CodecProfile.Auto)
+            return; // Auto lets the encoder pick the profile — no conflict.
+
+        bool profileImplies10Bit = video.CodecProfile is CodecProfile.Main10 or CodecProfile.High10;
+        bool bitDepthIs10 = video.BitDepth >= 10;
+
+        if (profileImplies10Bit == bitDepthIs10)
+            return; // consistent — no rule.
+
+        string impliedDepth = profileImplies10Bit ? "10-bit" : "8-bit";
+        string requestedDepth = bitDepthIs10 ? "10-bit" : "8-bit";
+        string fix = profileImplies10Bit
+            ? $"Either raise video.bit_depth to 10 (to use a VP9 profile2/3 encoder), or change video.codec_profile to Main or High (8-bit VP9 profile0/1)."
+            : $"Either set video.bit_depth to 8 (matching the 8-bit profile), or change video.codec_profile to Main10 or High10 (VP9 profile2/3 for 10-bit).";
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.BitDepthVp9ProfileMismatch,
+                Severity: EncoderRuleSeverity.Error,
+                Field: "video.codec_profile",
+                Message: $"VP9 codec_profile {video.CodecProfile} implies {impliedDepth} but "
+                    + $"video.bit_depth is {video.BitDepth} ({requestedDepth}); "
+                    + "libvpx-vp9 ties the profile number to both chroma subsampling and bit depth.",
+                Fix: fix
             )
         );
     }

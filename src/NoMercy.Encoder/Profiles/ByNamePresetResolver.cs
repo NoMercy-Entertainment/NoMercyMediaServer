@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Newtonsoft.Json;
+using NoMercy.Encoder.Errors;
 
 namespace NoMercy.Encoder.Profiles;
 
@@ -77,7 +78,7 @@ public class ByNamePresetResolver : INamePresetResolver
         {
             if (!seen.Add(parent))
                 throw new InvalidOperationException(
-                    $"Preset inheritance cycle detected at '{parent}'"
+                    $"[{EncoderRuleId.ParentIdCycle}] Preset inheritance cycle detected at '{parent}'"
                 );
 
             if (reversed.Count >= MaxInheritanceDepth)

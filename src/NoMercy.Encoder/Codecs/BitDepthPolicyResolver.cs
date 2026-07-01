@@ -19,7 +19,7 @@ public sealed record BitDepthResolutionResult(
     int FinalBitDepth,
     string? PixelFormat,
     string? SwitchedToEncoder,
-    EncoderRule? Warning,
+    EncoderRule[] Warnings,
     EncoderRuntimeException? Failure
 );
 
@@ -61,7 +61,7 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
                 FinalBitDepth: 8,
                 PixelFormat: "yuv420p",
                 SwitchedToEncoder: null,
-                Warning: null,
+                Warnings: [],
                 Failure: null
             );
         }
@@ -86,7 +86,7 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
                 FinalBitDepth: 10,
                 PixelFormat: pf,
                 SwitchedToEncoder: null,
-                Warning: null,
+                Warnings: [],
                 Failure: null
             );
         }
@@ -123,7 +123,18 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
             )
         );
 
-        EncoderRule warning = new(
+        // BitDepthNoHardwareSupport: why the downgrade happened (encoder capability gap).
+        // BitDepthAutoDowngrade: what was done in response (8-bit fallback applied).
+        // Both surface so the dashboard can show the cause and the consequence.
+        EncoderRule noHwSupport = new(
+            Id: EncoderRuleId.BitDepthNoHardwareSupport,
+            Severity: EncoderRuleSeverity.Warning,
+            Field: "video_outputs[…].bit_depth",
+            Message: $"Encoder '{encoderHandle}' does not support 10-bit output.",
+            Fix: "Switch hardware_preference to prefer_software (or force_software) to use a software encoder that supports 10-bit, or change bit_depth_policy to PreferSoftware."
+        );
+
+        EncoderRule autoDowngrade = new(
             Id: EncoderRuleId.BitDepthAutoDowngrade,
             Severity: EncoderRuleSeverity.Warning,
             Field: "video_outputs[…].bit_depth",
@@ -135,7 +146,7 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
             FinalBitDepth: 8,
             PixelFormat: "yuv420p",
             SwitchedToEncoder: null,
-            Warning: warning,
+            Warnings: [noHwSupport, autoDowngrade],
             Failure: null
         );
     }
@@ -168,7 +179,7 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
             FinalBitDepth: 0,
             PixelFormat: null,
             SwitchedToEncoder: null,
-            Warning: null,
+            Warnings: [],
             Failure: failure
         );
     }
@@ -205,7 +216,7 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
             FinalBitDepth: 10,
             PixelFormat: pf,
             SwitchedToEncoder: toHandle,
-            Warning: null,
+            Warnings: [],
             Failure: null
         );
     }
@@ -225,7 +236,7 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
             FinalBitDepth: 8,
             PixelFormat: "yuv420p",
             SwitchedToEncoder: null,
-            Warning: null,
+            Warnings: [],
             Failure: null
         );
     }
