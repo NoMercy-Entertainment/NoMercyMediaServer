@@ -24,6 +24,7 @@ using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Storage;
 using NoMercy.Tests.Encoder.Storage;
+using ContainerCompatibility = NoMercy.Encoder.Profiles.ContainerCompatibility;
 using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
 using Container = NoMercy.Encoder.Profiles.Container;
 using StreamPolicy = NoMercy.Encoder.Profiles.StreamPolicy;
@@ -156,10 +157,38 @@ public class ProfileToArgvInvariantTests
             DefaultRateControl: RateControlMode.Cq
         );
 
+    // Only H264/H265 have HW encoders modelled here; AV1/VP9 exercise the
+    // software path (and the codec-specific quality scales) in this grid.
+    private static bool HasHardwareEncoder(VideoCodecType codec) =>
+        codec is VideoCodecType.H264 or VideoCodecType.H265;
+
+    private static string SoftwareEncoderName(VideoCodecType codec) =>
+        codec switch
+        {
+            VideoCodecType.H264 => "libx264",
+            VideoCodecType.H265 => "libx265",
+            VideoCodecType.Av1 => "libsvtav1",
+            VideoCodecType.Vp9 => "libvpx-vp9",
+            _ => "libx264",
+        };
+
     public static IEnumerable<object[]> Grid()
     {
-        VideoCodecType[] codecs = [VideoCodecType.H264, VideoCodecType.H265];
-        Container[] containers = [Container.HlsTs, Container.HlsFmp4, Container.Mp4, Container.Mkv];
+        VideoCodecType[] codecs =
+        [
+            VideoCodecType.H264,
+            VideoCodecType.H265,
+            VideoCodecType.Av1,
+            VideoCodecType.Vp9,
+        ];
+        Container[] containers =
+        [
+            Container.HlsTs,
+            Container.HlsFmp4,
+            Container.Mp4,
+            Container.Mkv,
+            Container.Dash,
+        ];
         V2RateControlMode[] rateControls = [V2RateControlMode.Crf, V2RateControlMode.Vbr];
         (int crf, int bitrate)[] qualityPairs =
         [
@@ -168,23 +197,34 @@ public class ProfileToArgvInvariantTests
             (22, 6000), // capped-CRF (the dangerous combo)
         ];
         int[] widths = [1920, 1921, 1280]; // include an odd width
+        int[] bitDepths = [8, 10];
         bool[] hardwareChoices = [false, true];
 
         foreach (VideoCodecType codec in codecs)
         foreach (Container container in containers)
-        foreach (V2RateControlMode rc in rateControls)
-        foreach ((int crf, int bitrate) in qualityPairs)
-        foreach (int width in widths)
-        foreach (bool hardware in hardwareChoices)
         {
-            // Skip incoherent rate-control/quality pairs the validator itself rejects:
-            // VBR needs a bitrate; a pure-CRF pair under VBR is not a valid neighbor.
-            if (rc == V2RateControlMode.Vbr && bitrate == 0)
-                continue;
-            if (rc == V2RateControlMode.Crf && crf == 0)
+            // Only generate codec/container pairs the support matrix allows —
+            // the invariant is about VALID profiles, not ones validation rejects.
+            if (!ContainerCompatibility.SupportsVideo(container, codec))
                 continue;
 
-            yield return [codec, container, rc, crf, bitrate, width, hardware];
+            foreach (V2RateControlMode rc in rateControls)
+            foreach ((int crf, int bitrate) in qualityPairs)
+            foreach (int width in widths)
+            foreach (int bitDepth in bitDepths)
+            foreach (bool hardware in hardwareChoices)
+            {
+                // Skip incoherent rate-control/quality pairs the validator rejects.
+                if (rc == V2RateControlMode.Vbr && bitrate == 0)
+                    continue;
+                if (rc == V2RateControlMode.Crf && crf == 0)
+                    continue;
+                // Only H264/H265 have HW encoders in this grid.
+                if (hardware && !HasHardwareEncoder(codec))
+                    continue;
+
+                yield return [codec, container, rc, crf, bitrate, width, bitDepth, hardware];
+            }
         }
     }
 
@@ -197,12 +237,13 @@ public class ProfileToArgvInvariantTests
         int crf,
         int bitrate,
         int width,
+        int bitDepth,
         bool hardware
     )
     {
         ResolvedCodec resolved = hardware
             ? HardwareCodec(codec == VideoCodecType.H264 ? "h264_nvenc" : "hevc_nvenc")
-            : SoftwareCodec(codec == VideoCodecType.H264 ? "libx264" : "libx265");
+            : SoftwareCodec(SoftwareEncoderName(codec));
 
         PlanStage stage = BuildPlanStage(resolved);
 
@@ -226,7 +267,7 @@ public class ProfileToArgvInvariantTests
                     CodecProfile: CodecProfile.Auto,
                     Level: null,
                     Tune: null,
-                    BitDepth: 8,
+                    BitDepth: bitDepth,
                     PixelFormat: null,
                     KeyframeIntervalSeconds: 2,
                     ConvertHdrToSdr: false,
