@@ -164,19 +164,37 @@ public static class EncoderArgumentResolver
         int sourceHeight
     )
     {
-        int outputWidth = Math.Min(profile.Width, sourceWidth);
+        // A valid source width is required to reason about aspect ratio and to
+        // clamp against upscaling. When the probe failed to report it, fall back
+        // to the profile's own width so downstream never derives a zero height.
+        int effectiveSourceWidth = sourceWidth > 0 ? sourceWidth : profile.Width;
+        int effectiveSourceHeight =
+            sourceHeight > 0 ? sourceHeight
+            : profile.Height is int h and > 0 ? h
+            : effectiveSourceWidth * 9 / 16;
+
+        int outputWidth = Math.Min(profile.Width, effectiveSourceWidth);
+
         // Height <= 0 means "derive from source AR" just like null: ladder rungs
         // carry a non-nullable int, so an upstream null collapses to 0 — a literal
         // 0 here would name the variant "WIDTHx0" and advertise RESOLUTION=WIDTHx0,
-        // which players skip.
-        int outputHeight =
-            profile.Height is int explicitHeight and > 0 ? explicitHeight
-            : sourceWidth > 0 ? outputWidth * sourceHeight / sourceWidth
-            : 0;
+        // which players skip. An explicit height is clamped to the source so a
+        // profile can never request an upscale ffmpeg would happily honor.
+        int outputHeight = profile.Height is int explicitHeight and > 0
+            ? Math.Min(explicitHeight, effectiveSourceHeight)
+            : outputWidth * effectiveSourceHeight / effectiveSourceWidth;
 
-        // Encoders require even dimensions
-        if (outputHeight % 2 != 0)
-            outputHeight++;
+        // Encoders require even luma dimensions on the common 4:2:0 pixel
+        // formats; an odd width or height makes ffmpeg abort ("not divisible
+        // by 2"). Round DOWN so the result never exceeds the source.
+        outputWidth -= outputWidth % 2;
+        outputHeight -= outputHeight % 2;
+
+        // Never collapse to a zero axis — the smallest legal even frame.
+        if (outputWidth <= 0)
+            outputWidth = 2;
+        if (outputHeight <= 0)
+            outputHeight = 2;
 
         return (outputWidth, outputHeight);
     }

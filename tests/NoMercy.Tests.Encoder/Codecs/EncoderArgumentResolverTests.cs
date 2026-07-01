@@ -283,6 +283,52 @@ public class EncoderArgumentResolverTests
         (h % 2).Should().Be(0, "encoders require even dimensions");
     }
 
+    [Fact]
+    public void ResolveDimensions_OddExplicitWidth_IsRoundedEven()
+    {
+        // 1921 passes validation (Width > 0) but reaches scale=1921:-2, which
+        // libx264 rejects ("width not divisible by 2"). Width must be evened.
+        VideoOutput profile = MakeVideoOutput(width: 1921);
+        (int w, int _) = EncoderArgumentResolver.ResolveDimensions(profile, 3840, 2160);
+        (w % 2).Should().Be(0, "an odd luma width aborts the encode");
+        w.Should().Be(1920, "round DOWN so the result never exceeds the request/source");
+    }
+
+    [Fact]
+    public void ResolveDimensions_OddManualRungWidth_IsRoundedEven()
+    {
+        // Manual ladder rungs carry hand-authored widths (e.g. 853 for 480p);
+        // an odd rung width hits the same scale=W:-2 abort as an odd profile width.
+        VideoOutput rung = MakeVideoOutput(width: 853, height: 480);
+        (int w, int h) = EncoderArgumentResolver.ResolveDimensions(rung, 1920, 1080);
+        (w % 2).Should().Be(0);
+        (h % 2).Should().Be(0);
+        w.Should().Be(852);
+    }
+
+    [Fact]
+    public void ResolveDimensions_ZeroSourceWidth_DoesNotCollapseHeightToZero()
+    {
+        // A corrupt/partial probe can report sourceWidth = 0. With a derived
+        // (null) height the old code produced height 0 → RESOLUTION=WIDTHx0 in
+        // the HLS master. Height must fall back to a real value.
+        VideoOutput profile = MakeVideoOutput(width: 1920, height: null);
+        (int _, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 0, 0);
+        h.Should().BeGreaterThan(0, "a zero-height variant is skipped by every player");
+        (h % 2).Should().Be(0);
+    }
+
+    [Fact]
+    public void ResolveDimensions_ExplicitHeightAboveSource_IsClampedNoUpscale()
+    {
+        // Height=2160 on a 1280x720 source passed the width-only upscale guard
+        // and reached scale_cuda=1280:2160 — a stretched upscale. Explicit
+        // height must clamp to the source just like width does.
+        VideoOutput profile = MakeVideoOutput(width: 1280, height: 2160);
+        (int _, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 1280, 720);
+        h.Should().Be(720, "explicit height must not upscale beyond source");
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     // Helpers
     // ──────────────────────────────────────────────────────────────────────────
