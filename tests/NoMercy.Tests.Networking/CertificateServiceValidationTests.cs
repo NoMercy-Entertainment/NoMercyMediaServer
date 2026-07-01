@@ -89,6 +89,18 @@ public sealed class CertificateServiceValidationTests : IDisposable
         File.WriteAllText(keyPath, rsa is null ? string.Empty : rsa.ExportRSAPrivateKeyPem());
     }
 
+    /// <summary>
+    /// Subclass that overrides the DB read seam so tests never need a real SQLite connection.
+    /// </summary>
+    private sealed class StubCertificateService(string? certPem, IHttpClientFactory? factory = null)
+        : CertificateService(
+            NullLogger<CertificateService>.Instance,
+            factory ?? new NullHttpClientFactory()
+        )
+    {
+        protected override string? ReadCertificatePemFromDb() => certPem;
+    }
+
     private sealed class NullHttpClientFactory : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) =>
@@ -176,6 +188,33 @@ public sealed class CertificateServiceValidationTests : IDisposable
         bool result = service.HasValidCertificate();
 
         Assert.False(result);
+    }
+
+    // Regression: DB-presence branch must load + check NotAfter, not just check row existence.
+    // Without the fix, HasValidCertificate() returned true for any row regardless of expiry.
+
+    [Fact]
+    public void HasValidCertificate_ReturnsFalse_WhenDbCertIsExpired()
+    {
+        using X509Certificate2 expired = CreateSelfSignedCert(DateTimeOffset.UtcNow.AddSeconds(-1));
+        string certPem = expired.ExportCertificatePem();
+        StubCertificateService service = new(certPem);
+
+        bool result = service.HasValidCertificate();
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void HasValidCertificate_ReturnsTrue_WhenDbCertIsValid()
+    {
+        using X509Certificate2 valid = CreateSelfSignedCert(DateTimeOffset.UtcNow.AddDays(30));
+        string certPem = valid.ExportCertificatePem();
+        StubCertificateService service = new(certPem);
+
+        bool result = service.HasValidCertificate();
+
+        Assert.True(result);
     }
 
     [Fact]
@@ -382,6 +421,10 @@ public sealed class CertificateServiceValidationTests : IDisposable
         string source = File.ReadAllText(sourceFile);
 
         Assert.Contains("_cachedCertificate.NotAfter > DateTime.Now", source);
+
+        // DB branch must load + check NotAfter, not just assert row presence.
+        Assert.Contains("ReadCertificatePemFromDb", source);
+        Assert.Contains("dbCert.NotAfter > DateTime.Now", source);
 
         Assert.Contains(
             "_driver.FileExists(AppFiles.CertFile) && _driver.FileExists(AppFiles.KeyFile)",

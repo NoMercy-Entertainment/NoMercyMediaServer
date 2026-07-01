@@ -28,7 +28,7 @@ using NoMercy.Storage.Drivers.Local;
 
 namespace NoMercy.Networking.Certificate;
 
-public sealed class CertificateService : ICertificateService
+public class CertificateService : ICertificateService
 {
     private readonly IHttpClientFactory _httpClientFactory;
 
@@ -112,22 +112,41 @@ public sealed class CertificateService : ICertificateService
                 return _cachedCertificate.NotAfter > DateTime.Now;
         }
 
-        // Check DB
+        // Check DB — must load and verify NotAfter, not just row presence.
+        // A row with an expired cert must return false so Kestrel does not
+        // enable HTTPS with a cert that browsers reject.
         try
         {
-            using AppDbContext db = new();
-            if (db.Configuration.Any(c => c.Key == "ssl_certificate"))
-                return true;
+            string? certPem = ReadCertificatePemFromDb();
+            if (!string.IsNullOrEmpty(certPem))
+            {
+                using X509Certificate2 dbCert = new(Encoding.UTF8.GetBytes(certPem));
+                return dbCert.NotAfter > DateTime.Now;
+            }
         }
         catch
         {
-            // DB not ready yet — fall through to file check
+            // DB not ready or cert PEM is malformed — fall through to file check.
         }
 
         // Legacy fallback: cert files on disk (pre-DB-storage installs)
 #pragma warning disable CS0618
         return _driver.FileExists(AppFiles.CertFile) && _driver.FileExists(AppFiles.KeyFile);
 #pragma warning restore CS0618
+    }
+
+    /// <summary>
+    /// Returns the raw certificate PEM stored in the DB, or <c>null</c> when no
+    /// row exists or the DB is not yet available.  Extracted as a virtual method
+    /// so unit tests can override it without a real SQLite connection.
+    /// </summary>
+    protected virtual string? ReadCertificatePemFromDb()
+    {
+        using AppDbContext db = new();
+        return db
+            .Configuration.Where(c => c.Key == "ssl_certificate")
+            .Select(c => c.SecureValue)
+            .FirstOrDefault();
     }
 
     public void KestrelConfig(KestrelServerOptions options)
