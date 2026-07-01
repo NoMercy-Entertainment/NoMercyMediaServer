@@ -10,13 +10,13 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using MovieFileLibrary;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Events;
 using NoMercy.Events.Media;
-using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
@@ -35,9 +35,23 @@ namespace NoMercy.MediaProcessing.Files;
 /// Extracted from FileRepository so file enumeration no longer depends on TMDB.
 /// A null return means "unidentified" — callers must NOT treat that as "drop".
 /// </summary>
-public class MediaIdentificationService(MediaContext context, IJobDispatcher jobDispatcher)
+public class MediaIdentificationService(MediaContext context, IServiceScopeFactory scopeFactory)
     : IMediaIdentificationService
 {
+    /// <summary>
+    /// Runs an import job SYNCHRONOUSLY in a fresh DI scope so constructor-injected
+    /// services (IStorageFactory, IStorageDriver, ILoggerFactory) are resolved, then
+    /// disposes the scope when Handle() completes. Mirrors QueueWorker.ExecuteWithTransientRetry.
+    /// </summary>
+    private async Task RunJobSynchronouslyAsync<TJob>(Action<TJob> configure)
+        where TJob : AbstractMediaJob
+    {
+        await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
+        TJob job = ActivatorUtilities.CreateInstance<TJob>(scope.ServiceProvider);
+        configure(job);
+        await job.Handle();
+    }
+
     public async Task<(MovieOrEpisode match, string? imdbId)?> IdentifyAsync(
         MovieFile parsed,
         string libraryType,
@@ -334,7 +348,12 @@ public class MediaIdentificationService(MediaContext context, IJobDispatcher job
                         }
                     );
                 }
-                jobDispatcher.Dispatch(new MovieImportJob { LibraryId = libraryId, Id = movie.Id });
+
+                await RunJobSynchronouslyAsync<MovieImportJob>(job =>
+                {
+                    job.LibraryId = libraryId;
+                    job.Id = movie.Id;
+                });
             }
 
             movieItem = new()
@@ -381,14 +400,12 @@ public class MediaIdentificationService(MediaContext context, IJobDispatcher job
             );
         }
 
-        jobDispatcher.Dispatch(
-            new ShowImportJob
-            {
-                LibraryId = libraryId,
-                Id = showId,
-                HighPriority = true,
-            }
-        );
+        await RunJobSynchronouslyAsync<ShowImportJob>(job =>
+        {
+            job.LibraryId = libraryId;
+            job.Id = showId;
+            job.HighPriority = true;
+        });
     }
 
     private static async Task<Episode?> ResolveAbsoluteEpisodeAsync(
