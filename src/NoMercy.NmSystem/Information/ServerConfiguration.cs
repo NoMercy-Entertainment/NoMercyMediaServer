@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.Extensions.Options;
+using NoMercy.NmSystem.Configuration;
 
 namespace NoMercy.NmSystem.Information;
 
@@ -22,21 +23,22 @@ public class ServerConfiguration : IServerConfiguration
     public string ApiServerBaseUrl => $"{ApiBaseUrl}v1/server/";
     public string DnsServer { get; set; } = "1.1.1.1";
     public string UserAgent => $"NoMercy MediaServer ( admin@nomercy.tv )";
-    
+
     public bool Started { get; set; }
     public string? CloudflareTunnelToken { get; set; }
     public int InternalServerPort { get; set; } = 7626;
     public int ExternalServerPort { get; set; } = 7626;
     public string ManagementPipeName { get; set; } = "NoMercyManagement";
-    public string ManagementSocketPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "nomercy-management.sock");
-    
+    public string ManagementSocketPath =>
+        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "nomercy-management.sock");
+
     public bool Swagger { get; set; } = true;
     public bool IsDev { get; set; }
     public bool IsTest { get; set; }
     public bool UpdateAvailable { get; set; }
     public bool RestartNeeded { get; set; }
     public string? LatestVersion { get; set; }
-    
+
     public int LibraryWorkers { get; set; } = 1;
     public int ImportWorkers { get; set; } = 2;
     public int ExtrasWorkers { get; set; } = 4;
@@ -44,21 +46,24 @@ public class ServerConfiguration : IServerConfiguration
     public int EncoderTaskWorkers { get; set; } = 0;
     public int GpuEncoderWorkers { get; set; } = 1;
     public int CpuEncoderWorkers { get; set; } = 1;
-    
+
     public double EncoderCpuHeadroomPercent { get; set; } = 90.0;
     public double EncoderGpuHeadroomPercent { get; set; } = 95.0;
     public long EncoderMinFreeMemoryMb { get; set; } = 1024;
-    
+
     public int CronWorkers { get; set; } = 1;
     public int ImageWorkers { get; set; } = 3;
     public int FileWorkers { get; set; } = 2;
     public int MusicWorkers { get; set; } = 2;
     public int PaletteWorkers { get; set; } = 1;
-    
-    public bool ShowAdultContent { get; set; }
+
+    // Safe-by-default: delegates to RuntimeServerSettings so the controller gate
+    // always reflects the live dashboard setting (AllowAdultContent == true only).
+    public bool ShowAdultContent => RuntimeServerSettings.Current.ShowAdultContent;
 }
 
-public class ServerConfigurationWrapper(IOptions<ServerConfiguration> options) : IServerConfiguration
+public class ServerConfigurationWrapper(IOptions<ServerConfiguration> options)
+    : IServerConfiguration
 {
     private readonly ServerConfiguration _config = options.Value;
 
