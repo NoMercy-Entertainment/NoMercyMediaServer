@@ -36,7 +36,9 @@ namespace NoMercy.MediaProcessing.EventHandlers;
 public class AutoEncodeSubscriber(
     IEventBus eventBus,
     ILogger<AutoEncodeSubscriber> logger,
-    IStorage storage
+    IStorage storage,
+    IDbContextFactory<MediaContext> contextFactory,
+    JobDispatcher dispatcher
 ) : IHostedService
 {
     private readonly List<IDisposable> _subscriptions = [];
@@ -71,7 +73,7 @@ public class AutoEncodeSubscriber(
     {
         try
         {
-            await using MediaContext context = new();
+            await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
 
             // All folders in this library that have an encoder profile attached.
             List<Folder> folders = await context
@@ -111,7 +113,6 @@ public class AutoEncodeSubscriber(
                 return;
             }
 
-            JobDispatcher dispatcher = new();
             int dispatched = 0;
 
             // Pre-load drivers so we can rank sources by storage type
