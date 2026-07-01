@@ -371,18 +371,12 @@ public class FfmpegCommandBuilderTests
 
     // ── Audio filter and map options ────────────────────────────────────────
 
-
     [Fact]
     public void MapStreams_IncludedInOrder()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
             .AddInput(new("/input.mkv"))
-            .AddOutput(
-                new(
-                    FilePath: "/output.mp4",
-                    MapStreams: ["0:v:0", "0:a:0", "0:s:0"]
-                )
-            )
+            .AddOutput(new(FilePath: "/output.mp4", MapStreams: ["0:v:0", "0:a:0", "0:s:0"]))
             .Build("ffmpeg");
 
         int vIdx = Array.IndexOf(cmd.Arguments, "0:v:0");
@@ -398,12 +392,7 @@ public class FfmpegCommandBuilderTests
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
             .AddInput(new("/input.mkv"))
-            .AddOutput(
-                new(
-                    FilePath: "/output.mp4",
-                    MapStreams: ["0:v", "0:a:en", "0:a:fr"]
-                )
-            )
+            .AddOutput(new(FilePath: "/output.mp4", MapStreams: ["0:v", "0:a:en", "0:a:fr"]))
             .Build("ffmpeg");
 
         int firstMapIdx = Array.IndexOf(cmd.Arguments, "-map");
@@ -465,20 +454,8 @@ public class FfmpegCommandBuilderTests
         Dictionary<string, string> extraFlags = new() { ["-tag:v"] = "hvc1" };
 
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(
-                new(
-                    Threads: 8,
-                    ProbeSizeBytes: 5000000,
-                    AnalyzeDurationUs: 5000000
-                )
-            )
-            .AddInput(
-                new(
-                    "/input/4k.mkv",
-                    HwAccelDevice: "cuda",
-                    HwAccelOutputFormat: "cuda"
-                )
-            )
+            .WithGlobalOptions(new(Threads: 8, ProbeSizeBytes: 5000000, AnalyzeDurationUs: 5000000))
+            .AddInput(new("/input/4k.mkv", HwAccelDevice: "cuda", HwAccelOutputFormat: "cuda"))
             .WithFilterComplex("[0:v]scale_cuda=1920:1080[scaled]")
             .AddOutput(
                 new(
@@ -500,7 +477,8 @@ public class FfmpegCommandBuilderTests
         cmd.Arguments.Should().ContainInConsecutiveOrder("-threads", "8");
         cmd.Arguments.Should().ContainInConsecutiveOrder("-probesize", "5000000");
         cmd.Arguments.Should().ContainInConsecutiveOrder("-hwaccel", "cuda");
-        cmd.Arguments.Should().ContainInConsecutiveOrder("-filter_complex", "[0:v]scale_cuda=1920:1080[scaled]");
+        cmd.Arguments.Should()
+            .ContainInConsecutiveOrder("-filter_complex", "[0:v]scale_cuda=1920:1080[scaled]");
         cmd.Arguments.Should().ContainInConsecutiveOrder("-c:v", "hevc_nvenc");
         cmd.Arguments.Should().ContainInConsecutiveOrder("-c:a", "aac");
         cmd.Arguments.Should().ContainInConsecutiveOrder("-profile:v", "main");

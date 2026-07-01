@@ -94,7 +94,8 @@ public class AudioFilterBuilderTests
             null
         );
 
-        result.Should()
+        result
+            .Should()
             .Be("pan=stereo|FL<FL+0.707*FC+0.707*BL+0.707*SL|FR<FR+0.707*FC+0.707*BR+0.707*SR");
     }
 
@@ -107,8 +108,7 @@ public class AudioFilterBuilderTests
             null
         );
 
-        result.Should()
-            .Be("pan=mono|c0<0.5*FL+0.5*FR+0.5*FC+0.25*BL+0.25*BR+0.25*SL+0.25*SR");
+        result.Should().Be("pan=mono|c0<0.5*FL+0.5*FR+0.5*FC+0.25*BL+0.25*BR+0.25*SL+0.25*SR");
     }
 
     [Fact]
@@ -202,7 +202,8 @@ public class AudioFilterBuilderTests
             customMatrix
         );
 
-        string expected = "pan=stereo|L<0.6*FL+0.4*FC|R<0.6*FR+0.4*FC,loudnorm=I=-16:TP=-1.5:LRA=11";
+        string expected =
+            "pan=stereo|L<0.6*FL+0.4*FC|R<0.6*FR+0.4*FC,loudnorm=I=-16:TP=-1.5:LRA=11";
         result.Should().Be(expected);
     }
 

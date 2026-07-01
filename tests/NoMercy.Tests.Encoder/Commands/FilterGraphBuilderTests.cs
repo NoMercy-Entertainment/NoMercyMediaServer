@@ -188,9 +188,7 @@ public class FilterGraphBuilderTests
     [InlineData("bt2390")]
     public void Tonemap_VaryingAlgorithm_IncludesAlgo(string algorithm)
     {
-        string result = new FilterGraphBuilder()
-            .AddTonemap("0:v", algorithm, "sdr")
-            .Build();
+        string result = new FilterGraphBuilder().AddTonemap("0:v", algorithm, "sdr").Build();
 
         result.Should().Contain($"tonemap={algorithm}");
     }
@@ -198,9 +196,7 @@ public class FilterGraphBuilderTests
     [Fact]
     public void Tonemap_Hable_ProducesFullChain()
     {
-        string result = new FilterGraphBuilder()
-            .AddTonemap("0:v", "hable", "sdr")
-            .Build();
+        string result = new FilterGraphBuilder().AddTonemap("0:v", "hable", "sdr").Build();
 
         result.Should().Contain("zscale=t=linear");
         result.Should().Contain("tonemap=tonemap=hable");
@@ -243,9 +239,7 @@ public class FilterGraphBuilderTests
     [InlineData("bwdif")]
     public void Deinterlace_DifferentMethods_AllIncluded(string method)
     {
-        string result = new FilterGraphBuilder()
-            .AddDeinterlace("0:v", "deint", method)
-            .Build();
+        string result = new FilterGraphBuilder().AddDeinterlace("0:v", "deint", method).Build();
 
         result.Should().Be($"[0:v]{method}[deint]");
     }
@@ -253,9 +247,7 @@ public class FilterGraphBuilderTests
     [Fact]
     public void Deinterlace_DefaultMethod_IsYadif()
     {
-        string result = new FilterGraphBuilder()
-            .AddDeinterlace("0:v", "deint")
-            .Build();
+        string result = new FilterGraphBuilder().AddDeinterlace("0:v", "deint").Build();
 
         result.Should().Contain("yadif");
     }
@@ -268,9 +260,7 @@ public class FilterGraphBuilderTests
     [InlineData(1080, 1080, 420, 0)]
     public void Crop_VaryingDimensions_AllFormatted(int w, int h, int x, int y)
     {
-        string result = new FilterGraphBuilder()
-            .AddCrop("0:v", w, h, x, y, "cropped")
-            .Build();
+        string result = new FilterGraphBuilder().AddCrop("0:v", w, h, x, y, "cropped").Build();
 
         result.Should().Be($"[0:v]crop={w}:{h}:{x}:{y}[cropped]");
     }
@@ -281,9 +271,7 @@ public class FilterGraphBuilderTests
     public void Split_ManyOutputs_AllIncluded()
     {
         string[] outputs = ["a", "b", "c", "d", "e"];
-        string result = new FilterGraphBuilder()
-            .AddSplit("0:v", outputs)
-            .Build();
+        string result = new FilterGraphBuilder().AddSplit("0:v", outputs).Build();
 
         result.Should().Contain("split=5");
         foreach (string label in outputs)
@@ -301,9 +289,7 @@ public class FilterGraphBuilderTests
     [InlineData(1920)]
     public void ScaleWidth_VaryingWidths_MaintainsAspectRatio(int width)
     {
-        string result = new FilterGraphBuilder()
-            .AddScaleWidth("0:v", width, "scaled")
-            .Build();
+        string result = new FilterGraphBuilder().AddScaleWidth("0:v", width, "scaled").Build();
 
         result.Should().Contain($"scale={width}:-2");
     }
