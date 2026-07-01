@@ -15,7 +15,6 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using NoMercy.Encoder.Errors;
-using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Middleware;
 

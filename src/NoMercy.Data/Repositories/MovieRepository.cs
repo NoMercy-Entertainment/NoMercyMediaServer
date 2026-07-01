@@ -19,10 +19,6 @@ using NoMercy.Database.Models.Users;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
-
-using Logger = NoMercy.NmSystem.SystemCalls.Logger;
-
 using Microsoft.Extensions.Logging;
 namespace NoMercy.Data.Repositories;
 

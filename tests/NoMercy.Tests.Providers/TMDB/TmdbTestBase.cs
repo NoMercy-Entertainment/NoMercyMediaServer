@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Providers.TMDB.Client;
-using NoMercy.Setup.Server;
 using NoMercy.Tests.Common;
 
 namespace NoMercy.Tests.Providers.TMDB;

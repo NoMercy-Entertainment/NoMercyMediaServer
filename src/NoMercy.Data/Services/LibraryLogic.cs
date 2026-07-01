@@ -17,7 +17,6 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.NmSystem.Dto;
 using NoMercy.Storage;
 using NoMercyQueue;
-using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.Data.Services;
 

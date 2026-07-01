@@ -14,12 +14,9 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Music;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.MusicBrainz.Models;
 using NoMercy.Providers.Tadb.Client;
 using NoMercy.Providers.Tadb.Models;
-using Serilog.Events;
-
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;

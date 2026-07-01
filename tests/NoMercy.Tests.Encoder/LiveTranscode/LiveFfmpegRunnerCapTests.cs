@@ -18,7 +18,6 @@ using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.LiveTranscode;
-using NoMercy.Resources;
 using NoMercy.Storage;
 using NoMercy.Tests.Encoder.Storage;
 

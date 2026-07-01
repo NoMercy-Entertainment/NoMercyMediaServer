@@ -16,7 +16,6 @@ using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.NmSystem.Information;
-using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.Api.Middleware;
 

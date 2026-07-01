@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Data.DTOs.Encoder;
-using NoMercy.Data.Services;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 

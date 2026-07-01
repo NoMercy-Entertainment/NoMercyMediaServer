@@ -13,7 +13,6 @@ using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.DTOs.Media;
 

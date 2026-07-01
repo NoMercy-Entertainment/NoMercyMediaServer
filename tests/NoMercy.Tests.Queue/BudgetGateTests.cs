@@ -12,7 +12,6 @@
 using Moq;
 using NoMercy.Database;
 using NoMercy.Database.Models.Queue;
-using NoMercy.Resources;
 using NoMercy.Tests.Queue.TestHelpers;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;

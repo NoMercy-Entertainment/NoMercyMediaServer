@@ -13,7 +13,6 @@ using Asp.Versioning.ApiExplorer;
 using AspNetCore.Swagger.Themes;
 using Microsoft.Extensions.Options;
 using NoMercy.NmSystem.Configuration;
-using NoMercy.NmSystem.Information;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace NoMercy.Service.Configuration.Swagger;

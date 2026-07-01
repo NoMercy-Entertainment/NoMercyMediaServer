@@ -12,7 +12,6 @@
 using System.Net;
 using Amazon.S3;
 using Amazon.S3.Model;
-using NoMercy.Storage.Drivers.S3;
 using NoMercy.Storage.Remote;
 using NoMercy.Tests.Storage.Container;
 

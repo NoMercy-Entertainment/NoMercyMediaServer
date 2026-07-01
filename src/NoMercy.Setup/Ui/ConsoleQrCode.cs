@@ -12,7 +12,6 @@
 using System.Collections.Specialized;
 using System.Web;
 using NoMercy.NmSystem.Configuration;
-using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Setup.Ui;

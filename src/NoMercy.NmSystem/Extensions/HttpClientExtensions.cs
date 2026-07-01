@@ -14,7 +14,6 @@ using System.Net;
 using System.Net.Sockets;
 using DnsClient;
 using NoMercy.NmSystem.Configuration;
-using NoMercy.NmSystem.Information;
 
 namespace NoMercy.NmSystem.Extensions;
 

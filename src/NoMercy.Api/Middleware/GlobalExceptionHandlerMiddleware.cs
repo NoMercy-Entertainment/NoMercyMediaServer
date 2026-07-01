@@ -14,7 +14,6 @@ using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Middleware;
 

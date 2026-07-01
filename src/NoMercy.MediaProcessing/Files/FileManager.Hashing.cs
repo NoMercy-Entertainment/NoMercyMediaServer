@@ -9,25 +9,11 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.Collections.Concurrent;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.RegularExpressions;
-using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
 using NoMercy.Database;
-using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
-using NoMercy.Database.Models.Movies;
-using NoMercy.Database.Models.TvShows;
-using NoMercy.Events;
-using NoMercy.Events.Library;
-using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.Information;
 using NoMercy.Storage;
-using Serilog.Events;
 using SixLabors.ImageSharp;
 using SubtitlesParserV2;
 using SubtitlesParserV2.Models;

@@ -16,7 +16,6 @@ using NoMercy.Database.Models.Media;
 using NoMercy.Monitoring;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
 using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.Data.Jobs;

@@ -21,8 +21,6 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Status;
 using NoMercy.Setup.Auth;
 using NoMercy.Setup.Boot;
-using NoMercy.Setup.Dto;
-using NoMercy.Setup.Server;
 using NoMercy.Storage.Drivers.Local;
 
 namespace NoMercy.Tests.Setup;

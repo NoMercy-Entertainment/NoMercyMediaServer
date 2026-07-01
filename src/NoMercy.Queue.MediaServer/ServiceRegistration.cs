@@ -13,7 +13,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NoMercy.NmSystem.Configuration;
-using NoMercy.NmSystem.Information;
 using NoMercy.Queue.MediaServer.Configuration;
 using NoMercy.Resources;
 using NoMercyQueue;

@@ -10,11 +10,8 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Data.DTOs;
-using NoMercy.Data.Extensions;
 using NoMercy.Database;
 using NoMercy.Database.Models.Music;
-using NoMercy.NmSystem.NewtonSoftConverters;
 
 namespace NoMercy.Data.Repositories;
 

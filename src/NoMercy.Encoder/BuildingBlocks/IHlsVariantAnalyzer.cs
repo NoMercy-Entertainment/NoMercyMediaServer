@@ -9,8 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.Encoder.Output;
-
 namespace NoMercy.Encoder.BuildingBlocks;
 
 public interface IHlsVariantAnalyzer

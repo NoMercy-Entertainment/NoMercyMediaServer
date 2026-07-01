@@ -13,7 +13,6 @@ using FluentAssertions;
 using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Status;
-using Xunit;
 
 namespace NoMercy.Tests.Repositories;
 

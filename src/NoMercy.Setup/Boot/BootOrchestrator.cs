@@ -10,12 +10,10 @@
 // -----------------------------------------------------------------------------
 
 using Newtonsoft.Json;
-using NoMercy.Database;
 using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Security;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Auth;

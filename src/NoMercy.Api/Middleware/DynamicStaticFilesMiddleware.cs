@@ -17,7 +17,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 using MimeMapping;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 
 namespace NoMercy.Api.Middleware;

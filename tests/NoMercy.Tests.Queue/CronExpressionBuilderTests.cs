@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using NCrontab;
-using NoMercyQueue;
 using NoMercyQueue.Core;
 using Xunit;
 

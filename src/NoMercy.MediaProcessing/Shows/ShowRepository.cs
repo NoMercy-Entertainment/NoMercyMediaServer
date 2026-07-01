@@ -17,8 +17,6 @@ using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.MediaProcessing.Common;
-using NoMercy.NmSystem.Extensions;
-using NoMercy.Providers.KitsuIo;
 using NoMercy.Providers.TMDB.Models.TV;
 
 namespace NoMercy.MediaProcessing.Shows;

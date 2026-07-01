@@ -9,7 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System;
 using Microsoft.Extensions.Logging;
 
 namespace NoMercy.NmSystem.Logging;

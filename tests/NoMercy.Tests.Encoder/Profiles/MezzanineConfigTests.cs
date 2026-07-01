@@ -9,7 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Profiles;
 
 namespace NoMercy.Tests.Encoder.Profiles;

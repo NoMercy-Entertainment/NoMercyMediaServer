@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using System.Net;
-using NoMercy.Storage.Drivers.WebDav;
 using NoMercy.Storage.Remote;
 using NoMercy.Tests.Storage.Container;
 

@@ -20,7 +20,6 @@ using NoMercy.Providers.AcoustId;
 using NoMercy.Storage;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
-using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.Data.Jobs;
 

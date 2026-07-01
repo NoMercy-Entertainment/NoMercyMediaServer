@@ -13,7 +13,6 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using NoMercy.Providers.Abstractions;
 using NoMercy.Providers.Lrclib.Models;
-using NoMercy.Providers.MusixMatch.Models;
 using NoMercy.Providers.NoMercy.Models;
 
 namespace NoMercy.Providers.Lrclib.Client;

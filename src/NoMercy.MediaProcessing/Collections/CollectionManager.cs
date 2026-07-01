@@ -18,13 +18,9 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.MediaProcessing.Movies;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Collections;
 using NoMercy.Providers.TMDB.Models.Movies;
-using Serilog.Events;
-
 using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Collections;
 

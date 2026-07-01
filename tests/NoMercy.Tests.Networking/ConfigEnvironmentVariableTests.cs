@@ -11,7 +11,6 @@
 
 using System.Reflection;
 using NoMercy.NmSystem.Configuration;
-using NoMercy.NmSystem.Information;
 using Xunit;
 
 namespace NoMercy.Tests.Networking;

@@ -11,7 +11,6 @@
 
 using System.Runtime.Versioning;
 using Microsoft.Win32;
-using NoMercy.NmSystem.Information;
 
 namespace NoMercy.NmSystem.SystemCalls;
 

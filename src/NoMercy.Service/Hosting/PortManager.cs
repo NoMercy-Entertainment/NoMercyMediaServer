@@ -13,11 +13,8 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Configuration;
-using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Service.Hosting;
 

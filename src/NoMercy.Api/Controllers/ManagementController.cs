@@ -31,7 +31,6 @@ using NoMercy.Plugins.Abstractions;
 using NoMercy.Setup.Server;
 using NoMercy.Storage;
 using NoMercyQueue;
-using Serilog.Events;
 using Configuration = NoMercy.Database.Models.Common.Configuration;
 
 using Microsoft.Extensions.Logging;

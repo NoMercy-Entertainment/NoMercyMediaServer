@@ -20,7 +20,6 @@ using NoMercy.Events.Playback;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.Services.Video;
 

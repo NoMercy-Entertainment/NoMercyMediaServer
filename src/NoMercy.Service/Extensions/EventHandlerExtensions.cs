@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using NoMercy.Api.EventHandlers;
 using NoMercy.Api.Services.Music;
 using NoMercy.Database;

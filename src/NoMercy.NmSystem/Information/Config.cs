@@ -9,9 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.NmSystem.Configuration;
-using NoMercy.NmSystem.Dto;
-
 namespace NoMercy.NmSystem.Information;
 
 public static class Config

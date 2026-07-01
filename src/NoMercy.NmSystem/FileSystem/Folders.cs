@@ -9,9 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.NmSystem;
-using NoMercy.NmSystem.Information;
-
 namespace NoMercy.NmSystem.FileSystem;
 
 public static class Folders

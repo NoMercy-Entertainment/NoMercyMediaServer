@@ -11,7 +11,6 @@
 
 using Microsoft.AspNetCore.WebUtilities;
 using NoMercy.NmSystem.Configuration;
-using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;

@@ -16,7 +16,6 @@ using NoMercy.Data.Activity;
 using NoMercy.Database;
 using NoMercy.Networking;
 using NoMercy.Networking.Messaging;
-using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Hubs;
 

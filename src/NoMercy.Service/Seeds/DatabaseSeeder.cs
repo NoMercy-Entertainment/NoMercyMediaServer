@@ -21,7 +21,6 @@ using NoMercy.Database.Models.Storage;
 using NoMercy.Database.Models.Users;
 using NoMercy.Encoder.Bundle;
 using NoMercy.Encoder.Profiles;
-using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;

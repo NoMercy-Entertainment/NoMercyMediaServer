@@ -13,12 +13,10 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Music;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.FanArt.Models;
 using NoMercy.Providers.MusicBrainz.Models;
 using NoMercyQueue.Core.Interfaces;
-using Serilog.Events;
 using Image = NoMercy.Database.Models.Media.Image;
 
 using Microsoft.Extensions.DependencyInjection;

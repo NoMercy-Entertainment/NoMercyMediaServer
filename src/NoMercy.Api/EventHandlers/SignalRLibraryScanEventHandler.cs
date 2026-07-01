@@ -14,7 +14,6 @@ using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Events.Media;
 using NoMercy.Networking.Messaging;
-using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.EventHandlers;
 

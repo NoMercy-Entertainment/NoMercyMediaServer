@@ -18,11 +18,9 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.Services;
-using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Storage;
 using NoMercy.NmSystem.Auth;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;

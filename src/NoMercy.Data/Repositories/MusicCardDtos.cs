@@ -9,13 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.NmSystem.NewtonSoftConverters;
-using Microsoft.EntityFrameworkCore;
-using NoMercy.Data.DTOs;
-using NoMercy.Data.Extensions;
-using NoMercy.Database;
-using NoMercy.Database.Models.Music;
-
 namespace NoMercy.Data.Repositories;
 
 public class MusicStartPageData

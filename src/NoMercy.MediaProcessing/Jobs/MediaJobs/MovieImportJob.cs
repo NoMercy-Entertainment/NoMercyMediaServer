@@ -22,7 +22,6 @@ using NoMercy.Events.Library;
 using NoMercy.Events.Media;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Movies;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Models.Movies;
 
 using NoMercy.Storage;

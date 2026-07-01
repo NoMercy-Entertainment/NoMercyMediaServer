@@ -14,10 +14,7 @@ using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.MusicBrainz.Models;
-using Serilog.Events;
-
 using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.ReleaseGroups;
 

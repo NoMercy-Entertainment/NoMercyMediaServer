@@ -9,30 +9,16 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.Diagnostics;
 using System.Net;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Runtime.Loader;
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
-using CommandLine;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
-using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Networking.Certificate;
-using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Plugins.Abstractions;
 using NoMercy.Service.Configuration;
-using NoMercy.Service.Hosting;
-using NoMercy.Service.Seeds;
-using NoMercy.Setup.Boot;
 using NoMercy.Setup.Server;
-using NoMercy.Setup.Ui;
-using NoMercy.Storage;
-using NoMercyQueue;
 
 namespace NoMercy.Service.Hosting;
 

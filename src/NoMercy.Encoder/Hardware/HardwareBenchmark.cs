@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using System.Diagnostics;
-using System.Globalization;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;

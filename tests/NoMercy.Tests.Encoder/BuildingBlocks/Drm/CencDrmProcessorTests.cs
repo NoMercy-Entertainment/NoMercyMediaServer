@@ -14,7 +14,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.BuildingBlocks.Drm;
 using NoMercy.Encoder.Composition;
-using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.NmSystem.Information;
 using NoMercy.Storage;

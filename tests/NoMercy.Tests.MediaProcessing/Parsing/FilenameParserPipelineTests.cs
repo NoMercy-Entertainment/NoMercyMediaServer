@@ -9,15 +9,11 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.IO;
-using System.Linq;
-using FluentAssertions;
 using MovieFileLibrary;
 using NoMercy.MediaProcessing.Files.Parsing;
 using NoMercy.MediaProcessing.Files.Parsing.Adapters;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Tests.Common.TestMedia;
-using Xunit;
 
 namespace NoMercy.Tests.MediaProcessing.Parsing;
 

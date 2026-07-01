@@ -10,12 +10,9 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
-using System.Security.Claims;
-using FlexLabs.EntityFrameworkCore.Upsert;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.Services.Video;
 using NoMercy.Api.WebSockets;
 using NoMercy.Authorization;
@@ -28,10 +25,6 @@ using NoMercy.Networking.Discovery;
 using NoMercy.Networking.Http;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Configuration;
-using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Cast;
 
 namespace NoMercy.Api.Hubs;

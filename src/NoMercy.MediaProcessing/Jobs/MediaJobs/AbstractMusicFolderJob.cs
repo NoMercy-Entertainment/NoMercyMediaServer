@@ -13,11 +13,9 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
-using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using NoMercy.Providers.AcoustId;
 using NoMercy.Storage;
-using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 
 using Microsoft.Extensions.Logging;

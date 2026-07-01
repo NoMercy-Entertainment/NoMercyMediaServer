@@ -15,9 +15,6 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.People;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.NmSystem.SystemCalls;
-using Serilog.Events;
-
 using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.People;
 

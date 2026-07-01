@@ -9,9 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace NoMercy.Plugins.Abstractions;
 
 public interface IEncoderPlugin : IPlugin

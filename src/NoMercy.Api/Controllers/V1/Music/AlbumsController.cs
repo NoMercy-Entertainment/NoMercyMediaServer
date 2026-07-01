@@ -28,7 +28,6 @@ using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 using NoMercyQueue;
 

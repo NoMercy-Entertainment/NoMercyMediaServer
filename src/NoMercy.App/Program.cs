@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using System.Diagnostics;
-using Microsoft.Extensions.DependencyInjection;
 using NoMercy.NmSystem.Auth;
 using System.Reflection;
 using InfiniFrame;

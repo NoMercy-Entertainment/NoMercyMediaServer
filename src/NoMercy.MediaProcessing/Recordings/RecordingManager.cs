@@ -24,11 +24,8 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.MusicBrainz.Models;
 using NoMercy.Storage;
-using Serilog.Events;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using Logger = NoMercy.NmSystem.SystemCalls.Logger;
-
 using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Recordings;
 

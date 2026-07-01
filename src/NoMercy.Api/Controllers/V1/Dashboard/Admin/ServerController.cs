@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
@@ -26,7 +27,6 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Files;
-using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.Monitoring;
 using NoMercy.Networking.Discovery;
@@ -41,7 +41,6 @@ using NoMercy.Providers.AcoustId;
 using NoMercy.Providers.Helpers;
 using NoMercy.Storage;
 using NoMercyQueue;
-using NoMercyQueue.Core.Interfaces;
 using Serilog.Events;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -51,9 +50,7 @@ using Configuration = NoMercy.Database.Models.Common.Configuration;
 using HttpClient = System.Net.Http.HttpClient;
 using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 using Image = NoMercy.Database.Models.Media.Image;
-using JobDispatcher = NoMercy.MediaProcessing.Jobs.JobDispatcher;
 
-using Microsoft.Extensions.Logging;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
 [ApiController]
@@ -296,7 +293,12 @@ public class ServerController(
     public async Task<IActionResult> FileList([FromBody] FileListRequest request)
     {
         System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
-        logger.LogInformation("[FileList] folder={Folder} type={Type} driver={DriverId}", request.Folder, request.Type, request.DriverId);
+        logger.LogInformation(
+            "[FileList] folder={Folder} type={Type} driver={DriverId}",
+            request.Folder,
+            request.Type,
+            request.DriverId
+        );
 
         IStorage? resolvedStorage = null;
         if (!string.IsNullOrWhiteSpace(request.DriverId))
@@ -323,7 +325,11 @@ public class ServerController(
                 audioFingerprinter
             );
 
-            logger.LogInformation("[FileList] returned {Count} entries in {ElapsedMilliseconds}ms (music)", fileList.Count, sw.ElapsedMilliseconds);
+            logger.LogInformation(
+                "[FileList] returned {Count} entries in {ElapsedMilliseconds}ms (music)",
+                fileList.Count,
+                sw.ElapsedMilliseconds
+            );
 
             return Ok(
                 new DataResponseDto<FileListResponseDto>
@@ -342,7 +348,11 @@ public class ServerController(
                 )
                 : await fileListService.GetFilesInDirectory(request.Folder, request.Type);
 
-            logger.LogInformation("[FileList] returned {Count} entries in {ElapsedMilliseconds}ms", fileList.Count, sw.ElapsedMilliseconds);
+            logger.LogInformation(
+                "[FileList] returned {Count} entries in {ElapsedMilliseconds}ms",
+                fileList.Count,
+                sw.ElapsedMilliseconds
+            );
 
             return Ok(
                 new DataResponseDto<FileListResponseDto>

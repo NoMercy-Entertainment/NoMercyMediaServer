@@ -13,7 +13,6 @@ using NoMercy.Api.DTOs.Encoding;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
 using NoMercy.Networking.Messaging;
-using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.EventHandlers;
 

@@ -9,9 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System;
-using System.Collections.Generic;
-
 namespace NoMercy.MediaProcessing.Files.Parsing;
 
 /// <summary>

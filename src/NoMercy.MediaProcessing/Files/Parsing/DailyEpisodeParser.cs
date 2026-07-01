@@ -8,7 +8,7 @@
 //
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
-using System;
+
 using System.Text.RegularExpressions;
 
 namespace NoMercy.MediaProcessing.Files.Parsing;

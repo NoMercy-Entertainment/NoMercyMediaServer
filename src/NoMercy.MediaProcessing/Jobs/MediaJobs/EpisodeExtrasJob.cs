@@ -17,9 +17,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.MediaProcessing.Episodes;
 using NoMercy.MediaProcessing.People;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Models.Episode;
-using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 

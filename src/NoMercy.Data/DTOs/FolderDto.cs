@@ -11,7 +11,6 @@
 
 using NoMercy.Data.DTOs.Encoder;
 using Newtonsoft.Json;
-using NoMercy.Data.Services;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.NmSystem.Extensions;
 

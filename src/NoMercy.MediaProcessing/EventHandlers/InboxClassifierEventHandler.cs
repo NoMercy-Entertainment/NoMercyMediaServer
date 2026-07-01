@@ -20,8 +20,6 @@ using NoMercy.Events.FileWatcher;
 using NoMercy.Events.Inbox;
 using NoMercy.MediaProcessing.Inbox;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 
 namespace NoMercy.MediaProcessing.EventHandlers;

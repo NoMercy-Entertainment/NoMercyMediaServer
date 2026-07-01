@@ -9,22 +9,10 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
-using NoMercy.Encoder.BuildingBlocks;
-using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Codecs.Definitions;
-using NoMercy.Encoder.ContentAnalysis;
-using NoMercy.Encoder.Errors;
-using NoMercy.Encoder.Hardware;
-using NoMercy.Encoder.Hdr;
-using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Output;
-using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Profiles;
-using NoMercy.Encoder.Subtitles;
-using LegacyDrmConfig = NoMercy.Encoder.BuildingBlocks.Drm.DrmConfig;
-using LegacyDrmMethod = NoMercy.Encoder.BuildingBlocks.Drm.DrmMethod;
 
 namespace NoMercy.Encoder.Pipeline.Stages;
 

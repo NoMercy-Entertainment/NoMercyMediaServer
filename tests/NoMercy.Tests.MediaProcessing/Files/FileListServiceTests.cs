@@ -15,8 +15,6 @@ using NoMercy.MediaProcessing.Files.Parsing;
 using NoMercy.MediaProcessing.Files.Parsing.Adapters;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Storage;
-using Xunit;
-
 using Microsoft.Extensions.Logging.Abstractions;
 namespace NoMercy.Tests.MediaProcessing.Files;
 

@@ -16,8 +16,6 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Music;
 using NoMercy.Providers.Abstractions;
 using NoMercy.Providers.Lyrics;
-using NoMercy.Providers.MusixMatch.Models;
-using NoMercy.Providers.NoMercy.Client;
 
 namespace NoMercy.Api.Services.Music;
 

@@ -17,7 +17,6 @@ using NoMercy.Events;
 using NoMercy.Events.FileWatcher;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 using Serilog.Events;

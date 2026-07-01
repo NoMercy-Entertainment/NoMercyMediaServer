@@ -13,14 +13,12 @@ using Asp.Versioning.ApiExplorer;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using NoMercy.Api.Hubs;
 using NoMercy.Api.Middleware;
 using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
-using NoMercy.MediaProcessing.Jobs.ChangesJobs;
 using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
@@ -29,11 +27,9 @@ using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.Helpers;
 using NoMercy.Providers.NoMercy.Client;
 using NoMercy.Providers.TMDB.Client;
-using NoMercy.Queue.MediaServer.Jobs;
 using NoMercy.Service.Configuration.Swagger;
 using NoMercy.Service.Extensions;
 using NoMercy.Storage;
-using NoMercyQueue.Workers;
 
 namespace NoMercy.Service.Configuration;
 

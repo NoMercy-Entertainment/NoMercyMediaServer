@@ -24,15 +24,11 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
 using NoMercy.Storage;
-using Serilog.Events;
-using Logger = NoMercy.NmSystem.SystemCalls.Logger;
-
 using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Libraries;
 

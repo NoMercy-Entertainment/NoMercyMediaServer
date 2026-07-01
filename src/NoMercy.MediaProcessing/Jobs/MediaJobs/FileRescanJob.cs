@@ -19,9 +19,6 @@ using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
-
 using Microsoft.Extensions.Logging;
 using NoMercy.Storage;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;

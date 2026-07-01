@@ -8,7 +8,7 @@
 //
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
-using System.Linq;
+
 using System.Text.RegularExpressions;
 
 namespace NoMercy.Storage.Common;

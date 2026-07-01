@@ -17,7 +17,6 @@ using NoMercy.Database.Models.Encoder;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Orchestration;
@@ -28,15 +27,10 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs.Support;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Resources;
 using NoMercy.Storage;
 using NoMercyQueue;
 using NoMercyQueue.Core;
 using NoMercyQueue.Core.Resources;
-using Serilog.Events;
-
 using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 

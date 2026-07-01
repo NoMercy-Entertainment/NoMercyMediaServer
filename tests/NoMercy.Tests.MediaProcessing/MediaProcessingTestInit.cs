@@ -9,8 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System;
-using System.IO;
 using System.Runtime.CompilerServices;
 using NoMercy.Database;
 using NoMercy.NmSystem.Information;

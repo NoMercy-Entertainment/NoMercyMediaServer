@@ -31,13 +31,9 @@ using NoMercy.Database.Models.TvShows;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Files;
-using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
-using NoMercyQueue.Core.Interfaces;
 using EncoderProfileDto = NoMercy.Data.DTOs.Encoder.EncoderProfileDto;
 using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 

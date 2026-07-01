@@ -16,7 +16,6 @@ using Microsoft.Extensions.Logging;
 using MimeMapping;
 using NoMercy.NmSystem.Images;
 using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Storage;

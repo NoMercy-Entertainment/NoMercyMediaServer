@@ -12,7 +12,6 @@
 using FluentAssertions;
 using Newtonsoft.Json;
 using NoMercy.Data.Requests;
-using Xunit;
 
 namespace NoMercy.Tests.Repositories;
 

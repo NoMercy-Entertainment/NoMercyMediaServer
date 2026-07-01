@@ -20,7 +20,6 @@ using NoMercy.Database.Models.Users;
 using NoMercy.Networking;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.OpticalMedia.Drives;
 using NoMercy.OpticalMedia.Sources;
 

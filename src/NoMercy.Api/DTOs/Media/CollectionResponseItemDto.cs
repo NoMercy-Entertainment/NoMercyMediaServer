@@ -15,7 +15,6 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Models.Collections;
 
 namespace NoMercy.Api.DTOs.Media;

@@ -18,7 +18,6 @@ using NoMercy.Database.Activity;
 using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Profiles;
-using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Services;
 

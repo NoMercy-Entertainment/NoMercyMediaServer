@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using Newtonsoft.Json;
-using NoMercy.Data.DTOs;
 using NoMercy.Database.Models.Media;
 
 namespace NoMercy.Data.DTOs.Encoder;

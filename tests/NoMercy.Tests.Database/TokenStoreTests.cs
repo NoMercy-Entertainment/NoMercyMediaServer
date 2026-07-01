@@ -12,7 +12,6 @@
 using NoMercy.NmSystem.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
-using NoMercy.Database;
 
 namespace NoMercy.Tests.Database;
 

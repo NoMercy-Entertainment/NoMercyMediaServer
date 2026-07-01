@@ -19,7 +19,6 @@ using Newtonsoft.Json;
 using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
-using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Middleware;
 

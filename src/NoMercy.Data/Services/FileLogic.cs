@@ -21,11 +21,7 @@ using NoMercy.Database.Models.TvShows;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.Information;
 using NoMercy.Storage;
-using Serilog.Events;
-using Logger = NoMercy.NmSystem.SystemCalls.Logger;
-
 using Microsoft.Extensions.Logging;
 namespace NoMercy.Data.Services;
 

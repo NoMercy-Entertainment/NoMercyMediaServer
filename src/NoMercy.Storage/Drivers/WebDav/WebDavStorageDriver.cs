@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using System.Net;
-using System.Text.RegularExpressions;
 using NoMercy.Storage.Common;
 using WebDav;
 

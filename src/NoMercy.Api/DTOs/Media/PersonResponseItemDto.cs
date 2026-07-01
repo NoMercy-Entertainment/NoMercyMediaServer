@@ -13,7 +13,6 @@ using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.People;
 using NoMercy.NmSystem.Configuration;
-using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.Providers.TMDB.Models.People;
 using TmdbGender = NoMercy.Providers.TMDB.Models.People.TmdbGender;

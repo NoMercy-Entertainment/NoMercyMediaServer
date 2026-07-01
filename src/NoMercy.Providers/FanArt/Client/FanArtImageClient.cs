@@ -12,12 +12,10 @@
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.CoverArt.Models;
 using NoMercy.Providers.Helpers;
-using NoMercy.Setup.Server;
 using NoMercy.Storage;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.PixelFormats;
-using Configuration = AcoustID.Configuration;
 using Image = SixLabors.ImageSharp.Image;
 
 namespace NoMercy.Providers.FanArt.Client;

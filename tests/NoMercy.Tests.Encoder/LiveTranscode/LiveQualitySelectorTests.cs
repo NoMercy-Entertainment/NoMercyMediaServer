@@ -13,7 +13,6 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.LiveTranscode;
-using NoMercy.Resources;
 
 namespace NoMercy.Tests.Encoder.LiveTranscode;
 
