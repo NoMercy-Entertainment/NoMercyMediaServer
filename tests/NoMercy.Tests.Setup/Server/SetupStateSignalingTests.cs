@@ -1,0 +1,218 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using NoMercy.Setup.Server;
+
+namespace NoMercy.Tests.Setup.Server;
+
+[Trait("Category", "Data")]
+public class SetupStateSignalingTests
+{
+    [Fact]
+    public async Task WaitForChangeAsync_completes_when_transition_occurs()
+    {
+        SetupState state = new();
+        Task waitTask = state.WaitForChangeAsync();
+
+        await Task.Delay(10);
+        state.TransitionTo(SetupPhase.Authenticating);
+
+        await waitTask;
+    }
+
+    [Fact]
+    public async Task WaitForChangeAsync_cancellation_token_honored()
+    {
+        SetupState state = new();
+        using CancellationTokenSource cts = new(TimeSpan.FromMilliseconds(50));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            state.WaitForChangeAsync(cts.Token)
+        );
+    }
+
+    [Fact]
+    public async Task WaitForSetupCompleteAsync_completes_immediately_when_already_complete()
+    {
+        SetupState state = new();
+        state.TransitionTo(SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticated);
+        state.TransitionTo(SetupPhase.Registering);
+        state.TransitionTo(SetupPhase.Registered);
+        state.TransitionTo(SetupPhase.CertificateAcquired);
+        state.TransitionTo(SetupPhase.Complete);
+
+        Task completeTask = state.WaitForSetupCompleteAsync();
+
+        await completeTask;
+    }
+
+    [Fact]
+    public async Task WaitForSetupCompleteAsync_waits_until_complete()
+    {
+        SetupState state = new();
+        state.TransitionTo(SetupPhase.Authenticating);
+
+        Task waitTask = state.WaitForSetupCompleteAsync();
+        Assert.False(waitTask.IsCompleted);
+
+        state.TransitionTo(SetupPhase.Authenticated);
+        await Task.Delay(10);
+        Assert.False(waitTask.IsCompleted);
+
+        state.TransitionTo(SetupPhase.Registering);
+        state.TransitionTo(SetupPhase.Registered);
+        state.TransitionTo(SetupPhase.CertificateAcquired);
+        state.TransitionTo(SetupPhase.Complete);
+
+        await waitTask;
+    }
+
+    [Fact]
+    public async Task WaitForPhaseAsync_completes_when_phase_reached()
+    {
+        SetupState state = new();
+        Task waitTask = state.WaitForPhaseAsync(SetupPhase.Authenticated);
+
+        Assert.False(waitTask.IsCompleted);
+
+        state.TransitionTo(SetupPhase.Authenticating);
+        await Task.Delay(10);
+        Assert.False(waitTask.IsCompleted);
+
+        state.TransitionTo(SetupPhase.Authenticated);
+
+        await waitTask;
+    }
+
+    [Fact]
+    public async Task WaitForPhaseAsync_completes_immediately_when_phase_already_reached()
+    {
+        SetupState state = new();
+        state.TransitionTo(SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticated);
+
+        Task waitTask = state.WaitForPhaseAsync(SetupPhase.Authenticated);
+
+        await waitTask;
+    }
+
+    [Fact]
+    public async Task WaitForPhaseAsync_completes_when_phase_surpassed()
+    {
+        SetupState state = new();
+        state.TransitionTo(SetupPhase.Authenticating);
+
+        Task waitTask = state.WaitForPhaseAsync(SetupPhase.Authenticated);
+
+        state.TransitionTo(SetupPhase.Authenticated);
+        state.TransitionTo(SetupPhase.Registering);
+
+        await waitTask;
+    }
+
+    [Fact]
+    public async Task WaitForPhaseAsync_cancellation_token_honored()
+    {
+        SetupState state = new();
+        using CancellationTokenSource cts = new(TimeSpan.FromMilliseconds(50));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            state.WaitForPhaseAsync(SetupPhase.Complete, cts.Token)
+        );
+    }
+
+    [Fact]
+    public async Task SetPhaseDetail_signals_change()
+    {
+        SetupState state = new();
+        Task waitTask = state.WaitForChangeAsync();
+
+        await Task.Delay(10);
+        state.SetPhaseDetail("New detail");
+
+        await waitTask;
+    }
+
+    [Fact]
+    public async Task SetError_signals_change()
+    {
+        SetupState state = new();
+        Task waitTask = state.WaitForChangeAsync();
+
+        await Task.Delay(10);
+        state.SetError("Error message");
+
+        await waitTask;
+    }
+
+    [Fact]
+    public async Task ClearError_signals_change()
+    {
+        SetupState state = new();
+        state.SetError("Error message");
+
+        Task waitTask = state.WaitForChangeAsync();
+
+        await Task.Delay(10);
+        state.ClearError();
+
+        await waitTask;
+    }
+
+    [Fact]
+    public async Task Reset_signals_change()
+    {
+        SetupState state = new();
+        state.TransitionTo(SetupPhase.Authenticating);
+
+        Task waitTask = state.WaitForChangeAsync();
+
+        await Task.Delay(10);
+        state.Reset();
+
+        await waitTask;
+    }
+
+    [Fact]
+    public async Task Multiple_waiters_all_notified_on_change()
+    {
+        SetupState state = new();
+
+        Task wait1 = state.WaitForChangeAsync();
+        Task wait2 = state.WaitForChangeAsync();
+        Task wait3 = state.WaitForChangeAsync();
+
+        await Task.Delay(10);
+        state.TransitionTo(SetupPhase.Authenticating);
+
+        await Task.WhenAll(wait1, wait2, wait3);
+    }
+
+    [Fact]
+    public async Task Subsequent_wait_after_change_gets_next_signal()
+    {
+        SetupState state = new();
+
+        Task wait1 = state.WaitForChangeAsync();
+        await Task.Delay(10);
+        state.TransitionTo(SetupPhase.Authenticating);
+        await wait1;
+
+        Task wait2 = state.WaitForChangeAsync();
+        Assert.False(wait2.IsCompleted);
+
+        await Task.Delay(10);
+        state.TransitionTo(SetupPhase.Authenticated);
+
+        await wait2;
+    }
+}
