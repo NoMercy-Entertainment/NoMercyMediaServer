@@ -42,9 +42,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\NoMercy.Api\NoMercy.Api.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Encoder\NoMercy.Encoder.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Events\NoMercy.Events.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.MediaProcessing\NoMercy.MediaProcessing.csproj" />
+    <ProjectReference Include="..\..\src\NoMercy.Networking\NoMercy.Networking.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.OpticalMedia\NoMercy.OpticalMedia.csproj" />
   </ItemGroup>
 
