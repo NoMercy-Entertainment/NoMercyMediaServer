@@ -14,6 +14,7 @@ using Moq;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Output;
@@ -21,6 +22,7 @@ using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Tests.Encoder.Pipeline.Stages;
+using NoMercy.Tests.Encoder.Storage;
 using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
 using Container = NoMercy.Encoder.Profiles.Container;
 using StreamPolicy = NoMercy.Encoder.Profiles.StreamPolicy;
@@ -226,6 +228,9 @@ public class CappedCrfTests
         video.Crf.Should().Be(22);
         video.ExtraFlags.Should().ContainKey("-maxrate").WhoseValue.Should().Be("4000k");
         video.ExtraFlags.Should().ContainKey("-bufsize").WhoseValue.Should().Be("8000k");
+        // The ceiling is the VBV cap (-maxrate/-bufsize), never a target bitrate:
+        // BitrateKbps must be cleared so no -b:v collides with -crf and forces ABR.
+        video.BitrateKbps.Should().Be(0);
     }
 
     // ----------------------------------------------------------------
@@ -378,5 +383,73 @@ public class CappedCrfTests
         int bufKbps = int.Parse(bufsize.TrimEnd('k'));
 
         bufKbps.Should().Be(maxKbps * 2);
+    }
+
+    // ----------------------------------------------------------------
+    // argv-level: build the REAL ffmpeg command from the plan and assert
+    // the capped-CRF output never carries a target bitrate (-b:v). The
+    // plan-field tests above cannot see the -crf + -b:v collision because
+    // they never serialize the command; these do.
+    // ----------------------------------------------------------------
+
+    private static async Task<string> BuildArgvAsync(PlanStage stage, ValidateInput input)
+    {
+        EncodingContext ctx = EncodingContext.Create();
+        StageResult result = await stage.ExecuteAsync(input, ctx, CancellationToken.None);
+        ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)result).Value;
+
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        FfmpegCommandBuilder builder = new();
+        builder.AddInput(new("/input.mkv"));
+        strategy.ConfigureOutput(builder, plan.OutputPlan, "/output");
+
+        return string.Join(" ", builder.Build("ffmpeg").Arguments);
+    }
+
+    [Fact]
+    public async Task CrfCapped_libx264_argv_has_crf_and_maxrate_but_no_target_bitrate()
+    {
+        PlanStage stage = BuildPlanStage(SoftwareCodec("libx264"));
+        string argv = await BuildArgvAsync(
+            stage,
+            FakeInput(VideoCodecType.H264, crf: 22, bitrateKbps: 4000)
+        );
+
+        argv.Should().Contain("-crf 22");
+        argv.Should().Contain("-maxrate 4000k");
+        argv.Should().Contain("-bufsize 8000k");
+        // The regression: -b:v alongside -crf makes libx264 switch to ABR and
+        // silently voids the CRF quality target. It must never appear.
+        argv.Should().NotContain("-b:v");
+    }
+
+    [Fact]
+    public async Task CrfCapped_nvenc_argv_has_cq_and_maxrate_but_no_target_bitrate()
+    {
+        PlanStage stage = BuildPlanStage(HardwareCodec("h264_nvenc", RateControlMode.Cq));
+        string argv = await BuildArgvAsync(
+            stage,
+            FakeInput(VideoCodecType.H264, crf: 22, bitrateKbps: 4000)
+        );
+
+        argv.Should().Contain("-cq");
+        argv.Should().Contain("-maxrate 4000k");
+        // NVENC capped-quality must not carry a redundant -b:v target.
+        argv.Should().NotContain("-b:v");
+    }
+
+    [Fact]
+    public async Task PureBitrate_argv_still_emits_target_bitrate()
+    {
+        // Guard the other direction: a pure-ABR profile (no CRF) MUST still
+        // emit -b:v — the capped-CRF suppression must not swallow real ABR.
+        PlanStage stage = BuildPlanStage(SoftwareCodec("libx264"));
+        string argv = await BuildArgvAsync(
+            stage,
+            FakeInput(VideoCodecType.H264, crf: 0, bitrateKbps: 4000)
+        );
+
+        argv.Should().Contain("-b:v 4000k");
+        argv.Should().NotContain("-maxrate");
     }
 }

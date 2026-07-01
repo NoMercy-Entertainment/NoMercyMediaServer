@@ -502,12 +502,19 @@ public class PlanStage(
                             );
 
                             // Capped-CRF: when both a CRF target and a bitrate ceiling are set,
-                            // emit -maxrate / -bufsize so FFmpeg enforces the cap.
+                            // the ceiling is enforced by -maxrate / -bufsize (a VBV cap on a
+                            // quality-targeted encode), never by -b:v. Emitting -b:v alongside
+                            // -crf / -cq / -qp puts the encoder into a conflicting rate-control
+                            // state (libx264 silently switches to ABR; NVENC / AMF ignore or
+                            // fight the quality target), so the bitrate must NOT reach the
+                            // output plan as a target bitrate.
+                            int outputBitrateKbps = v.BitrateKbps;
                             if (v.Crf > 0 && v.BitrateKbps > 0)
                             {
                                 int bufKbps = v.BitrateKbps * 2;
                                 extraFlags["-maxrate"] = $"{v.BitrateKbps}k";
                                 extraFlags["-bufsize"] = $"{bufKbps}k";
+                                outputBitrateKbps = 0;
                             }
 
                             // HDR→HDR passthrough: preserve color metadata when source is HDR
@@ -614,7 +621,7 @@ public class PlanStage(
                                 Height: outputHeight,
                                 EncoderName: outputEncoderName,
                                 Crf: crf,
-                                BitrateKbps: v.BitrateKbps,
+                                BitrateKbps: outputBitrateKbps,
                                 Preset: EncoderArgumentResolver.ResolvePreset(v.Preset, encoder),
                                 Profile: EncoderArgumentResolver.ResolveProfile(
                                     codecProfileString,
