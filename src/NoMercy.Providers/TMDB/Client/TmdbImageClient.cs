@@ -83,13 +83,22 @@ public abstract class TmdbImageClient
                 if (path is null)
                     return null;
 
+                // A null/empty image path (an entity with no poster/backdrop) must
+                // never reach the write below: path.Replace("/", "") collapses to
+                // an empty file name, so filePath becomes the 'original' folder
+                // itself and WriteAsync targets the directory — "Access to the path
+                // '…/cache/images/original' is denied". Nothing to download here.
+                string fileName = path.Replace("/", "");
+                if (string.IsNullOrWhiteSpace(fileName))
+                    return null;
+
                 bool isSvg = path.EndsWith(".svg");
                 string folder = Path.Join(AppFiles.ImagesPath, "original");
 
                 IStorage storage = Storage;
                 await storage.CreateDirectoryAsync(folder, CancellationToken.None);
 
-                string filePath = Path.Join(folder, path.Replace("/", ""));
+                string filePath = Path.Join(folder, fileName);
                 if (await storage.ExistsAsync(filePath, CancellationToken.None))
                 {
                     if (isSvg)
