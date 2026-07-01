@@ -54,6 +54,23 @@ public sealed class CertificateServiceValidationTests : IDisposable
         );
     }
 
+    /// <summary>
+    /// Builds a service whose inter-attempt delay is a no-op, so retry tests
+    /// exercise the loop's control flow without paying the real 10s production
+    /// wait per retry.
+    /// </summary>
+    private static CertificateService BuildFastRetryService(IHttpClientFactory factory)
+    {
+        return new NoDelayCertificateService(factory);
+    }
+
+    private sealed class NoDelayCertificateService(IHttpClientFactory factory)
+        : CertificateService(NullLogger<CertificateService>.Instance, factory)
+    {
+        protected override Task DelayBetweenAttemptsAsync(TimeSpan delay, CancellationToken ct) =>
+            Task.CompletedTask;
+    }
+
     private static X509Certificate2 CreateSelfSignedCert(DateTimeOffset notAfter)
     {
         using RSA rsa = RSA.Create(2048);
@@ -226,7 +243,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
             factoryCalled = true;
             return new HttpResponseMessage(HttpStatusCode.Accepted);
         });
-        CertificateService service = BuildService(factory);
+        CertificateService service = BuildFastRetryService(factory);
 
         await service.RenewSslCertificate("test-token", maxRetries: 1);
 
@@ -260,7 +277,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
             factoryCalled = true;
             return new HttpResponseMessage(HttpStatusCode.Accepted);
         });
-        CertificateService service = BuildService(factory);
+        CertificateService service = BuildFastRetryService(factory);
         using X509Certificate2 nearExpiry = CreateSelfSignedCert(DateTimeOffset.UtcNow.AddDays(12));
         InjectCachedCertificate(service, nearExpiry);
 
@@ -278,7 +295,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
             factoryCalled = true;
             return new HttpResponseMessage(HttpStatusCode.Accepted);
         });
-        CertificateService service = BuildService(factory);
+        CertificateService service = BuildFastRetryService(factory);
         using X509Certificate2 expired = CreateSelfSignedCert(DateTimeOffset.UtcNow.AddSeconds(-1));
         InjectCachedCertificate(service, expired);
 
@@ -387,7 +404,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
             callCount++;
             return new HttpResponseMessage(HttpStatusCode.Accepted);
         });
-        CertificateService service = BuildService(factory);
+        CertificateService service = BuildFastRetryService(factory);
 
         await service.RenewSslCertificate("test-token", maxRetries: 2);
 
@@ -403,7 +420,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
             callCount++;
             return new HttpResponseMessage(HttpStatusCode.GatewayTimeout);
         });
-        CertificateService service = BuildService(factory);
+        CertificateService service = BuildFastRetryService(factory);
 
         await Assert.ThrowsAsync<HttpRequestException>(() =>
             service.RenewSslCertificate("test-token", maxRetries: 2)

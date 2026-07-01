@@ -149,6 +149,16 @@ public class CertificateService : ICertificateService
             .FirstOrDefault();
     }
 
+    /// <summary>
+    /// Waits between certificate-fetch retries. Extracted as a virtual method so
+    /// unit tests can override it to a no-op instead of blocking for the real
+    /// 10-second production delay on every 202/timeout retry.
+    /// </summary>
+    protected virtual Task DelayBetweenAttemptsAsync(TimeSpan delay, CancellationToken ct)
+    {
+        return Task.Delay(delay, ct);
+    }
+
     public void KestrelConfig(KestrelServerOptions options)
     {
         options.AddServerHeader = false;
@@ -299,7 +309,10 @@ public class CertificateService : ICertificateService
                         attempt,
                         maxRetries
                     );
-                    await Task.Delay(TimeSpan.FromSeconds(CertRetryDelaySeconds));
+                    await DelayBetweenAttemptsAsync(
+                        TimeSpan.FromSeconds(CertRetryDelaySeconds),
+                        CancellationToken.None
+                    );
                 }
                 catch (CertificateNotDueException ex)
                 {
@@ -321,7 +334,10 @@ public class CertificateService : ICertificateService
                         attempt,
                         maxRetries
                     );
-                    await Task.Delay(TimeSpan.FromSeconds(CertRetryDelaySeconds));
+                    await DelayBetweenAttemptsAsync(
+                        TimeSpan.FromSeconds(CertRetryDelaySeconds),
+                        CancellationToken.None
+                    );
                 }
         }
         catch (Exception ex) when (hasExistingCert)
