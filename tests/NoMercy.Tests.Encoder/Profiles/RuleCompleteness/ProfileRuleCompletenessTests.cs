@@ -65,6 +65,7 @@ public class ProfileRuleCompletenessTests
         EncoderRuleId.SubtitlesBurnInPermanent,
         EncoderRuleId.SubtitlesAssNeedsCapableClient,
         EncoderRuleId.HdrInverseTonemapUnsupported,
+        EncoderRuleId.BitDepthH26xProfilePromoted,
         EncoderRuleId.CustomArgsReservedFlag,
         EncoderRuleId.DrmHttpNotHttps,
         EncoderRuleId.DrmKeyMissing,
@@ -479,6 +480,15 @@ public class ProfileRuleCompletenessTests
                 VideoTranscode(bitDepth: 8),
                 hdrPolicy: HdrPolicy.AlwaysPreserve
             ),
+            // H.264 + explicit 8-bit-only "High" profile + 10-bit depth: the
+            // pipeline promotes High -> High10, the validator warns about it.
+            [EncoderRuleId.BitDepthH26xProfilePromoted] = MakeProfile(
+                VideoTranscode(codec: VideoCodecType.H264, bitDepth: 10) with
+                {
+                    CodecProfile = CodecProfile.High,
+                },
+                container: Container.Mp4
+            ),
             [EncoderRuleId.CustomArgsReservedFlag] = MakeProfile(
                 VideoTranscode(),
                 customArgs: new Dictionary<string, string> { ["-c:v"] = "libx264" }
@@ -730,6 +740,14 @@ public class ProfileRuleCompletenessTests
                 VideoTranscode(bitDepth: 10),
                 hdrPolicy: HdrPolicy.AlwaysPreserve
             ),
+            // H.264 + High10 + 10-bit already agree — nothing to promote, no warning.
+            [EncoderRuleId.BitDepthH26xProfilePromoted] = MakeProfile(
+                VideoTranscode(codec: VideoCodecType.H264, bitDepth: 10) with
+                {
+                    CodecProfile = CodecProfile.High10,
+                },
+                container: Container.Mp4
+            ),
             [EncoderRuleId.CustomArgsReservedFlag] = MakeProfile(
                 VideoTranscode(),
                 customArgs: new Dictionary<string, string> { ["-loglevel"] = "info" }
@@ -783,8 +801,8 @@ public class ProfileRuleCompletenessTests
         count
             .Should()
             .Be(
-                70,
-                "EncoderRuleId currently catalogues 70 rules; "
+                71,
+                "EncoderRuleId currently catalogues 71 rules; "
                     + "if this count changed, update the completeness sets above and this guard"
             );
     }

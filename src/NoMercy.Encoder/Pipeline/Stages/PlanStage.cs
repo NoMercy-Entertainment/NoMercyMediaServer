@@ -635,7 +635,8 @@ public class PlanStage(
                                 Preset: EncoderArgumentResolver.ResolvePreset(v.Preset, encoder),
                                 Profile: EncoderArgumentResolver.ResolveProfile(
                                     codecProfileString,
-                                    encoder
+                                    encoder,
+                                    outputTenBit ? 10 : 8
                                 ),
                                 Level: v.Level,
                                 TenBit: outputTenBit,

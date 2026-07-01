@@ -62,6 +62,7 @@ public static class ProfileRuleValidator
         EmitSubtitlesAssNeedsCapableClient(profile, rules);
         EmitHdrInverseTonemapUnsupported(profile, rules);
         EmitBitDepthVp9ProfileMismatch(profile, rules);
+        EmitBitDepthH26xProfilePromoted(profile, rules);
         EmitCustomArgsReservedFlag(profile, rules);
         EmitDrmHttpNotHttps(profile, rules);
         EmitDrmKeyMissing(profile, rules);
@@ -1236,6 +1237,46 @@ public static class ProfileRuleValidator
                     + $"video.bit_depth is {video.BitDepth} ({requestedDepth}); "
                     + "libvpx-vp9 ties the profile number to both chroma subsampling and bit depth.",
                 Fix: fix
+            )
+        );
+    }
+
+    private static void EmitBitDepthH26xProfilePromoted(
+        EncodingProfile profile,
+        List<EncoderRule> rules
+    )
+    {
+        // H.264/H.265 tie the profile string to the bit depth: "baseline",
+        // "main" and "high" are 8-bit-only. Emitting one next to a 10-bit pixel
+        // format makes the encoder abort ("high profile doesn't support a bit
+        // depth of 10"). The pipeline auto-promotes an 8-bit tier to its 10-bit
+        // sibling (high -> high10, main -> main10) so the encode still succeeds,
+        // but the operator asked for a tier that cannot carry 10-bit — surface a
+        // warning so the dashboard shows what the profile string became.
+        if (profile.Video is not { Policy: StreamPolicy.Transcode } video)
+            return;
+        if (video.Codec is not (VideoCodecType.H264 or VideoCodecType.H265))
+            return;
+        if (video.BitDepth < 10)
+            return;
+
+        bool profileIs8BitOnly =
+            video.CodecProfile is CodecProfile.Baseline or CodecProfile.Main or CodecProfile.High;
+        if (!profileIs8BitOnly)
+            return;
+
+        string promoted = video.CodecProfile == CodecProfile.High ? "High10" : "Main10";
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.BitDepthH26xProfilePromoted,
+                Severity: EncoderRuleSeverity.Warning,
+                Field: "video.codec_profile",
+                Message: $"{video.Codec} codec_profile {video.CodecProfile} is 8-bit only but "
+                    + $"video.bit_depth is {video.BitDepth}; the profile will be promoted to "
+                    + $"{promoted} so the encoder accepts the 10-bit pixel format.",
+                Fix: $"Set video.codec_profile to {promoted} (10-bit) explicitly, or lower "
+                    + "video.bit_depth to 8 to keep the 8-bit profile."
             )
         );
     }

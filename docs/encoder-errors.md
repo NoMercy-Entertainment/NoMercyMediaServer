@@ -18,6 +18,7 @@ shows up below wrapped in backticks. Add a new ID → add a new bullet here in t
 - `bit_depth.no_hardware_support` — selected encoder cannot encode the requested bit depth.
 - `bit_depth.strict_violation` — strict policy refuses to silently downgrade.
 - `bit_depth.vp9_profile_mismatch` — VP9 profile and bit depth do not agree (profile 0/1 = 8-bit, 2/3 = 10/12-bit).
+- `bit_depth.h26x_profile_promoted` — an 8-bit-only H.264/H.265 profile was requested with 10-bit depth; the profile is promoted to its 10-bit sibling (High to High10, Main to Main10) so the encoder accepts the 10-bit pixel format.
 
 ## Bitrate
 - `bitrate.too_low_for_resolution` — codec-aware floor not met for the chosen resolution.

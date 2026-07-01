@@ -53,6 +53,7 @@ public static class EncoderRuleId
     // ---- Bit depth -------------------------------------------------------
     public const string BitDepthNoHardwareSupport = "bit_depth.no_hardware_support";
     public const string BitDepthVp9ProfileMismatch = "bit_depth.vp9_profile_mismatch";
+    public const string BitDepthH26xProfilePromoted = "bit_depth.h26x_profile_promoted";
     public const string BitDepthAutoDowngrade = "bit_depth.auto_downgrade";
     public const string BitDepthStrictViolation = "bit_depth.strict_violation";
 

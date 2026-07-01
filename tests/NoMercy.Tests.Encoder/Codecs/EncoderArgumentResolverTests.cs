@@ -331,6 +331,81 @@ public class EncoderArgumentResolverTests
         EncoderArgumentResolver.ResolveProfile("high", libx264).Should().Be("high");
     }
 
+    // ──────────────────────────────────────────────────────────────────────────
+    // ResolveProfile — bit-depth coupling (10-bit must not emit an 8-bit profile)
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("high")]
+    [InlineData("main")]
+    [InlineData("baseline")]
+    public void ResolveProfile_H264_TenBit_PromotesEightBitTierToHigh10(string requested)
+    {
+        // libx264 with a 10-bit pixel format rejects an 8-bit-only profile
+        // string ("high profile doesn't support a bit depth of 10"). H.264's
+        // ONLY 10-bit profile is high10 (there is no h264 "main10"), so every
+        // 8-bit tier promotes to high10 — the profile libx264 actually accepts.
+        EncoderInfo libx264 = GetH264Encoder("libx264");
+        EncoderArgumentResolver
+            .ResolveProfile(requested, libx264, finalBitDepth: 10)
+            .Should()
+            .Be("high10");
+    }
+
+    [Fact]
+    public void ResolveProfile_H264_TenBit_KeepsAlreadyTenBitProfile()
+    {
+        EncoderInfo libx264 = GetH264Encoder("libx264");
+        EncoderArgumentResolver
+            .ResolveProfile("high10", libx264, finalBitDepth: 10)
+            .Should()
+            .Be("high10");
+    }
+
+    [Fact]
+    public void ResolveProfile_H264_EightBit_LeavesEightBitTierUntouched()
+    {
+        // The promotion must never fire at 8-bit — "high" stays "high".
+        EncoderInfo libx264 = GetH264Encoder("libx264");
+        EncoderArgumentResolver
+            .ResolveProfile("high", libx264, finalBitDepth: 8)
+            .Should()
+            .Be("high");
+    }
+
+    [Fact]
+    public void ResolveProfile_H265_TenBit_PromotesMainToMain10()
+    {
+        EncoderInfo libx265 = GetEncoder(VideoCodecType.H265, "libx265");
+        EncoderArgumentResolver
+            .ResolveProfile("main", libx265, finalBitDepth: 10)
+            .Should()
+            .Be("main10");
+    }
+
+    [Fact]
+    public void ResolveProfile_H264_TenBit_NullProfile_FallsBackToTenBitCapable()
+    {
+        // A null (Auto) request at 10-bit must not fall back to Profiles[0]
+        // ("baseline", 8-bit only) — the fallback itself has to be 10-bit-capable.
+        EncoderInfo libx264 = GetH264Encoder("libx264");
+        string? resolved = EncoderArgumentResolver.ResolveProfile(null, libx264, finalBitDepth: 10);
+        resolved.Should().BeOneOf("high10", "high422", "high444p");
+    }
+
+    [Fact]
+    public void ResolveProfile_Vp9_TenBit_DoesNotApplyH26xPromotion()
+    {
+        // VP9 numeric profiles mean chroma/bit-depth, NOT an H.264 tier. The
+        // H26x promotion must not touch them — "main" is not VP9 vocabulary, so
+        // it falls back to the encoder's own first profile, never "main10".
+        EncoderInfo vpx = GetEncoder(VideoCodecType.Vp9, "libvpx-vp9");
+        EncoderArgumentResolver
+            .ResolveProfile("main", vpx, finalBitDepth: 10)
+            .Should()
+            .Be("0", "VP9 falls back to its own first profile, never an H26x sibling");
+    }
+
     [Fact]
     public void ResolveDimensions_OddExplicitWidth_IsRoundedEven()
     {

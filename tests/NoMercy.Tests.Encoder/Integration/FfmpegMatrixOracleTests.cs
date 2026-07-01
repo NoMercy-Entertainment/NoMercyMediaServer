@@ -222,10 +222,77 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
             );
     }
 
+    // Bit-depth × explicit-codec-profile axis. The bug this catches only appears
+    // when a 10-bit output carries an 8-bit-only H.26x profile string, and only
+    // when the profile is EXPLICIT (Auto masks it on some encoders). Every 10-bit
+    // software codec is exercised at 8-bit AND 10-bit, each against every
+    // CodecProfile tier the user can set. ffmpeg accepting the command is proof
+    // the pipeline couples the profile string to the pixel format.
+    public static IEnumerable<object[]> BitDepthProfileMatrix()
+    {
+        (VideoCodecType video, CodecProfile[] profiles)[] videoCases =
+        [
+            (
+                VideoCodecType.H264,
+                [CodecProfile.Auto, CodecProfile.Main, CodecProfile.High, CodecProfile.High10]
+            ),
+            (VideoCodecType.H265, [CodecProfile.Auto, CodecProfile.Main, CodecProfile.Main10]),
+        ];
+
+        foreach ((VideoCodecType video, CodecProfile[] profiles) in videoCases)
+        foreach (int bitDepth in new[] { 8, 10 })
+        foreach (CodecProfile codecProfile in profiles)
+            yield return [video, bitDepth, codecProfile];
+    }
+
+    [SkippableTheory]
+    [MemberData(nameof(BitDepthProfileMatrix))]
+    public async Task BitDepthAndProfile_FfmpegAcceptsTheGeneratedCommand(
+        VideoCodecType video,
+        int bitDepth,
+        CodecProfile codecProfile
+    )
+    {
+        string videoEncoder = VideoEncoderName(video);
+        Skip.IfNot(
+            _availableEncoders.Contains(videoEncoder),
+            $"video encoder {videoEncoder} not available in this ffmpeg build"
+        );
+
+        string outputDir = Path.Combine(_testDir, $"bd_{video}_{bitDepth}_{codecProfile}");
+        Directory.CreateDirectory(outputDir);
+
+        EncodingProfile profile = BuildProfile(
+            Container.Mkv,
+            video,
+            AudioCodecType.Aac,
+            bitDepth,
+            codecProfile
+        );
+        EncodingRequest request = new(
+            InputPath: _inputFile,
+            OutputDirectory: outputDir,
+            Profile: profile
+        );
+
+        using CancellationTokenSource cts = new(TimeSpan.FromMinutes(2));
+        IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
+        EncodingResult result = await encoder.EncodeAsync(request, progress: null, cts.Token);
+
+        result
+            .Success.Should()
+            .BeTrue(
+                $"ffmpeg must accept {video} {bitDepth}-bit profile={codecProfile}. "
+                    + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+            );
+    }
+
     private static EncodingProfile BuildProfile(
         Container container,
         VideoCodecType video,
-        AudioCodecType audio
+        AudioCodecType audio,
+        int bitDepth = 8,
+        CodecProfile codecProfile = CodecProfile.Auto
     ) =>
         new(
             Id: Ulid.NewUlid(),
@@ -242,10 +309,10 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
                 MaxBitrateKbps: null,
                 BufferSizeKbps: null,
                 Preset: "ultrafast",
-                CodecProfile: CodecProfile.Auto,
+                CodecProfile: codecProfile,
                 Level: null,
                 Tune: null,
-                BitDepth: 8,
+                BitDepth: bitDepth,
                 PixelFormat: null,
                 KeyframeIntervalSeconds: 2,
                 ConvertHdrToSdr: false,
