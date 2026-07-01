@@ -60,20 +60,46 @@ public static class EncoderArgumentResolver
         if (encoder.Profiles.Contains(profileValue))
             return profileValue;
 
-        // The encoder's vocabulary does not contain the requested name verbatim.
-        // Map the well-known libx264 profile tiers onto the aliases encoders use
-        // so the requested quality tier is preserved rather than silently reset.
-        string[] aliases = ProfileAliases(profileValue);
-        foreach (string alias in aliases)
+        // The H.264-tier aliases (baseline/main/high -> numeric idc) only make
+        // sense for H.264/HEVC encoders whose vocabulary IS those numeric codes
+        // (e.g. videotoolbox "66"/"77"/"100"). VP9/AV1 profiles are numeric too
+        // but mean chroma/bit-depth, NOT an H.264 tier — cross-mapping "main" to
+        // VP9 "1" (4:2:2) would be wrong. Only alias-map for H26x-vocabulary
+        // encoders; everything else falls back to the safe first profile.
+        if (IsH26xProfileVocabulary(encoder))
         {
-            string? match = encoder.Profiles.FirstOrDefault(p =>
-                string.Equals(p, alias, StringComparison.OrdinalIgnoreCase)
-            );
-            if (match is not null)
-                return match;
+            string[] aliases = ProfileAliases(profileValue);
+            foreach (string alias in aliases)
+            {
+                string? match = encoder.Profiles.FirstOrDefault(p =>
+                    string.Equals(p, alias, StringComparison.OrdinalIgnoreCase)
+                );
+                if (match is not null)
+                    return match;
+            }
         }
 
         return encoder.Profiles[0];
+    }
+
+    /// <summary>
+    /// True when the encoder's profile vocabulary is the H.264/HEVC tier set
+    /// (named "baseline/main/high" or the videotoolbox numeric profile_idc
+    /// codes). VP9/AV1 encoders also expose numeric profiles, but those denote
+    /// chroma/bit-depth rather than an H.264 tier, so the tier aliases must not
+    /// be applied to them.
+    /// </summary>
+    private static bool IsH26xProfileVocabulary(EncoderInfo encoder)
+    {
+        string name = encoder.FfmpegName.ToLowerInvariant();
+        if (name.Contains("vp9") || name.Contains("vpx") || name.Contains("av1"))
+            return false;
+        return name.Contains("264")
+            || name.Contains("h264")
+            || name.Contains("hevc")
+            || name.Contains("265")
+            || name.Contains("x264")
+            || name.Contains("x265");
     }
 
     /// <summary>

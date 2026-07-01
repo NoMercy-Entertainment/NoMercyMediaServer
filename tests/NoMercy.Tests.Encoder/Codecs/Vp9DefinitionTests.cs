@@ -51,10 +51,11 @@ public class Vp9DefinitionTests
 
         sw.RequiredVendor.Should().BeNull();
         sw.Presets.Should().BeEmpty();
-        sw.Profiles.Should().Contain("profile0");
-        sw.Profiles.Should().Contain("profile1");
-        sw.Profiles.Should().Contain("profile2");
-        sw.Profiles.Should().Contain("profile3");
+        // Numeric profile ids — the values ffmpeg's -profile accepts for VP9.
+        sw.Profiles.Should().Contain("0");
+        sw.Profiles.Should().Contain("1");
+        sw.Profiles.Should().Contain("2");
+        sw.Profiles.Should().Contain("3");
         sw.QualityRange.Min.Should().Be(0);
         sw.QualityRange.Max.Should().Be(63);
         sw.SupportedRateControl.Should().Contain(RateControlMode.Crf);
@@ -82,10 +83,10 @@ public class Vp9DefinitionTests
 
         vaapi.RequiredVendor.Should().Be(GpuVendor.Intel);
         vaapi.Presets.Should().BeEmpty();
-        vaapi.Profiles.Should().Contain("profile0");
-        vaapi.Profiles.Should().Contain("profile1");
-        vaapi.Profiles.Should().Contain("profile2");
-        vaapi.Profiles.Should().Contain("profile3");
+        vaapi.Profiles.Should().Contain("0");
+        vaapi.Profiles.Should().Contain("1");
+        vaapi.Profiles.Should().Contain("2");
+        vaapi.Profiles.Should().Contain("3");
         vaapi.QualityRange.Min.Should().Be(0);
         vaapi.QualityRange.Max.Should().Be(255);
         vaapi.MaxConcurrentSessions.Should().Be(int.MaxValue);

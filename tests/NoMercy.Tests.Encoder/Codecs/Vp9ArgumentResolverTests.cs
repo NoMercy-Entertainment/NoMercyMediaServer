@@ -20,8 +20,8 @@ namespace NoMercy.Tests.Encoder.Codecs;
 /// tests pin that hardware matrix plus VP9-specific behaviors:
 ///
 ///   - libvpx-vp9 has no presets (uses -deadline / -cpu-used instead).
-///   - libvpx-vp9 uses numeric profile IDs ("profile0".."profile3") where
-///     profile2/profile3 enable 10-bit.
+///   - libvpx-vp9 uses numeric profile IDs ("0".."3", the values ffmpeg's
+///     -profile option actually accepts) where profile 2/3 enable 10-bit.
 ///   - vp9_qsv lacks 10-bit support. vp9_vaapi also lacks it.
 ///   - vp9_vaapi uses 0-255 QP (VA-API convention), not 0-63 like libvpx.
 /// </summary>
@@ -43,9 +43,10 @@ public class Vp9ArgumentResolverTests
     public void LibVpxVp9_UsesNumericProfiles()
     {
         EncoderInfo vpx = Get("libvpx-vp9");
-        vpx.Profiles.Should().BeEquivalentTo("profile0", "profile1", "profile2", "profile3");
-        // "main" from H264/HEVC profile strings must fall back to profile0.
-        EncoderArgumentResolver.ResolveProfile("main", vpx).Should().Be("profile0");
+        vpx.Profiles.Should().BeEquivalentTo("0", "1", "2", "3");
+        // "main" from H264/HEVC profile strings must fall back to profile "0"
+        // (the first profile) — the value ffmpeg's -profile actually accepts.
+        EncoderArgumentResolver.ResolveProfile("main", vpx).Should().Be("0");
     }
 
     [Fact]
