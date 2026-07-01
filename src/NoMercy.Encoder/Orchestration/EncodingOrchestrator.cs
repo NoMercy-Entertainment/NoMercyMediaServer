@@ -116,10 +116,18 @@ public class EncodingOrchestrator(
 
         try
         {
+            // Measure staging (remote source -> local temp) separately from the
+            // encode below. On a LocalStorage source this is a no-op path return;
+            // on a remote source it is a full download that today runs BEFORE the
+            // first frame is encoded. Logging staging-vs-encode tells us whether
+            // overlapping the two (streaming ffmpeg's input) is worth the work.
+            Stopwatch stagingWatch = Stopwatch.StartNew();
             await using LocalPathLease lease = await sourceStorage.AcquireLocalPathAsync(
                 request.InputPath,
                 ct
             );
+            stagingWatch.Stop();
+            LogStaging(request.InputPath, sourceStorage, lease.Path, stagingWatch.Elapsed);
 
             EncodingResult result;
 
@@ -181,6 +189,21 @@ public class EncodingOrchestrator(
 
                 result = await strategy.EncodeAsync(stagedRequest, progress, ct);
                 wall.Stop();
+
+                // Sits next to the staging line so the log shows the split
+                // directly: how much of the job was transfer vs actual encode.
+                // wall spans staging+encode (it feeds total-duration stats below),
+                // so subtract staging to report encode-only here.
+                double encodeOnlySeconds = Math.Max(
+                    0,
+                    wall.Elapsed.TotalSeconds - stagingWatch.Elapsed.TotalSeconds
+                );
+                logger.LogInformation(
+                    "Encode finished in {Seconds:F1}s (excludes {Staging:F1}s staging) [{Input}]",
+                    encodeOnlySeconds,
+                    stagingWatch.Elapsed.TotalSeconds,
+                    request.InputPath
+                );
 
                 // Per-task encodes (TaskFilter set on EncodingOptions) write
                 // to a SHARED tempDir derived from the relative OutputDirectory.
@@ -364,6 +387,63 @@ public class EncodingOrchestrator(
                 Status = "failed",
                 EnrichedError = errorShape,
             };
+        }
+    }
+
+    // Logs how long staging the source to a local temp file took, and the
+    // effective throughput. A LocalStorage source returns its own path unchanged
+    // (no download) — detected by the lease path matching the input — so nothing
+    // is logged for the local case. For remote sources this is the transfer that
+    // currently blocks the encode from starting; the number here is what a
+    // streaming (overlapped) input would reclaim.
+    private void LogStaging(
+        string inputPath,
+        IStorage sourceStorage,
+        string leasePath,
+        TimeSpan elapsed
+    )
+    {
+        bool staged = !string.Equals(
+            Path.GetFullPath(leasePath),
+            SafeFullPath(inputPath),
+            StringComparison.OrdinalIgnoreCase
+        );
+        if (!staged)
+            return;
+
+        long bytes = 0;
+        try
+        {
+            bytes = new FileInfo(leasePath).Length;
+        }
+        catch
+        {
+            // size is best-effort — the timing is the point
+        }
+
+        double seconds = elapsed.TotalSeconds;
+        double mbps = seconds > 0 ? bytes / 1_000_000.0 / seconds : 0;
+        logger.LogInformation(
+            "Staged source for encode: {Backend} {MB:F0} MB in {Seconds:F1}s "
+                + "({MBps:F0} MB/s, {Mbps:F0} Mbps) before ffmpeg start [{Input}]",
+            sourceStorage.Driver.BackendLabel,
+            bytes / 1_000_000.0,
+            seconds,
+            mbps,
+            mbps * 8,
+            inputPath
+        );
+    }
+
+    private static string SafeFullPath(string path)
+    {
+        try
+        {
+            return Path.GetFullPath(path);
+        }
+        catch
+        {
+            return path;
         }
     }
 
