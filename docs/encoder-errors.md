@@ -65,9 +65,12 @@ shows up below wrapped in backticks. Add a new ID → add a new bullet here in t
 - `hls.keyframe_segment_misalignment` — segment duration is not an integer multiple of the keyframe interval.
 
 ## Imports / signatures
+- `import.fetch_failed` — profile URL was reachable but the download failed (non-2xx status, timeout, or transport error).
 - `import.http_not_https` — profile import URL must be HTTPS.
+- `import.json_malformed` — fetched or inline profile body is not valid JSON, or deserialises to null.
 - `import.publisher_untrusted` — profile signed by a key that is not in the trusted publishers table.
 - `import.signature_invalid` — profile signature did not verify against the declared publisher key.
+- `import.source_missing` — neither an inline profile body nor a URL was supplied to import from.
 - `import.unsigned_requires_flag` — unsigned profile import requires the explicit `?trust_unsigned=true` query flag.
 
 ## Jobs

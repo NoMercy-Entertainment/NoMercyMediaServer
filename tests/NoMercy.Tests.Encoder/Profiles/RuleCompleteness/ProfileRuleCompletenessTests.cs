@@ -169,6 +169,12 @@ public class ProfileRuleCompletenessTests
         // not by the static profile structure validator.
         [EncoderRuleId.ImportHttpNotHttps] =
             "import-pipeline-only: trust-chain URL scheme check in the import pipeline",
+        [EncoderRuleId.ImportFetchFailed] =
+            "import-pipeline-only: URL fetch failure surfaced by EncoderProfileService.ImportAsync",
+        [EncoderRuleId.ImportSourceMissing] =
+            "import-pipeline-only: neither inline body nor URL supplied — checked by EncoderProfileService.ImportAsync",
+        [EncoderRuleId.ImportJsonMalformed] =
+            "import-pipeline-only: profile body JSON parse failure surfaced by EncoderProfileService.ImportAsync",
         [EncoderRuleId.ImportSignatureInvalid] =
             "import-pipeline-only: cryptographic signature verified by ProfileSignatureVerifier",
         [EncoderRuleId.ImportPublisherUntrusted] =
@@ -770,8 +776,8 @@ public class ProfileRuleCompletenessTests
         count
             .Should()
             .Be(
-                66,
-                "EncoderRuleId currently catalogues 66 rules; "
+                69,
+                "EncoderRuleId currently catalogues 69 rules; "
                     + "if this count changed, update the completeness sets above and this guard"
             );
     }

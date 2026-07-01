@@ -90,6 +90,9 @@ public static class EncoderRuleId
     public const string DrmKeyMissing = "drm.key_missing";
     public const string DrmHttpNotHttps = "drm.http_not_https";
     public const string ImportHttpNotHttps = "import.http_not_https";
+    public const string ImportFetchFailed = "import.fetch_failed";
+    public const string ImportSourceMissing = "import.source_missing";
+    public const string ImportJsonMalformed = "import.json_malformed";
     public const string ImportSignatureInvalid = "import.signature_invalid";
     public const string ImportPublisherUntrusted = "import.publisher_untrusted";
     public const string ImportUnsignedRequiresFlag = "import.unsigned_requires_flag";
