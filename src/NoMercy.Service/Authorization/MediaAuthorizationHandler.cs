@@ -29,10 +29,8 @@ public class MediaAuthorizationHandler(
     {
         foreach (IAuthorizationRequirement requirement in context.Requirements)
         {
-            // A throw from a policy check escapes into the authorization middleware
-            // and surfaces as an unlogged 500 (the action never runs). Catch and
-            // log per requirement so the failing rule + reason is diagnosable, then
-            // leave the requirement unmet (deny) rather than crash the request.
+            // A policy-check throw otherwise surfaces as an unlogged 500; log and
+            // leave the requirement unmet (deny) instead.
             try
             {
                 switch (requirement)

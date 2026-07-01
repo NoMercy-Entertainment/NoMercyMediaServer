@@ -43,9 +43,8 @@ public class BaseController : Controller
         [System.Runtime.CompilerServices.CallerMemberName] string caller = ""
     )
     {
-        // A returned 5xx never reaches GlobalExceptionHandlerMiddleware, so without
-        // this it produces a ProblemDetails the server never logs — an invisible
-        // server error. Log the caller + trace so every 5xx is diagnosable.
+        // A returned 5xx never reaches GlobalExceptionHandlerMiddleware, so it would
+        // otherwise be an unlogged, invisible server error.
         if (statusCode >= 500)
         {
             ILogger? log = HttpContext
