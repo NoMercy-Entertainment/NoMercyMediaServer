@@ -631,9 +631,9 @@ public class LibrariesController(
         if (resolved is not null)
             query = query.Where(f => f.Resolved == resolved);
 
-        List<ImportFailure> failures = await query
+        List<ImportFailure> failures = (await query.ToListAsync(ct))
             .OrderByDescending(f => f.LastAttemptAt)
-            .ToListAsync(ct);
+            .ToList();
 
         return Ok(new { data = failures });
     }

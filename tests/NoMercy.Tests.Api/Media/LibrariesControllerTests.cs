@@ -209,13 +209,24 @@ public class LibrariesControllerTests : IClassFixture<NoMercyApiFactory>
     }
 
     // GET /api/v1/libraries/{libraryId}/import-failures — auth pair
-    //
-    // COMPAT-GATE NOTE: the authenticated shape test is omitted because the
-    // controller's OrderByDescending(f => f.LastAttemptAt) on a DateTimeOffset
-    // column throws NotSupportedException on SQLite (EF Core does not translate
-    // DateTimeOffset ORDER BY for SQLite). This is a real production bug —
-    // surfaced by this test. Fix must convert LastAttemptAt to a supported type
-    // or switch the sort to LINQ-to-Objects before this test can be added back.
+
+    [Fact]
+    public async Task GetImportFailures_ReturnsOkWithDataEnvelope_WhenAuthenticated()
+    {
+        HttpResponseMessage response = await _authed.GetAsync(
+            $"/api/v1/libraries/{NoMercyApiFactory.MovieLibraryId}/import-failures"
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        string body = await response.Content.ReadAsStringAsync();
+        using JsonDocument doc = JsonDocument.Parse(body);
+
+        doc.RootElement.TryGetProperty("data", out JsonElement data)
+            .Should()
+            .BeTrue("import-failures response envelope must contain a 'data' property");
+        data.ValueKind.Should().Be(JsonValueKind.Array, "'data' must be an array");
+    }
 
     [Fact]
     public async Task GetImportFailures_ReturnsUnauthorized_WhenAnonymous()
