@@ -311,17 +311,25 @@ public class BuildStage(
 
             string? filterGraph;
 
+            string? pgsThumbnailLabel = null;
             if (isPgsBurnIn)
             {
+                // The overlay output must be split into one distinct pad per
+                // consumer — each video rung plus the thumbnail branch — or
+                // ffmpeg aborts on a pad mapped more than once.
+                bool pgsIncludesThumbnails = input.Plan.OutputPlan.Thumbnails is not null;
                 PgsBurnInFilterChain chain = pgsBurnInFilterBuilder!.Build(
                     videoStreamIndex: 0,
-                    subtitleStreamIndex: burnInPlan!.SourceIndex
+                    subtitleStreamIndex: burnInPlan!.SourceIndex,
+                    videoOutputCount: input.Plan.OutputPlan.VideoOutputs.Length,
+                    includeThumbnails: pgsIncludesThumbnails
                 );
                 filterGraph = chain.FilterComplex;
-                // Override the video map label in every video output to [burned].
-                OutputPlan pgsRemapped = FilterGraphAssembler.RemapVideoToBurnedLabel(
+                pgsThumbnailLabel = chain.ThumbnailLabel;
+                // Give each video output its own split pad.
+                OutputPlan pgsRemapped = FilterGraphAssembler.RemapVideoToBurnedLabels(
                     input.Plan.OutputPlan,
-                    chain.MapLabel
+                    chain.VideoLabels
                 );
                 input = input with { Plan = input.Plan with { OutputPlan = pgsRemapped } };
             }
@@ -367,10 +375,16 @@ public class BuildStage(
             {
                 ThumbnailOutputPlan thumbs = input.Plan.OutputPlan.Thumbnails;
 
+                // The normal filter graph defines a [thumbs] pad; the PGS overlay
+                // path bypasses it, so read from the dedicated split pad it
+                // produced instead — otherwise -map [thumbs] references a label
+                // that no filtergraph defines and ffmpeg aborts.
+                string thumbnailMapLabel = pgsThumbnailLabel ?? "[thumbs]";
+
                 builder.AddOutput(
                     new(
                         FilePath: $"thumbs_{thumbs.Width}x{thumbs.Height}.webp",
-                        MapStreams: ["[thumbs]"],
+                        MapStreams: [thumbnailMapLabel],
                         ExtraFlags: new()
                         {
                             ["-f"] = "spritevtt",

@@ -48,6 +48,78 @@ public class PgsBurnInFilterBuilderTests
         result.FilterComplex.Should().Be("[0:v:1][0:s:0]overlay=format=auto[burned]");
     }
 
+    // ── Multi-consumer split (regression: one pad cannot feed many -maps) ───
+
+    [Fact]
+    public void Build_MultipleVideoRungs_SplitsBurnedIntoOnePadPerRung()
+    {
+        // A filtergraph output pad can only feed one -map; two rungs mapping the
+        // same [burned] pad aborts ffmpeg. The overlay must be split per rung.
+        PgsBurnInFilterChain result = _builder.Build(
+            videoStreamIndex: 0,
+            subtitleStreamIndex: 0,
+            videoOutputCount: 2,
+            includeThumbnails: false
+        );
+
+        result.FilterComplex.Should().Contain("overlay=format=auto,split=2");
+        result.VideoLabels.Should().Equal("[burned0]", "[burned1]");
+        result.FilterComplex.Should().Contain("[burned0][burned1]");
+        result.VideoLabels.Should().OnlyHaveUniqueItems();
+        result.ThumbnailLabel.Should().BeNull();
+    }
+
+    [Fact]
+    public void Build_Thumbnails_AddsADedicatedThumbnailPad()
+    {
+        // The PGS path bypasses the normal graph that defines [thumbs]; the
+        // thumbnail branch must get its own split pad or -map references a label
+        // no filtergraph defines.
+        PgsBurnInFilterChain result = _builder.Build(
+            videoStreamIndex: 0,
+            subtitleStreamIndex: 0,
+            videoOutputCount: 1,
+            includeThumbnails: true
+        );
+
+        result.FilterComplex.Should().Contain("split=2");
+        result.ThumbnailLabel.Should().NotBeNull();
+        result.FilterComplex.Should().Contain(result.ThumbnailLabel!);
+        result.VideoLabels.Should().HaveCount(1);
+        result.VideoLabels[0].Should().NotBe(result.ThumbnailLabel);
+    }
+
+    [Fact]
+    public void Build_MultipleRungsAndThumbnails_SplitsForEveryConsumer()
+    {
+        PgsBurnInFilterChain result = _builder.Build(
+            videoStreamIndex: 0,
+            subtitleStreamIndex: 1,
+            videoOutputCount: 3,
+            includeThumbnails: true
+        );
+
+        result.FilterComplex.Should().Contain("split=4");
+        result.VideoLabels.Should().HaveCount(3);
+        List<string> allPads = [.. result.VideoLabels, result.ThumbnailLabel!];
+        allPads.Should().OnlyHaveUniqueItems("every consumer needs its own pad");
+    }
+
+    [Fact]
+    public void Build_SingleVideoNoThumbnails_KeepsSinglePadNoSplit()
+    {
+        PgsBurnInFilterChain result = _builder.Build(
+            videoStreamIndex: 0,
+            subtitleStreamIndex: 0,
+            videoOutputCount: 1,
+            includeThumbnails: false
+        );
+
+        result.FilterComplex.Should().NotContain("split");
+        result.FilterComplex.Should().EndWith("[burned]");
+        result.VideoLabels.Should().Equal("[burned]");
+    }
+
     // ── Multiple stream indices ────────────────────────────────────────────
 
     [Theory]

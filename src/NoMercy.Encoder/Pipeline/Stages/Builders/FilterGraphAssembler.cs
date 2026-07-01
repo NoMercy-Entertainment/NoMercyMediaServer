@@ -478,16 +478,22 @@ public static class FilterGraphAssembler
     }
 
     /// <summary>
-    /// Returns a copy of <paramref name="plan"/> with every video output's
-    /// <see cref="VideoOutputPlan.MapLabel"/> replaced by
-    /// <paramref name="burnedLabel"/>. Used for PGS burn-in where the
-    /// <c>overlay</c> filter emits a single composited output pad that all
-    /// video encoders must read from.
+    /// Returns a copy of <paramref name="plan"/> with each video output's
+    /// <see cref="VideoOutputPlan.MapLabel"/> replaced by its OWN pad from
+    /// <paramref name="burnedLabels"/>. Used for PGS burn-in: the overlay
+    /// output is <c>split</c> into one pad per rung, and each video encoder
+    /// reads from a distinct pad (a filtergraph output pad can feed only one
+    /// consumer, so sharing one label across rungs aborts ffmpeg).
     /// </summary>
-    public static OutputPlan RemapVideoToBurnedLabel(OutputPlan plan, string burnedLabel)
+    public static OutputPlan RemapVideoToBurnedLabels(
+        OutputPlan plan,
+        IReadOnlyList<string> burnedLabels
+    )
     {
         VideoOutputPlan[] remapped = plan
-            .VideoOutputs.Select(v => v with { MapLabel = burnedLabel })
+            .VideoOutputs.Select(
+                (v, i) => v with { MapLabel = burnedLabels[Math.Min(i, burnedLabels.Count - 1)] }
+            )
             .ToArray();
 
         return plan with
