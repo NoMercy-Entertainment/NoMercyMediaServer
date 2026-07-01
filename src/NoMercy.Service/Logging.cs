@@ -9,9 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System;
-using System.Linq;
-using Microsoft.Extensions.Logging;
 using NoMercy.NmSystem.Logging;
 
 namespace NoMercy.Service;
@@ -68,9 +65,14 @@ public class CustomLogger<T> : ILogger<T>
         if (!IsEnabled(logLevel))
             return;
 
-        string message = formatter(state, exception);
-        if (FilteredPhrases.Any(message.Contains))
-            return;
+        // Errors bypass phrase filtering: "Microsoft" matches framework frames in
+        // an exception's rendered stack, which was silently dropping 500 stacks.
+        if (logLevel < LogLevel.Error)
+        {
+            string message = formatter(state, exception);
+            if (FilteredPhrases.Any(message.Contains))
+                return;
+        }
 
         _inner.Log(logLevel, eventId, state, exception, formatter);
     }

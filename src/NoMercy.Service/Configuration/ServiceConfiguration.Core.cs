@@ -12,8 +12,6 @@
 using I18N.DotNet;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using NoMercy.Api.Hubs;
 using NoMercy.Api.Services;
 using NoMercy.Api.WebSockets;
@@ -68,12 +66,10 @@ using NoMercy.Setup.Boot;
 using NoMercy.Setup.Cast;
 using NoMercy.Setup.Server;
 using NoMercy.Storage;
-using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Extensions;
 using Serilog.Events;
 using CollectionRepository = NoMercy.Data.Repositories.CollectionRepository;
 using DatabaseActivity = NoMercy.Database.Activity;
-using DataIMovieRepository = NoMercy.Data.Repositories.IMovieRepository;
 using LibraryRepository = NoMercy.Data.Repositories.LibraryRepository;
 using MediaProcessingCollectionRepository = NoMercy.MediaProcessing.Collections.CollectionRepository;
 using MediaProcessingEpisodeRepository = NoMercy.MediaProcessing.Episodes.EpisodeRepository;
@@ -544,6 +540,13 @@ public static partial class ServiceConfiguration
             // NeedsRecalibration() can honour its 30-day grace window.
             opts.SpeedIndexCachePath = AppFiles.SpeedIndexCachePath;
         });
+
+        // Registered here, not in Providers or Encoder: it bridges both and neither
+        // may reference the other.
+        services.AddTransient<
+            Providers.AcoustId.IAudioFingerprinter,
+            MediaProcessing.Fingerprinting.FfmpegChromaprintFingerprinter
+        >();
 
         // Transcode-scoped IStorage — paths are relative to AppFiles.TranscodePath.
         // HomeController uses this so it can pass scope-relative paths (Rule 1 of
