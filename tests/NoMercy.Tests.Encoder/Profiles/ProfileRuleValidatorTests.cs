@@ -746,6 +746,78 @@ public class ProfileRuleValidatorTests
         Assert.False(env.Valid);
     }
 
+    [Theory]
+    [InlineData("-crf")]
+    [InlineData("-b:v")]
+    [InlineData("-maxrate")]
+    [InlineData("-rc")]
+    [InlineData("-cq")]
+    [InlineData("-profile:v")]
+    [InlineData("-level")]
+    [InlineData("-g")]
+    [InlineData("-color_primaries")]
+    [InlineData("-pix_fmt")]
+    public void CustomArgsReservedFlag_NewlyReservedRateControlAndEncoderFlags_Fire(string flag)
+    {
+        // These flags are all derived from typed profile fields (rate control,
+        // codec profile, level, GOP, color). Overriding any of them via
+        // CustomArguments desyncs the validator from what ffmpeg runs.
+        EncodingProfile profile = ProfileFor(Video()) with
+        {
+            CustomArguments = new Dictionary<string, string> { [flag] = "x" },
+        };
+
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.CustomArgsReservedFlag));
+        Assert.False(env.Valid);
+    }
+
+    [Fact]
+    public void CustomArgsReservedFlag_FiresForPerVideoCustomArguments()
+    {
+        // The real escape hatch the pipeline merges is VideoOutput.CustomArguments,
+        // which was validated by nothing. A video-level -rc override must fire.
+        VideoOutput video = Video() with
+        {
+            CustomArguments = new Dictionary<string, string> { ["-rc"] = "cbr" },
+        };
+        EncodingProfile profile = ProfileFor(video);
+
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        EncoderRule rule = env.Errors.First(r => r.Id == EncoderRuleId.CustomArgsReservedFlag);
+        Assert.Contains("video.custom_arguments", rule.Field);
+        Assert.False(env.Valid);
+    }
+
+    [Fact]
+    public void CustomArgsReservedFlag_FiresForPerAudioCustomArguments()
+    {
+        AudioOutput audio = Audio(AudioCodecType.Aac, 192) with
+        {
+            CustomArguments = new Dictionary<string, string> { ["-b:a"] = "320k" },
+        };
+        EncodingProfile profile = ProfileFor(Video(), audio: [audio]);
+
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        EncoderRule rule = env.Errors.First(r => r.Id == EncoderRuleId.CustomArgsReservedFlag);
+        Assert.Contains("audio[0].custom_arguments", rule.Field);
+        Assert.False(env.Valid);
+    }
+
+    [Fact]
+    public void CustomArgsReservedFlag_AllowsNonReservedPerVideoFlag()
+    {
+        // A genuinely-informational per-output flag stays permitted.
+        VideoOutput video = Video() with
+        {
+            CustomArguments = new Dictionary<string, string> { ["-loglevel"] = "info" },
+        };
+        EncodingProfile profile = ProfileFor(video);
+
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.CustomArgsReservedFlag));
+    }
+
     [Fact]
     public void CustomArgsReservedFlag_AllowsKeyWithoutLeadingDash()
     {

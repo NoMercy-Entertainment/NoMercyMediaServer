@@ -107,6 +107,43 @@ public static class ProfileRuleValidator
         "-hls_segment_filename",
         "-hls_playlist_type",
         "-hls_segment_type",
+        // Rate control — driven by VideoOutput.RateControl / Crf / BitrateKbps.
+        // The resolver owns the whole rate-control flag set as a unit; letting a
+        // custom flag override one member desyncs it from the others (e.g. a
+        // custom -rc cbr on top of the resolver's -cq, or a custom -maxrate that
+        // discards the computed VBV ceiling while -bufsize stays derived).
+        "-crf",
+        "-b:v",
+        "-maxrate",
+        "-bufsize",
+        "-rc",
+        "-cq",
+        "-qp",
+        "-global_quality",
+        "-q:v",
+        // Codec profile / level / pixel format — driven by VideoOutput.CodecProfile,
+        // Level, BitDepth. A custom override is emitted a SECOND time next to the
+        // typed emit (ffmpeg last-wins), so the manifest advertises one thing and
+        // the stream is another.
+        "-profile:v",
+        "-level",
+        "-pix_fmt",
+        "-profile:a",
+        // GOP — driven by KeyframeIntervalSeconds; the strategy always emits -g.
+        "-g",
+        "-keyint_min",
+        // Audio shaping — driven by AudioOutput.BitrateKbps / SampleRateHz / Channels.
+        "-b:a",
+        "-ar",
+        "-ac",
+        // HDR / color signaling — derived from the source when HDR passthrough is
+        // preserved; a custom override produces inconsistent primaries/trc/matrix.
+        "-color_primaries",
+        "-color_trc",
+        "-colorspace",
+        "-color_range",
+        // Stream tags — driven by the codec/container (hvc1/dvh1 for HEVC/DV).
+        "-tag:v",
     };
 
     /// <summary>
@@ -1172,10 +1209,38 @@ public static class ProfileRuleValidator
 
     private static void EmitCustomArgsReservedFlag(EncodingProfile profile, List<EncoderRule> rules)
     {
-        if (profile.CustomArguments is null || profile.CustomArguments.Count == 0)
+        // The per-stream CustomArguments dicts are the real escape hatches the
+        // pipeline merges into each output's flags (PlanStage merges
+        // VideoOutput.CustomArguments last-wins). Validating only the top-level
+        // profile.CustomArguments left every per-output override completely
+        // unchecked — a video-level -rc / -maxrate / -profile:v silently clobbered
+        // a resolver-owned flag with no error. Scan all four sources.
+        ScanCustomArgs("custom_arguments", profile.CustomArguments, rules);
+
+        if (profile.Video is not null)
+            ScanCustomArgs("video.custom_arguments", profile.Video.CustomArguments, rules);
+
+        for (int i = 0; i < profile.Audio.Length; i++)
+            ScanCustomArgs($"audio[{i}].custom_arguments", profile.Audio[i].CustomArguments, rules);
+
+        for (int i = 0; i < profile.Subtitles.Length; i++)
+            ScanCustomArgs(
+                $"subtitles[{i}].custom_arguments",
+                profile.Subtitles[i].CustomArguments,
+                rules
+            );
+    }
+
+    private static void ScanCustomArgs(
+        string fieldPrefix,
+        Dictionary<string, string>? customArgs,
+        List<EncoderRule> rules
+    )
+    {
+        if (customArgs is null || customArgs.Count == 0)
             return;
 
-        foreach (string key in profile.CustomArguments.Keys)
+        foreach (string key in customArgs.Keys)
         {
             // Normalize: callers may store keys with or without the leading dash.
             string normalized = key.StartsWith('-') ? key : $"-{key}";
@@ -1186,12 +1251,12 @@ public static class ProfileRuleValidator
                 new EncoderRule(
                     Id: EncoderRuleId.CustomArgsReservedFlag,
                     Severity: EncoderRuleSeverity.Error,
-                    Field: $"custom_arguments[{key}]",
+                    Field: $"{fieldPrefix}[{key}]",
                     Message: $"CustomArgument '{key}' overrides a flag the encoder derives from typed "
                         + "profile fields. The profile's declared values would be ignored and the "
                         + "validator can no longer guarantee the output matches the profile.",
                     Fix: $"Remove the '{key}' override and set the matching typed field "
-                        + "(codec / container / preset / hardware preference / ladder) instead."
+                        + "(codec / container / preset / rate control / hardware preference / ladder) instead."
                 )
             );
         }

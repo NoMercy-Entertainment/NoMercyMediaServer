@@ -608,12 +608,22 @@ public class PlanStage(
 
                             // Profile/plugin CustomArguments escape hatch: merge the
                             // per-video custom flags last so user/plugin intent wins.
-                            // ProfileValidator already blocks codec/format-overriding
-                            // keys, so what reaches here is safe to apply verbatim.
+                            // Defense in depth: even though the validator now rejects
+                            // reserved-flag overrides, a code-built or legacy-validated
+                            // profile could still carry one. Skip any key a typed field
+                            // already owns so the argv can never emit a duplicate /
+                            // conflicting flag next to the value the resolver computed.
                             if (v.CustomArguments is not null)
                             {
                                 foreach ((string argKey, string argValue) in v.CustomArguments)
+                                {
+                                    string normalizedKey = argKey.StartsWith('-')
+                                        ? argKey
+                                        : $"-{argKey}";
+                                    if (ProfileRuleValidator.ReservedFlags.Contains(normalizedKey))
+                                        continue;
                                     extraFlags[argKey] = argValue;
+                                }
                             }
 
                             return new VideoOutputPlan(
