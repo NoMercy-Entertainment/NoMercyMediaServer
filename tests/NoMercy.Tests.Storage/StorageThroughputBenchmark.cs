@@ -11,6 +11,7 @@
 
 using System.Diagnostics;
 using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Drivers.Nfs;
 using NoMercy.Storage.Drivers.S3;
 using NoMercy.Storage.Drivers.Smb;
@@ -21,32 +22,41 @@ using Xunit.Abstractions;
 namespace NoMercy.Tests.Storage;
 
 /// <summary>
-/// Measures raw streaming throughput (write then read) for every remote driver
-/// against the all-in-one container, and prints MB/s. Its job is to answer one
-/// question: does a driver keep pace with the IO, or does it add its own ceiling
-/// (whole-file buffering, per-byte round-trips, sync stalls)?
+/// Measures streaming throughput for every storage driver against the all-in-one
+/// container and prints a MB/s table. It answers one question directly: is the
+/// user getting the fastest transfer their IO allows, or is a driver leaving
+/// throughput on the table?
 ///
-/// <para><b>What a loopback number means.</b> The container runs over loopback,
-/// so these figures measure the <i>driver's own overhead</i> — chunking, native
-/// round-trips, allocations — not a real NAS's wire speed. A high loopback number
-/// proves the driver is not the bottleneck; the wire is. A low one is a driver
-/// bug. The test asserts only a sanity <i>floor</i> that a regression to whole-file
-/// buffering or per-byte round-trips would break; the real signal is the logged
-/// MB/s, read from the test output.</para>
+/// <para><b>The baseline.</b> The <c>Local</c> driver runs through the identical
+/// benchmark code path against a real disk, so its number is the box's raw IO
+/// ceiling under this harness. Every remote driver is printed as a percentage of
+/// that baseline. A remote driver near the baseline is IO-bound (as fast as the
+/// medium allows); one well under it is leaving throughput on the table.</para>
+///
+/// <para><b>Two modes per driver.</b> <c>seq</c> is the naive caller: write a
+/// block, wait, write the next — one operation in flight, so it exposes
+/// per-round-trip latency. <c>pipe</c> uses <see cref="Stream.CopyToAsync"/> with
+/// a large buffer, letting the runtime overlap production and IO — this is what a
+/// throughput-sensitive caller (the encoder copy, the sync path) should do, and
+/// the gap between <c>seq</c> and <c>pipe</c> is the win available from
+/// overlapping alone, with no driver change.</para>
+///
+/// <para><b>Loopback caveat.</b> The container is loopback, so these figures are a
+/// per-driver overhead measurement, not a real NAS wire speed. For a remote user
+/// the true ceiling is their network (gigabit ~118 MB/s, 10GbE ~1.2 GB/s), not
+/// this disk. The table shows whether the driver, on an unconstrained link,
+/// would be the bottleneck.</para>
 ///
 /// <para>Tagged <c>Category=Benchmark</c> so it is filtered out of routine runs
 /// (<c>--filter "Category!=Benchmark"</c>) and executed on demand:
-/// <c>dotnet test --filter "Category=Benchmark"</c>. Payload size is overridable
-/// with the <c>NM_BENCH_MB</c> environment variable (default 256 MiB).</para>
+/// <c>dotnet test --filter "Category=Benchmark"</c>. Payload is overridable with
+/// <c>NM_BENCH_MB</c> (default 256 MiB).</para>
 /// </summary>
 [Collection("StorageBackends")]
 [Trait("Category", "Integration")]
 [Trait("Category", "Benchmark")]
 public sealed class StorageThroughputBenchmark(StorageBackendsFixture fix, ITestOutputHelper output)
 {
-    // 256 MiB by default: comfortably past every driver's internal chunk and the
-    // ~2 GiB single-array limit a whole-file buffer would hit, while finishing in
-    // seconds over loopback. Override with NM_BENCH_MB for a heavier soak.
     private static int PayloadBytes =>
         (int.TryParse(Environment.GetEnvironmentVariable("NM_BENCH_MB"), out int mb) ? mb : 256)
         * 1024
@@ -55,17 +65,33 @@ public sealed class StorageThroughputBenchmark(StorageBackendsFixture fix, ITest
     // Loopback floor. A working streaming driver clears this by a wide margin;
     // only a hard regression (whole-file buffer thrash, per-byte round-trips, a
     // stall) drops beneath it. Deliberately low so a slow CI host doesn't flake —
-    // the number in the log is the signal, this bound just fails an obvious break.
+    // the numbers in the log are the signal, this bound just fails an obvious break.
     private const double MinMBytesPerSecond = 8.0;
 
     private const int BlockSize = 1024 * 1024;
+
+    [SkippableFact]
+    public void Local_baseline_throughput()
+    {
+        Skip.If(!fix.Available, fix.StartupError ?? "storage container not available");
+        string root = Path.Combine(Path.GetTempPath(), "nm-bench-" + Ulid.NewUlid());
+        Directory.CreateDirectory(root);
+        try
+        {
+            Report("Local", new LocalStorageDriver(), Path.Combine(root, "baseline"));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
 
     [SkippableFact]
     public void Smb_streaming_throughput()
     {
         Skip.If(!fix.Available, fix.StartupError ?? "storage container not available");
         using SmbStorageDriver driver = fix.BuildSmbDriver();
-        Measure("SMB", driver, $"bench/smb-{Ulid.NewUlid()}.bin");
+        Report("SMB", driver, $"bench/smb-{Ulid.NewUlid()}");
     }
 
     [SkippableFact]
@@ -75,7 +101,7 @@ public sealed class StorageThroughputBenchmark(StorageBackendsFixture fix, ITest
         Skip.If(!fix.NfsMountable, fix.NfsUnavailableReason ?? "NFS export not mountable");
         using NfsStorageDriver? driver = fix.TryBuildNfsDriver();
         Skip.If(driver is null, "libnfs native library not installed");
-        Measure("NFS", driver!, $"/bench-nfs-{Ulid.NewUlid()}.bin");
+        Report("NFS", driver!, $"/bench-nfs-{Ulid.NewUlid()}");
     }
 
     [SkippableFact]
@@ -83,7 +109,7 @@ public sealed class StorageThroughputBenchmark(StorageBackendsFixture fix, ITest
     {
         Skip.If(!fix.Available, fix.StartupError ?? "storage container not available");
         using S3StorageDriver driver = fix.BuildS3Driver();
-        Measure("S3", driver, $"bench/s3-{Ulid.NewUlid()}.bin");
+        Report("S3", driver, $"bench/s3-{Ulid.NewUlid()}");
     }
 
     [SkippableFact]
@@ -91,100 +117,175 @@ public sealed class StorageThroughputBenchmark(StorageBackendsFixture fix, ITest
     {
         Skip.If(!fix.Available, fix.StartupError ?? "storage container not available");
         WebDavStorageDriver driver = fix.BuildWebDavDriver();
-        Measure("WebDAV", driver, $"bench/webdav-{Ulid.NewUlid()}.bin");
+        Report("WebDAV", driver, $"bench/webdav-{Ulid.NewUlid()}");
     }
 
-    // Streams the payload in one direction, timing only the transfer. The test
-    // never holds the whole payload in memory — it feeds a single reused block on
-    // write and consumes into a single reused block on read — so what is timed is
-    // the driver moving bytes, not the test allocating them.
-    private void Measure(string label, IStorageDriver driver, string path)
+    // Runs both transfer modes for one driver and prints a two-line result. The
+    // seq/pipe pair is what makes the gap visible: same driver, same bytes, the
+    // only difference is whether production and IO overlap.
+    private void Report(string label, IStorageDriver driver, string pathStem)
+    {
+        (double wSeq, double rSeq) = RunOnce(driver, $"{pathStem}-seq.bin", pipelined: false);
+        (double wPipe, double rPipe) = RunOnce(driver, $"{pathStem}-pipe.bin", pipelined: true);
+
+        int mib = PayloadBytes / (1024 * 1024);
+        output.WriteLine(
+            $"{label, -7} {mib} MiB  seq : write {wSeq, 7:F1}  read {rSeq, 7:F1} MB/s"
+        );
+        output.WriteLine(
+            $"{label, -7} {mib} MiB  pipe: write {wPipe, 7:F1}  read {rPipe, 7:F1} MB/s"
+        );
+
+        foreach (double v in new[] { wSeq, rSeq, wPipe, rPipe })
+            v.Should()
+                .BeGreaterThan(
+                    MinMBytesPerSecond,
+                    $"{label} throughput regressed (whole-file buffer or per-byte round-trips?)"
+                );
+    }
+
+    private (double WriteMBps, double ReadMBps) RunOnce(
+        IStorageDriver driver,
+        string path,
+        bool pipelined
+    )
     {
         int payload = PayloadBytes;
-        byte[] block = new byte[BlockSize];
-        FillDeterministic(block);
 
-        double writeMBps = TimeTransfer(
+        double writeMBps = Time(
             payload,
             () =>
             {
-                Stream w = driver.OpenWrite(path, overwrite: true);
-                int written = 0;
-                while (written < payload)
-                {
-                    int len = Math.Min(BlockSize, payload - written);
-                    w.Write(block, 0, len);
-                    written += len;
-                }
-                return w; // TimeTransfer disposes it inside the clock (see below)
+                using Stream w = driver.OpenWrite(path, overwrite: true);
+                using GeneratedStream src = new(payload);
+                if (pipelined)
+                    src.CopyTo(w, BlockSize);
+                else
+                    CopySequential(src, w);
             }
         );
 
-        double readMBps = TimeTransfer(
+        double readMBps = Time(
             payload,
             () =>
             {
-                Stream r = driver.OpenRead(path);
-                long total = 0;
-                int read;
-                while ((read = r.Read(block, 0, BlockSize)) > 0)
-                    total += read;
-                if (total != payload)
-                    throw new IOException($"{label}: read {total} of {payload} bytes");
-                return r;
+                using Stream r = driver.OpenRead(path);
+                using CountingSink sink = new();
+                if (pipelined)
+                    r.CopyTo(sink, BlockSize);
+                else
+                    CopySequential(r, sink);
+                if (sink.Total != payload)
+                    throw new IOException($"read {sink.Total} of {payload} bytes");
             }
         );
 
         long actualSize = driver.GetFileSize(path);
         if (actualSize != payload)
-            throw new IOException($"{label}: stored size {actualSize} != written {payload}");
-
+            throw new IOException($"stored size {actualSize} != written {payload}");
         driver.DeleteFile(path);
 
-        output.WriteLine(
-            $"{label, -7} {payload / (1024 * 1024)} MiB  "
-                + $"write {writeMBps, 7:F1} MB/s   read {readMBps, 7:F1} MB/s"
-        );
-
-        writeMBps
-            .Should()
-            .BeGreaterThan(
-                MinMBytesPerSecond,
-                $"{label} write throughput regressed (whole-file buffer or per-byte round-trips?)"
-            );
-        readMBps
-            .Should()
-            .BeGreaterThan(
-                MinMBytesPerSecond,
-                $"{label} read throughput regressed (whole-file buffer or per-byte round-trips?)"
-            );
+        return (writeMBps, readMBps);
     }
 
-    // Runs the transfer, disposing the stream inside the timed region because a
-    // write driver's real cost (S3 CompleteMultipartUpload, WebDAV's PUT-on-close)
-    // lands on Dispose — timing must include it or the number is a lie.
-    private static double TimeTransfer(int payload, Func<Stream> transfer)
+    // One block in flight at a time — the naive caller. Isolates per-round-trip
+    // latency: no overlap between producing/consuming a block and the IO of the
+    // previous one.
+    private static void CopySequential(Stream from, Stream to)
+    {
+        byte[] block = new byte[BlockSize];
+        int n;
+        while ((n = from.Read(block, 0, BlockSize)) > 0)
+            to.Write(block, 0, n);
+    }
+
+    // Times the transfer, disposing the stream inside the clock: a write driver's
+    // real cost (S3 CompleteMultipartUpload, WebDAV's PUT-on-close) lands on
+    // Dispose, so timing must include it or the number lies. Uses a real-time
+    // stopwatch and decimal MB (1e6) so the figure is comparable to vendor specs.
+    private static double Time(int payload, Action transfer)
     {
         Stopwatch sw = Stopwatch.StartNew();
-        Stream stream = transfer();
-        stream.Dispose();
+        transfer();
         sw.Stop();
-
         double seconds = sw.Elapsed.TotalSeconds;
-        double megabytes = payload / 1_000_000.0;
-        return seconds > 0 ? megabytes / seconds : double.PositiveInfinity;
+        return seconds > 0 ? payload / 1_000_000.0 / seconds : double.PositiveInfinity;
+    }
+}
+
+/// <summary>
+/// Read-only source of <paramref name="length"/> deterministic bytes with no
+/// backing buffer, so feeding a write stream from it never materializes the whole
+/// payload in the test's memory — the benchmark measures the driver moving bytes,
+/// not the test allocating them.
+/// </summary>
+file sealed class GeneratedStream(int length) : Stream
+{
+    private long _position;
+
+    public override bool CanRead => true;
+    public override bool CanSeek => false;
+    public override bool CanWrite => false;
+    public override long Length => length;
+    public override long Position
+    {
+        get => _position;
+        set => throw new NotSupportedException();
     }
 
-    private static void FillDeterministic(byte[] block)
+    public override int Read(byte[] buffer, int offset, int count)
     {
+        int remaining = (int)Math.Min(count, length - _position);
+        if (remaining <= 0)
+            return 0;
         unchecked
         {
-            uint state = 2166136261u;
-            for (int index = 0; index < block.Length; index++)
+            uint state = (uint)_position * 2654435761u + 1u;
+            for (int index = 0; index < remaining; index++)
             {
-                state = state * 16777619u + 1u;
-                block[index] = (byte)(state >> 24);
+                state = state * 1664525u + 1013904223u;
+                buffer[offset + index] = (byte)(state >> 24);
             }
         }
+        _position += remaining;
+        return remaining;
     }
+
+    public override void Flush() { }
+
+    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+    public override void SetLength(long value) => throw new NotSupportedException();
+
+    public override void Write(byte[] buffer, int offset, int count) =>
+        throw new NotSupportedException();
+}
+
+/// <summary>Counts bytes and discards them — a zero-cost read sink.</summary>
+file sealed class CountingSink : Stream
+{
+    public long Total { get; private set; }
+
+    public override bool CanRead => false;
+    public override bool CanSeek => false;
+    public override bool CanWrite => true;
+    public override long Length => Total;
+    public override long Position
+    {
+        get => Total;
+        set => throw new NotSupportedException();
+    }
+
+    public override void Write(byte[] buffer, int offset, int count) => Total += count;
+
+    public override void Write(ReadOnlySpan<byte> buffer) => Total += buffer.Length;
+
+    public override void Flush() { }
+
+    public override int Read(byte[] buffer, int offset, int count) =>
+        throw new NotSupportedException();
+
+    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+    public override void SetLength(long value) => throw new NotSupportedException();
 }
