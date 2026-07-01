@@ -284,6 +284,54 @@ public class EncoderArgumentResolverTests
     }
 
     [Fact]
+    public void ResolveProfile_HighOnNumericVocabulary_MapsToHighNotFirstEntry()
+    {
+        // h264_videotoolbox exposes numeric profiles ("66"=Baseline, "77"=Main,
+        // "100"=High). "high" must map to "100", never silently fall back to the
+        // first entry "66" (Baseline) — that ran Baseline while the profile
+        // asked for High.
+        EncoderInfo videotoolbox = new(
+            FfmpegName: "h264_videotoolbox",
+            RequiredVendor: null,
+            Presets: [],
+            Profiles: ["66", "77", "100"],
+            Levels: [],
+            QualityRange: new(0, 100, 50),
+            SupportedRateControl: [RateControlMode.QualityLevel],
+            Supports10Bit: false,
+            SupportsHdr: false,
+            MaxConcurrentSessions: 3,
+            PixelFormat10Bit: "yuv420p10le",
+            VendorSpecificFlags: new()
+        );
+
+        EncoderArgumentResolver.ResolveProfile("high", videotoolbox).Should().Be("100");
+        EncoderArgumentResolver.ResolveProfile("main", videotoolbox).Should().Be("77");
+        EncoderArgumentResolver.ResolveProfile("baseline", videotoolbox).Should().Be("66");
+    }
+
+    [Fact]
+    public void ResolveProfile_KnownVocabulary_PassesThroughVerbatim()
+    {
+        EncoderInfo libx264 = new(
+            FfmpegName: "libx264",
+            RequiredVendor: null,
+            Presets: ["medium"],
+            Profiles: ["baseline", "main", "high"],
+            Levels: ["4.1"],
+            QualityRange: new(0, 51, 23),
+            SupportedRateControl: [RateControlMode.Crf],
+            Supports10Bit: false,
+            SupportsHdr: false,
+            MaxConcurrentSessions: int.MaxValue,
+            PixelFormat10Bit: "yuv420p10le",
+            VendorSpecificFlags: new()
+        );
+
+        EncoderArgumentResolver.ResolveProfile("high", libx264).Should().Be("high");
+    }
+
+    [Fact]
     public void ResolveDimensions_OddExplicitWidth_IsRoundedEven()
     {
         // 1921 passes validation (Width > 0) but reaches scale=1921:-2, which

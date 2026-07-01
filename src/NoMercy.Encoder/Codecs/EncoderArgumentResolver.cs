@@ -39,18 +39,58 @@ public static class EncoderArgumentResolver
 
     /// <summary>
     /// Returns the validated profile for the target encoder.
-    /// Falls back to the encoder's first (safest) profile if unsupported.
+    ///
+    /// Profiles are written in libx264 vocabulary (baseline / main / high /
+    /// high10). Some encoders use a disjoint vocabulary — h264_videotoolbox
+    /// exposes numeric profiles ("66" = Baseline, "77" = Main, "100" = High).
+    /// A blind fall-back to <c>Profiles[0]</c> silently downgrades every
+    /// non-matching request to the encoder's first (usually weakest) profile —
+    /// e.g. "high" on videotoolbox became "66" (Baseline), so the encode ran
+    /// Baseline while the profile asked for High. Map by SEMANTICS first so the
+    /// requested tier is honoured; only then fall back.
     /// </summary>
     public static string? ResolveProfile(string? profileValue, EncoderInfo encoder)
     {
         if (encoder.Profiles.Length == 0)
             return null;
 
-        if (profileValue is not null && encoder.Profiles.Contains(profileValue))
+        if (profileValue is null)
+            return encoder.Profiles[0];
+
+        if (encoder.Profiles.Contains(profileValue))
             return profileValue;
+
+        // The encoder's vocabulary does not contain the requested name verbatim.
+        // Map the well-known libx264 profile tiers onto the aliases encoders use
+        // so the requested quality tier is preserved rather than silently reset.
+        string[] aliases = ProfileAliases(profileValue);
+        foreach (string alias in aliases)
+        {
+            string? match = encoder.Profiles.FirstOrDefault(p =>
+                string.Equals(p, alias, StringComparison.OrdinalIgnoreCase)
+            );
+            if (match is not null)
+                return match;
+        }
 
         return encoder.Profiles[0];
     }
+
+    /// <summary>
+    /// Alternate spellings / numeric equivalents of a libx264-vocabulary profile
+    /// name across the encoders NoMercy targets, most-specific first. Numeric
+    /// values are the H.264 profile_idc (videotoolbox) and the HEVC-videotoolbox
+    /// codes ("1" = Main, "2" = Main10).
+    /// </summary>
+    private static string[] ProfileAliases(string profileValue) =>
+        profileValue.ToLowerInvariant() switch
+        {
+            "baseline" or "constrained_baseline" => ["baseline", "constrained_baseline", "66"],
+            "main" => ["main", "77", "1"],
+            "high" => ["high", "100"],
+            "high10" or "main10" => ["high10", "main10", "2"],
+            _ => [],
+        };
 
     /// <summary>
     /// Maps CRF to the correct rate control flag for the encoder.

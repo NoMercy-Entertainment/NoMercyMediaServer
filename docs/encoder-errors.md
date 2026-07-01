@@ -84,6 +84,7 @@ shows up below wrapped in backticks. Add a new ID → add a new bullet here in t
 
 ## Levels
 - `level.frame_rate_cap_exceeded` — the source fps × resolution exceeds the declared codec level's luma sample rate cap; the encoder will reject it at runtime.
+- `level.invalid` — the declared level is not a level the codec defines; ffmpeg would reject it.
 - `level.resolution_mismatch` — codec level cannot carry the requested resolution.
 
 ## Licensing

@@ -720,6 +720,56 @@ public class ProfileRuleValidatorTests
         Assert.False(HasRule(env, EncoderRuleId.SubtitlesBurnInPermanent));
     }
 
+    // ── LevelInvalid ─────────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("6.3")]
+    [InlineData("9.9")]
+    [InlineData("bogus")]
+    public void LevelInvalid_UnknownH264Level_FiresAsError(string level)
+    {
+        EncodingProfile profile = ProfileFor(Video(level: level));
+
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+
+        Assert.True(HasRule(env, EncoderRuleId.LevelInvalid));
+        Assert.False(env.Valid);
+    }
+
+    [Theory]
+    [InlineData("4.0")]
+    [InlineData("5.1")]
+    public void LevelInvalid_KnownH264Level_DoesNotFire(string level)
+    {
+        EncodingProfile profile = ProfileFor(Video(width: 1280, height: 720, level: level));
+
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+
+        Assert.False(HasRule(env, EncoderRuleId.LevelInvalid));
+    }
+
+    [Fact]
+    public void LevelInvalid_CodecWithNoLevelTable_NeverFires()
+    {
+        // AV1 has no level table in this catalogue; an unknown level must NOT be
+        // flagged as invalid (we simply do not enumerate its levels).
+        EncodingProfile profile = ProfileFor(Video(codec: VideoCodecType.Av1, level: "7.3"));
+
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+
+        Assert.False(HasRule(env, EncoderRuleId.LevelInvalid));
+    }
+
+    [Fact]
+    public void LevelInvalid_NoLevelSet_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(Video(level: null));
+
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+
+        Assert.False(HasRule(env, EncoderRuleId.LevelInvalid));
+    }
+
     // ── CustomArgsReservedFlag ───────────────────────────────────────────────
 
     [Theory]

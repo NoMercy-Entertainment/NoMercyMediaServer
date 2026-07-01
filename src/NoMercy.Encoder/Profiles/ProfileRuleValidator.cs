@@ -51,6 +51,7 @@ public static class ProfileRuleValidator
         EmitLadderManualEmpty(profile, rules);
         EmitLadderManualUnsorted(profile, rules);
         EmitProfileLevelResolutionMismatch(profile, rules);
+        EmitLevelInvalid(profile, rules);
         EmitBitrateTooLowForResolution(profile, rules);
         EmitCrfOutOfTypicalRange(profile, rules);
         EmitHlsKeyframeSegmentMisalignment(profile, rules);
@@ -810,6 +811,38 @@ public static class ProfileRuleValidator
                     + $"({lumaSamplesPerSec:N0} luma samples/sec required, "
                     + $"level {video.Level} allows {cap.MaxLumaSamplesPerSec:N0}).",
                 Fix: fix
+            )
+        );
+    }
+
+    private static void EmitLevelInvalid(EncodingProfile profile, List<EncoderRule> rules)
+    {
+        // An explicit level must be one the codec actually defines. The
+        // luma-cap rules above intentionally treat an unknown level as a
+        // pass (they only compare against a known cap), so a bogus level like
+        // H.264 "6.3" sailed through and reached ffmpeg as `-level 6.3`, which
+        // libx264 rejects ("invalid level_idc"). Whitelist against the known
+        // table — but only for codecs whose levels this catalogue enumerates,
+        // so a codec with no table (e.g. AV1) is never false-flagged.
+        if (
+            profile.Video is not { Policy: StreamPolicy.Transcode } video
+            || string.IsNullOrEmpty(video.Level)
+            || !CodecLevelFpsCaps.HasLevelTable(video.Codec)
+        )
+            return;
+
+        if (CodecLevelFpsCaps.Lookup(video.Codec, video.Level) is not null)
+            return;
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.LevelInvalid,
+                Severity: EncoderRuleSeverity.Error,
+                Field: "video.level",
+                Message: $"Level '{video.Level}' is not a valid {video.Codec} level; "
+                    + "ffmpeg would reject it and the encode would fail to start.",
+                Fix: "Set video.level to a level the codec defines (e.g. \"4.0\", \"5.1\"), "
+                    + "or leave it unset to let the encoder pick."
             )
         );
     }

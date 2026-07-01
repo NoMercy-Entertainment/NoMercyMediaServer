@@ -35,6 +35,7 @@ public static class EncoderRuleId
 
     // ---- Codec / level / container ---------------------------------------
     public const string LevelResolutionMismatch = "level.resolution_mismatch";
+    public const string LevelInvalid = "level.invalid";
     public const string CodecContainerMismatch = "codec.container_mismatch";
 
     // ---- Audio -----------------------------------------------------------

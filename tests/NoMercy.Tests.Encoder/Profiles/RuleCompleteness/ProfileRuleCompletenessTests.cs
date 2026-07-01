@@ -54,6 +54,7 @@ public class ProfileRuleCompletenessTests
         EncoderRuleId.LadderManualEmpty,
         EncoderRuleId.LadderManualUnsorted,
         EncoderRuleId.LevelResolutionMismatch,
+        EncoderRuleId.LevelInvalid,
         EncoderRuleId.BitrateTooLowForResolution,
         EncoderRuleId.CrfOutOfTypicalRange,
         EncoderRuleId.HlsKeyframeSegmentMisalignment,
@@ -426,6 +427,9 @@ public class ProfileRuleCompletenessTests
             [EncoderRuleId.LevelResolutionMismatch] = MakeProfile(
                 VideoTranscode(codec: VideoCodecType.H264, width: 3840, height: 2160, level: "4.0")
             ),
+            [EncoderRuleId.LevelInvalid] = MakeProfile(
+                VideoTranscode(codec: VideoCodecType.H264, level: "6.3")
+            ),
             [EncoderRuleId.BitrateTooLowForResolution] = MakeProfile(
                 VideoTranscode(rc: RateControlMode.Vbr, bitrate: 500, width: 3840, height: 2160)
             ),
@@ -674,6 +678,9 @@ public class ProfileRuleCompletenessTests
             [EncoderRuleId.LevelResolutionMismatch] = MakeProfile(
                 VideoTranscode(codec: VideoCodecType.H264, width: 1920, height: 1080, level: "4.1")
             ),
+            [EncoderRuleId.LevelInvalid] = MakeProfile(
+                VideoTranscode(codec: VideoCodecType.H264, level: "4.1")
+            ),
             [EncoderRuleId.BitrateTooLowForResolution] = MakeProfile(
                 VideoTranscode(rc: RateControlMode.Vbr, bitrate: 3000, width: 1920, height: 1080)
             ),
@@ -776,8 +783,8 @@ public class ProfileRuleCompletenessTests
         count
             .Should()
             .Be(
-                69,
-                "EncoderRuleId currently catalogues 69 rules; "
+                70,
+                "EncoderRuleId currently catalogues 70 rules; "
                     + "if this count changed, update the completeness sets above and this guard"
             );
     }
