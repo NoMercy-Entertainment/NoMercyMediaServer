@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Logging;
 using NoMercy.Authorization;
 
 namespace NoMercy.Service.Authorization;
@@ -19,23 +20,41 @@ namespace NoMercy.Service.Authorization;
 /// endpoints declare intent with <c>[Authorize(Policy = ...)]</c> instead of repeating
 /// imperative permission checks, while reusing the exact same rule engine.
 /// </summary>
-public class MediaAuthorizationHandler(IMediaAuthorizationPolicy policy) : IAuthorizationHandler
+public class MediaAuthorizationHandler(
+    IMediaAuthorizationPolicy policy,
+    ILogger<MediaAuthorizationHandler> logger
+) : IAuthorizationHandler
 {
     public Task HandleAsync(AuthorizationHandlerContext context)
     {
         foreach (IAuthorizationRequirement requirement in context.Requirements)
         {
-            switch (requirement)
+            // A throw from a policy check escapes into the authorization middleware
+            // and surfaces as an unlogged 500 (the action never runs). Catch and
+            // log per requirement so the failing rule + reason is diagnosable, then
+            // leave the requirement unmet (deny) rather than crash the request.
+            try
             {
-                case OwnerRequirement when policy.IsOwner(context.User):
-                    context.Succeed(requirement);
-                    break;
-                case ModeratorRequirement when policy.IsModerator(context.User):
-                    context.Succeed(requirement);
-                    break;
-                case MediaAccessRequirement when policy.IsAllowed(context.User):
-                    context.Succeed(requirement);
-                    break;
+                switch (requirement)
+                {
+                    case OwnerRequirement when policy.IsOwner(context.User):
+                        context.Succeed(requirement);
+                        break;
+                    case ModeratorRequirement when policy.IsModerator(context.User):
+                        context.Succeed(requirement);
+                        break;
+                    case MediaAccessRequirement when policy.IsAllowed(context.User):
+                        context.Succeed(requirement);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(
+                    ex,
+                    "Authorization check {Requirement} threw — denying",
+                    requirement.GetType().Name
+                );
             }
         }
 
