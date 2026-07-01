@@ -152,9 +152,11 @@ public static class ProfileRuleValidator
     private static void EmitProfileNoOutputs(EncodingProfile profile, List<EncoderRule> rules)
     {
         // A profile must produce at least one output stream — every encode call would be a no-op.
+        // Audio/Subtitles may be null when Newtonsoft.Json deserialises a positional record whose
+        // JSON omits those fields — guard so we emit the rule rather than throw.
         bool hasVideo = profile.Video is { Policy: not StreamPolicy.Omit };
-        bool hasAudio = profile.Audio.Any(a => a.Policy != StreamPolicy.Omit);
-        bool hasSubtitles = profile.Subtitles.Any(s => s.Policy != SubtitlePolicy.Omit);
+        bool hasAudio = (profile.Audio ?? []).Any(a => a.Policy != StreamPolicy.Omit);
+        bool hasSubtitles = (profile.Subtitles ?? []).Any(s => s.Policy != SubtitlePolicy.Omit);
 
         if (hasVideo || hasAudio || hasSubtitles)
             return;
@@ -303,7 +305,11 @@ public static class ProfileRuleValidator
         List<EncoderRule> rules
     )
     {
-        foreach (AudioOutput audio in profile.Audio.Where(a => a.Policy == StreamPolicy.Transcode))
+        foreach (
+            AudioOutput audio in (profile.Audio ?? []).Where(a =>
+                a.Policy == StreamPolicy.Transcode
+            )
+        )
         {
             if (ContainerCompatibility.SupportsAudio(profile.Container, audio.Codec))
                 continue;
@@ -324,7 +330,11 @@ public static class ProfileRuleValidator
     {
         // Lossy audio encoders need a target bitrate. FLAC and TrueHD are lossless and
         // ignore -b:a — leave those alone. Copy-mode audio is a passthrough.
-        foreach (AudioOutput audio in profile.Audio.Where(a => a.Policy == StreamPolicy.Transcode))
+        foreach (
+            AudioOutput audio in (profile.Audio ?? []).Where(a =>
+                a.Policy == StreamPolicy.Transcode
+            )
+        )
         {
             if (audio.Codec is AudioCodecType.Flac or AudioCodecType.TrueHd)
                 continue;
@@ -460,7 +470,7 @@ public static class ProfileRuleValidator
                 or Container.Dash;
 
         foreach (
-            SubtitleOutput subtitle in profile.Subtitles.Where(s =>
+            SubtitleOutput subtitle in (profile.Subtitles ?? []).Where(s =>
                 s.Codec == SubtitleCodecType.Ass && s.Policy == SubtitlePolicy.Extract
             )
         )
@@ -699,7 +709,7 @@ public static class ProfileRuleValidator
         // BurnIn writes subtitles into video pixels permanently. Worth flagging once so users
         // who pick the policy by accident see what they signed up for.
         foreach (
-            SubtitleOutput subtitle in profile.Subtitles.Where(s =>
+            SubtitleOutput subtitle in (profile.Subtitles ?? []).Where(s =>
                 s.Policy == SubtitlePolicy.BurnIn
             )
         )
@@ -929,7 +939,11 @@ public static class ProfileRuleValidator
         // AC-3 / E-AC-3 only accept a fixed bitrate ladder per the AC-3 (ATSC A/52) spec. Any
         // bitrate outside this set silently picks the nearest supported value in libavcodec —
         // surprises the user when the encode output doesn't match the request.
-        foreach (AudioOutput audio in profile.Audio.Where(a => a.Policy == StreamPolicy.Transcode))
+        foreach (
+            AudioOutput audio in (profile.Audio ?? []).Where(a =>
+                a.Policy == StreamPolicy.Transcode
+            )
+        )
         {
             int[]? ladder = audio.Codec switch
             {
@@ -1059,7 +1073,7 @@ public static class ProfileRuleValidator
         // pixels — no track in the container — and Omit drops the track entirely. Validate only
         // the two policies that need container compatibility.
         foreach (
-            SubtitleOutput subtitle in profile.Subtitles.Where(s =>
+            SubtitleOutput subtitle in (profile.Subtitles ?? []).Where(s =>
                 s.Policy is SubtitlePolicy.Extract or SubtitlePolicy.Copy
             )
         )

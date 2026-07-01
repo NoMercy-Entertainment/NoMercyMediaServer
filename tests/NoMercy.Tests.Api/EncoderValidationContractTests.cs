@@ -285,6 +285,90 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         Assert.False(hasMalformedError, "A valid JSON object must not be flagged as malformed");
     }
 
+    // RULE: validate/empty-outputs — POST /encoder/profiles/validate with well-formed JSON
+    //       whose Audio/Subtitles arrays are empty (and Video is null) must return 200 with
+    //       valid:false and the profile.no_outputs rule id. Previously threw NRE → HTTP 500
+    //       because ProfileRuleValidator called .Any() on null arrays produced by
+    //       Newtonsoft.Json when positional record parameters are absent from JSON.
+
+    [Fact]
+    public async Task Validate_EmptyArraysProfile_Returns200WithValidFalseAndNoOutputsRuleId()
+    {
+        string emptyOutputsJson = JsonSerializer.Serialize(
+            new
+            {
+                Id = Ulid.NewUlid().ToString(),
+                Name = "Empty Outputs Test",
+                Container = "HlsTs",
+                Video = (object?)null,
+                Audio = Array.Empty<object>(),
+                Subtitles = Array.Empty<object>(),
+            }
+        );
+
+        HttpResponseMessage response = await _authed.PostAsJsonAsync(
+            "/api/v1/encoder/profiles/validate",
+            new { profile_json = emptyOutputsJson }
+        );
+
+        string body = await response.Content.ReadAsStringAsync();
+        Assert.NotEqual(System.Net.HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.True(
+            response.StatusCode == System.Net.HttpStatusCode.OK,
+            $"Expected 200 (validation envelope) for empty-outputs profile, got {(int)response.StatusCode}: {body}"
+        );
+
+        using JsonDocument doc = JsonDocument.Parse(body);
+        JsonElement root = doc.RootElement;
+
+        root.TryGetProperty("valid", out JsonElement validEl)
+            .Should()
+            .BeTrue($"Response must have 'valid'. Body: {body}");
+        validEl.GetBoolean().Should().BeFalse("empty outputs are not valid");
+
+        root.TryGetProperty("errors", out JsonElement errorsEl)
+            .Should()
+            .BeTrue($"Response must have 'errors'. Body: {body}");
+        bool hasNoOutputsRule = errorsEl
+            .EnumerateArray()
+            .Any(e =>
+                e.TryGetProperty("id", out JsonElement idEl)
+                && idEl.GetString() == "profile.no_outputs"
+            );
+        Assert.True(
+            hasNoOutputsRule,
+            $"Expected rule id 'profile.no_outputs' in errors. Body: {body}"
+        );
+    }
+
+    [Fact]
+    public async Task Validate_ProfileWithOneAudioOutput_DoesNotFireNoOutputsRule()
+    {
+        HttpResponseMessage response = await _authed.PostAsJsonAsync(
+            "/api/v1/encoder/profiles/validate",
+            new { profile_json = ValidProfileJson }
+        );
+
+        string body = await response.Content.ReadAsStringAsync();
+        Assert.NotEqual(System.Net.HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+
+        using JsonDocument doc = JsonDocument.Parse(body);
+        bool hasNoOutputsRule = false;
+        if (doc.RootElement.TryGetProperty("errors", out JsonElement errs))
+        {
+            hasNoOutputsRule = errs.EnumerateArray()
+                .Any(e =>
+                    e.TryGetProperty("id", out JsonElement idEl)
+                    && idEl.GetString() == "profile.no_outputs"
+                );
+        }
+        Assert.False(
+            hasNoOutputsRule,
+            $"profile.no_outputs must not fire when at least one output is declared. Body: {body}"
+        );
+    }
+
     // RULE: legacy-validate/profile_json-missing — POST /dashboard/encoding/presets/validate
     //       with empty profile_json must return 400 (legacy endpoint gates via HTTP
     //       status; the new /encoder/profiles/validate always returns 200).
@@ -1844,6 +1928,11 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
                 "validate/profile_json-malformed",
                 "Validate_MalformedProfileJson",
                 "Validate_WellFormedJsonObject",
+            ],
+            [
+                "validate/empty-outputs",
+                "Validate_EmptyArraysProfile",
+                "Validate_ProfileWithOneAudioOutput",
             ],
             [
                 "legacy-validate/profile_json-missing",

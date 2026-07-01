@@ -70,7 +70,11 @@ public static class ProfileValidator
                 );
         }
 
-        foreach (AudioOutput audio in profile.Audio.Where(a => a.Policy == StreamPolicy.Transcode))
+        foreach (
+            AudioOutput audio in (profile.Audio ?? []).Where(a =>
+                a.Policy == StreamPolicy.Transcode
+            )
+        )
         {
             if (!ContainerCompatibility.SupportsAudio(profile.Container, audio.Codec))
                 errors.Add(
@@ -81,7 +85,11 @@ public static class ProfileValidator
 
     private static void ValidateAudioBitrate(EncodingProfile profile, List<string> errors)
     {
-        foreach (AudioOutput audio in profile.Audio.Where(a => a.Policy == StreamPolicy.Transcode))
+        foreach (
+            AudioOutput audio in (profile.Audio ?? []).Where(a =>
+                a.Policy == StreamPolicy.Transcode
+            )
+        )
         {
             if (
                 audio.BitrateKbps <= 0
@@ -201,7 +209,11 @@ public static class ProfileValidator
             errors.Add($"CMAF requires a CMAF-compatible video codec; got {video.Codec}.");
         }
 
-        foreach (AudioOutput audio in profile.Audio.Where(a => a.Policy == StreamPolicy.Transcode))
+        foreach (
+            AudioOutput audio in (profile.Audio ?? []).Where(a =>
+                a.Policy == StreamPolicy.Transcode
+            )
+        )
         {
             if (!ContainerCompatibility.IsCmafCompatible(audio.Codec))
                 errors.Add($"CMAF requires a CMAF-compatible audio codec; got {audio.Codec}.");
@@ -245,7 +257,7 @@ public static class ProfileValidator
             return;
 
         // Rule 1 — acquisition enabled but no subtitle output declared
-        if (profile.Subtitles.Length == 0)
+        if ((profile.Subtitles ?? []).Length == 0)
             errors.Add("SubtitleAcquisition requires at least one declared subtitle output");
 
         // Rule 2 — acquisition enabled on audio-only container
