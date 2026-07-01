@@ -66,6 +66,29 @@ internal static class NoMercyFfmpegProbe
     }
 
     /// <summary>
+    /// Resolves shaka-packager, which the binaries download step installs next to
+    /// ffmpeg (<c>binaries/ffmpeg/packager[.exe]</c>). Honours
+    /// <c>SHAKA_PACKAGER_PATH</c> first, then the same candidate roots as ffmpeg.
+    /// </summary>
+    public static string? ResolveShakaPackagerPath()
+    {
+        string? overridePath = Environment.GetEnvironmentVariable("SHAKA_PACKAGER_PATH");
+        if (!string.IsNullOrWhiteSpace(overridePath) && File.Exists(overridePath))
+            return overridePath;
+
+        string binaryName = OperatingSystem.IsWindows() ? "packager.exe" : "packager";
+
+        foreach (string root in CandidateRoots())
+        {
+            string candidate = Path.Combine(root, "binaries", "ffmpeg", binaryName);
+            if (File.Exists(candidate))
+                return candidate;
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Confirms the resolved binary is actually the nomercy-ffmpeg fork by
     /// asking it about the spritevtt muxer. Stock ffmpeg reports
     /// "Unknown muxer" on stderr; the fork prints the muxer's options block

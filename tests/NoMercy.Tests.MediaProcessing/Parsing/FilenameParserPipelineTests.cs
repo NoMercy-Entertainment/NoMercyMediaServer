@@ -16,6 +16,7 @@ using MovieFileLibrary;
 using NoMercy.MediaProcessing.Files.Parsing;
 using NoMercy.MediaProcessing.Files.Parsing.Adapters;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.Tests.Common.TestMedia;
 using Xunit;
 
 namespace NoMercy.Tests.MediaProcessing.Parsing;
@@ -333,7 +334,11 @@ public class FilenameParserPipelineTests
     [InlineData("Limitless.S01E05.720p.HDTV.x264.mkv", "Limitless", 1, 5)]
     [InlineData("Breaking.Bad.S05E14.1080p.BluRay.x265-GROUP.mkv", "Breaking Bad", 5, 14)]
     public void Title_cleanup_preserves_real_titles_in_season_episode(
-        string file, string title, int season, int episode)
+        string file,
+        string title,
+        int season,
+        int episode
+    )
     {
         MovieFile result = Pipeline().Parse(Context(file));
         result.IsSeries.Should().BeTrue();
@@ -443,17 +448,71 @@ public class FilenameParserPipelineTests
     // ---------------------------------------------------------------------------
     [Theory]
     [InlineData("Halo.2022.S01E06.POLISH.720p.WEB.H264-A4O.mkv", "Halo", 1, 6, "season-episode")]
-    [InlineData("Gilmore.Girls.S05E01.720p.WEB-DL.AAC2.0.H.264-tK.mkv", "Gilmore Girls", 5, 1, "season-episode")]
-    [InlineData("Direct.Talk.S09E09.Mizutani.Yoshihiro.Relief.1080p.HDTV.H264-DARKFLiX.mkv", "Direct Talk", 9, 9, "season-episode")]
-    [InlineData("Dark.Net.S01E06.DOC.SUBFRENCH.720p.WEBRip.x264-TiMELiNE.mkv", "Dark Net", 1, 6, "season-episode")]
-    [InlineData("New.Amsterdam.2018.S02E12.1080p.AMZN.Webrip.x265.10bit.EAC3.5.1.mkv", "New Amsterdam", 2, 12, "season-episode")]
-    [InlineData("Stranger.Things.S04E09.2160p.NF.WEB-DL.DDP5.1.x265-NTb.mkv", "Stranger Things", 4, 9, "season-episode")]
-    [InlineData("The.X-Files.2x14.Die.Hand.Die.Verletzt.DVDRip.XviD.MultiDub-VeLVeT.mkv", "The X-Files", 2, 14, "cross-format")]
-    [InlineData("New.Amsterdam.2018.2x12.1080p.WEBMux.x264-NovaRi.mkv", "New Amsterdam", 2, 12, "cross-format")]
-    [InlineData("24.Twenty.Four.S2.E07.German.DVDRiP.Line.Dubbed.SVCD-SOF.mkv", "24 Twenty Four", 2, 7, "episode-short-form")]
+    [InlineData(
+        "Gilmore.Girls.S05E01.720p.WEB-DL.AAC2.0.H.264-tK.mkv",
+        "Gilmore Girls",
+        5,
+        1,
+        "season-episode"
+    )]
+    [InlineData(
+        "Direct.Talk.S09E09.Mizutani.Yoshihiro.Relief.1080p.HDTV.H264-DARKFLiX.mkv",
+        "Direct Talk",
+        9,
+        9,
+        "season-episode"
+    )]
+    [InlineData(
+        "Dark.Net.S01E06.DOC.SUBFRENCH.720p.WEBRip.x264-TiMELiNE.mkv",
+        "Dark Net",
+        1,
+        6,
+        "season-episode"
+    )]
+    [InlineData(
+        "New.Amsterdam.2018.S02E12.1080p.AMZN.Webrip.x265.10bit.EAC3.5.1.mkv",
+        "New Amsterdam",
+        2,
+        12,
+        "season-episode"
+    )]
+    [InlineData(
+        "Stranger.Things.S04E09.2160p.NF.WEB-DL.DDP5.1.x265-NTb.mkv",
+        "Stranger Things",
+        4,
+        9,
+        "season-episode"
+    )]
+    [InlineData(
+        "The.X-Files.2x14.Die.Hand.Die.Verletzt.DVDRip.XviD.MultiDub-VeLVeT.mkv",
+        "The X-Files",
+        2,
+        14,
+        "cross-format"
+    )]
+    [InlineData(
+        "New.Amsterdam.2018.2x12.1080p.WEBMux.x264-NovaRi.mkv",
+        "New Amsterdam",
+        2,
+        12,
+        "cross-format"
+    )]
+    [InlineData(
+        "24.Twenty.Four.S2.E07.German.DVDRiP.Line.Dubbed.SVCD-SOF.mkv",
+        "24 Twenty Four",
+        2,
+        7,
+        "episode-short-form"
+    )]
     [InlineData("1883.S01E04.1080p.WEB.H264.mkv", "1883", 1, 4, "season-episode")]
     [InlineData("1923.S01E02.720p.HDTV.x264.mkv", "1923", 1, 2, "season-episode")]
-    public void SceneCorpus_real_names(string file, string title, int season, int episode, string adapter)
+    public void SceneCorpus_real_names(
+        string file,
+        string title,
+        int season,
+        int episode,
+        string adapter
+    )
     {
         ParseContext context = Context(file);
         MovieFile result = Pipeline().Parse(context);
@@ -479,16 +538,32 @@ public class FilenameParserPipelineTests
     // stray "9.00" numbers, a year before the SxxExx, an "x" inside the title).
     // ---------------------------------------------------------------------------
     [Theory]
-    [InlineData("24.S02E02.9.00.Uhr.bis.10.00.Uhr.German.DL.TV.Dubbed.DVDRip.SVCD.READ.NFO-c0nFuSed", 2, 2)]
+    [InlineData(
+        "24.S02E02.9.00.Uhr.bis.10.00.Uhr.German.DL.TV.Dubbed.DVDRip.SVCD.READ.NFO-c0nFuSed",
+        2,
+        2
+    )]
     [InlineData("4x4.Ule.ja.Umber.Autoga.Colombias.S01E09.EE.1080p.WEB.h264-EMX", 1, 9)]
     [InlineData("72.Cutest.Animals.S01E0.German.DL.Doku.1080p.WEB.x264-BiGiNT", 1, 0)]
     [InlineData("Dark.Net.S01E06.DOC.SUBFRENCH.720p.WEBRip.x264-TiMELiNE", 1, 6)]
-    [InlineData("Direct.Talk.S09E09.Mizutani.Yoshihiro.Relief.Beds.Made.of.Cardboard.1080p.HDTV.H264-DARKFLiX", 9, 9)]
+    [InlineData(
+        "Direct.Talk.S09E09.Mizutani.Yoshihiro.Relief.Beds.Made.of.Cardboard.1080p.HDTV.H264-DARKFLiX",
+        9,
+        9
+    )]
     [InlineData("Gilmore.Girls.S05E01.720p.WEB-DL.AAC2.0.H.264-tK", 5, 1)]
     [InlineData("Halo.2022.S01E06.POLISH.720p.WEB.H264-A4O", 1, 6)]
     [InlineData("New.Amsterdam.2018.S02E12.14.Years.mkv", 2, 12)]
-    [InlineData("New.Amsterdam.2018.2x12.14.Anni.2.Mesi.8.Giorni.ITA-ENG.1080p.WEBMux.x264-NovaRi", 2, 12)]
-    public void Pipeline_ExtractsSeasonEpisode_FromHardRealNames(string file, int season, int episode)
+    [InlineData(
+        "New.Amsterdam.2018.2x12.14.Anni.2.Mesi.8.Giorni.ITA-ENG.1080p.WEBMux.x264-NovaRi",
+        2,
+        12
+    )]
+    public void Pipeline_ExtractsSeasonEpisode_FromHardRealNames(
+        string file,
+        int season,
+        int episode
+    )
     {
         MovieFile result = Pipeline().Parse(Context(file));
         result.Season.Should().Be(season);
@@ -496,7 +571,10 @@ public class FilenameParserPipelineTests
     }
 
     [Theory]
-    [InlineData("Spy.x.Family.E04.Elterngespraech.an.der.Eliteschule.German.2022.ANiME.DL.BDRiP.x264-STARS", 4)]
+    [InlineData(
+        "Spy.x.Family.E04.Elterngespraech.an.der.Eliteschule.German.2022.ANiME.DL.BDRiP.x264-STARS",
+        4
+    )]
     public void Pipeline_ExtractsEpisode_WhenNoSeason(string file, int episode)
     {
         MovieFile result = Pipeline().Parse(Context(file));
@@ -505,11 +583,23 @@ public class FilenameParserPipelineTests
 
     [Theory]
     [InlineData("Gegen.den.Strom.2018.German.AC3D.DL.1080p.BluRay.x264-SAVASTANOS", "2018")]
-    [InlineData("Batman.v.Superman.Dawn.of.Justice.2016.IMAX.German.DL.TrueHD.Atmos.DUBBED.2160p.UHD.BluRay.x265-GSG9", "2016")]
-    [InlineData("Cloudy.With.A.Chance.Of.Meatballs.2009.NORDIC.DTS-HD.DTS.AC3.NORDICSUBS.1080p.BluRay.x264-TUSAHD", "2009")]
+    [InlineData(
+        "Batman.v.Superman.Dawn.of.Justice.2016.IMAX.German.DL.TrueHD.Atmos.DUBBED.2160p.UHD.BluRay.x265-GSG9",
+        "2016"
+    )]
+    [InlineData(
+        "Cloudy.With.A.Chance.Of.Meatballs.2009.NORDIC.DTS-HD.DTS.AC3.NORDICSUBS.1080p.BluRay.x264-TUSAHD",
+        "2009"
+    )]
     [InlineData("Pay.the.Ghost.2015.1080p.HULU.WEB-DL.DDP.5.1.H.264-PiRaTeS", "2015")]
-    [InlineData("Angel.Heart.1987.German.DTSMAD.5.1.DL.2160p.UHD.BluRay.HDR.DV.HEVC.Remux-HDSource", "1987")]
-    [InlineData("Burial.Ground.The.Nights.Of.Terror.1981.DUBBED.GRINDHOUSE.VERSION.1080P.BLURAY.X264-WATCHABLE", "1981")]
+    [InlineData(
+        "Angel.Heart.1987.German.DTSMAD.5.1.DL.2160p.UHD.BluRay.HDR.DV.HEVC.Remux-HDSource",
+        "1987"
+    )]
+    [InlineData(
+        "Burial.Ground.The.Nights.Of.Terror.1981.DUBBED.GRINDHOUSE.VERSION.1080P.BLURAY.X264-WATCHABLE",
+        "1981"
+    )]
     [InlineData("Intruders.Die.Aliens.Sind.Unter.Uns.1992.Uncut.German.AC3.DVDRiP.XviD", "1992")]
     [InlineData("V.H.S.94.2021.BluRay.1080p.DTS-HD.MA.5.1.AVC-GROUPNAME", "2021")]
     public void Pipeline_ClassifiesMovies_NotSeries(string file, string year)
@@ -519,4 +609,38 @@ public class FilenameParserPipelineTests
         result.Year.Should().Be(year);
     }
 
+    // ---------------------------------------------------------------------------
+    // Shared test-media corpus — the same real-world filename patterns the encoder
+    // input→output tests synthesise. Parsing them here proves the corpus names are
+    // classified correctly (movie vs series, season/episode) before any byte is
+    // encoded, so a corpus entry and its parse expectation can never drift apart.
+    // ---------------------------------------------------------------------------
+    public static TheoryData<string> CorpusFiles()
+    {
+        TheoryData<string> data = [];
+        foreach (MediaCorpusEntry entry in MediaCorpus.Entries)
+            data.Add(entry.RelativePath);
+        return data;
+    }
+
+    [Theory]
+    [MemberData(nameof(CorpusFiles))]
+    public void Corpus_filenames_parse_to_expected_classification(string relativePath)
+    {
+        MediaCorpusEntry entry = MediaCorpus.Entries.Single(e => e.RelativePath == relativePath);
+
+        string fileName = Path.GetFileName(entry.RelativePath);
+        string folderTitle =
+            Path.GetFileName(Path.GetDirectoryName(entry.RelativePath) ?? string.Empty)
+            ?? string.Empty;
+        string libraryType = entry.ExpectedIsMovie ? "movies" : "tv";
+
+        MovieFile result = Pipeline().Parse(Context(fileName, folderTitle, libraryType));
+
+        result.IsSeries.Should().Be(!entry.ExpectedIsMovie);
+        if (entry.ExpectedSeason is int season)
+            result.Season.Should().Be(season);
+        if (entry.ExpectedEpisode is int episode)
+            result.Episode.Should().Be(episode);
+    }
 }

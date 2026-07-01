@@ -18,6 +18,7 @@ using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.NmSystem.Information;
 using NoMercy.Storage;
+using NoMercy.Tests.Encoder.Integration;
 
 namespace NoMercy.Tests.Encoder.BuildingBlocks.Drm;
 
@@ -301,11 +302,8 @@ public class CencDrmProcessorTests
     public async Task PackageAsync_WithRealPackager_ProducesMpd()
     {
         string? packagerPath =
-            Environment.GetEnvironmentVariable("SHAKA_PACKAGER_PATH") is string env
-            && File.Exists(env)
-                ? env
-            : File.Exists(AppFiles.ShakaPackagerPath) ? AppFiles.ShakaPackagerPath
-            : null;
+            NoMercyFfmpegProbe.ResolveShakaPackagerPath()
+            ?? (File.Exists(AppFiles.ShakaPackagerPath) ? AppFiles.ShakaPackagerPath : null);
         Skip.If(
             packagerPath is null,
             "shaka-packager binary not present — set SHAKA_PACKAGER_PATH or run the "
@@ -342,12 +340,16 @@ public class CencDrmProcessorTests
             File.Exists(inputMp4).Should().BeTrue("ffmpeg must produce the input clip");
 
             // 2) Package it with real CENC raw-key encryption via the processor.
+            //    The packager writes real files, so storage.Exists must reflect the
+            //    real filesystem (not the always-false default mock).
             EncoderOptions opts = new() { ShakaPackagerPathOverride = packagerPath };
+            IStorage storage = Mock.Of<IStorage>(s => s.Exists(It.IsAny<string>()) == false);
+            Mock.Get(storage).Setup(s => s.Exists(It.IsAny<string>())).Returns<string>(File.Exists);
             CencDrmProcessor processor = new(
                 opts,
                 new ProcessRunner(NullLogger<ProcessRunner>.Instance),
                 NullLogger<CencDrmProcessor>.Instance,
-                MakeStorage()
+                storage
             );
 
             string manifestPath = Path.Combine(tmpDir, "manifest.mpd");
@@ -383,8 +385,7 @@ public class CencDrmProcessorTests
         string candidate = AppFiles.FfmpegPath;
         if (File.Exists(candidate))
             return candidate;
-        string? env = Environment.GetEnvironmentVariable("NOMERCY_FFMPEG_PATH");
-        return !string.IsNullOrWhiteSpace(env) && File.Exists(env) ? env : null;
+        return NoMercyFfmpegProbe.ResolveFfmpegPath();
     }
 
     private static async Task RunProcessAsync(string fileName, string[] args)
