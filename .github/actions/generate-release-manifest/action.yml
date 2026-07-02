@@ -63,7 +63,7 @@ runs:
           [ -f "$ASSET_FILE" ] || continue
 
           SHA256=$(cat "$sha_file" | tr -d '[:space:]')
-          SIZE=$(stat -c%s "$ASSET_FILE")
+          SIZE=$(stat -c%s "$ASSET_FILE" 2>/dev/null || stat -f%z "$ASSET_FILE")
 
           if [ "$FIRST" = "true" ]; then
             FIRST=false
