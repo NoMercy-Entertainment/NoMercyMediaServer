@@ -15,6 +15,7 @@ using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Progress;
+using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Pipeline.Stages;
 
@@ -47,71 +48,121 @@ public class ExecuteStage(
         List<ExecutionResult> results = [];
         long lastProgressMs = 0;
 
-        for (int i = 0; i < input.Commands.Length; i++)
+        try
         {
-            FfmpegCommand cmd = input.Commands[i];
-
-            // Only the main encode command (index 0) reports progress.
-            // Post-processing commands (subtitles, fonts) are short-lived.
-            Action<EncodingProgress>? onProgress = null;
-            if (i == 0 && input.Progress is not null)
+            for (int i = 0; i < input.Commands.Length; i++)
             {
-                onProgress = progress =>
+                FfmpegCommand cmd = input.Commands[i];
+
+                // Only the main encode command (index 0) reports progress.
+                // Post-processing commands (subtitles, fonts) are short-lived.
+                Action<EncodingProgress>? onProgress = null;
+                if (i == 0 && input.Progress is not null)
                 {
-                    lastProgressMs = (long)(progress.CurrentTimeSeconds * 1000);
-                    input.Progress.OnProgress(progress);
-                };
-            }
-            else if (i == 0)
-            {
-                onProgress = progress =>
+                    onProgress = progress =>
+                    {
+                        lastProgressMs = (long)(progress.CurrentTimeSeconds * 1000);
+                        input.Progress.OnProgress(progress);
+                    };
+                }
+                else if (i == 0)
                 {
-                    lastProgressMs = (long)(progress.CurrentTimeSeconds * 1000);
-                };
-            }
-
-            ExecutionResult result = await executor.ExecuteAsync(
-                cmd,
-                input.InputDuration,
-                onProgress: onProgress,
-                correlationId: context.CorrelationId,
-                ct: ct
-            );
-
-            results.Add(result);
-
-            if (!result.Success)
-            {
-                // Command 0 is the main encode — must succeed.
-                // Subsequent commands (subtitle extraction, font extraction, thumbnails)
-                // are post-processing — failures are logged but not fatal.
-                if (i == 0)
-                {
-                    EncodingError error =
-                        result.Error
-                        ?? new EncodingError(
-                            EncodingErrorKind.ProcessCrashed,
-                            "FFmpeg exited with non-zero code",
-                            result.StdErr,
-                            Name,
-                            true
-                        );
-
-                    await WriteCrashCheckpointAsync(context, lastProgressMs, result.StdErr, ct);
-
-                    return new StageFailure(error);
+                    onProgress = progress =>
+                    {
+                        lastProgressMs = (long)(progress.CurrentTimeSeconds * 1000);
+                    };
                 }
 
+                ExecutionResult result = await executor.ExecuteAsync(
+                    cmd,
+                    input.InputDuration,
+                    onProgress: onProgress,
+                    correlationId: context.CorrelationId,
+                    ct: ct
+                );
+
+                results.Add(result);
+
+                if (!result.Success)
+                {
+                    // Command 0 is the main encode — must succeed.
+                    // Subsequent commands (subtitle extraction, font extraction, thumbnails)
+                    // are post-processing — failures are logged but not fatal.
+                    if (i == 0)
+                    {
+                        EncodingError error =
+                            result.Error
+                            ?? new EncodingError(
+                                EncodingErrorKind.ProcessCrashed,
+                                "FFmpeg exited with non-zero code",
+                                result.StdErr,
+                                Name,
+                                true
+                            );
+
+                        await WriteCrashCheckpointAsync(context, lastProgressMs, result.StdErr, ct);
+
+                        return new StageFailure(error);
+                    }
+
+                    logger.LogWarning(
+                        "[{CorrelationId}] Post-process command {Index} failed (non-fatal): exit={ExitCode}",
+                        context.CorrelationId,
+                        i,
+                        result.ExitCode
+                    );
+                }
+            }
+
+            return new StageSuccess<ExecutionResult[]>(results.ToArray());
+        }
+        finally
+        {
+            CleanupDrmKeyArtifacts(input.Commands, context.CorrelationId);
+        }
+    }
+
+    /// <summary>
+    /// Aes128HlsDrmProcessor writes drm.key/drm_keyinfo.txt to a per-encode
+    /// directory under StoragePaths.TempRoot (never OutputDirectory — that
+    /// directory is published to the served destination). Ffmpeg has now
+    /// either consumed that -hls_key_info_file or failed trying, so the temp
+    /// directory can go. Only ever deletes paths under TempRoot — a defensive
+    /// scope check in case a future DRM processor writes artifacts elsewhere.
+    /// </summary>
+    private void CleanupDrmKeyArtifacts(FfmpegCommand[] commands, string correlationId)
+    {
+        foreach (FfmpegCommand cmd in commands)
+        {
+            int idx = Array.IndexOf(cmd.Arguments, "-hls_key_info_file");
+            if (idx < 0 || idx + 1 >= cmd.Arguments.Length)
+                continue;
+
+            string keyInfoPath = cmd.Arguments[idx + 1];
+            string? tempDir = Path.GetDirectoryName(keyInfoPath);
+            if (string.IsNullOrEmpty(tempDir))
+                continue;
+
+            string fullTempDir = Path.GetFullPath(tempDir);
+            string fullTempRoot = Path.GetFullPath(StoragePaths.TempRoot);
+            if (!fullTempDir.StartsWith(fullTempRoot, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            try
+            {
+                if (Directory.Exists(fullTempDir))
+                    Directory.Delete(fullTempDir, recursive: true);
+            }
+            catch (Exception ex)
+            {
                 logger.LogWarning(
-                    "[{CorrelationId}] Post-process command {Index} failed (non-fatal): exit={ExitCode}",
-                    context.CorrelationId,
-                    i,
-                    result.ExitCode
+                    ex,
+                    "[{CorrelationId}] Failed to delete DRM key temp directory {Directory}",
+                    correlationId,
+                    fullTempDir
                 );
             }
         }
-
-        return new StageSuccess<ExecutionResult[]>(results.ToArray());
     }
 
     private async Task WriteCrashCheckpointAsync(

@@ -63,6 +63,12 @@ public static class AppFiles
     public static string DataPath => Path.Combine(AppPath, "data");
     public static string LogPath => Path.Combine(AppPath, "log");
 
+    // AES-128 HLS DRM keys, protected at rest via DataProtection (see
+    // NoMercy.NmSystem.Security.DrmKeyStore). Never served as static files —
+    // outside CachePath/TranscodePath so it can never land in a published
+    // transcode output.
+    public static string DrmKeysPath => Path.Combine(DataPath, "drm_keys");
+
     // ── Cache ────────────────────────────────────────────────────────────
 
     public static string CachePath => Path.Combine(AppPath, "cache");

@@ -18,6 +18,7 @@ using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.Progress;
+using NoMercy.Storage;
 
 namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 
@@ -52,10 +53,7 @@ public class ExecuteStageTests
             new EncodingError(EncodingErrorKind.Unknown, "exec failed", stderr, "exec", false)
         );
 
-    private static ExecuteStage BuildStage(
-        IFfmpegExecutor executor,
-        ICheckpointStore? store = null
-    )
+    private static ExecuteStage BuildStage(IFfmpegExecutor executor, ICheckpointStore? store = null)
     {
         ICheckpointStore effectiveStore = store ?? new Mock<ICheckpointStore>().Object;
         return new(executor, effectiveStore, NullLogger<ExecuteStage>.Instance);
@@ -381,11 +379,7 @@ public class ExecuteStageTests
         ExecuteStage stage = BuildStage(exec.Object, store.Object);
         ExecuteInput input = new([Cmd("main")], InputDuration: TimeSpan.Zero);
 
-        await stage.ExecuteAsync(
-            input,
-            Ctx(outputDirectory: null),
-            CancellationToken.None
-        );
+        await stage.ExecuteAsync(input, Ctx(outputDirectory: null), CancellationToken.None);
 
         store.Verify(
             s => s.SaveAsync(It.IsAny<JobCheckpoint>(), It.IsAny<CancellationToken>()),
@@ -513,5 +507,171 @@ public class ExecuteStageTests
 
         // Stage always wires a progress callback on cmd 0 to track LastProgressMs.
         observedCallback.Should().NotBeNull();
+    }
+
+    // ── DRM key temp-directory cleanup ──────────────────────────────────────
+    //
+    // Aes128HlsDrmProcessor writes drm.key/drm_keyinfo.txt to a per-encode
+    // directory under StoragePaths.TempRoot (never the published output dir —
+    // see Aes128HlsDrmProcessorTests). ExecuteStage is the last stage that
+    // reads that directory (via -hls_key_info_file), so it deletes it once
+    // ffmpeg is done — success or failure — closing the temp-file leak.
+
+    [Fact]
+    public async Task ExecuteAsync_Success_DeletesDrmKeyTempDirectoryUnderTempRoot()
+    {
+        string drmTempDir = Path.Combine(
+            StoragePaths.TempRoot,
+            "drm-keys",
+            Guid.NewGuid().ToString("N")
+        );
+        Directory.CreateDirectory(drmTempDir);
+        string keyInfoPath = Path.Combine(drmTempDir, "drm_keyinfo.txt");
+        await File.WriteAllTextAsync(keyInfoPath, "https://example/key\n/tmp/drm.key\nabcd\n");
+        await File.WriteAllBytesAsync(Path.Combine(drmTempDir, "drm.key"), new byte[16]);
+
+        try
+        {
+            Mock<IFfmpegExecutor> exec = new();
+            exec.Setup(e =>
+                    e.ExecuteAsync(
+                        It.IsAny<FfmpegCommand>(),
+                        It.IsAny<TimeSpan>(),
+                        It.IsAny<Action<EncodingProgress>?>(),
+                        It.IsAny<string?>(),
+                        It.IsAny<CancellationToken>()
+                    )
+                )
+                .ReturnsAsync(Success());
+
+            ExecuteStage stage = BuildStage(exec.Object);
+            FfmpegCommand cmd = new(
+                Executable: "ffmpeg",
+                Arguments: ["-i", "src.mkv", "-hls_key_info_file", keyInfoPath, "-y", "/out"],
+                WorkingDirectory: null
+            );
+            ExecuteInput input = new([cmd], InputDuration: TimeSpan.Zero);
+
+            await stage.ExecuteAsync(input, Ctx(), CancellationToken.None);
+
+            Directory
+                .Exists(drmTempDir)
+                .Should()
+                .BeFalse("the DRM key temp dir must be deleted once ffmpeg consumes it");
+        }
+        finally
+        {
+            if (Directory.Exists(drmTempDir))
+                Directory.Delete(drmTempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MainCommandFails_StillDeletesDrmKeyTempDirectory()
+    {
+        string drmTempDir = Path.Combine(
+            StoragePaths.TempRoot,
+            "drm-keys",
+            Guid.NewGuid().ToString("N")
+        );
+        Directory.CreateDirectory(drmTempDir);
+        string keyInfoPath = Path.Combine(drmTempDir, "drm_keyinfo.txt");
+        await File.WriteAllTextAsync(keyInfoPath, "https://example/key\n/tmp/drm.key\nabcd\n");
+
+        try
+        {
+            Mock<IFfmpegExecutor> exec = new();
+            exec.Setup(e =>
+                    e.ExecuteAsync(
+                        It.IsAny<FfmpegCommand>(),
+                        It.IsAny<TimeSpan>(),
+                        It.IsAny<Action<EncodingProgress>?>(),
+                        It.IsAny<string?>(),
+                        It.IsAny<CancellationToken>()
+                    )
+                )
+                .ReturnsAsync(Failure("ffmpeg blew up"));
+
+            ExecuteStage stage = BuildStage(exec.Object);
+            FfmpegCommand cmd = new(
+                Executable: "ffmpeg",
+                Arguments: ["-i", "src.mkv", "-hls_key_info_file", keyInfoPath, "-y", "/out"],
+                WorkingDirectory: null
+            );
+            ExecuteInput input = new([cmd], InputDuration: TimeSpan.Zero);
+
+            StageResult result = await stage.ExecuteAsync(input, Ctx(), CancellationToken.None);
+
+            result.Should().BeOfType<StageFailure>();
+            Directory
+                .Exists(drmTempDir)
+                .Should()
+                .BeFalse("cleanup must run even when the main encode command fails");
+        }
+        finally
+        {
+            if (Directory.Exists(drmTempDir))
+                Directory.Delete(drmTempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_KeyInfoFileOutsideTempRoot_IsNotDeleted()
+    {
+        // Defensive scope check: cleanup only ever touches paths under
+        // StoragePaths.TempRoot. A path elsewhere (e.g. a published output
+        // dir) must be left alone even if it happens to carry the flag.
+        // Uses the current working directory rather than mutating the
+        // process-wide StoragePaths.TempRoot static, which other tests read
+        // concurrently.
+        string outsideDir = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            $"not-under-temproot-{Guid.NewGuid():N}"
+        );
+        Directory.CreateDirectory(outsideDir);
+        string keyInfoPath = Path.Combine(outsideDir, "drm_keyinfo.txt");
+        await File.WriteAllTextAsync(keyInfoPath, "https://example/key\n/tmp/drm.key\nabcd\n");
+
+        try
+        {
+            Path.GetFullPath(outsideDir)
+                .Should()
+                .NotStartWith(
+                    Path.GetFullPath(StoragePaths.TempRoot),
+                    "test fixture must be outside TempRoot for this assertion to be meaningful"
+                );
+
+            Mock<IFfmpegExecutor> exec = new();
+            exec.Setup(e =>
+                    e.ExecuteAsync(
+                        It.IsAny<FfmpegCommand>(),
+                        It.IsAny<TimeSpan>(),
+                        It.IsAny<Action<EncodingProgress>?>(),
+                        It.IsAny<string?>(),
+                        It.IsAny<CancellationToken>()
+                    )
+                )
+                .ReturnsAsync(Success());
+
+            ExecuteStage stage = BuildStage(exec.Object);
+            FfmpegCommand cmd = new(
+                Executable: "ffmpeg",
+                Arguments: ["-i", "src.mkv", "-hls_key_info_file", keyInfoPath, "-y", "/out"],
+                WorkingDirectory: null
+            );
+            ExecuteInput input = new([cmd], InputDuration: TimeSpan.Zero);
+
+            await stage.ExecuteAsync(input, Ctx(), CancellationToken.None);
+
+            Directory
+                .Exists(outsideDir)
+                .Should()
+                .BeTrue("cleanup must never delete a directory outside TempRoot");
+        }
+        finally
+        {
+            if (Directory.Exists(outsideDir))
+                Directory.Delete(outsideDir, recursive: true);
+        }
     }
 }

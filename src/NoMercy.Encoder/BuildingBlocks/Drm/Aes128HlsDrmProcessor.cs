@@ -11,6 +11,7 @@
 
 using System.Security.Cryptography;
 using System.Text;
+using NoMercy.NmSystem.Security;
 using NoMercy.Storage;
 
 namespace NoMercy.Encoder.BuildingBlocks.Drm;
@@ -29,6 +30,16 @@ namespace NoMercy.Encoder.BuildingBlocks.Drm;
 /// Ffmpeg reads this, encrypts each segment with AES-128-CBC, and emits
 /// <c>#EXT-X-KEY:METHOD=AES-128,URI="&lt;uri&gt;",IV=0x&lt;iv&gt;</c>
 /// into the playlist automatically.
+///
+/// The artifacts are written to a per-encode directory under
+/// <see cref="StoragePaths.TempRoot"/> — NEVER <paramref name="outputDirectory"/>
+/// as passed to <see cref="PrepareAsync"/> — because that directory is the
+/// encode's working dir and gets published to the served destination.
+/// Shipping <c>drm.key</c> there would put the raw decryption key right next
+/// to the ciphertext it protects. <see cref="Pipeline.Stages.ExecuteStage"/>
+/// deletes the temp directory once ffmpeg has consumed it. The raw key is
+/// also persisted protected (see <see cref="DrmKeyStore"/>) so an authorized
+/// key-serving endpoint can still hand it to real clients.
 /// </summary>
 public class Aes128HlsDrmProcessor(IStorage storage) : IDrmProcessor
 {
@@ -52,8 +63,6 @@ public class Aes128HlsDrmProcessor(IStorage storage) : IDrmProcessor
         if (string.IsNullOrWhiteSpace(config.KeyUri))
             throw new ArgumentException("DrmConfig.KeyUri is required", nameof(config));
 
-        storage.CreateDirectory(outputDirectory);
-
         byte[] key = config.Key ?? RandomNumberGenerator.GetBytes(16);
         if (key.Length != 16)
             throw new ArgumentException(
@@ -68,9 +77,17 @@ public class Aes128HlsDrmProcessor(IStorage storage) : IDrmProcessor
                 nameof(config)
             );
 
-        string keyFilePath = Path.Combine(outputDirectory, KeyFileName);
-        string keyInfoPath = Path.Combine(outputDirectory, KeyInfoFileName);
+        string tempDirectory = Path.Combine(
+            StoragePaths.TempRoot,
+            "drm-keys",
+            Guid.NewGuid().ToString("N")
+        );
+        storage.CreateDirectory(tempDirectory);
 
+        string keyFilePath = Path.Combine(tempDirectory, KeyFileName);
+        string keyInfoPath = Path.Combine(tempDirectory, KeyInfoFileName);
+
+        await DrmKeyStore.StoreKeyAsync(config.KeyUri, key, iv, ct).ConfigureAwait(false);
         await storage.WriteAsync(keyFilePath, key, ct).ConfigureAwait(false);
 
         // ffmpeg accepts forward slashes everywhere; normalizing keeps tests
