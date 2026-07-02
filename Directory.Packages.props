@@ -34,6 +34,10 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.17.0" />
     <!-- Swagger -->
+    <!-- Pin Microsoft.OpenApi to the patched 2.7.5: Swashbuckle 10.1.7 pulls the
+         transitive 2.4.1, which carries NU1903 / GHSA-v5pm-xwqc-g5wc (circular schema
+         reference can terminate parsing). 2.7.5 is the first patched 2.x release. -->
+    <PackageVersion Include="Microsoft.OpenApi" Version="2.7.5" />
     <PackageVersion Include="Swashbuckle.AspNetCore.Newtonsoft" Version="10.1.7" />
     <PackageVersion Include="Swashbuckle.AspNetCore.Swagger" Version="10.1.7" />
     <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerGen" Version="10.1.7" />
