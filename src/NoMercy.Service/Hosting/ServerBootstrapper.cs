@@ -174,10 +174,38 @@ public sealed class ServerBootstrapper
             app = WebHostFactory.Create(options, forceHttp: true);
             diStorage = app.Services.GetRequiredService<IStorage>();
             orchestrator = app.Services.GetRequiredService<BootOrchestrator>();
+
+            // The disposed container took its ShutdownCoordinator (and the
+            // CancellationTokenSource behind shutdownCoordinator.Token) with it.
+            // Rebind to the new container so later consumers don't touch a
+            // disposed token source.
+            shutdownCoordinator = app.Services.GetRequiredService<IShutdownCoordinator>();
         }
 
         // Load SSL cert from database now that TokenStore is initialized by BootOrchestrator
         Start.Certificate!.LoadFromDb();
+
+        // Inverse of the setup rebuild above: the host was built HTTP-only because
+        // no certificate existed when the forceHttp decision was made, but
+        // BootOrchestrator.RunAsync just registered the server and acquired one
+        // (the has-token-no-cert first boot). Without this the server keeps serving
+        // plain HTTP until a manual restart. Rebind to HTTPS now — the host has not
+        // started yet, so this is a clean pre-start swap, not a live restart.
+        if (!needsSetupMode && !hasCert && Start.Certificate!.HasValidCertificate())
+        {
+            Logger.App("Certificate acquired during boot — rebinding host to HTTPS");
+            await app.DisposeAsync();
+            app = WebHostFactory.Create(options);
+            diStorage = app.Services.GetRequiredService<IStorage>();
+            shutdownCoordinator = app.Services.GetRequiredService<IShutdownCoordinator>();
+
+            // Resolve the cert service on the new container (this sets the
+            // Start.Certificate boot handle to the new singleton) and load the
+            // freshly acquired cert into its cache so Kestrel's certificate
+            // selector has it on the first TLS handshake.
+            _ = app.Services.GetRequiredService<ICertificateService>();
+            Start.Certificate!.LoadFromDb();
+        }
 
         // Auth completed — seed auth-dependent data (users, library assignment, claims)
         if (!needsSetupMode)
