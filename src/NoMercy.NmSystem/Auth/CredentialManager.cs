@@ -90,7 +90,12 @@ public static class CredentialManager
 
         using SecretsManager secretsManager = SecretsManager.LoadStore(AppFiles.SecretsStore);
         secretsManager.LoadKeyFromFile(AppFiles.SecretsKey);
-        return secretsManager.Delete(target);
+
+        bool deleted = secretsManager.Delete(target);
+        if (deleted)
+            secretsManager.SaveStore(AppFiles.SecretsStore);
+
+        return deleted;
     }
 
     public static SecureString ConvertToSecureString(string password)

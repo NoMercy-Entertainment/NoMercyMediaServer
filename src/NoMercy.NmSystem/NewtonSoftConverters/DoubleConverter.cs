@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Globalization;
 using Newtonsoft.Json;
 
 namespace NoMercy.NmSystem.NewtonSoftConverters;
@@ -46,11 +47,22 @@ public class DoubleConverter : JsonConverter
         {
             JsonToken.Null => null,
             JsonToken.Float or JsonToken.Integer => Convert.ToDouble(reader.Value),
-            JsonToken.String when double.TryParse((string)reader.Value!, out double result) =>
+            // JSON always uses '.' as the decimal separator regardless of host
+            // locale — parsing with the current culture silently mangles the
+            // value on any machine where '.' isn't the decimal separator (e.g.
+            // "7.5" reads as 75 under a culture that treats '.' as a group
+            // separator).
+            JsonToken.String
+                when double.TryParse(
+                    (string)reader.Value!,
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out double result
+                ) =>
                 result is not double.NaN
                 && result is not double.PositiveInfinity
                 && result is not double.NegativeInfinity
-                    ? result / 1000000
+                    ? result
                     : throw new JsonSerializationException($"Invalid double value: {reader.Value}"),
             _ => throw new JsonSerializationException(
                 $"Unexpected token {reader.TokenType} when parsing double."

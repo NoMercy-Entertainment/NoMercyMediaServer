@@ -138,7 +138,8 @@ public record KnownForDto
             cast.Movie?.VideoFiles.Count > 0
             || (cast.Tv?.Episodes.Any(e => e.VideoFiles.Count != 0) ?? false);
         NumberOfItems =
-            cast.Movie?.VideoFiles.Count + cast.Tv?.Episodes.Count(e => e.VideoFiles.Count != 0);
+            (cast.Movie?.VideoFiles.Count ?? 0)
+            + (cast.Tv?.Episodes.Count(e => e.VideoFiles.Count != 0) ?? 0);
         HaveItems =
             cast.Movie?.VideoFiles.Count > 0
                 ? 1
@@ -167,7 +168,8 @@ public record KnownForDto
             crew.Movie?.VideoFiles.Count > 0
             || (crew.Tv?.Episodes.Any(e => e.VideoFiles.Count != 0) ?? false);
         NumberOfItems =
-            crew.Movie?.VideoFiles.Count + crew.Tv?.Episodes.Count(e => e.VideoFiles.Count > 0);
+            (crew.Movie?.VideoFiles.Count ?? 0)
+            + (crew.Tv?.Episodes.Count(e => e.VideoFiles.Count > 0) ?? 0);
         HaveItems =
             crew.Movie?.VideoFiles.Count > 0
                 ? 1

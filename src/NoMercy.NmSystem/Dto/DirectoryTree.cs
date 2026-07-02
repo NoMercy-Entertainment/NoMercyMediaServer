@@ -22,7 +22,7 @@ public class DirectoryTree
     public int Mode { get; set; }
 
     [JsonProperty("size")]
-    public int? Size { get; set; }
+    public long? Size { get; set; }
 
     [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
@@ -62,7 +62,7 @@ public class DirectoryTree
         Parent = parentPath;
         FullPath = fullPath.Replace(@"..\", "");
         Mode = (int)pathInfo.Attributes;
-        Size = type == "file" ? (int?)fileInfo.Length : null;
+        Size = type == "file" ? fileInfo.Length : null;
         Type = type;
     }
 }

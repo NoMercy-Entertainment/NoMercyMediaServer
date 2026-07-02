@@ -34,6 +34,13 @@ public static class Locking
         {
             return true;
         }
+        catch (UnauthorizedAccessException)
+        {
+            // A read-only file (or one without write ACLs for this process)
+            // throws UnauthorizedAccessException rather than IOException when
+            // opened with FileAccess.ReadWrite — treat it the same as locked.
+            return true;
+        }
 
         return false;
     }
@@ -55,12 +62,14 @@ public static class Locking
                 )
                     continue;
 
-                process.Kill();
-                process.WaitForExit();
-
+                // Never kill the process holding the file — it may be an
+                // in-flight ffmpeg encode (or ffprobe/ffplay), and killing it
+                // destroys the user's running job. Log and let the caller's
+                // own retry/defer logic handle the file staying locked.
                 Logger.System(
-                    $"Closed application {process.ProcessName} locking {filePath}",
-                    LogEventLevel.Verbose
+                    $"{process.ProcessName} (pid {process.Id}) holds {filePath} — "
+                        + "skipping cleanup to avoid killing an in-flight process.",
+                    LogEventLevel.Warning
                 );
 
                 break;

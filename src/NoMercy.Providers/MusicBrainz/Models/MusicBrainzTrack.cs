@@ -30,22 +30,33 @@ public class MusicBrainzTrack
 
     public double Duration => (Length ?? 0) / 1000.0;
 
+    // Bound as the raw JSON token (Newtonsoft renders a numeric token to its
+    // string form when the target type is string) so a vinyl-style "A1" or
+    // box-set "1-05" track number reaches the parser below. Number's own
+    // setter used to run Convert.ToInt32 on an already-int value — a
+    // conversion that can never throw — so the fallback for non-numeric
+    // input was unreachable dead code.
     [JsonProperty("number")]
-    public int Number
+    private string? NumberToken
     {
-        get => _number;
-        set
-        {
-            try
-            {
-                _number = Convert.ToInt32(value);
-            }
-            catch (Exception)
-            {
-                _number =
-                    value.ToString().Replace("A", "").Split("-").LastOrDefault()?.ToInt() ?? 0;
-            }
-        }
+        set => _number = ParseNumber(value);
+    }
+
+    [JsonIgnore]
+    public int Number => _number;
+
+    /// <summary>
+    /// Most releases send a plain integer. Vinyl/cassette media prefix a side
+    /// letter (e.g. "A1") and box sets sometimes encode disc-track as "1-05"
+    /// — both fall back to the trailing numeric segment. Unparseable input
+    /// defaults to 0.
+    /// </summary>
+    internal static int ParseNumber(string? raw)
+    {
+        if (raw is not null && int.TryParse(raw, out int parsed))
+            return parsed;
+
+        return raw?.Replace("A", string.Empty).Split("-").LastOrDefault()?.ToInt() ?? 0;
     }
 
     [JsonProperty("position")]

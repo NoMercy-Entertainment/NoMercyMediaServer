@@ -424,7 +424,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
                         Name = Path.GetFileName(file),
                         Path = file,
                         Extension = extension,
-                        Size = (int)_driver.GetFileSize(file),
+                        Size = _driver.GetFileSize(file),
                         Created = _driver.GetCreationTimeUtc(file).ToLocalTime(),
                         Modified = _driver.GetLastWriteTimeUtc(file).ToLocalTime(),
                         Accessed = _driver.GetLastAccessTimeUtc(file).ToLocalTime(),

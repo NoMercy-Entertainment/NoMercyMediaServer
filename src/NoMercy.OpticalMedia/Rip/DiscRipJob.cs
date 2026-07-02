@@ -224,6 +224,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
 
         DiscRipResult[] successes = results.Where(r => r.Success).ToArray();
         HashSet<string> notifiedFolders = new(StringComparer.OrdinalIgnoreCase);
+        HashSet<int> dispatchedTitleIndexes = [];
         int batchIndex = 0;
 
         foreach (DiscRipResult res in successes)
@@ -319,7 +320,12 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
                 Request.DiscType == OpticalDiscType.Dvd
                 || Request.DiscType == OpticalDiscType.BluRay;
 
-            if (isVideoDisc && notifiedFolders.Add(watcherFolderHost))
+            // Per-title dispatch: each ripped title is its own episode/file and
+            // needs its own VideoEncodeJob. Gating this on the shared season
+            // folder (like the audio branch below) meant only the first title
+            // per folder ever dispatched — every other episode landed on disk
+            // with no encode job and no fallback event.
+            if (isVideoDisc && dispatchedTitleIndexes.Add(res.TitleIndex))
             {
                 Ulid? resolvedPresetId = ResolvePresetId(
                     Request.EncodingProfileId,
