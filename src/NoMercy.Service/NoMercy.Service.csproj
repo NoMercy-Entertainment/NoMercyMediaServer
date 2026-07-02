@@ -28,8 +28,10 @@
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
-    <DebugType>None</DebugType>
-    <DebugSymbols>false</DebugSymbols>
+    <!-- Embed portable symbols into the single-file binary so remote exception
+         traces from self-hosted users carry file and line numbers. Embedded avoids
+         shipping a separate .pdb next to the single-file exe. -->
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
 
   <ItemGroup>
