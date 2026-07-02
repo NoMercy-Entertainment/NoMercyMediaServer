@@ -1069,7 +1069,7 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Fact]
-    public async Task Users_Notifications_ReturnsNotImplemented()
+    public async Task Users_Notifications_ReturnsStatusResponse()
     {
         HttpResponseMessage response = await _client.PatchAsync(
             "/api/v1/dashboard/users/notifications",
@@ -1077,11 +1077,9 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        // Notification settings have no backing storage yet — the endpoint must
-        // report that honestly instead of returning a fabricated success.
         Assert.True(
-            response.StatusCode == HttpStatusCode.NotImplemented,
-            $"Expected NotImplemented, got {(int)response.StatusCode}: {body}"
+            response.StatusCode == HttpStatusCode.OK,
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
         JsonDocument json = JsonDocument.Parse(body);

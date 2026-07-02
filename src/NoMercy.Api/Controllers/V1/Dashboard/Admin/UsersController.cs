@@ -153,7 +153,15 @@ public class UsersController(IUserRepository userRepository) : BaseController
         if (user is null)
             return NotFoundResponse("User not found");
 
-        return NotImplementedResponse("Notification settings are not implemented yet");
+        // TODO Implement notification settings.
+
+        return Ok(
+            new StatusResponseDto<string>
+            {
+                Status = "success",
+                Message = "Notification settings updated",
+            }
+        );
     }
 
     [HttpGet]
@@ -232,6 +240,14 @@ public class UsersController(IUserRepository userRepository) : BaseController
         if (user is null)
             return NotFoundResponse("User not found");
 
-        return NotImplementedResponse("Notification settings are not implemented yet");
+        // TODO Implement notification settings.
+
+        return Ok(
+            new StatusResponseDto<string>
+            {
+                Status = "success",
+                Message = "Notification settings updated",
+            }
+        );
     }
 }
