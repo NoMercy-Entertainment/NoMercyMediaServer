@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -121,5 +122,86 @@ public class ProcessResourceMonitorBranchTests
         second.Should().BeGreaterThanOrEqualTo(0);
         second.Should().BeLessThanOrEqualTo(100);
         double.IsNaN(second).Should().BeFalse();
+    }
+
+    // ── Baseline isolation between GetCpuUsagePercent and SampleProcessFamilyCpu ──
+    //
+    // Both samplers used to read/write the SAME _lastCpuTime field under
+    // DIFFERENT locks (_snapshotLock vs _systemSnapshotLock), so calling one
+    // clobbered the other's baseline — e.g. GetSystemCpuUsagePercent falling
+    // back to SampleProcessFamilyCpu on macOS would corrupt whatever
+    // GetCpuUsagePercent had primed, and vice versa.
+
+    [Fact]
+    public void SampleProcessFamilyCpu_DoesNotClobber_GetCpuUsagePercentBaseline()
+    {
+        ProcessResourceMonitor sut = new(NullLogger<ProcessResourceMonitor>.Instance);
+
+        sut.GetCpuUsagePercent();
+        TimeSpan baselineAfterOwnCall = GetPrivateField<TimeSpan>(sut, "_lastCpuTime");
+
+        // Burn a little CPU so SampleProcessFamilyCpu's own reading has moved,
+        // then call it — pre-fix this call wrote into _lastCpuTime too.
+        for (int i = 0; i < 10_000; i++)
+            _ = Math.Sqrt(i);
+        sut.SampleProcessFamilyCpu();
+        sut.SampleProcessFamilyCpu();
+
+        TimeSpan baselineAfterFamilySample = GetPrivateField<TimeSpan>(sut, "_lastCpuTime");
+
+        baselineAfterFamilySample.Should().Be(baselineAfterOwnCall);
+    }
+
+    [Fact]
+    public void GetCpuUsagePercent_DoesNotClobber_SampleProcessFamilyCpuBaseline()
+    {
+        ProcessResourceMonitor sut = new(NullLogger<ProcessResourceMonitor>.Instance);
+
+        sut.SampleProcessFamilyCpu();
+        TimeSpan baselineAfterOwnCall = GetPrivateField<TimeSpan>(sut, "_lastProcessFamilyCpuTime");
+
+        for (int i = 0; i < 10_000; i++)
+            _ = Math.Sqrt(i);
+        sut.GetCpuUsagePercent();
+        sut.GetCpuUsagePercent();
+
+        TimeSpan baselineAfterCpuUsageCalls = GetPrivateField<TimeSpan>(
+            sut,
+            "_lastProcessFamilyCpuTime"
+        );
+
+        baselineAfterCpuUsageCalls.Should().Be(baselineAfterOwnCall);
+    }
+
+    [Fact]
+    public async Task Interleaved_GetCpuUsagePercent_and_SampleProcessFamilyCpu_StayIndependent()
+    {
+        // Hammer both samplers from multiple threads — neither baseline field
+        // should ever throw, and each converges on its own last-seen CPU time.
+        ProcessResourceMonitor sut = new(NullLogger<ProcessResourceMonitor>.Instance);
+
+        Task cpuUsageLoop = Task.Run(() =>
+        {
+            for (int i = 0; i < 200; i++)
+                sut.GetCpuUsagePercent();
+        });
+        Task familyLoop = Task.Run(() =>
+        {
+            for (int i = 0; i < 200; i++)
+                sut.SampleProcessFamilyCpu();
+        });
+
+        Func<Task> act = () => Task.WhenAll(cpuUsageLoop, familyLoop);
+
+        await act.Should().NotThrowAsync();
+    }
+
+    private static T GetPrivateField<T>(object instance, string fieldName)
+    {
+        FieldInfo? field = instance
+            .GetType()
+            .GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Instance);
+        field.Should().NotBeNull($"field {fieldName} should exist on {instance.GetType().Name}");
+        return (T)field!.GetValue(instance)!;
     }
 }

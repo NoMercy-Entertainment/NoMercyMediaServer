@@ -21,35 +21,46 @@ public sealed class WindowsProcessSuspender : IProcessSuspender
 {
     public void Suspend(int processId)
     {
-        nint handle = NtOpenProcess(processId);
-        if (handle != nint.Zero)
+        // Process is kept alive (via `using`) for as long as its Handle is in
+        // use: Process.Handle used to be read from a Process that then went
+        // out of scope and became GC-eligible immediately after this method
+        // returned. Once collected/finalized the underlying OS handle closes,
+        // and Windows can reuse that same handle value for something
+        // unrelated — a later NtSuspendProcess/NtResumeProcess call against
+        // the stale value could then act on the wrong process entirely.
+        using Process? process = TryGetProcess(processId);
+        if (process is null)
         {
-            NtSuspendProcess(handle);
-            NtClose(handle);
+            return;
         }
+
+        NtSuspendProcess(process.Handle);
+        // No manual NtClose here — Process.Dispose() (via `using`) owns
+        // closing the handle it lazily opened via .Handle above. Closing it
+        // here too would double-close the same OS handle value.
     }
 
     public void Resume(int processId)
     {
-        nint handle = NtOpenProcess(processId);
-        if (handle != nint.Zero)
+        using Process? process = TryGetProcess(processId);
+        if (process is null)
         {
-            NtResumeProcess(handle);
-            NtClose(handle);
+            return;
         }
+
+        NtResumeProcess(process.Handle);
     }
 
-    private static nint NtOpenProcess(int pid)
+    private static Process? TryGetProcess(int pid)
     {
         try
         {
-            Process process = Process.GetProcessById(pid);
-            return process.Handle;
+            return Process.GetProcessById(pid);
         }
         catch (Exception)
         {
-            // Process gone or access denied — callers treat Zero as a no-op.
-            return nint.Zero;
+            // Process gone or access denied — callers treat null as a no-op.
+            return null;
         }
     }
 
@@ -58,7 +69,4 @@ public sealed class WindowsProcessSuspender : IProcessSuspender
 
     [DllImport("ntdll.dll")]
     private static extern uint NtResumeProcess(nint processHandle);
-
-    [DllImport("ntdll.dll")]
-    private static extern uint NtClose(nint handle);
 }

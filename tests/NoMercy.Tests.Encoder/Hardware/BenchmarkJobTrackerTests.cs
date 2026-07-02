@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Codecs;
@@ -18,7 +19,17 @@ namespace NoMercy.Tests.Encoder.Hardware;
 
 public class BenchmarkJobTrackerTests
 {
-    private static BenchmarkJobTracker MakeTracker(IHardwareBenchmark? benchmark = null)
+    private static IHostApplicationLifetime NeverStoppingLifetime()
+    {
+        Mock<IHostApplicationLifetime> lifetime = new();
+        lifetime.Setup(l => l.ApplicationStopping).Returns(CancellationToken.None);
+        return lifetime.Object;
+    }
+
+    private static BenchmarkJobTracker MakeTracker(
+        IHardwareBenchmark? benchmark = null,
+        IHostApplicationLifetime? lifetime = null
+    )
     {
         IHardwareBenchmark bench =
             benchmark
@@ -27,7 +38,11 @@ public class BenchmarkJobTrackerTests
                 == Task.FromResult(new SpeedIndex(new()))
             );
 
-        return new BenchmarkJobTracker(bench, NullLogger<BenchmarkJobTracker>.Instance);
+        return new BenchmarkJobTracker(
+            bench,
+            NullLogger<BenchmarkJobTracker>.Instance,
+            lifetime ?? NeverStoppingLifetime()
+        );
     }
 
     // ── Start ──────────────────────────────────────────────────────────────────
@@ -175,5 +190,129 @@ public class BenchmarkJobTrackerTests
         completed!.Status.Should().Be("completed");
         completed.MeasurementCount.Should().Be(2);
         completed.CompletedAt.Should().NotBeNull();
+    }
+
+    // ── Single-flight calibration ────────────────────────────────────────────
+    //
+    // Start() can be triggered from several independent places close together
+    // (driver-change detection, the on-demand HTTP endpoint, a retried click).
+    // Without the SemaphoreSlim gate each spawns its own concurrent ffmpeg
+    // probe and they race writing the same SpeedIndex cache file.
+
+    [Fact]
+    public async Task Start_ConcurrentTriggers_NeverRunCalibrateAsyncConcurrently()
+    {
+        int concurrentCount = 0;
+        int maxObservedConcurrency = 0;
+        object gate = new();
+
+        Mock<IHardwareBenchmark> mock = new();
+        mock.Setup(b => b.CalibrateAsync(It.IsAny<CancellationToken>()))
+            .Returns(async () =>
+            {
+                lock (gate)
+                {
+                    concurrentCount++;
+                    maxObservedConcurrency = Math.Max(maxObservedConcurrency, concurrentCount);
+                }
+
+                await Task.Delay(75);
+
+                lock (gate)
+                {
+                    concurrentCount--;
+                }
+
+                return new SpeedIndex(new());
+            });
+
+        BenchmarkJobTracker tracker = MakeTracker(mock.Object);
+
+        BenchmarkJobStatus jobA = tracker.Start([], []);
+        BenchmarkJobStatus jobB = tracker.Start([], []);
+        BenchmarkJobStatus jobC = tracker.Start([], []);
+
+        await Task.Delay(700);
+
+        maxObservedConcurrency.Should().Be(1);
+        tracker.Get(jobA.JobId)!.Status.Should().Be("completed");
+        tracker.Get(jobB.JobId)!.Status.Should().Be("completed");
+        tracker.Get(jobC.JobId)!.Status.Should().Be("completed");
+    }
+
+    // ── Host shutdown token ──────────────────────────────────────────────────
+    //
+    // RunAsync used to hardcode CancellationToken.None — a benchmark could
+    // outlive the host it was calibrating for.
+
+    [Fact]
+    public async Task RunAsync_PassesLifetimeApplicationStoppingToken_ToCalibrateAsync()
+    {
+        using CancellationTokenSource shutdownCts = new();
+        Mock<IHostApplicationLifetime> lifetime = new();
+        lifetime.Setup(l => l.ApplicationStopping).Returns(shutdownCts.Token);
+
+        CancellationToken? observedToken = null;
+        Mock<IHardwareBenchmark> mock = new();
+        mock.Setup(b => b.CalibrateAsync(It.IsAny<CancellationToken>()))
+            .Returns(
+                (CancellationToken ct) =>
+                {
+                    observedToken = ct;
+                    return Task.FromResult(new SpeedIndex(new()));
+                }
+            );
+
+        BenchmarkJobTracker tracker = MakeTracker(mock.Object, lifetime.Object);
+
+        tracker.Start([], []);
+        await Task.Delay(200);
+
+        observedToken.Should().Be(shutdownCts.Token);
+    }
+
+    [Fact]
+    public async Task RunAsync_ShutdownWhileQueuedBehindGate_CancelsWithoutCallingCalibrateAsync()
+    {
+        TaskCompletionSource firstJobStarted = new(
+            TaskCreationOptions.RunContinuationsAsynchronously
+        );
+        TaskCompletionSource<SpeedIndex> firstJobRelease = new(
+            TaskCreationOptions.RunContinuationsAsynchronously
+        );
+        int calibrateCallCount = 0;
+
+        Mock<IHardwareBenchmark> mock = new();
+        mock.Setup(b => b.CalibrateAsync(It.IsAny<CancellationToken>()))
+            .Returns(async () =>
+            {
+                Interlocked.Increment(ref calibrateCallCount);
+                firstJobStarted.TrySetResult();
+                return await firstJobRelease.Task;
+            });
+
+        using CancellationTokenSource shutdownCts = new();
+        Mock<IHostApplicationLifetime> lifetime = new();
+        lifetime.Setup(l => l.ApplicationStopping).Returns(shutdownCts.Token);
+
+        BenchmarkJobTracker tracker = MakeTracker(mock.Object, lifetime.Object);
+
+        BenchmarkJobStatus first = tracker.Start([], []);
+        await firstJobStarted.Task; // first job now holds the gate, blocked inside CalibrateAsync
+
+        BenchmarkJobStatus second = tracker.Start([], []);
+        await Task.Delay(150); // let the second job queue behind _calibrationGate
+
+        await shutdownCts.CancelAsync();
+        await Task.Delay(150);
+
+        tracker.Get(second.JobId)!.Status.Should().Be("cancelled");
+        tracker.Get(first.JobId)!.Status.Should().Be("running");
+
+        // Release the first job so the test doesn't leak a running task.
+        firstJobRelease.TrySetResult(new SpeedIndex(new()));
+        await Task.Delay(150);
+
+        calibrateCallCount.Should().Be(1); // second job's CalibrateAsync was never invoked
     }
 }

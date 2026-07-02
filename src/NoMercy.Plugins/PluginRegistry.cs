@@ -17,9 +17,37 @@ internal sealed class PluginRegistry : IPluginRegistry
 {
     private readonly ConcurrentDictionary<Guid, LoadedPlugin> _plugins = new();
 
+    /// <summary>
+    /// Replaces the entry for <paramref name="id"/>. Every call site that
+    /// re-registers an id (a manifest reload, a direct-assembly reload, a
+    /// malfunctioned-plugin re-record) used to overwrite the previous
+    /// <see cref="LoadedPlugin"/> outright — its <c>Instance</c> was never
+    /// disposed and its <c>LoadContext</c> was never unloaded, leaking a
+    /// collectible ALC that pins the old assembly file (surfaces later as an
+    /// IOException when uninstall tries to delete the plugin directory).
+    /// Centralizing the dispose+unload here fixes every caller in one place.
+    /// </summary>
     public LoadedPlugin this[Guid id]
     {
-        set => _plugins[id] = value;
+        set
+        {
+            LoadedPlugin? replaced = null;
+            _plugins.AddOrUpdate(
+                id,
+                value,
+                (_, existing) =>
+                {
+                    replaced = existing;
+                    return value;
+                }
+            );
+
+            if (replaced is not null && !ReferenceEquals(replaced, value))
+            {
+                replaced.Instance?.Dispose();
+                replaced.LoadContext?.Unload();
+            }
+        }
     }
 
     public bool TryGetValue(Guid id, [MaybeNullWhen(false)] out LoadedPlugin plugin)

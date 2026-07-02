@@ -438,4 +438,91 @@ public class StorageFactoryTests
         Action act = () => storage.Exists(allowed);
         act.Should().NotThrow<StoragePathNotAllowedException>();
     }
+
+    // -----------------------------------------------------------------------
+    // Disposal on eviction / shutdown
+    // -----------------------------------------------------------------------
+    //
+    // Invalidate/InvalidateAll used to drop the cached IStorage without
+    // telling its driver to release anything — a real NFS/S3/WebDAV/SMB
+    // driver leaks its keep-alive timer, native context, SDK client, or
+    // HttpClient every time a folder's storage is invalidated (config
+    // change, driver swap, folder delete).
+
+    [Fact]
+    public void Invalidate_DisposesUnderlyingDriver_WhenDriverIsDisposable()
+    {
+        Mock<IStorageDriver> driver = BackendMock();
+        driver.As<IDisposable>();
+        StorageFactory factory = Factory(driver, LocalResolver(Path.GetTempPath()));
+        Ulid id = Ulid.NewUlid();
+        factory.For(id, Ulid.NewUlid(), string.Empty);
+
+        factory.Invalidate(id);
+
+        driver.As<IDisposable>().Verify(d => d.Dispose(), Times.Once);
+    }
+
+    [Fact]
+    public void Invalidate_NonDisposableDriver_DoesNotThrow()
+    {
+        // BackendMock() alone does NOT implement IDisposable — the eviction
+        // path must check structurally and no-op, not assume every driver
+        // is disposable.
+        Mock<IStorageDriver> driver = BackendMock();
+        StorageFactory factory = Factory(driver, LocalResolver(Path.GetTempPath()));
+        Ulid id = Ulid.NewUlid();
+        factory.For(id, Ulid.NewUlid(), string.Empty);
+
+        Action act = () => factory.Invalidate(id);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Invalidate_RemovedEntry_NextCallBuildsAndCanDisposeAgain()
+    {
+        Mock<IStorageDriver> driver = BackendMock();
+        driver.As<IDisposable>();
+        StorageFactory factory = Factory(driver, LocalResolver(Path.GetTempPath()));
+        Ulid id = Ulid.NewUlid();
+        Ulid driverId = Ulid.NewUlid();
+        IStorage first = factory.For(id, driverId, string.Empty);
+
+        factory.Invalidate(id);
+        IStorage second = factory.For(id, driverId, string.Empty);
+
+        second.Should().NotBeSameAs(first);
+        driver.As<IDisposable>().Verify(d => d.Dispose(), Times.Once);
+    }
+
+    [Fact]
+    public void InvalidateAll_DisposesEveryCachedEntrysDriver()
+    {
+        Mock<IStorageDriver> driver = BackendMock();
+        driver.As<IDisposable>();
+        StorageFactory factory = Factory(driver, LocalResolver(Path.GetTempPath()));
+        factory.For(Ulid.NewUlid(), Ulid.NewUlid(), string.Empty);
+        factory.For(Ulid.NewUlid(), Ulid.NewUlid(), string.Empty);
+
+        factory.InvalidateAll();
+
+        // Two distinct cache entries (different folder ids) both wrap the
+        // same injected local driver — every entry's Dispose() must fire,
+        // not just the first one enumerated.
+        driver.As<IDisposable>().Verify(d => d.Dispose(), Times.Exactly(2));
+    }
+
+    [Fact]
+    public void Dispose_DisposesEveryCachedEntrysDriver()
+    {
+        Mock<IStorageDriver> driver = BackendMock();
+        driver.As<IDisposable>();
+        StorageFactory factory = Factory(driver, LocalResolver(Path.GetTempPath()));
+        factory.For(Ulid.NewUlid(), Ulid.NewUlid(), string.Empty);
+
+        factory.Dispose();
+
+        driver.As<IDisposable>().Verify(d => d.Dispose(), Times.Once);
+    }
 }

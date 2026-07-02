@@ -266,7 +266,19 @@ public class PluginRepository : IPluginRepository
     {
         try
         {
-            string json = JsonSerializer.Serialize(_repositories, JsonOptions);
+            // AddRepositoryAsync / RemoveRepositoryAsync mutate _repositories
+            // under `lock (_lock)` but call this AFTER releasing it — reading
+            // the live list here (as this used to) could race a concurrent
+            // mutation and throw "Collection was modified" or serialize a
+            // half-updated list. Snapshot under the lock; serialize + write
+            // outside it so file I/O never blocks the other lock holders.
+            List<PluginRepositoryInfo> snapshot;
+            lock (_lock)
+            {
+                snapshot = _repositories.ToList();
+            }
+
+            string json = JsonSerializer.Serialize(snapshot, JsonOptions);
             await _storage.WriteAllTextAsync(_repositoriesFilePath, json, ct);
         }
         catch (Exception ex)

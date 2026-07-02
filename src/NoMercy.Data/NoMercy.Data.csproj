@@ -9,6 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="NoMercy.Tests.Repositories" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\NoMercy.Events\NoMercy.Events.csproj" />
     <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
     <ProjectReference Include="..\NoMercy.Database\NoMercy.Database.csproj" />

@@ -37,6 +37,7 @@ public class ServerRegistrationService : IServerRegistrationService
 
     private static readonly int[] BackoffSeconds = [2, 5, 15, 30, 60];
     private readonly SemaphoreSlim _initLock = new(1, 1);
+    private Task? _inFlightInit;
     private DateTime _lastFailureUtc = DateTime.MinValue;
     private static readonly TimeSpan FailureCooldown = TimeSpan.FromSeconds(60);
 
@@ -60,7 +61,17 @@ public class ServerRegistrationService : IServerRegistrationService
         _networkDiscovery = networkDiscovery;
     }
 
-    public async Task Init(int maxRetries = 5)
+    /// <summary>
+    /// Registers + assigns the server and renews its certificate. Concurrent
+    /// callers share the SAME in-flight attempt instead of a "loser" returning
+    /// early on a non-blocking lock: the loser used to advance to Registered
+    /// (and check for a certificate) before the winner's attempt — including
+    /// the certificate renewal — had actually finished, producing a spurious
+    /// "certificate not acquired" downstream. A caller that joins an
+    /// already-running attempt does not apply its own <paramref name="maxRetries"/>
+    /// — only the value the FIRST caller passed seeds the shared attempt.
+    /// </summary>
+    public Task Init(int maxRetries = 5)
     {
         TimeSpan sinceLastFailure = DateTime.UtcNow - _lastFailureUtc;
         if (sinceLastFailure < FailureCooldown)
@@ -71,12 +82,24 @@ public class ServerRegistrationService : IServerRegistrationService
             throw new InvalidOperationException("Registration on cooldown after recent failure");
         }
 
-        if (!await _initLock.WaitAsync(0))
+        _initLock.Wait();
+        try
         {
-            Logger.Register("Registration already in progress, skipping duplicate call");
-            return;
-        }
+            if (_inFlightInit is null || _inFlightInit.IsCompleted)
+            {
+                _inFlightInit = RunRegistrationAsync(maxRetries);
+            }
 
+            return _inFlightInit;
+        }
+        finally
+        {
+            _initLock.Release();
+        }
+    }
+
+    private async Task RunRegistrationAsync(int maxRetries)
+    {
         try
         {
             await RegisterServer(maxRetries);
@@ -87,10 +110,6 @@ public class ServerRegistrationService : IServerRegistrationService
         {
             _lastFailureUtc = DateTime.UtcNow;
             throw;
-        }
-        finally
-        {
-            _initLock.Release();
         }
     }
 

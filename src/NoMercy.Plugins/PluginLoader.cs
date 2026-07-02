@@ -170,6 +170,18 @@ internal sealed class PluginLoader(
 
                     IPlugin? storedInstance =
                         initialStatus == PluginStatus.Active ? instance : null;
+
+                    // Reaching here with no stored instance means the plugin
+                    // was never auto-enabled — Initialize() was never called
+                    // and `instance` is about to be discarded unreferenced.
+                    // Dispose it now instead of leaking whatever its
+                    // constructor allocated (the Malfunctioned/auto-enabled
+                    // failure path above already disposes its own instance).
+                    if (storedInstance is null)
+                    {
+                        instance.Dispose();
+                    }
+
                     LoadedPlugin loaded = new(info, storedInstance, loadContext);
                     _registry[manifest.Id] = loaded;
                     foundPlugin = true;

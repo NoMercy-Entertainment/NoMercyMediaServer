@@ -48,11 +48,21 @@ public abstract class SinglePassStrategyBase(IEncoder encoder, ILogger logger, I
     {
         IStorage effectiveStorage = request.DestinationStorage ?? request.SourceStorage ?? storage;
 
+        // Per-task encodes (TaskFilter set on EncodingOptions) write into a
+        // SHARED output directory alongside every other decomposed task in
+        // the same coordinator group — see EncodingOrchestrator's isPerTaskRun
+        // comment. Sweeping that directory here would delete sibling tasks'
+        // segments the moment any one of them fails or is cancelled; the
+        // coordinator owns cleanup of the whole group once every task in it
+        // has reported, so per-task runs skip the sweep entirely.
+        bool isPerTaskRun =
+            request.Options?.TaskFilter is { } filter && filter.Kind != EncodeTaskKind.Whole;
+
         try
         {
             EncodingResult result = await encoder.EncodeAsync(request, progress, ct);
 
-            if (!result.Success)
+            if (!result.Success && !isPerTaskRun)
             {
                 DeletePartialOutput(
                     request.OutputDirectory,
@@ -65,11 +75,14 @@ public abstract class SinglePassStrategyBase(IEncoder encoder, ILogger logger, I
         }
         catch (OperationCanceledException)
         {
-            DeletePartialOutput(
-                request.OutputDirectory,
-                effectiveStorage,
-                preserveCheckpoint: false
-            );
+            if (!isPerTaskRun)
+            {
+                DeletePartialOutput(
+                    request.OutputDirectory,
+                    effectiveStorage,
+                    preserveCheckpoint: false
+                );
+            }
             throw;
         }
     }

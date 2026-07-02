@@ -16,6 +16,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.LiveTranscode;
+using NoMercy.Storage;
 using NoMercy.Tests.Encoder.Storage;
 
 namespace NoMercy.Tests.Encoder.LiveTranscode;
@@ -332,6 +333,158 @@ public class LiveFfmpegRunnerTests
                 // Best-effort cleanup
             }
         }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Conditional session-complete: a superseded (per-seek) runner must not
+    // end the whole session's segment stream when its own ffmpeg exits.
+    // ──────────────────────────────────────────────────────────────────────────
+
+    private static async Task DrainAsync(LiveSession session)
+    {
+        await foreach (Segment _ in session.Segments) { }
+    }
+
+    [Fact]
+    public async Task RunAsync_StillCurrentRunner_CompletesSessionSegmentChannel()
+    {
+        string tempDir = Path.Combine(
+            Path.GetTempPath(),
+            $"live-runner-current-{Guid.NewGuid():N}"
+        );
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            LiveRunInput input = new(
+                InputPath: "/media/in.mkv",
+                OutputDirectory: tempDir,
+                StartPosition: TimeSpan.Zero,
+                Quality: MakeQuality(),
+                SegmentDurationSeconds: 6
+            );
+
+            LiveFfmpegRunner sut = MakeRunner(new FakeProcessRunner(() => { }));
+            LiveSession session = new("sess-current", MakeQuality());
+            session.SetState(LiveSessionState.Transcoding);
+
+            // RunAsync invoked with the session's OWN current runner token —
+            // mirrors the real _runnerFactory wiring (LiveEncoder.SpawnRunner)
+            // where no newer seek has superseded this runner.
+            await sut.RunAsync(input, session, session.RunnerCancellation);
+
+            Task drain = DrainAsync(session);
+            Task completed = await Task.WhenAny(drain, Task.Delay(TimeSpan.FromSeconds(2)));
+
+            completed.Should().Be(drain, "the current runner must complete the segment channel");
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+            catch
+            {
+                // Best-effort cleanup
+            }
+        }
+    }
+
+    [Fact]
+    public async Task RunAsync_SupersededBySeek_DoesNotCompleteSessionSegmentChannel()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"live-runner-stale-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            LiveRunInput input = new(
+                InputPath: "/media/in.mkv",
+                OutputDirectory: tempDir,
+                StartPosition: TimeSpan.Zero,
+                Quality: MakeQuality(),
+                SegmentDurationSeconds: 6
+            );
+
+            LiveFfmpegRunner sut = MakeRunner(new FakeProcessRunner(() => { }));
+            LiveSession session = new("sess-stale", MakeQuality());
+            session.SetState(LiveSessionState.Transcoding);
+
+            CancellationToken staleToken = session.RunnerCancellation;
+
+            // A seek/resume/quality-change swaps in a fresh runner CTS before
+            // this (now-superseded) runner's ffmpeg process finishes. No
+            // factory is attached, so the seek only replaces the CTS.
+            await session.SeekAsync(TimeSpan.FromSeconds(10), CancellationToken.None);
+
+            await sut.RunAsync(input, session, staleToken);
+
+            Task drain = DrainAsync(session);
+            Task completed = await Task.WhenAny(drain, Task.Delay(TimeSpan.FromMilliseconds(400)));
+
+            completed
+                .Should()
+                .NotBe(drain, "a superseded runner must not end the session's segment stream");
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+            catch
+            {
+                // Best-effort cleanup
+            }
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Resource-lease lifetime: the lease is acquired before CreateDirectory /
+    // AcquireLocalPath / BuildArguments run — a throw from any of those must
+    // still release it, not leak the GPU/CPU budget forever.
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task RunAsync_ThrowFromCreateDirectory_StillReleasesResourceLease()
+    {
+        Mock<IStorage> storage = new();
+        storage
+            .Setup(s => s.CreateDirectory(It.IsAny<string>()))
+            .Throws(new IOException("disk full"));
+
+        ResourceLease lease = new("lease-1", null, 0, 2);
+        Mock<IResourceBudget> budget = new();
+        budget
+            .Setup(b =>
+                b.AcquireAsync(It.IsAny<ResourceRequirement>(), It.IsAny<CancellationToken>())
+            )
+            .ReturnsAsync(lease);
+
+        LiveFfmpegRunner sut = new(
+            new FakeProcessRunner(() => { }),
+            new() { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
+            NullLogger<LiveFfmpegRunner>.Instance,
+            storage.Object,
+            NoopCap(),
+            NoopHardware(),
+            budget.Object
+        );
+
+        LiveRunInput input = new(
+            InputPath: "/media/in.mkv",
+            OutputDirectory: "/tmp/live",
+            StartPosition: TimeSpan.Zero,
+            Quality: MakeQuality(),
+            SegmentDurationSeconds: 6
+        );
+        LiveSession session = new("sess-throw", MakeQuality());
+
+        Func<Task> act = () => sut.RunAsync(input, session, CancellationToken.None);
+
+        await act.Should().ThrowAsync<IOException>();
+        budget.Verify(b => b.Release(lease), Times.Once);
     }
 
     // ──────────────────────────────────────────────────────────────────────────

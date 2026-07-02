@@ -22,7 +22,7 @@ namespace NoMercy.Storage.Factory;
 /// </summary>
 internal sealed record LocalDriverConfig(string? RootPath);
 
-public sealed class StorageFactory : IStorageFactory
+public sealed class StorageFactory : IStorageFactory, IDisposable
 {
     private readonly ILogger<StorageFactory> _logger;
 
@@ -137,12 +137,45 @@ public sealed class StorageFactory : IStorageFactory
         string prefix = folderId.ToString();
         foreach (string key in _cache.Keys)
         {
-            if (key.StartsWith(prefix, StringComparison.Ordinal))
-                _cache.TryRemove(key, out _);
+            if (
+                key.StartsWith(prefix, StringComparison.Ordinal)
+                && _cache.TryRemove(key, out IStorage? removed)
+            )
+            {
+                DisposeUnderlyingDriver(removed);
+            }
         }
     }
 
-    public void InvalidateAll() => _cache.Clear();
+    public void InvalidateAll()
+    {
+        foreach (IStorage storage in _cache.Values)
+            DisposeUnderlyingDriver(storage);
+        _cache.Clear();
+    }
+
+    /// <summary>
+    /// Disposes the process-level singleton on host shutdown so every cached
+    /// storage's driver releases its unmanaged/network handles (NFS keep-alive
+    /// timer + libnfs context, S3 SDK client, WebDAV HttpClient). The DI
+    /// container tracks and disposes this automatically because it's resolved
+    /// through a factory delegate (see ServiceCollectionExtensions) rather than
+    /// registered as a pre-built instance.
+    /// </summary>
+    public void Dispose() => InvalidateAll();
+
+    /// <summary>
+    /// Evicting an IStorage from the cache used to just drop the reference —
+    /// the underlying driver (when it holds real resources: NFS/SMB/S3/WebDAV)
+    /// was never told to release them. IStorage/IStorageDriver don't declare
+    /// Dispose themselves (LocalStorageDriver has nothing to release), so this
+    /// checks for it structurally instead of widening either abstraction.
+    /// </summary>
+    private static void DisposeUnderlyingDriver(IStorage storage)
+    {
+        if (storage.Driver is IDisposable disposable)
+            disposable.Dispose();
+    }
 
     // -----------------------------------------------------------------------
 

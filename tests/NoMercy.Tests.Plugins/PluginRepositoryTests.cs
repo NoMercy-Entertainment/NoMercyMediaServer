@@ -479,6 +479,37 @@ public class PluginRepositoryTests : IDisposable
         loaded[0].Name.Should().Be("persisted-repo");
     }
 
+    // ── Concurrent save ───────────────────────────────────────────────────────
+    //
+    // SaveRepositoriesToDiskAsync used to serialize the live _repositories
+    // list without holding _lock — a concurrent AddRepositoryAsync mutating
+    // that same list (each call locks only around its own Add, then saves
+    // outside the lock) could race the serializer's enumeration and throw
+    // "Collection was modified; enumeration operation may not execute."
+
+    [Fact]
+    public async Task AddRepositoryAsync_ConcurrentCalls_DoNotThrowFromRacingSave()
+    {
+        PluginRepositoryManifest manifest = CreateTestManifest(pluginCount: 0);
+        HttpClient client = CreateMockHttpClient(manifest);
+        PluginRepository repo = MakeRepo(client);
+        const int concurrentAdds = 20;
+
+        Func<Task> act = () =>
+            Task.WhenAll(
+                Enumerable
+                    .Range(0, concurrentAdds)
+                    .Select(i =>
+                        repo.AddRepositoryAsync($"repo-{i}", $"https://example.com/repo-{i}.json")
+                    )
+            );
+
+        await act.Should().NotThrowAsync();
+
+        IReadOnlyList<PluginRepositoryInfo> repos = repo.GetRepositories();
+        repos.Should().HaveCount(concurrentAdds);
+    }
+
     private sealed class MockHttpHandler(string responseContent, HttpStatusCode statusCode)
         : HttpMessageHandler
     {

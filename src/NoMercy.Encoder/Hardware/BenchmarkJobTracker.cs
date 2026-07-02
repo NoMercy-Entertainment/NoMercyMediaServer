@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace NoMercy.Encoder.Hardware;
@@ -27,10 +28,19 @@ namespace NoMercy.Encoder.Hardware;
 /// </summary>
 public sealed class BenchmarkJobTracker(
     IHardwareBenchmark benchmark,
-    ILogger<BenchmarkJobTracker> logger
+    ILogger<BenchmarkJobTracker> logger,
+    IHostApplicationLifetime lifetime
 ) : IBenchmarkJobTracker
 {
     private readonly ConcurrentDictionary<string, BenchmarkJobStatus> _jobs = new();
+
+    // Start() can be triggered from several independent places (driver-change
+    // detection at boot, the on-demand HTTP endpoint, a user retrying it) close
+    // together. Without this gate each spawns its own concurrent ffmpeg
+    // hardware probe and they race writing the same SpeedIndex cache file. One
+    // calibration runs at a time; the rest queue behind the semaphore in call
+    // order.
+    private readonly SemaphoreSlim _calibrationGate = new(1, 1);
 
     public BenchmarkJobStatus Start(
         IReadOnlyList<Codecs.VideoCodecType> codecs,
@@ -73,6 +83,27 @@ public sealed class BenchmarkJobTracker(
         IReadOnlyList<int> resolutions
     )
     {
+        CancellationToken shutdownToken = lifetime.ApplicationStopping;
+
+        try
+        {
+            await _calibrationGate.WaitAsync(shutdownToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            _jobs[jobId] = _jobs[jobId] with
+            {
+                Status = "cancelled",
+                CompletedAt = DateTime.UtcNow,
+            };
+
+            logger.LogInformation(
+                "Benchmark job {JobId} cancelled before it could start (host shutting down)",
+                jobId
+            );
+            return;
+        }
+
         try
         {
             logger.LogInformation(
@@ -81,7 +112,7 @@ public sealed class BenchmarkJobTracker(
                 string.Join(", ", codecNames.Count > 0 ? codecNames : ["all"])
             );
 
-            SpeedIndex result = await benchmark.CalibrateAsync(CancellationToken.None);
+            SpeedIndex result = await benchmark.CalibrateAsync(shutdownToken);
 
             _jobs[jobId] = _jobs[jobId] with
             {
@@ -116,6 +147,10 @@ public sealed class BenchmarkJobTracker(
             };
 
             logger.LogError(ex, "Benchmark job {JobId} failed", jobId);
+        }
+        finally
+        {
+            _calibrationGate.Release();
         }
     }
 }

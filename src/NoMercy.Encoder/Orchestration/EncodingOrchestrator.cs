@@ -144,6 +144,13 @@ public class EncodingOrchestrator(
                     StoragePaths.TranscodeRoot,
                     relativeOutputPath.Replace('/', Path.DirectorySeparatorChar)
                 );
+            // request.OutputDirectory is documented as relative, but nothing
+            // enforces that: a rooted path makes Path.Combine discard
+            // TranscodeRoot entirely and return the rooted path unchanged, and
+            // a "../.." traversal escapes it just as easily. Reject anything
+            // that resolves outside TranscodeRoot before it's ever created or
+            // (on the cleanup path below) recursively deleted.
+            tempDir = EnsureWithinTranscodeRoot(tempDir);
             // CreateDirectory is idempotent — returns the existing DirectoryInfo
             // when the path already exists. FFmpeg's -y overwrites any stale
             // segments from a prior run, so wiping isn't necessary and a
@@ -244,7 +251,11 @@ public class EncodingOrchestrator(
                 {
                     try
                     {
-                        Directory.Delete(tempDir, recursive: true);
+                        // Re-validated immediately before the recursive delete —
+                        // tempDir is already containment-checked above, but a
+                        // rooted-path or traversal escape here would otherwise
+                        // recursively delete whatever directory it resolved to.
+                        Directory.Delete(EnsureWithinTranscodeRoot(tempDir), recursive: true);
                     }
                     catch (Exception cleanEx)
                     {
@@ -430,6 +441,47 @@ public class EncodingOrchestrator(
             mbps * 8,
             inputPath
         );
+    }
+
+    /// <summary>
+    /// Resolves <paramref name="candidateTempDir"/> to its canonical full path
+    /// and throws unless it is <see cref="StoragePaths.TranscodeRoot"/> itself
+    /// or a descendant of it. The candidate is built from
+    /// <c>request.OutputDirectory</c>, which is documented as storage-relative
+    /// but not structurally enforced at this boundary — a rooted path or a
+    /// ".." traversal would otherwise let <see cref="Directory.CreateDirectory"/>
+    /// and the recursive <see cref="Directory.Delete"/> below operate on an
+    /// arbitrary filesystem location instead of the transcode cache.
+    /// </summary>
+    private static string EnsureWithinTranscodeRoot(string candidateTempDir)
+    {
+        string normalizedRoot = Path.GetFullPath(StoragePaths.TranscodeRoot);
+        string normalizedTempDir = Path.GetFullPath(candidateTempDir);
+
+        string rootWithSeparator = normalizedRoot.EndsWith(Path.DirectorySeparatorChar)
+            ? normalizedRoot
+            : normalizedRoot + Path.DirectorySeparatorChar;
+
+        bool isRootItself = string.Equals(
+            normalizedTempDir,
+            normalizedRoot,
+            StringComparison.OrdinalIgnoreCase
+        );
+        bool isUnderRoot = normalizedTempDir.StartsWith(
+            rootWithSeparator,
+            StringComparison.OrdinalIgnoreCase
+        );
+
+        if (!isRootItself && !isUnderRoot)
+        {
+            throw new InvalidOperationException(
+                $"Encoder temp dir '{normalizedTempDir}' escapes the transcode root "
+                    + $"'{normalizedRoot}'. OutputDirectory must resolve to a path under "
+                    + "the transcode root — check for a rooted path or '..' traversal."
+            );
+        }
+
+        return normalizedTempDir;
     }
 
     private static string SafeFullPath(string path)

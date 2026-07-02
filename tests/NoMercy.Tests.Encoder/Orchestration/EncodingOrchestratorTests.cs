@@ -150,6 +150,117 @@ public class EncodingOrchestratorTests
         );
     }
 
+    // ── Temp-dir containment (Path.Combine + rooted-path / ".." escape) ──────
+    //
+    // request.OutputDirectory is documented as storage-relative but nothing
+    // structurally enforced that: Path.Combine silently discards the root
+    // when the second argument is itself rooted, and ".." segments resolve
+    // right past it. Both used to reach Directory.CreateDirectory and the
+    // recursive Directory.Delete unchecked.
+
+    [Fact]
+    public async Task EncodeAsync_OutputDirectoryTraversesAboveTranscodeRoot_FailsWithoutTouchingFilesystem()
+    {
+        string escapeTarget = Path.Combine(
+            Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar),
+            "..",
+            "..",
+            "..",
+            $"nm-orch-escape-{Guid.NewGuid():N}"
+        );
+        string resolvedEscapeTarget = Path.GetFullPath(escapeTarget);
+
+        EncodingRequest request = BuildRequest(OutputFormat.Hls, EncodeMode.SinglePass) with
+        {
+            OutputDirectory = "../../../" + Path.GetFileName(resolvedEscapeTarget),
+        };
+        Mock<IEncodingStrategy> strategy = BuildStrategy(
+            OutputFormat.Hls,
+            EncodeMode.SinglePass,
+            success: true
+        );
+        _resolver
+            .Setup(r => r.Resolve(OutputFormat.Hls, EncodeMode.SinglePass))
+            .Returns(strategy.Object);
+
+        EncodingOrchestrator orchestrator = new(
+            _resolver.Object,
+            _storage.Object,
+            _encoder.Object,
+            NullLogger<EncodingOrchestrator>.Instance
+        );
+
+        try
+        {
+            EncodingResult result = await orchestrator.EncodeAsync(request);
+
+            result.Success.Should().BeFalse();
+            result.Status.Should().Be("failed");
+            Directory.Exists(resolvedEscapeTarget).Should().BeFalse();
+            strategy.Verify(
+                s =>
+                    s.EncodeAsync(
+                        It.IsAny<EncodingRequest>(),
+                        It.IsAny<IProgressObserver?>(),
+                        It.IsAny<CancellationToken>()
+                    ),
+                Times.Never,
+                "the containment check must reject the temp dir before the strategy ever runs"
+            );
+        }
+        finally
+        {
+            if (Directory.Exists(resolvedEscapeTarget))
+                Directory.Delete(resolvedEscapeTarget, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task EncodeAsync_OutputDirectoryIsRootedPath_FailsWithoutTouchingFilesystem()
+    {
+        // A Windows drive-letter path (or any already-rooted path) survives
+        // the '/' trim untouched, and Path.Combine(root, rooted) discards
+        // root entirely per .NET's documented behavior.
+        string rootedEscapeTarget = Path.Combine(
+            Directory.GetParent(Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar))!.FullName,
+            $"nm-orch-rooted-escape-{Guid.NewGuid():N}"
+        );
+
+        EncodingRequest request = BuildRequest(OutputFormat.Hls, EncodeMode.SinglePass) with
+        {
+            OutputDirectory = rootedEscapeTarget,
+        };
+        Mock<IEncodingStrategy> strategy = BuildStrategy(
+            OutputFormat.Hls,
+            EncodeMode.SinglePass,
+            success: true
+        );
+        _resolver
+            .Setup(r => r.Resolve(OutputFormat.Hls, EncodeMode.SinglePass))
+            .Returns(strategy.Object);
+
+        EncodingOrchestrator orchestrator = new(
+            _resolver.Object,
+            _storage.Object,
+            _encoder.Object,
+            NullLogger<EncodingOrchestrator>.Instance
+        );
+
+        try
+        {
+            EncodingResult result = await orchestrator.EncodeAsync(request);
+
+            result.Success.Should().BeFalse();
+            result.Status.Should().Be("failed");
+            Directory.Exists(rootedEscapeTarget).Should().BeFalse();
+        }
+        finally
+        {
+            if (Directory.Exists(rootedEscapeTarget))
+                Directory.Delete(rootedEscapeTarget, recursive: true);
+        }
+    }
+
     private static Container ToContainer(OutputFormat format) =>
         format switch
         {

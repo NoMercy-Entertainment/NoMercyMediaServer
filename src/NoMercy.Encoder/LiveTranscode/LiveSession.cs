@@ -82,7 +82,34 @@ public class LiveSession : ILiveSession
 
     internal void SetSpeed(double speed) => _currentSpeed = speed;
 
-    internal void Complete() => _segmentChannel.Writer.Complete();
+    internal void Complete() => _segmentChannel.Writer.TryComplete();
+
+    /// <summary>
+    /// Completes the segment channel only when <paramref name="runnerToken"/>
+    /// still belongs to the CURRENT runner generation. A seek / quality-change
+    /// / resume replaces <see cref="_runnerCts"/> with a fresh source before
+    /// the runner it is replacing has necessarily exited; that superseded
+    /// runner's own completion must not end the session's segment stream out
+    /// from under the runner that replaced it. Called by
+    /// <see cref="LiveFfmpegRunner.RunAsync"/>'s finally block instead of
+    /// <see cref="Complete"/> directly.
+    /// </summary>
+    internal void CompleteIfCurrentRunner(CancellationToken runnerToken)
+    {
+        try
+        {
+            if (_runnerCts.Token != runnerToken)
+                return;
+        }
+        catch (ObjectDisposedException)
+        {
+            // Session is already tearing down — DisposeAsync owns completing
+            // the channel in that case.
+            return;
+        }
+
+        Complete();
+    }
 
     /// <summary>
     /// Cancels the current FFmpeg runner, resets position state, then spawns
@@ -189,47 +216,77 @@ public class LiveSession : ILiveSession
         }
     }
 
+    /// <summary>
+    /// Blocking acquire on the same <see cref="_seekLock"/> SeekAsync /
+    /// ChangeQualityAsync await into asynchronously. Suspend/Resume are
+    /// synchronous by contract (SignalR hub methods and the buffer-adaptive
+    /// sweep call them without awaiting), so they take the lock via the
+    /// synchronous companion instead of changing that contract — without it,
+    /// a Resume racing a Seek could each read/replace _runnerCts out from
+    /// under the other and leak a zombie ffmpeg the session no longer tracks.
+    /// </summary>
     public void Suspend()
     {
-        int previous = Interlocked.CompareExchange(
-            ref _state,
-            (int)LiveSessionState.Buffered,
-            (int)LiveSessionState.Transcoding
-        );
-
-        if (previous != (int)LiveSessionState.Transcoding)
-            return;
-
+        _seekLock.Wait();
         try
         {
-            _runnerCts.Cancel();
+            int previous = Interlocked.CompareExchange(
+                ref _state,
+                (int)LiveSessionState.Buffered,
+                (int)LiveSessionState.Transcoding
+            );
+
+            if (previous != (int)LiveSessionState.Transcoding)
+                return;
+
+            try
+            {
+                _runnerCts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Already disposed; nothing to cancel
+            }
         }
-        catch (ObjectDisposedException)
+        finally
         {
-            // Already disposed; nothing to cancel
+            _seekLock.Release();
         }
     }
 
     public void Resume()
     {
-        int previous = Interlocked.CompareExchange(
-            ref _state,
-            (int)LiveSessionState.Transcoding,
-            (int)LiveSessionState.Buffered
-        );
-
-        if (previous != (int)LiveSessionState.Buffered)
-            return;
-
-        _runnerCts = CancellationTokenSource.CreateLinkedTokenSource(_sessionCts.Token);
-
-        if (_runnerFactory is not null)
+        _seekLock.Wait();
+        try
         {
-            TimeSpan resumePosition = new(Interlocked.Read(ref _playbackPositionTicks));
-            _ = Task.Run(
-                () => _runnerFactory(resumePosition, _runnerCts.Token),
-                CancellationToken.None
+            int previous = Interlocked.CompareExchange(
+                ref _state,
+                (int)LiveSessionState.Transcoding,
+                (int)LiveSessionState.Buffered
             );
+
+            if (previous != (int)LiveSessionState.Buffered)
+                return;
+
+            // The CTS being replaced here was cancelled by the matching
+            // Suspend() call but never disposed — Dispose() is idempotent so
+            // this is safe even if something else already disposed it.
+            _runnerCts.Dispose();
+
+            _runnerCts = CancellationTokenSource.CreateLinkedTokenSource(_sessionCts.Token);
+
+            if (_runnerFactory is not null)
+            {
+                TimeSpan resumePosition = new(Interlocked.Read(ref _playbackPositionTicks));
+                _ = Task.Run(
+                    () => _runnerFactory(resumePosition, _runnerCts.Token),
+                    CancellationToken.None
+                );
+            }
+        }
+        finally
+        {
+            _seekLock.Release();
         }
     }
 

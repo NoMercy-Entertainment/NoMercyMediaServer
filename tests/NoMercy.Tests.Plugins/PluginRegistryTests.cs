@@ -8,6 +8,7 @@
 //
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
+using System.Collections.Concurrent;
 using FluentAssertions;
 using NoMercy.Plugins;
 using NoMercy.Plugins.Abstractions;
@@ -75,5 +76,118 @@ public class PluginRegistryTests
         registry.Clear();
 
         registry.Values.Should().BeEmpty();
+    }
+
+    // ── Dispose+unload on replace ────────────────────────────────────────────
+    //
+    // Every registry write in PluginLoader (manifest reload, direct-assembly
+    // reload, malfunctioned re-record) used to overwrite the previous entry
+    // outright: its Instance was never disposed and its LoadContext was never
+    // unloaded, leaking a collectible ALC that pins the old assembly file.
+
+    [Fact]
+    public void Set_ReplacingExistingEntry_DisposesOldInstanceAndUnloadsOldLoadContext()
+    {
+        PluginRegistry registry = new();
+        Guid id = Guid.NewGuid();
+
+        DisposalTrackingPlugin oldInstance = new();
+        string dummyPath = Path.Combine(
+            Path.GetTempPath(),
+            $"nm-registry-test-{Guid.NewGuid():N}.dll"
+        );
+        File.WriteAllBytes(dummyPath, []);
+        PluginLoadContext oldContext = new(dummyPath);
+        bool oldContextUnloaded = false;
+        oldContext.Unloading += _ => oldContextUnloaded = true;
+
+        registry[id] = new LoadedPlugin(MakeInfo(id), oldInstance, oldContext);
+
+        LoadedPlugin newLoaded = new LoadedPlugin(MakeInfo(id), new DisposalTrackingPlugin(), null);
+        registry[id] = newLoaded;
+
+        oldInstance.WasDisposed.Should().BeTrue();
+        oldContextUnloaded.Should().BeTrue();
+        registry.TryGetValue(id, out LoadedPlugin? current).Should().BeTrue();
+        current.Should().BeSameAs(newLoaded);
+
+        try
+        {
+            File.Delete(dummyPath);
+        }
+        catch
+        {
+            // Best-effort — the ALC may still hold the file briefly post-unload.
+        }
+    }
+
+    [Fact]
+    public void Set_ReplacingWithSameReference_DoesNotDisposeIt()
+    {
+        PluginRegistry registry = new();
+        Guid id = Guid.NewGuid();
+        DisposalTrackingPlugin instance = new();
+        LoadedPlugin loaded = new(MakeInfo(id), instance, null);
+
+        registry[id] = loaded;
+        registry[id] = loaded; // idempotent re-set of the exact same object
+
+        instance.WasDisposed.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Set_ConcurrentReplacements_DisposesEverySupersededEntryExactlyOnce()
+    {
+        PluginRegistry registry = new();
+        Guid id = Guid.NewGuid();
+        const int concurrentWriters = 50;
+        ConcurrentBag<DisposalTrackingPlugin> instances = new();
+
+        Parallel.For(
+            0,
+            concurrentWriters,
+            i =>
+            {
+                DisposalTrackingPlugin instance = new();
+                instances.Add(instance);
+                registry[id] = new LoadedPlugin(MakeInfo(id), instance, null);
+            }
+        );
+
+        int disposedCount = instances.Count(i => i.WasDisposed);
+        disposedCount
+            .Should()
+            .Be(
+                concurrentWriters - 1,
+                "every superseded entry must be disposed exactly once, and the surviving one must not be"
+            );
+
+        registry.TryGetValue(id, out LoadedPlugin? current).Should().BeTrue();
+        DisposalTrackingPlugin survivor = (DisposalTrackingPlugin)current!.Instance!;
+        survivor.WasDisposed.Should().BeFalse();
+    }
+
+    private static PluginInfo MakeInfo(Guid id) =>
+        new()
+        {
+            Id = id,
+            Name = "Test",
+            Description = string.Empty,
+            Version = new Version(1, 0, 0),
+            Status = PluginStatus.Active,
+        };
+
+    private sealed class DisposalTrackingPlugin : IPlugin
+    {
+        public bool WasDisposed { get; private set; }
+
+        public string Name => "DisposalTracker";
+        public string Description => string.Empty;
+        public Guid Id => Guid.NewGuid();
+        public Version Version => new(1, 0, 0);
+
+        public void Initialize(IPluginContext context) { }
+
+        public void Dispose() => WasDisposed = true;
     }
 }

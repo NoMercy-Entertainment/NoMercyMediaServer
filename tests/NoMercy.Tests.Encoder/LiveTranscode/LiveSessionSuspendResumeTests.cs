@@ -9,6 +9,8 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Reflection;
+using System.Threading;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.LiveTranscode;
 
@@ -164,5 +166,113 @@ public class LiveSessionSuspendResumeTests
 
         // After resume, a fresh CTS is installed — new token must not be cancelled
         session.RunnerCancellation.IsCancellationRequested.Should().BeFalse();
+    }
+
+    // ── Resume/Suspend routed through _seekLock ──────────────────────────────
+    //
+    // Resume()/Suspend() used to mutate _runnerCts OUTSIDE the _seekLock that
+    // SeekAsync/ChangeQualityAsync hold — a Resume racing a Seek could read
+    // and replace _runnerCts out from under the other, leaking a zombie
+    // ffmpeg the session no longer tracks. Both are now gated by the SAME
+    // _seekLock SeekAsync uses.
+
+    private static CancellationTokenSource GetRunnerCts(LiveSession session)
+    {
+        FieldInfo field = typeof(LiveSession).GetField(
+            "_runnerCts",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        )!;
+        return (CancellationTokenSource)field.GetValue(session)!;
+    }
+
+    [Fact]
+    public void Resume_DisposesThePreviousRunnerCts()
+    {
+        // The CTS Suspend() cancels is not disposed by Suspend() itself (it
+        // may still be the session's live CTS if Resume() is never called).
+        // Resume() replacing it must dispose it instead of leaking it.
+        LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
+        session.SetState(LiveSessionState.Transcoding);
+        session.AttachRunnerFactory((_, _) => Task.CompletedTask);
+
+        session.Suspend();
+        CancellationTokenSource suspendedCts = GetRunnerCts(session);
+
+        session.Resume();
+
+        Action act = () => _ = suspendedCts.Token;
+        act.Should()
+            .Throw<ObjectDisposedException>(
+                "Resume() must dispose the CTS Suspend() cancelled instead of leaking it"
+            );
+    }
+
+    [Fact]
+    public async Task Suspend_ConcurrentWithSeek_WaitsForSeekToReleaseTheLock()
+    {
+        LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
+        session.SetState(LiveSessionState.Transcoding);
+
+        using ManualResetEventSlim seekIsHoldingLock = new(false);
+        using ManualResetEventSlim releaseSeek = new(false);
+        session.AttachBufferResetCallback(() =>
+        {
+            seekIsHoldingLock.Set();
+            releaseSeek.Wait(TimeSpan.FromSeconds(5));
+        });
+
+        // SeekAsync's WaitAsync completes synchronously on an uncontended
+        // semaphore, so the callback (and its blocking wait) would otherwise
+        // run inline on THIS thread instead of freeing it to observe the
+        // lock being held — dispatch it via Task.Run so it genuinely runs
+        // in the background.
+        Task seekTask = Task.Run(() =>
+            session.SeekAsync(TimeSpan.FromSeconds(5), CancellationToken.None)
+        );
+
+        seekIsHoldingLock.Wait(TimeSpan.FromSeconds(5)).Should().BeTrue();
+
+        Task suspendTask = Task.Run(() => session.Suspend());
+        await Task.Delay(150);
+        suspendTask
+            .IsCompleted.Should()
+            .BeFalse("Suspend must wait for the in-progress Seek to release _seekLock");
+
+        releaseSeek.Set();
+        await Task.WhenAll(seekTask, suspendTask).WaitAsync(TimeSpan.FromSeconds(5));
+
+        suspendTask.IsCompletedSuccessfully.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Resume_ConcurrentWithSeek_WaitsForSeekToReleaseTheLock()
+    {
+        LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
+        session.SetState(LiveSessionState.Buffered);
+
+        using ManualResetEventSlim seekIsHoldingLock = new(false);
+        using ManualResetEventSlim releaseSeek = new(false);
+        session.AttachBufferResetCallback(() =>
+        {
+            seekIsHoldingLock.Set();
+            releaseSeek.Wait(TimeSpan.FromSeconds(5));
+        });
+
+        Task seekTask = Task.Run(() =>
+            session.SeekAsync(TimeSpan.FromSeconds(5), CancellationToken.None)
+        );
+
+        seekIsHoldingLock.Wait(TimeSpan.FromSeconds(5)).Should().BeTrue();
+
+        Task resumeTask = Task.Run(() => session.Resume());
+        await Task.Delay(150);
+        resumeTask
+            .IsCompleted.Should()
+            .BeFalse("Resume must wait for the in-progress Seek to release _seekLock");
+
+        releaseSeek.Set();
+        await Task.WhenAll(seekTask, resumeTask).WaitAsync(TimeSpan.FromSeconds(5));
+
+        resumeTask.IsCompletedSuccessfully.Should().BeTrue();
     }
 }
