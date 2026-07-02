@@ -12,6 +12,7 @@
 using System.Reflection;
 using System.Security.Cryptography;
 using Newtonsoft.Json;
+using Org.BouncyCastle.Bcpg;
 using Org.BouncyCastle.Bcpg.OpenPgp;
 using Serilog.Events;
 
