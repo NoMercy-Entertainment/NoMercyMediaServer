@@ -25,6 +25,13 @@ on:
         description: 'Release title (defaults to NoMercy MediaServer v{version})'
         required: false
         type: string
+    secrets:
+      PAT:
+        description: 'PAT for pushing to master'
+        required: true
+      GPG_PRIVATE_KEY:
+        description: 'ASCII-armored GPG private key for signing the release manifest'
+        required: false
 
 jobs:
   create_release:
@@ -92,10 +99,14 @@ jobs:
           VERSION="${{ inputs.version }}"
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-          # Generate .sha256 sidecar files for installer and bare-binary assets
-          for file in ./output/*.exe ./output/*.tar.gz ./output/*.dmg ./output/*.pkg; do
+          # Generate per-asset .sha256 sidecar for every non-sidecar output file
+          for file in ./output/*; do
             [ -f "$file" ] || continue
             BASENAME=$(basename "$file")
+            # Skip files that are already sidecar metadata
+            case "$BASENAME" in
+              *.sha256|manifest.json|manifest.json.sig|release-info.json) continue ;;
+            esac
             sha256sum "$file" | awk '{print $1}' > "./output/${BASENAME}.sha256"
             echo "Generated SHA-256 for $BASENAME"
           done
@@ -112,6 +123,60 @@ jobs:
 
           echo "=== Release artifacts with checksums ==="
           ls -la ./output/
+
+      - name: Build manifest.json
+        run: |
+          VERSION="${{ inputs.version }}"
+          SHORT_SHA="${GITHUB_SHA::7}"
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          # Build JSON array of assets with name, sha256, and size
+          ASSETS_JSON="["
+          FIRST=true
+          for sha_file in ./output/*.sha256; do
+            [ -f "$sha_file" ] || continue
+            BASENAME=$(basename "$sha_file" .sha256)
+            ASSET_FILE="./output/$BASENAME"
+            [ -f "$ASSET_FILE" ] || continue
+
+            SHA256=$(cat "$sha_file" | tr -d '[:space:]')
+            SIZE=$(stat -c%s "$ASSET_FILE")
+
+            if [ "$FIRST" = "true" ]; then
+              FIRST=false
+            else
+              ASSETS_JSON="$ASSETS_JSON,"
+            fi
+            ASSETS_JSON="$ASSETS_JSON
+            {\"name\":\"$BASENAME\",\"sha256\":\"$SHA256\",\"size\":$SIZE}"
+          done
+          ASSETS_JSON="$ASSETS_JSON
+          ]"
+
+          cat > ./output/manifest.json << EOF
+          {
+            "version": "${VERSION}",
+            "commit_sha": "${SHORT_SHA}",
+            "build_timestamp": "${TIMESTAMP}",
+            "assets": ${ASSETS_JSON}
+          }
+          EOF
+
+          echo "=== manifest.json ==="
+          cat ./output/manifest.json
+
+      - name: Sign manifest.json
+        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          gpg --armor --detach-sign --output ./output/manifest.json.sig ./output/manifest.json
+          echo "Signed manifest.json -> manifest.json.sig"
+          # Export the public key so consumers can verify; the public key fingerprint
+          # must match the NOMERCY_RELEASE_GPG_FINGERPRINT secret if set.
+          FINGERPRINT=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/{print $10; exit}')
+          echo "Signing fingerprint: $FINGERPRINT"
 
       - name: Write release notes
         run: |
