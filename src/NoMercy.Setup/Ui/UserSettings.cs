@@ -241,6 +241,9 @@ public static class UserSettings
                 case "swagger":
                     RuntimeServerSettings.Current.Swagger = setting.Value.ToBoolean();
                     break;
+                case "UseSynthesizedDns":
+                    RuntimeServerSettings.Current.UseSynthesizedDns = setting.Value.ToBoolean();
+                    break;
                 case "allowAdultContent":
                     RuntimeServerSettings.Current.AllowAdultContent = setting.Value.ToBoolean();
                     break;

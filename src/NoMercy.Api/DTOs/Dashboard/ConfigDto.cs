@@ -59,4 +59,7 @@ public class ConfigDtoData
 
     [JsonProperty("allow_adult_content")]
     public bool? AllowAdultContent { get; set; }
+
+    [JsonProperty("use_synthesized_dns")]
+    public bool? UseSynthesizedDns { get; set; }
 }

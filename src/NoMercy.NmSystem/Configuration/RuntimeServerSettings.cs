@@ -57,6 +57,8 @@ public class RuntimeServerSettings
 
     public bool Swagger { get; set; } = true;
 
+    public bool UseSynthesizedDns { get; set; }
+
     public bool? AllowAdultContent { get; set; }
 
     // Safe-by-default: adult content is shown only when explicitly enabled.

@@ -256,6 +256,7 @@ public class ServerRegistrationService : IServerRegistrationService
             { "stun_public_ip", _connectivityStatus.StunPublicIp.OrEmpty() },
             { "stun_public_port", (_connectivityStatus.StunPublicPort?.ToString()).OrEmpty() },
             { "stun_nat_type", _connectivityStatus.NatStatus.ToString() },
+            { "dns_scheme", RuntimeServerSettings.Current.UseSynthesizedDns ? "srv" : "apex" },
         };
     }
 

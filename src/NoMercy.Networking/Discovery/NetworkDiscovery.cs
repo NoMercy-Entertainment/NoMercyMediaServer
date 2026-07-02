@@ -98,11 +98,14 @@ public class NetworkDiscovery : INetworkDiscovery
         }
     }
 
-    public string InternalDomain => $"{InternalIp.SafeHost()}.{Info.DeviceId}.nomercy.tv";
+    private static string DnsSuffix =>
+        RuntimeServerSettings.Current.UseSynthesizedDns ? "srv.nomercy.tv" : "nomercy.tv";
+
+    public string InternalDomain => $"{InternalIp.SafeHost()}.{Info.DeviceId}.{DnsSuffix}";
     public string InternalAddress =>
         $"https://{InternalDomain}:{RuntimeServerSettings.Current.InternalServerPort}";
 
-    public string ExternalDomain => $"{ExternalIp.SafeHost()}.{Info.DeviceId}.nomercy.tv";
+    public string ExternalDomain => $"{ExternalIp.SafeHost()}.{Info.DeviceId}.{DnsSuffix}";
     public string ExternalAddress =>
         $"https://{ExternalDomain}:{RuntimeServerSettings.Current.ExternalServerPort}";
 

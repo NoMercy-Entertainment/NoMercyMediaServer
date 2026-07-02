@@ -66,6 +66,7 @@ public class ConfigurationController(
                     ServerName = DeviceName(),
                     Swagger = runtimeSettings.Swagger,
                     AllowAdultContent = runtimeSettings.ShowAdultContent,
+                    UseSynthesizedDns = runtimeSettings.UseSynthesizedDns,
                 },
             }
         );
@@ -257,6 +258,34 @@ public class ConfigurationController(
                 )
                 .RunAsync();
             changes.Add(("swagger", oldSwagger, (bool)request.Swagger));
+        }
+
+        if (request.UseSynthesizedDns is not null)
+        {
+            bool oldUseSynthesizedDns = runtimeSettings.UseSynthesizedDns;
+            runtimeSettings.UseSynthesizedDns = (bool)request.UseSynthesizedDns;
+            await appContext
+                .Configuration.Upsert(
+                    new()
+                    {
+                        Key = "UseSynthesizedDns",
+                        Value = runtimeSettings.UseSynthesizedDns.ToString(),
+                        ModifiedBy = userId,
+                    }
+                )
+                .On(e => e.Key)
+                .WhenMatched(
+                    (o, n) =>
+                        new()
+                        {
+                            Value = runtimeSettings.UseSynthesizedDns.ToString(),
+                            ModifiedBy = n.ModifiedBy,
+                        }
+                )
+                .RunAsync();
+            changes.Add(
+                ("UseSynthesizedDns", oldUseSynthesizedDns, (bool)request.UseSynthesizedDns)
+            );
         }
 
         if (request.AllowAdultContent is not null)
