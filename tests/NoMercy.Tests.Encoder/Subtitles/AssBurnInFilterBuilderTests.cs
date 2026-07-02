@@ -54,7 +54,7 @@ public class AssBurnInFilterBuilderTests
         string result = _builder.Build("/path/to/subtitle.ass", "/output/fonts");
 
         Assert.StartsWith("ass='", result);
-        Assert.Contains(":fontsdir=/output/fonts", result);
+        Assert.Contains(":fontsdir='/output/fonts'", result);
     }
 
     [Fact]
@@ -83,20 +83,13 @@ public class AssBurnInFilterBuilderTests
     }
 
     [Fact]
-    public void EscapeForFilterGraph_BackslashPath_NormalisesAndEscapes()
+    public void Build_PathWithSpacesCommaSemicolonAndBrackets_SurvivesUnescapedInsideQuotes()
     {
-        string result = AssBurnInFilterBuilder.EscapeForFilterGraph(@"C:\path\file.ass");
+        // Verified against a real ffmpeg build: comma / semicolon / brackets /
+        // whitespace need no individual escaping once the value is quoted —
+        // only the colon, backslash, and quote characters inside the quotes do.
+        string result = _builder.Build("/media/[Group] show, part;1.ass");
 
-        // Backslashes → forward slashes, colon escaped
-        Assert.Equal("C\\:/path/file.ass", result);
-    }
-
-    [Fact]
-    public void EscapeForFilterGraph_UnixPath_OnlyEscapesColons()
-    {
-        string result = AssBurnInFilterBuilder.EscapeForFilterGraph("/usr/media/sub.ass");
-
-        // No colons → no escaping needed; no backslashes → no change
-        Assert.Equal("/usr/media/sub.ass", result);
+        Assert.Equal("ass='/media/[Group] show, part;1.ass'", result);
     }
 }

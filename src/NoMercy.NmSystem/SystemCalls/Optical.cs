@@ -208,7 +208,7 @@ public static class Optical
     {
         try
         {
-            RunShellCommand($"eject {drivePath}");
+            Shell.ExecSync("eject", [drivePath]);
             return true;
         }
         catch (Exception ex)
@@ -224,7 +224,7 @@ public static class Optical
     {
         try
         {
-            RunShellCommand($"eject -t {drivePath}");
+            Shell.ExecSync("eject", ["-t", drivePath]);
             return true;
         }
         catch (Exception ex)
@@ -244,7 +244,7 @@ public static class Optical
     {
         try
         {
-            RunShellCommand($"drutil eject {drivePath}");
+            Shell.ExecSync("drutil", ["eject", drivePath]);
             return true;
         }
         catch (Exception ex)
@@ -260,7 +260,7 @@ public static class Optical
     {
         try
         {
-            RunShellCommand($"drutil tray close {drivePath}");
+            Shell.ExecSync("drutil", ["tray", "close", drivePath]);
             return true;
         }
         catch (Exception ex)

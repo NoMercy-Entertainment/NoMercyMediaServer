@@ -478,9 +478,9 @@ public static class FilterGraphAssembler
 
         // Generic text subtitle fallback: subtitles= filter with stream-index.
         // Delegate to shared escape logic so both code paths stay in sync.
-        string escaped = AssBurnInFilterBuilder.EscapeForFilterGraph(inputPath);
+        string escaped = FilterGraphPathEscaper.Escape(inputPath);
 
-        return $"subtitles='{escaped}':si={burnIn.SourceIndex}";
+        return $"subtitles={escaped}:si={burnIn.SourceIndex}";
     }
 
     /// <summary>
