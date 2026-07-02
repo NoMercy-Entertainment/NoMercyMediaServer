@@ -63,9 +63,9 @@ public class PortManager : IPortManager
                 );
             }
 
-            Environment.ExitCode = 1;
-            Environment.Exit(1);
-            return;
+            throw new StartupAbortException(
+                $"Port {port} is in use and the blocking process could not be identified."
+            );
         }
 
         bool isStaleInstance = false;
@@ -100,9 +100,9 @@ public class PortManager : IPortManager
                     blockingProcessName,
                     blockingPid
                 );
-                Environment.ExitCode = 1;
-                Environment.Exit(1);
-                return;
+                throw new StartupAbortException(
+                    $"Port {port} is in use by {blockingProcessName} (PID {blockingPid}) and NoMercy is registered on this port."
+                );
             }
 
             int alternativePort = FindNextAvailablePort(port + 1);
@@ -121,9 +121,9 @@ public class PortManager : IPortManager
 
         if (!portFreed)
         {
-            Environment.ExitCode = 1;
-            Environment.Exit(1);
-            return;
+            throw new StartupAbortException(
+                $"Port {port} could not be freed after killing the stale process (PID {blockingPid})."
+            );
         }
 
         _logger.LogInformation("Port freed — continuing startup...");
@@ -144,9 +144,9 @@ public class PortManager : IPortManager
             startPort,
             MaxPort
         );
-        Environment.ExitCode = 1;
-        Environment.Exit(1);
-        return -1;
+        throw new StartupAbortException(
+            $"No available port found in range {startPort}-{MaxPort}."
+        );
     }
 
     public bool IsPortAvailable(int port)

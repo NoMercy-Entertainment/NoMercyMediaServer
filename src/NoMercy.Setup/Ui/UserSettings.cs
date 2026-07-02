@@ -32,27 +32,41 @@ public static class UserSettings
 
             foreach (Configuration config in configuration)
             {
-                switch (config.Key)
+                if (config.Key is "internalPort" or "externalPort")
                 {
-                    case "internalPort"
-                        when RuntimeServerSettings.Current.InternalServerPort
-                            != int.Parse(config.Value):
+                    if (!int.TryParse(config.Value, out int parsedPort))
+                    {
+                        Logger.App(
+                            $"UserSettings: skipping malformed '{config.Key}' value '{config.Value}' — keeping other settings",
+                            LogEventLevel.Warning
+                        );
+                        continue;
+                    }
+
+                    if (
+                        config.Key == "internalPort"
+                        && RuntimeServerSettings.Current.InternalServerPort != parsedPort
+                    )
+                    {
                         config.Value = RuntimeServerSettings.Current.InternalServerPort.ToString();
                         appContext
                             .Configuration.Upsert(new() { Key = config.Key, Value = config.Value })
                             .On(c => c.Key)
                             .Run();
-                        break;
-                    case "externalPort"
-                        when RuntimeServerSettings.Current.ExternalServerPort
-                            != int.Parse(config.Value):
+                    }
+                    else if (
+                        config.Key == "externalPort"
+                        && RuntimeServerSettings.Current.ExternalServerPort != parsedPort
+                    )
+                    {
                         config.Value = RuntimeServerSettings.Current.ExternalServerPort.ToString();
                         appContext
                             .Configuration.Upsert(new() { Key = config.Key, Value = config.Value })
                             .On(c => c.Key)
                             .Run();
-                        break;
+                    }
                 }
+
                 settings[config.Key] = config.Value;
             }
 
@@ -147,45 +161,59 @@ public static class UserSettings
         {
             switch (setting.Key)
             {
-                case "internalPort"
-                    when RuntimeServerSettings.Current.InternalServerPort
-                        == int.Parse(setting.Value):
-                    RuntimeServerSettings.Current.InternalServerPort = int.Parse(setting.Value);
+                case "internalPort":
+                    if (!int.TryParse(setting.Value, out int internalPort))
+                    {
+                        Logger.App(
+                            $"UserSettings: skipping malformed 'internalPort' value '{setting.Value}' — keeping current runtime setting",
+                            LogEventLevel.Warning
+                        );
+                        break;
+                    }
+
+                    bool internalPortChanged =
+                        RuntimeServerSettings.Current.InternalServerPort != internalPort;
+                    RuntimeServerSettings.Current.InternalServerPort = internalPort;
+                    if (internalPortChanged)
+                        appContext
+                            .Configuration.Upsert(
+                                new()
+                                {
+                                    Key = setting.Key,
+                                    Value = RuntimeServerSettings
+                                        .Current
+                                        .InternalServerPort.ToString(),
+                                }
+                            )
+                            .On(c => c.Key)
+                            .Run();
                     break;
-                case "internalPort"
-                    when RuntimeServerSettings.Current.InternalServerPort
-                        != int.Parse(setting.Value):
-                    RuntimeServerSettings.Current.InternalServerPort = int.Parse(setting.Value);
-                    appContext
-                        .Configuration.Upsert(
-                            new()
-                            {
-                                Key = setting.Key,
-                                Value = RuntimeServerSettings.Current.InternalServerPort.ToString(),
-                            }
-                        )
-                        .On(c => c.Key)
-                        .Run();
-                    break;
-                case "externalPort"
-                    when RuntimeServerSettings.Current.ExternalServerPort
-                        == int.Parse(setting.Value):
-                    RuntimeServerSettings.Current.ExternalServerPort = int.Parse(setting.Value);
-                    break;
-                case "externalPort"
-                    when RuntimeServerSettings.Current.ExternalServerPort
-                        != int.Parse(setting.Value):
-                    RuntimeServerSettings.Current.ExternalServerPort = int.Parse(setting.Value);
-                    appContext
-                        .Configuration.Upsert(
-                            new()
-                            {
-                                Key = setting.Key,
-                                Value = RuntimeServerSettings.Current.ExternalServerPort.ToString(),
-                            }
-                        )
-                        .On(c => c.Key)
-                        .Run();
+                case "externalPort":
+                    if (!int.TryParse(setting.Value, out int externalPort))
+                    {
+                        Logger.App(
+                            $"UserSettings: skipping malformed 'externalPort' value '{setting.Value}' — keeping current runtime setting",
+                            LogEventLevel.Warning
+                        );
+                        break;
+                    }
+
+                    bool externalPortChanged =
+                        RuntimeServerSettings.Current.ExternalServerPort != externalPort;
+                    RuntimeServerSettings.Current.ExternalServerPort = externalPort;
+                    if (externalPortChanged)
+                        appContext
+                            .Configuration.Upsert(
+                                new()
+                                {
+                                    Key = setting.Key,
+                                    Value = RuntimeServerSettings
+                                        .Current
+                                        .ExternalServerPort.ToString(),
+                                }
+                            )
+                            .On(c => c.Key)
+                            .Run();
                     break;
                 case "libraryRunners":
                     RuntimeServerSettings.Current.LibraryWorkers = new(

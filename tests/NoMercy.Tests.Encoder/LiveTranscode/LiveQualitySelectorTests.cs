@@ -269,4 +269,43 @@ public class LiveQualitySelectorTests
 
         optimal.IsHardwareAccelerated.Should().BeFalse();
     }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Sub-smallest-tier sources (regression: empty candidate set must never
+    // reach First()/throw — the smallest tier is always kept as a fallback)
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void SubSmallestTierSource_GetAvailableQualities_KeepsSmallestTier()
+    {
+        IHardwareCapabilities hardware = MakeGpuHardware();
+        MediaInfo media = MakeMedia(320, 240);
+        ClientCapabilities client = MakeClient();
+        SpeedIndex speeds = MakeFastGpuSpeedIndex();
+        IResourceBudget budget = MakeBudget(hardware);
+
+        LiveQuality[] qualities = _gpuSelector.GetAvailableQualities(media, client, speeds, budget);
+
+        qualities.Should().ContainSingle();
+        qualities[0].Width.Should().Be(854);
+        qualities[0].Height.Should().Be(480);
+    }
+
+    [Fact]
+    public void SubSmallestTierSource_SelectOptimal_SelectsSmallestTierWithoutThrowing()
+    {
+        IHardwareCapabilities hardware = MakeGpuHardware();
+        MediaInfo media = MakeMedia(320, 240);
+        ClientCapabilities client = MakeClient();
+        SpeedIndex speeds = MakeFastGpuSpeedIndex();
+        IResourceBudget budget = MakeBudget(hardware);
+
+        Action act = () => _gpuSelector.SelectOptimal(media, client, speeds, budget);
+
+        act.Should().NotThrow();
+
+        LiveQuality optimal = _gpuSelector.SelectOptimal(media, client, speeds, budget);
+        optimal.Width.Should().Be(854);
+        optimal.Height.Should().Be(480);
+    }
 }

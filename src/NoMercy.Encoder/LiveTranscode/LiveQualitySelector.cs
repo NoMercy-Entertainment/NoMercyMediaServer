@@ -52,37 +52,69 @@ public class LiveQualitySelector(ICodecResolver codecResolver, IHardwareCapabili
             if (tierWidth > sourceWidth || tierHeight > sourceHeight)
                 continue;
 
-            int bitrateKbps = EstimateBitrateKbps(tierWidth, tierHeight);
-
-            double speedMultiplier = speeds.GetSpeedMultiplier(
-                targetCodec,
-                resolved.FfmpegEncoderName,
-                tierWidth,
-                deviceName
+            qualities.Add(
+                BuildQuality(tierWidth, tierHeight, targetCodec, resolved, speeds, deviceName, isHardwareAccelerated)
             );
+        }
 
-            bool canRealtime = speedMultiplier >= 1.2;
-
-            string qualityId = $"{tierHeight}p";
-            string label = $"{tierHeight}p";
-
-            LiveQuality quality = new(
-                Id: qualityId,
-                Label: label,
-                Width: tierWidth,
-                Height: tierHeight,
-                Codec: targetCodec,
-                BitrateKbps: bitrateKbps,
-                Encoder: resolved.FfmpegEncoderName,
-                IsHardwareAccelerated: isHardwareAccelerated,
-                ExpectedSpeed: speedMultiplier,
-                CanRealtime: canRealtime
+        // Sources smaller than every tier (e.g. sub-480p) would otherwise
+        // leave the candidate set empty — keep the smallest tier so callers
+        // never select from an empty sequence.
+        if (qualities.Count == 0)
+        {
+            (int fallbackWidth, int fallbackHeight) = ResolutionTiers[^1];
+            qualities.Add(
+                BuildQuality(
+                    fallbackWidth,
+                    fallbackHeight,
+                    targetCodec,
+                    resolved,
+                    speeds,
+                    deviceName,
+                    isHardwareAccelerated
+                )
             );
-
-            qualities.Add(quality);
         }
 
         return [.. qualities];
+    }
+
+    private static LiveQuality BuildQuality(
+        int tierWidth,
+        int tierHeight,
+        VideoCodecType targetCodec,
+        ResolvedCodec resolved,
+        SpeedIndex speeds,
+        string? deviceName,
+        bool isHardwareAccelerated
+    )
+    {
+        int bitrateKbps = EstimateBitrateKbps(tierWidth, tierHeight);
+
+        double speedMultiplier = speeds.GetSpeedMultiplier(
+            targetCodec,
+            resolved.FfmpegEncoderName,
+            tierWidth,
+            deviceName
+        );
+
+        bool canRealtime = speedMultiplier >= 1.2;
+
+        string qualityId = $"{tierHeight}p";
+        string label = $"{tierHeight}p";
+
+        return new(
+            Id: qualityId,
+            Label: label,
+            Width: tierWidth,
+            Height: tierHeight,
+            Codec: targetCodec,
+            BitrateKbps: bitrateKbps,
+            Encoder: resolved.FfmpegEncoderName,
+            IsHardwareAccelerated: isHardwareAccelerated,
+            ExpectedSpeed: speedMultiplier,
+            CanRealtime: canRealtime
+        );
     }
 
     public LiveQuality SelectOptimal(

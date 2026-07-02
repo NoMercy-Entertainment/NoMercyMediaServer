@@ -499,11 +499,18 @@ public static partial class StringExtensions
         if (string.IsNullOrEmpty(hms))
             return 0;
 
-        int[] parts = hms.Split('.').ElementAt(0).Split(':').Select(int.Parse).ToArray();
-        if (parts.Length < 3)
-            parts = new[] { 0 }.Concat(parts).ToArray();
+        string[] rawParts = hms.Split('.')[0].Split(':');
+        int[] parts = rawParts
+            .Select(part => int.TryParse(part, out int value) ? value : 0)
+            .ToArray();
 
-        return parts[0] * 60 * 60 + parts[1] * 60 + parts[2];
+        return parts.Length switch
+        {
+            >= 3 => (parts[0] * 60 * 60) + (parts[1] * 60) + parts[2],
+            2 => (parts[0] * 60) + parts[1],
+            1 => parts[0],
+            _ => 0,
+        };
     }
 
     public static int ToSeconds(this double hms)

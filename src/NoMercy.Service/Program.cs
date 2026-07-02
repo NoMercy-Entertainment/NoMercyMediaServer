@@ -56,9 +56,18 @@ public static class Program
             e.SetObserved();
         };
 
-        await Parser
-            .Default.ParseArguments<StartupOptions>(args)
-            .MapResult(o => new ServerBootstrapper().RunAsync(o), ErrorParsingArguments);
+        try
+        {
+            await Parser
+                .Default.ParseArguments<StartupOptions>(args)
+                .MapResult(o => new ServerBootstrapper().RunAsync(o), ErrorParsingArguments);
+        }
+        catch (StartupAbortException ex)
+        {
+            Logger.App($"Fatal startup error: {ex.Message}");
+            Environment.ExitCode = 1;
+            Environment.Exit(1);
+        }
 
         static Task ErrorParsingArguments(IEnumerable<Error> errors)
         {

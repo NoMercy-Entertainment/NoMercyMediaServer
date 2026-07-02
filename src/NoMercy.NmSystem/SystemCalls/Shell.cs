@@ -427,13 +427,15 @@ public static class Shell
 
     public static class ProcessHelper
     {
-#if WINDOWS
+        [System.Runtime.Versioning.SupportedOSPlatform("windows")]
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool AttachConsole(uint dwProcessId);
 
+        [System.Runtime.Versioning.SupportedOSPlatform("windows")]
         [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
         private static extern bool FreeConsole();
 
+        [System.Runtime.Versioning.SupportedOSPlatform("windows")]
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool GenerateConsoleCtrlEvent(
             CtrlTypes dwCtrlEvent,
@@ -447,19 +449,16 @@ public static class Shell
 
         public static void SendCtrlC(Process process)
         {
+            if (!OperatingSystem.IsWindows())
+                throw new PlatformNotSupportedException(
+                    "SendCtrlC is only supported on Windows platforms."
+                );
+
             if (AttachConsole((uint)process.Id))
             {
                 GenerateConsoleCtrlEvent(CtrlTypes.CTRL_C_EVENT, 0);
                 FreeConsole();
             }
         }
-#else
-        public static void SendCtrlC(Process process)
-        {
-            throw new PlatformNotSupportedException(
-                "SendCtrlC is only supported on Windows platforms."
-            );
-        }
-#endif
     }
 }
