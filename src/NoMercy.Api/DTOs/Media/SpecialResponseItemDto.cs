@@ -171,10 +171,10 @@ public record SpecialResponseItemDto
         NumberOfItems = special.Items.Count;
 
         int haveMovies = special.Items.Count(item =>
-            item.MovieId is not null && item.Movie?.VideoFiles.Count != 0
+            item.MovieId is not null && item.Movie?.VideoFiles.Count > 0
         );
         int haveEpisodes = special.Items.Count(item =>
-            item.EpisodeId is not null && item.Episode?.VideoFiles.Count != 0
+            item.EpisodeId is not null && item.Episode?.VideoFiles.Count > 0
         );
         HaveItems = haveMovies + haveEpisodes;
 
@@ -208,10 +208,10 @@ public record SpecialResponseItemDto
         NumberOfItems = special.Items.Count;
 
         int movies = special.Items.Count(item =>
-            item.MovieId is not null && item.Movie?.VideoFiles.Count != 0
+            item.MovieId is not null && item.Movie?.VideoFiles.Count > 0
         );
         int episodes = special.Items.Count(item =>
-            item.EpisodeId is not null && item.Episode?.VideoFiles.Count != 0
+            item.EpisodeId is not null && item.Episode?.VideoFiles.Count > 0
         );
 
         HaveItems = movies + episodes;

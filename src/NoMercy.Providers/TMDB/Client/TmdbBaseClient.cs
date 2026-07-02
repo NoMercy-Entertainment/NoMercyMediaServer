@@ -159,7 +159,7 @@ public class TmdbBaseClient : ExternalApiClient
         if (limit > 1)
             await Parallel.ForAsync(
                 2,
-                Max(firstPage?.TotalPages ?? 0, limit, 500),
+                Max(firstPage?.TotalPages ?? 0, limit, 500) + 1,
                 async (i, _) =>
                 {
                     TmdbPaginatedResponse<T>? page = await Get<TmdbPaginatedResponse<T>>(

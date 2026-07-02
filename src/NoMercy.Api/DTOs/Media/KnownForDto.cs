@@ -14,6 +14,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.People;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Models.People;
 
 namespace NoMercy.Api.DTOs.Media;
@@ -134,12 +135,12 @@ public record KnownForDto
         VoteCount = cast.Movie?.VoteCount ?? cast.Tv?.VoteCount ?? 0;
         Link = new($"/{MediaType}/{Id}", UriKind.Relative);
         HasItem =
-            cast.Movie?.VideoFiles.Count != 0
+            cast.Movie?.VideoFiles.Count > 0
             || (cast.Tv?.Episodes.Any(e => e.VideoFiles.Count != 0) ?? false);
         NumberOfItems =
             cast.Movie?.VideoFiles.Count + cast.Tv?.Episodes.Count(e => e.VideoFiles.Count != 0);
         HaveItems =
-            cast.Movie?.VideoFiles.Count != 0
+            cast.Movie?.VideoFiles.Count > 0
                 ? 1
                 : cast.Tv?.Episodes.Count(e => e.VideoFiles.Count != 0) ?? 0;
         ColorPalette = cast.Movie?.ColorPalette ?? cast.Tv?.ColorPalette;
@@ -163,12 +164,12 @@ public record KnownForDto
         Job = crew.Job.Task.OrEmpty();
         Link = new($"/{MediaType}/{Id}", UriKind.Relative);
         HasItem =
-            crew.Movie?.VideoFiles.Count != 0
+            crew.Movie?.VideoFiles.Count > 0
             || (crew.Tv?.Episodes.Any(e => e.VideoFiles.Count != 0) ?? false);
         NumberOfItems =
             crew.Movie?.VideoFiles.Count + crew.Tv?.Episodes.Count(e => e.VideoFiles.Count > 0);
         HaveItems =
-            crew.Movie?.VideoFiles.Count != 0
+            crew.Movie?.VideoFiles.Count > 0
                 ? 1
                 : crew.Tv?.Episodes.Count(e => e.VideoFiles.Count > 0) ?? 0;
         ColorPalette = crew.Movie?.ColorPalette ?? crew.Tv?.ColorPalette;
@@ -226,7 +227,7 @@ public record KnownForDto
                     || c.EpisodeId == crew.Id
                 )
                 && (
-                    c.Movie?.VideoFiles.Count != 0
+                    c.Movie?.VideoFiles.Count > 0
                     || c.Tv?.Episodes.Any(e => e.VideoFiles.Count != 0) != null
                 )
             ) == true;
@@ -283,7 +284,7 @@ public record KnownForDto
                     || c.EpisodeId == crew.Id
                 )
                 && (
-                    c.Movie?.VideoFiles.Count != 0
+                    c.Movie?.VideoFiles.Count > 0
                     || c.Tv?.Episodes.Any(e => e.VideoFiles.Count != 0) != null
                 )
             ) == true;

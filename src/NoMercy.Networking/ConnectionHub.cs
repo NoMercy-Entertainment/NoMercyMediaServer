@@ -93,7 +93,7 @@ public class ConnectionHub : Hub
         };
 
         IQueryCollection? query = _httpContextAccessor.HttpContext?.Request.Query;
-        if (query is not null && query.Count > 1)
+        if (query is not null && query.Count > 0)
         {
             if (query.TryGetValue("client_id", out StringValues value))
                 client.DeviceId = value.ToString();
@@ -128,54 +128,59 @@ public class ConnectionHub : Hub
                 client.Model = model.ToString();
         }
 
-        await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
-        await mediaContext
-            .Devices.Upsert(client)
-            .On(x => x.DeviceId)
-            .WhenMatched(
-                (ds, di) =>
-                    new()
-                    {
-                        Browser = di.Browser,
-                        DeviceId = di.DeviceId,
-                        Ip = di.Ip,
-                        Model = di.Model,
-                        Name = di.Name,
-                        Os = di.Os,
-                        Type = di.Type,
-                        Version = di.Version,
-                        // VolumePercent intentionally NOT updated here: preserve the
-                        // persisted per-device volume across (re)connections. Only an
-                        // explicit SetDeviceVolumeCommand changes it. Otherwise the
-                        // connect-time client_volume query param would clobber the stored
-                        // level (resetting to the player's 100% default) on every reconnect.
-                    }
-            )
-            .RunAsync();
-
-        // Update CustomName separately — FlexLabs upsert doesn't support conditional expressions.
-        // Only overwrite when the client sends a non-empty custom_name, preserving existing names otherwise.
-        if (!string.IsNullOrEmpty(client.CustomName))
+        // client_id is the only field the upsert keys on — without it, every such
+        // connection would collide on the same empty-string DeviceId row.
+        if (!string.IsNullOrEmpty(client.DeviceId))
         {
+            await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
             await mediaContext
-                .Devices.Where(x => x.DeviceId == client.DeviceId)
-                .ExecuteUpdateAsync(x => x.SetProperty(d => d.CustomName, client.CustomName));
-        }
+                .Devices.Upsert(client)
+                .On(x => x.DeviceId)
+                .WhenMatched(
+                    (ds, di) =>
+                        new()
+                        {
+                            Browser = di.Browser,
+                            DeviceId = di.DeviceId,
+                            Ip = di.Ip,
+                            Model = di.Model,
+                            Name = di.Name,
+                            Os = di.Os,
+                            Type = di.Type,
+                            Version = di.Version,
+                            // VolumePercent intentionally NOT updated here: preserve the
+                            // persisted per-device volume across (re)connections. Only an
+                            // explicit SetDeviceVolumeCommand changes it. Otherwise the
+                            // connect-time client_volume query param would clobber the stored
+                            // level (resetting to the player's 100% default) on every reconnect.
+                        }
+                )
+                .RunAsync();
 
-        Device? device = await mediaContext.Devices.FirstOrDefaultAsync(x =>
-            x.DeviceId == client.DeviceId
-        );
+            // Update CustomName separately — FlexLabs upsert doesn't support conditional expressions.
+            // Only overwrite when the client sends a non-empty custom_name, preserving existing names otherwise.
+            if (!string.IsNullOrEmpty(client.CustomName))
+            {
+                await mediaContext
+                    .Devices.Where(x => x.DeviceId == client.DeviceId)
+                    .ExecuteUpdateAsync(x => x.SetProperty(d => d.CustomName, client.CustomName));
+            }
 
-        AlignClientWithPersistedDevice(client, device);
+            Device? device = await mediaContext.Devices.FirstOrDefaultAsync(x =>
+                x.DeviceId == client.DeviceId
+            );
 
-        if (device is not null)
-        {
-            await mediaContext
-                .Devices.Where(x => x.DeviceId == device.DeviceId)
-                .ExecuteUpdateAsync(x => x.SetProperty(d => d.IsActive, true));
-            await mediaContext.SaveChangesAsync();
+            AlignClientWithPersistedDevice(client, device);
 
-            await ActivityLogger.LogConnectionAsync("connection.connected", user.Id, device.Id);
+            if (device is not null)
+            {
+                await mediaContext
+                    .Devices.Where(x => x.DeviceId == device.DeviceId)
+                    .ExecuteUpdateAsync(x => x.SetProperty(d => d.IsActive, true));
+                await mediaContext.SaveChangesAsync();
+
+                await ActivityLogger.LogConnectionAsync("connection.connected", user.Id, device.Id);
+            }
         }
 
         ConnectedClients.Clients.TryAdd(Context.ConnectionId, client);

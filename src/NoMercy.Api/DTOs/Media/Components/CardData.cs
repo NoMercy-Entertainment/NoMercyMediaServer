@@ -19,6 +19,7 @@ using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.DTOs.Media.Components;
 
@@ -261,10 +262,10 @@ public record CardData
             CreatedAt = item.Special.CreatedAt;
 
             int availableMovies = item.Special.Items.Count(specialItem =>
-                specialItem.MovieId != null && specialItem.Movie?.VideoFiles.Count != 0
+                specialItem.MovieId != null && specialItem.Movie?.VideoFiles.Count > 0
             );
             int availableEpisodes = item.Special.Items.Count(specialItem =>
-                specialItem.Episode != null && specialItem.Episode?.VideoFiles.Count != 0
+                specialItem.Episode != null && specialItem.Episode?.VideoFiles.Count > 0
             );
             HaveItems = availableMovies + availableEpisodes;
 

@@ -180,6 +180,23 @@ public class StrTests
     }
 
     [Fact]
+    public void ContainsSanitized_NonAsciiNeedle_DoesNotFalseMatchUnrelatedText()
+    {
+        // CJK/Cyrillic/Greek sanitize down to an empty string under the
+        // ASCII-only regex; Contains("") must not make this trivially true.
+        "The Matrix".ContainsSanitized("こんにちは").Should().BeFalse();
+        "Some Album".ContainsSanitized("Привет").Should().BeFalse();
+        "こんにちは".ContainsSanitized("hello").Should().BeFalse();
+    }
+
+    [Fact]
+    public void ContainsSanitized_NonAsciiNeedle_StillMatchesRealContainment()
+    {
+        "こんにちは世界".ContainsSanitized("こんにちは").Should().BeTrue();
+        "Привет мир".ContainsSanitized("Привет").Should().BeTrue();
+    }
+
+    [Fact]
     public void EqualsSanitized_MatchesAfterSanitization()
     {
         "The Matrix".EqualsSanitized("the matrix").Should().BeTrue();

@@ -408,9 +408,21 @@ public static partial class StringExtensions
         if (value == null)
             return false;
 
-        str = str.Sanitize().ToLower();
-        value = value.Sanitize().ToLower();
-        return str.Contains(value) || value.Contains(str);
+        string sanitizedStr = str.Sanitize().ToLower();
+        string sanitizedValue = value.Sanitize().ToLower();
+
+        // Sanitizing strips non-ASCII scripts (CJK/Cyrillic/Greek) down to an
+        // empty string, and Contains("") trivially matches anything — fall
+        // back to the original strings so a fully non-ASCII needle can't
+        // produce a false match.
+        if (sanitizedStr.Length == 0 || sanitizedValue.Length == 0)
+        {
+            string lowerStr = str.ToLower();
+            string lowerValue = value.ToLower();
+            return lowerStr.Contains(lowerValue) || lowerValue.Contains(lowerStr);
+        }
+
+        return sanitizedStr.Contains(sanitizedValue) || sanitizedValue.Contains(sanitizedStr);
     }
 
     public static bool EqualsSanitized(this string str, string value)

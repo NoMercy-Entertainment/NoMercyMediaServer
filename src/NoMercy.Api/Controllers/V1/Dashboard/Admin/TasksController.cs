@@ -55,22 +55,45 @@ public class TasksController(
 ) : BaseController
 {
     [HttpGet]
-    public IActionResult Index()
+    public async Task<IActionResult> Index()
     {
 
-        List<TaskDto> list =
-        [
-            new()
+        await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
+
+        List<QueueJob> jobs = await queueContext
+            .QueueJobs.OrderByDescending(j => j.Priority)
+            .ThenBy(j => j.CreatedAt)
+            .ToListAsync();
+
+        List<TaskDto> list = jobs.Select(job => new TaskDto
             {
-                Id = "pqiilkpnf8lmwrcxn0l8tngf",
-                Title = "Scan media library",
+                Id = job.Id.ToString(),
+                Title = ResolveJobTitle(job),
                 Value = 0,
-                Type = "library",
-                CreatedAt = DateTime.Parse("2024-01-25 09:26:56"),
-            },
-        ];
+                Type = job.Queue,
+                CreatedAt = job.CreatedAt,
+                UpdatedAt = job.ReservedAt ?? job.CreatedAt,
+            })
+            .ToList();
 
         return Ok(list);
+    }
+
+    /// <summary>
+    /// Best-effort human-readable job type for the dashboard task list. Falls
+    /// back to the raw queue name if the payload can't be deserialized to its
+    /// concrete job type (e.g. a stale payload from a removed job class).
+    /// </summary>
+    private static string ResolveJobTitle(QueueJob job)
+    {
+        try
+        {
+            return SerializationHelper.Deserialize<object>(job.Payload).GetType().Name;
+        }
+        catch (Exception)
+        {
+            return job.Queue;
+        }
     }
 
     [HttpPost]
