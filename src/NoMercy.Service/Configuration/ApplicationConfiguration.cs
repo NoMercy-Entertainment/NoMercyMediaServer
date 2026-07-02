@@ -257,23 +257,48 @@ public static class ApplicationConfiguration
 
     private static void ConfigureStaticFiles(IApplicationBuilder app)
     {
-        // Folders.EmptyFolder(AppFiles.TranscodePath);
-
-        app.UseStaticFiles(
-            new StaticFileOptions
+        // /transcodes serves trailer HLS output and other transcoded media. It must
+        // require the same authenticated identity as the rest of the media surface.
+        // TokenParamAuthMiddleware has already promoted ?token=/?access_token= to a
+        // Bearer header and UseAuthentication has validated it before this branch runs,
+        // so an authenticated player still streams while anonymous callers get 401.
+        app.UseWhen(
+            context => context.Request.Path.StartsWithSegments("/transcodes"),
+            branch =>
             {
-                FileProvider = new PhysicalFileProvider(AppFiles.TranscodePath),
-                RequestPath = new("/transcodes"),
-                ServeUnknownFileTypes = true,
-                HttpsCompression = HttpsCompressionMode.Compress,
-            }
-        );
+                branch.Use(
+                    async (context, next) =>
+                    {
+                        if (context.User.Identity?.IsAuthenticated != true)
+                        {
+                            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                            return;
+                        }
 
-        app.UseDirectoryBrowser(
-            new DirectoryBrowserOptions
-            {
-                FileProvider = new PhysicalFileProvider(AppFiles.TranscodePath),
-                RequestPath = new("/transcodes"),
+                        await next();
+                    }
+                );
+
+                branch.UseStaticFiles(
+                    new StaticFileOptions
+                    {
+                        FileProvider = new PhysicalFileProvider(AppFiles.TranscodePath),
+                        RequestPath = new("/transcodes"),
+                        ServeUnknownFileTypes = true,
+                        HttpsCompression = HttpsCompressionMode.Compress,
+                    }
+                );
+
+                // Directory enumeration of the transcode tree is a dev-only convenience;
+                // never expose the listing on a reachable server.
+                if (Config.IsDev)
+                    branch.UseDirectoryBrowser(
+                        new DirectoryBrowserOptions
+                        {
+                            FileProvider = new PhysicalFileProvider(AppFiles.TranscodePath),
+                            RequestPath = new("/transcodes"),
+                        }
+                    );
             }
         );
     }
