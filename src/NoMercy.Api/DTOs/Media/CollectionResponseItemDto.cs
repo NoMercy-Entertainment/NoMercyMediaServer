@@ -216,9 +216,6 @@ public record CollectionResponseItemDto
         Id = tmdbCollectionAppends.Id;
         Title = !string.IsNullOrEmpty(title) ? title : tmdbCollectionAppends.Name;
         Overview = !string.IsNullOrEmpty(overview) ? overview : tmdbCollectionAppends.Overview;
-        Id = tmdbCollectionAppends.Id;
-        Title = tmdbCollectionAppends.Name;
-        Overview = tmdbCollectionAppends.Overview;
         Backdrop = tmdbCollectionAppends.BackdropPath;
         Poster = tmdbCollectionAppends.PosterPath;
         TitleSort = tmdbCollectionAppends.Name.TitleSort();

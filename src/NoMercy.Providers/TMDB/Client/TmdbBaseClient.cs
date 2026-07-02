@@ -71,7 +71,8 @@ public class TmdbBaseClient : ExternalApiClient
         where T : class
     {
         query ??= new();
-        query["language"] = priority is true ? Language : "";
+        if (!query.ContainsKey("language"))
+            query["language"] = priority is true ? Language : "";
         query["include_adult"] = RuntimeServerSettings.Current.ShowAdultContent ? "true" : "false";
 
         string newUrl = QueryHelpers.AddQueryString(url, query);

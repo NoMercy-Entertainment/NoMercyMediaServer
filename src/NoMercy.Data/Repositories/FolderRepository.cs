@@ -116,15 +116,34 @@ public class FolderRepository(MediaContext context) : IFolderRepository
         // list in OnModelCreating, so a straight Remove + SaveChangesAsync
         // throws on the constraint violation. Mirrors the same workaround
         // pattern as MovieRepository / CollectionRepository / TvShowRepository.
-        await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF");
+        //
+        // PRAGMA foreign_keys is per-connection in SQLite. EF Core's
+        // ExecuteSqlRawAsync and SaveChangesAsync each open and close a pooled
+        // connection by default — PRAGMA OFF on connection A doesn't apply to
+        // the DELETE on connection B. Pin one connection across all calls.
+        bool ownsConnection =
+            context.Database.GetDbConnection().State != System.Data.ConnectionState.Open;
+
+        if (ownsConnection)
+            await context.Database.OpenConnectionAsync();
+
         try
         {
-            context.Folders.Remove(folder);
-            return await context.SaveChangesAsync();
+            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF");
+            try
+            {
+                context.Folders.Remove(folder);
+                return await context.SaveChangesAsync();
+            }
+            finally
+            {
+                await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON");
+            }
         }
         finally
         {
-            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON");
+            if (ownsConnection)
+                await context.Database.CloseConnectionAsync();
         }
     }
 

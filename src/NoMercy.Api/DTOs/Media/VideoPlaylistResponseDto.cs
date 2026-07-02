@@ -327,13 +327,6 @@ public class VideoPlaylistResponseDto
         Captions = videoFile.Metadata?.Subtitles ?? [];
         Qualities = videoFile.Metadata?.Video ?? [];
 
-        if (index is null)
-            return;
-        SeasonName = "Collection";
-        Season = 0;
-        Episode = index;
-        EpisodeId = movie.Id;
-
         ContentRating = movie
             .CertificationMovies.Where(certificationMovie =>
                 certificationMovie.Certification.Iso31661 == "US"
@@ -348,6 +341,13 @@ public class VideoPlaylistResponseDto
                 ),
             })
             .FirstOrDefault();
+
+        if (index is null)
+            return;
+        SeasonName = "Collection";
+        Season = 0;
+        Episode = index;
+        EpisodeId = movie.Id;
     }
 
     private record Subs

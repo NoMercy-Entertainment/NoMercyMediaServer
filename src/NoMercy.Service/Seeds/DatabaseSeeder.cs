@@ -328,8 +328,15 @@ public static class DatabaseSeeder
 
         if (ShouldSeedMarvel)
         {
-            Thread thread = new(() => _ = SpecialSeed.Init(mediaDbContext));
-            thread.Start();
+            try
+            {
+                await using MediaContext specialSeedContext = new();
+                await SpecialSeed.Init(specialSeedContext);
+            }
+            catch (Exception ex)
+            {
+                Logger.Setup($"Special seed failed: {ex.Message}", LogEventLevel.Warning);
+            }
         }
 
         foreach (Func<Task> seed in seeds)

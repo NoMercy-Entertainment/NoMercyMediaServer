@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -32,8 +33,6 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
     [JsonIgnore]
     private ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
 
-    private readonly MediaContext _mediaContext = new();
-
     public string QueueName => "import";
     public int Priority => 5;
 
@@ -51,6 +50,8 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
 
     private ILogger<MusicLogic> _musicLogicLogger = null!;
 
+    private IDbContextFactory<MediaContext> _mediaContextFactory = null!;
+
     // Constructor injection: the queue worker builds the job via
     // ActivatorUtilities; [ActivatorUtilitiesConstructor] selects this ctor
     // over the serialized-data ctor. The parameterless ctor is kept for
@@ -61,13 +62,15 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
         IStorageFactory storageFactory,
         IStorageDriver storageDriver,
         IAudioFingerprinter audioFingerprinter,
-        ILogger<MusicLogic> musicLogicLogger)
+        ILogger<MusicLogic> musicLogicLogger,
+        IDbContextFactory<MediaContext> mediaContextFactory)
     {
         LoggerFactory = loggerFactory;
         StorageFactory = storageFactory;
         this.storageDriver = storageDriver;
         AudioFingerprinter = audioFingerprinter;
         _musicLogicLogger = musicLogicLogger;
+        _mediaContextFactory = mediaContextFactory;
     }
 
     public MusicJob()
@@ -88,6 +91,7 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
         storageDriver = serviceProvider.GetRequiredService<IStorageDriver>();
         AudioFingerprinter = serviceProvider.GetRequiredService<IAudioFingerprinter>();
         _musicLogicLogger = serviceProvider.GetRequiredService<ILogger<MusicLogic>>();
+        _mediaContextFactory = serviceProvider.GetRequiredService<IDbContextFactory<MediaContext>>();
     }
 
     public async Task Handle()
@@ -111,7 +115,7 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
                 _musicLogicLogger,
                 Library,
                 list,
-                _mediaContext,
+                _mediaContextFactory,
                 StorageFactory,
                 AudioFingerprinter
             );
@@ -121,11 +125,11 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
 
     public void Dispose()
     {
-        _mediaContext.Dispose();
+        //
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        await _mediaContext.DisposeAsync();
+        return ValueTask.CompletedTask;
     }
 }

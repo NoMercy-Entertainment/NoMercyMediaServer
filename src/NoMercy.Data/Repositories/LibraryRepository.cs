@@ -1284,12 +1284,6 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory)
             .RunAsync();
     }
 
-    public async Task SaveChangesAsync()
-    {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync();
-        await context.SaveChangesAsync();
-    }
-
     #endregion
 
     public async Task<int> SyncEncoderProfileFolderAsync(
@@ -1298,10 +1292,33 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory)
     )
     {
         await using MediaContext context = await contextFactory.CreateDbContextAsync();
-        await context
-            .EncoderProfileFolder.Where(epf => folders.Select(f => f.Id).Contains(epf.FolderId))
-            .ExecuteDeleteAsync();
+        await using Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction transaction =
+            await context.Database.BeginTransactionAsync();
 
-        return await AddEncoderProfileFolderAsync(encoderProfileFolders);
+        try
+        {
+            await context
+                .EncoderProfileFolder.Where(epf =>
+                    folders.Select(f => f.Id).Contains(epf.FolderId)
+                )
+                .ExecuteDeleteAsync();
+
+            int result = await context
+                .EncoderProfileFolder.UpsertRange(encoderProfileFolders)
+                .On(epl => new { epl.FolderId, epl.EncoderProfileId })
+                .WhenMatched(
+                    (epls, epli) =>
+                        new() { FolderId = epli.FolderId, EncoderProfileId = epli.EncoderProfileId }
+                )
+                .RunAsync();
+
+            await transaction.CommitAsync();
+            return result;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 }

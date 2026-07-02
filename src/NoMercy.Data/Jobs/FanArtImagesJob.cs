@@ -212,7 +212,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
 
             List<Image> covers = [];
             List<Image> cdArts = [];
-            foreach ((Guid _, Albums albums) in fanArt.Albums)
+            foreach ((Guid albumId, Albums albums) in fanArt.Albums)
             {
                 covers.AddRange(
                     albums.Cover.Select(image => new Image
@@ -221,7 +221,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
                         Type = "cover",
                         VoteCount = image.Likes,
                         FilePath = "/" + image.Url.FileName(),
-                        ArtistId = musicBrainzRelease.Id,
+                        AlbumId = albumId,
                         Site = image.Url.BasePath(),
                         Name = fanArt.Name,
                     })
@@ -234,7 +234,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
                         Type = "cdArt",
                         VoteCount = image.Likes,
                         FilePath = "/" + image.Url.FileName(),
-                        ArtistId = musicBrainzRelease.Id,
+                        AlbumId = albumId,
                         Site = image.Url.BasePath(),
                         Name = fanArt.Name,
                     })

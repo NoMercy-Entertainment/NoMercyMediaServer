@@ -325,6 +325,42 @@ public class FolderRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteFolderAsync_WithForeignKeyDependents_SucceedsWithoutThrowing()
+    {
+        // Real DB-level FK dependents (FolderLibrary, EncoderProfileFolder),
+        // fetched through a context that has never tracked those dependents —
+        // isolates the SQLite-connection-pinning bug from EF's client-side
+        // change-tracker fixup (a container concern, not the PRAGMA bug).
+        // PRAGMA foreign_keys=OFF must apply to the same physical connection
+        // as the DELETE, or SQLite's Restrict constraint throws here.
+        (IDbContextFactory<MediaContext> factory, SqliteConnection keepAlive) =
+            TestMediaContextFactory.CreateSeededFactory();
+        try
+        {
+            await using MediaContext deleteContext = factory.CreateDbContext();
+            FolderRepository isolatedRepository = new(deleteContext);
+
+            Folder folder = await deleteContext.Folders.FirstAsync(f =>
+                f.Id == SeedConstants.MovieFolderId
+            );
+
+            Func<Task> act = async () => await isolatedRepository.DeleteFolderAsync(folder);
+
+            await act.Should().NotThrowAsync();
+
+            await using MediaContext verifyContext = factory.CreateDbContext();
+            Folder? result = await verifyContext.Folders.FirstOrDefaultAsync(f =>
+                f.Id == SeedConstants.MovieFolderId
+            );
+            result.Should().BeNull();
+        }
+        finally
+        {
+            keepAlive.Dispose();
+        }
+    }
+
+    [Fact]
     public async Task GetAllFoldersAsync_ReturnsAllFolders()
     {
         List<Folder> result = await _repository.GetAllFoldersAsync();

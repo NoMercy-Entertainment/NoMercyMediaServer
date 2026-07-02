@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Providers.TMDB.Client;
+using NoMercy.Providers.TMDB.Models.Genres;
 
 namespace NoMercy.Tests.Providers.TMDB.Client;
 
@@ -192,5 +193,38 @@ public class TmdbBaseClientTests : TmdbTestBase
 
         // Assert
         client.Id.Should().Be(originalId);
+    }
+
+    [Fact]
+    public async Task Get_PreservesCallerSuppliedLanguage_WhenPriorityFalse()
+    {
+        // Regression for the genre-i18n bug: Get<T> used to unconditionally
+        // overwrite query["language"] with "" whenever priority wasn't true,
+        // silently dropping a caller-supplied language (e.g. TmdbMovieClient
+        // /TmdbTvClient Genres(language)). The merge is the first statement
+        // in Get<T> and runs synchronously before any I/O, so the caller's
+        // dictionary is already mutated the instant the call returns —
+        // no need to wait on the (real) network response to assert on it.
+        using TestableBaseClient client = new(ValidMovieId, "en-US");
+        Dictionary<string, string?> query = new() { ["language"] = "nl" };
+
+        Task<TmdbGenreMovies?> task = client.Get<TmdbGenreMovies>(
+            "genre/movie/list",
+            query,
+            priority: false
+        );
+
+        query["language"].Should().Be("nl");
+
+        client.Dispose();
+        try
+        {
+            await task;
+        }
+        catch
+        {
+            // Dispose/network noise from the in-flight call is irrelevant —
+            // this test only asserts on the query-merge side effect above.
+        }
     }
 }
