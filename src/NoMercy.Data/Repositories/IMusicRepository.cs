@@ -260,13 +260,18 @@ public interface IMusicRepository
         CancellationToken ct = default
     );
 
-    Task<Playlist?> GetPlaylistForEditAsync(Guid id, CancellationToken ct = default);
+    Task<Playlist?> GetPlaylistForEditAsync(Guid id, Guid userId, CancellationToken ct = default);
 
     Task<Playlist?> GetPlaylistForCoverAsync(Guid id, Guid userId, CancellationToken ct = default);
 
     Task<int> DeletePlaylistAsync(Guid id, Guid userId, CancellationToken ct = default);
 
-    Task<int> AddPlaylistTrackAsync(Guid playlistId, Guid trackId, CancellationToken ct = default);
+    Task<int> AddPlaylistTrackAsync(
+        Guid playlistId,
+        Guid trackId,
+        Guid userId,
+        CancellationToken ct = default
+    );
 
     Task<int> RemovePlaylistTrackAsync(
         Guid playlistId,
@@ -309,6 +314,7 @@ public interface IMusicRepository
 
     Task<int> UpdatePlaylistMetadataAsync(
         Guid id,
+        Guid userId,
         string name,
         string? description,
         string cover,

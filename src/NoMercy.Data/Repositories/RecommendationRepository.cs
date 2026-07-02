@@ -93,6 +93,7 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
         Dictionary<int, RecommendationCandidateDto> metadataMap = await context
             .Recommendations.AsNoTracking()
             .Where(r => mediaIds.Contains(r.MediaId) && r.MovieFromId != null)
+            .Where(r => r.MovieFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
             .Select(r => new
             {
                 r.MediaId,
@@ -164,6 +165,7 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
             .Recommendations.AsNoTracking()
             .Where(r => mediaIds.Contains(r.MediaId) && r.TvFromId != null)
             .Where(r => r.TvFrom!.MediaType != MediaTypes.AnimeMediaType)
+            .Where(r => r.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
             .Select(r => new
             {
                 r.MediaId,
@@ -235,6 +237,7 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
             .Recommendations.AsNoTracking()
             .Where(r => mediaIds.Contains(r.MediaId) && r.TvFromId != null)
             .Where(r => r.TvFrom!.MediaType == MediaTypes.AnimeMediaType)
+            .Where(r => r.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
             .Select(r => new
             {
                 r.MediaId,
@@ -304,6 +307,7 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
         Dictionary<int, RecommendationCandidateDto> metadataMap = await context
             .Similar.AsNoTracking()
             .Where(s => mediaIds.Contains(s.MediaId) && s.MovieFromId != null)
+            .Where(s => s.MovieFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
             .Select(s => new
             {
                 s.MediaId,
@@ -375,6 +379,7 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
             .Similar.AsNoTracking()
             .Where(s => mediaIds.Contains(s.MediaId) && s.TvFromId != null)
             .Where(s => s.TvFrom!.MediaType != MediaTypes.AnimeMediaType)
+            .Where(s => s.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
             .Select(s => new
             {
                 s.MediaId,
@@ -446,6 +451,7 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
             .Similar.AsNoTracking()
             .Where(s => mediaIds.Contains(s.MediaId) && s.TvFromId != null)
             .Where(s => s.TvFrom!.MediaType == MediaTypes.AnimeMediaType)
+            .Where(s => s.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
             .Select(s => new
             {
                 s.MediaId,

@@ -131,11 +131,16 @@ public partial class MusicRepository
             );
     }
 
-    public async Task<Playlist?> GetPlaylistForEditAsync(Guid id, CancellationToken ct = default)
+    public async Task<Playlist?> GetPlaylistForEditAsync(
+        Guid id,
+        Guid userId,
+        CancellationToken ct = default
+    )
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
         return await mediaContext
             .Playlists.AsNoTracking()
+            .Where(playlist => playlist.UserId == userId)
             .FirstOrDefaultAsync(playlist => playlist.Id == id, ct);
     }
 
@@ -163,10 +168,18 @@ public partial class MusicRepository
     public async Task<int> AddPlaylistTrackAsync(
         Guid playlistId,
         Guid trackId,
+        Guid userId,
         CancellationToken ct = default
     )
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        bool ownsPlaylist = await mediaContext.Playlists.AnyAsync(
+            playlist => playlist.Id == playlistId && playlist.UserId == userId,
+            ct
+        );
+        if (!ownsPlaylist)
+            return -1;
+
         mediaContext.PlaylistTrack.Add(new() { PlaylistId = playlistId, TrackId = trackId });
         return await mediaContext.SaveChangesAsync(ct);
     }
@@ -272,6 +285,7 @@ public partial class MusicRepository
 
     public async Task<int> UpdatePlaylistMetadataAsync(
         Guid id,
+        Guid userId,
         string name,
         string? description,
         string cover,
@@ -280,7 +294,9 @@ public partial class MusicRepository
     )
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
-        Playlist? playlist = await mediaContext.Playlists.FirstOrDefaultAsync(p => p.Id == id, ct);
+        Playlist? playlist = await mediaContext
+            .Playlists.Where(p => p.UserId == userId)
+            .FirstOrDefaultAsync(p => p.Id == id, ct);
         if (playlist is null)
             return 0;
 

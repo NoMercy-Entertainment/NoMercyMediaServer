@@ -160,7 +160,8 @@ public class PlaylistsController : BaseController
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> Edit(Guid id, [FromBody] CreatePlaylistRequestDto request)
     {
-        Playlist? playlist = await _musicRepository.GetPlaylistForEditAsync(id);
+        Guid userId = User.UserId();
+        Playlist? playlist = await _musicRepository.GetPlaylistForEditAsync(id, userId);
 
         if (playlist is null)
             return NotFoundResponse("Playlist not found");
@@ -196,6 +197,7 @@ public class PlaylistsController : BaseController
 
         int result = await _musicRepository.UpdatePlaylistMetadataAsync(
             id,
+            userId,
             request.Name,
             request.Description,
             cover,
@@ -294,7 +296,10 @@ public class PlaylistsController : BaseController
         [FromBody] CreatePlaylistTrackRequestDto request
     )
     {
-        int result = await _musicRepository.AddPlaylistTrackAsync(id, request.Id);
+        int result = await _musicRepository.AddPlaylistTrackAsync(id, request.Id, User.UserId());
+
+        if (result < 0)
+            return NotFoundResponse("Playlist not found");
 
         await _eventBus.PublishAsync(
             new LibraryRefreshedEvent { QueryKey = ["music", "playlists", id] }

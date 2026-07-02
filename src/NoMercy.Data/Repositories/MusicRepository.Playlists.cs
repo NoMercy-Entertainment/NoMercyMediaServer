@@ -72,6 +72,9 @@ public partial class MusicRepository
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
         return await mediaContext
             .PlaylistTrack.AsNoTracking()
+            .Where(pt =>
+                pt.PlaylistId == playlistId && pt.TrackId == trackId && pt.Playlist.UserId == userId
+            )
             .Include(pt => pt.Track)
                 .ThenInclude(track => track.Images)
             .Include(pt => pt.Playlist)
