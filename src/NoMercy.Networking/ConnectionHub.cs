@@ -180,7 +180,10 @@ public class ConnectionHub : Hub
 
         ConnectedClients.Clients.TryAdd(Context.ConnectionId, client);
 
-        await Clients.All.SendAsync("ConnectedDevicesState", Devices());
+        // Devices() is already filtered to this caller's user, so it must only go to
+        // that user's own connections — Clients.All leaked one user's device names/IPs
+        // to every connected client and corrupted the Connect device-switcher state.
+        await Clients.User(user.Id.ToString()).SendAsync("ConnectedDevicesState", Devices());
     }
 
     private static void AlignClientWithPersistedDevice(Client client, Device? device)
@@ -225,7 +228,10 @@ public class ConnectionHub : Hub
 
             ConnectedClients.Clients.Remove(Context.ConnectionId, out _);
 
-            await Clients.All.SendAsync("ConnectedDevicesState", Devices());
+            // Scope to the disconnecting client's own user (see OnConnectedAsync).
+            await Clients
+                .User(Context.User.UserId().ToString())
+                .SendAsync("ConnectedDevicesState", Devices());
         }
     }
 
