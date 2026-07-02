@@ -16,7 +16,10 @@ filter="${1:-}"
 jobs="${TEST_JOBS:-$(nproc 2>/dev/null || echo 4)}"
 results="$(mktemp -d)"
 
-projects="$(find "$repo/tests" -name '*.csproj' | grep -i 'Tests' | sort)"
+# Match only real test projects (NoMercy.Tests.*). A bare `grep -i tests` also
+# matched sample/fixture projects under tests/ (e.g. NoMercy.Plugin.Samples.Echo),
+# which run zero tests and reported a false green.
+projects="$(find "$repo/tests" -name '*.csproj' | grep -E 'NoMercy\.Tests\.' | sort)"
 [ -n "$filter" ] && projects="$(printf '%s\n' "$projects" | grep -iE "$filter")"
 
 run_one() {

@@ -68,8 +68,15 @@ jobs:
                 gh release delete "$tag" --yes --cleanup-tag 2>/dev/null || true
               done
 
+  # Gate the whole staged release on the test suite — build/publish must never run
+  # on a red suite (this path previously built and released with no test prerequisite).
+  test:
+    uses: ./.github/workflows/test.yml
+    with:
+      dotnet-version: "10.0.x"
+
   build_executables:
-    needs: prepare
+    needs: [prepare, test]
     uses: ./.github/workflows/build-executables.yml
     secrets: inherit
     with:
