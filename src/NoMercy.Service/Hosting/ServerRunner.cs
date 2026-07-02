@@ -177,8 +177,13 @@ public class ServerRunner : IServerRunner
         // Give the SSO callback page time to deliver its response to the browser
         await Task.Delay(3000);
 
-        // Gracefully stop the HTTP host
+        // Gracefully stop the HTTP host. Cancel the old coordinator while its token
+        // source is still alive so background work bound to it winds down before the
+        // container — and the CancellationTokenSource behind _shutdownCoordinator — is
+        // disposed. Calling RequestShutdown() after DisposeAsync threw
+        // ObjectDisposedException on every cert-acquired setup restart.
         httpHost.Services.GetRequiredService<IBootStatus>().MarkStopped();
+        _shutdownCoordinator.RequestShutdown();
         await httpHost.StopAsync(TimeSpan.FromSeconds(10));
         await httpHost.DisposeAsync();
 
@@ -187,8 +192,6 @@ public class ServerRunner : IServerRunner
         restartStopWatch.Start();
 
         WebApplication httpsHost = WebHostFactory.Create(options);
-
-        _shutdownCoordinator.RequestShutdown(); // Reset existing (if any)
 
         IShutdownCoordinator httpsShutdownCoordinator =
             httpsHost.Services.GetRequiredService<IShutdownCoordinator>();

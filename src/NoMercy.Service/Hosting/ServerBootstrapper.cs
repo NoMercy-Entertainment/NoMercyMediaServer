@@ -271,8 +271,12 @@ public sealed class ServerBootstrapper
 
         if (shouldRetry)
         {
+            // RunHost/RunWithHttpsRestart already disposed the host (and the
+            // CancellationTokenSource behind shutdownCoordinator) before signalling a
+            // retry, so we must NOT touch shutdownCoordinator here — the retry host
+            // below builds its own. Calling RequestShutdown() on the disposed
+            // coordinator threw ObjectDisposedException on the port-conflict path.
             Logger.App("Rebuilding server after port conflict resolution...");
-            shutdownCoordinator.RequestShutdown(); // Reset existing (if any)
 
             Stopwatch retryStopWatch = new();
             retryStopWatch.Start();
