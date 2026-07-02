@@ -251,7 +251,7 @@ public class Binaries
             _driver.DeleteFile(tempPath);
 
         string? directory = Path.GetDirectoryName(destPath);
-        if (directory is not null && !_driver.FileExists(directory))
+        if (directory is not null && !_driver.DirectoryExists(directory))
             _storage.CreateDirectory(directory);
 
         Logger.Setup($"Downloading {label}", LogEventLevel.Verbose);
