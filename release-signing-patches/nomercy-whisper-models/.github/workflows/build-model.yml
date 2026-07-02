@@ -1,0 +1,171 @@
+name: Build Single Whisper GGML Model
+
+on:
+  workflow_call:
+    inputs:
+      model_name:
+        required: true
+        type: string
+        description: "Name of the model (e.g., base, small, medium, large-v3)"
+      model_repo:
+        required: true
+        type: string
+        description: "HuggingFace repository path (e.g., openai/whisper-base)"
+      release_upload_url:
+        required: true
+        type: string
+        description: "GitHub release upload_url for direct asset upload"
+      release_tag:
+        required: true
+        type: string
+        description: "GitHub release tag for direct asset upload"
+
+jobs:
+  build-model:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
+      - name: Checkout whisper.cpp
+        uses: actions/checkout@v4
+        with:
+          repository: ggml-org/whisper.cpp
+          ref: v1.7.6
+
+      - name: Download mel filters
+        run: |
+          # Ensure the whisper assets directory exists and download mel filters
+          mkdir -p ${{ github.workspace }}/whisper/assets
+          if [ ! -f "${{ github.workspace }}/whisper/assets/mel_filters.npz" ]; then
+            echo "Downloading mel_filters.npz..."
+            wget -O "${{ github.workspace }}/whisper/assets/mel_filters.npz" \
+              "https://raw.githubusercontent.com/openai/whisper/main/whisper/assets/mel_filters.npz" || \
+            curl -L -o "${{ github.workspace }}/whisper/assets/mel_filters.npz" \
+              "https://raw.githubusercontent.com/openai/whisper/main/whisper/assets/mel_filters.npz"
+          fi
+
+      - name: Install dependencies
+        run: |
+          git config --global --add safe.directory ${{ github.workspace }}
+          sudo apt-get update && sudo apt-get install -y git-lfs wget python3 python3-pip
+          git lfs install
+          pip3 install numpy tqdm torch --index-url https://download.pytorch.org/whl/cpu
+          pip3 install transformers
+          mkdir -p ${{ github.workspace }}/models-src ${{ github.workspace }}/output/models
+
+      - name: Download HuggingFace model ${{ inputs.model_name }}
+        run: |
+          # For large models, use sparse checkout to avoid downloading unnecessary files
+          MODEL_DIR="${{ github.workspace }}/models-src/${{ inputs.model_name }}"
+
+          for i in {1..3}; do
+            rm -rf "$MODEL_DIR"
+            mkdir -p "$MODEL_DIR"
+            cd "$MODEL_DIR"
+
+            if git clone --filter=blob:none --no-checkout https://huggingface.co/${{ inputs.model_repo }} .; then
+              # Configure sparse checkout to exclude large unnecessary files
+              git sparse-checkout init --cone
+              git sparse-checkout set --no-cone
+              echo "/*" > .git/info/sparse-checkout
+              echo "!flax_model.msgpack" >> .git/info/sparse-checkout
+              echo "!tf_model.h5" >> .git/info/sparse-checkout
+              if git checkout; then
+                break
+              else
+                cd ${{ github.workspace }}
+                rm -rf "$MODEL_DIR"
+                if git clone --depth 1 https://huggingface.co/${{ inputs.model_repo }} "$MODEL_DIR"; then
+                  break
+                fi
+              fi
+            fi
+
+            echo "Attempt $i failed, retrying..."
+            cd ${{ github.workspace }}
+            rm -rf "$MODEL_DIR"
+            sleep $((i * 5))  # Progressive backoff: 5s, 10s, 15s
+          done
+
+      - name: Convert model to GGML ${{ inputs.model_name }}
+        run: |
+          python3 ${{ github.workspace }}/models/convert-h5-to-ggml.py \
+            ${{ github.workspace }}/models-src/${{ inputs.model_name }} \
+            ${{ github.workspace }} \
+            ${{ github.workspace }}/output/models/
+          if [ -f "${{ github.workspace }}/output/models/ggml-model.bin" ]; then
+            mv "${{ github.workspace }}/output/models/ggml-model.bin" \
+               "${{ github.workspace }}/output/models/ggml-${{ inputs.model_name }}.bin"
+          fi
+          echo "Cleaning up ${{ inputs.model_name }} source files..."
+          rm -rf ${{ github.workspace }}/models-src/${{ inputs.model_name }}
+
+      - name: Upload GGML model ${{ inputs.model_name }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: whisper-ggml-model-${{ inputs.model_name }}
+          path: output/models/ggml-${{ inputs.model_name }}.bin
+
+      - name: Split large model if needed
+        if: ${{ inputs.model_name == 'large-v3' }}
+        run: |
+          split -b 2000M output/models/ggml-large-v3.bin output/models/ggml-large-v3.bin.part-
+
+      - name: Generate SHA256 for model file(s)
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.model_name }}" = "large-v3" ]; then
+            for f in output/models/ggml-large-v3.bin.part-*; do
+              [[ -f "$f" ]] || continue
+              sha256sum "$f" | awk '{print $1}' > "${f}.sha256"
+            done
+          else
+            sha256sum "output/models/ggml-${{ inputs.model_name }}.bin" | awk '{print $1}' \
+              > "output/models/ggml-${{ inputs.model_name }}.bin.sha256"
+          fi
+
+      - name: Upload SHA256 as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sha256-${{ inputs.model_name }}
+          path: output/models/*.sha256
+
+      - name: Set upload pattern
+        id: set-upload-pattern
+        run: |
+          if [ "${{ inputs.model_name }}" = "large-v3" ]; then
+            echo "pattern=output/models/ggml-large-v3.bin.part-*" >> $GITHUB_OUTPUT
+            echo "sha256_pattern=output/models/ggml-large-v3.bin.part-*.sha256" >> $GITHUB_OUTPUT
+          else
+            echo "pattern=output/models/ggml-${{ inputs.model_name }}.bin" >> $GITHUB_OUTPUT
+            echo "sha256_pattern=output/models/ggml-${{ inputs.model_name }}.bin.sha256" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload model(s) and SHA256 to GitHub Release
+        if: ${{ inputs.release_tag != '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Uploading ${{ steps.set-upload-pattern.outputs.pattern }} to release"
+          gh release upload "${{ inputs.release_tag }}" \
+            ${{ steps.set-upload-pattern.outputs.pattern }} \
+            ${{ steps.set-upload-pattern.outputs.sha256_pattern }} \
+            --repo "${{ github.repository }}" --clobber
+        shell: bash
+
+      # Optionally, still upload as workflow artifact for redundancy
+      - name: Upload as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ggml-${{ inputs.model_name }}
+          path: ${{ steps.set-upload-pattern.outputs.pattern }}

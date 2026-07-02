@@ -1,0 +1,217 @@
+name: Build Whisper GGML Models
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 0"
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.create-tag.outputs.tag }}
+      upload_url: ${{ steps.create-release.outputs.upload_url }}
+      whispercpp-version: ${{ steps.get-whispercpp-version.outputs.version }}
+    steps:
+      - name: Checkout whisper.cpp
+        uses: actions/checkout@v4
+        with:
+          repository: ggml-org/whisper.cpp
+          ref: v1.7.6
+
+      - name: Extract whisper.cpp version
+        id: get-whispercpp-version
+        run: |
+          if [ -f VERSION ]; then
+            VERSION=$(cat VERSION)
+          elif [ -d .git ]; then
+            VERSION=$(git describe --tags --abbrev=0)
+          else
+            VERSION="unknown"
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Create version tag
+        id: create-tag
+        run: |
+          VERSION=$(date +'%Y.%m.%d')
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${VERSION}.$(date +'%H%M')"
+          fi
+          echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Create draft release
+        id: create-release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.create-tag.outputs.tag }}
+          name: "Whisper GGML Models ${{ steps.create-tag.outputs.tag }}"
+          body: |
+            # Whisper GGML Models Release ${{ steps.create-tag.outputs.tag }}
+
+            This release contains GGML-converted Whisper models for use with whisper.cpp and compatible applications.
+
+            ## Models Included
+            - **ggml-base.bin** - Base model (~150MB)
+            - **ggml-small.bin** - Small model (~500MB)
+            - **ggml-medium.bin** - Medium model (~1.5GB)
+            - **ggml-large-v3.bin** - Large v3 model (~3GB, split into parts due to GitHub size limits)
+
+            ## Usage
+            These models can be used directly with:
+            - [whisper.cpp](https://github.com/ggml-org/whisper.cpp)
+            - [whisper-desktop](https://github.com/Const-me/Whisper)
+            - Any application supporting GGML Whisper models
+
+            ## How to Reassemble the Large Model
+            After downloading all parts (e.g., `ggml-large-v3.bin.part-aa`, `ggml-large-v3.bin.part-ab`, ...), run the following command in the folder with the parts:
+
+            **Linux / macOS (Terminal):**
+            ```sh
+            cat ggml-large-v3.bin.part-* > ggml-large-v3.bin
+            ```
+
+            **Windows (Command Prompt):**
+            ```cmd
+            copy /b ggml-large-v3.bin.part-aa+ggml-large-v3.bin.part-ab+ggml-large-v3.bin.part-ac ggml-large-v3.bin
+            ```
+            *(Add all part filenames in order, separated by `+`.)*
+
+            **Windows (PowerShell):**
+            ```powershell
+            Get-Content .\ggml-large-v3.bin.part-* -Raw | Set-Content .\ggml-large-v3.bin -AsByteStream
+            ```
+
+            ## Integrity Verification
+            Each model file ships with a `.sha256` sidecar containing the hex digest.
+            `manifest.json` lists every asset with its SHA-256 hash and byte size.
+            `manifest.json.sig` is a detached ASCII-armored GPG signature over
+            `manifest.json`, signed with the NoMercy Entertainment org key.
+
+            ## Build Information
+            - Built from: whisper.cpp ${{ steps.get-whispercpp-version.outputs.version }}
+            - Source models: OpenAI Whisper (HuggingFace)
+            - Build date: ${{ steps.create-tag.outputs.tag }}
+
+            Generated automatically by GitHub Actions.
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-base:
+    needs: create-release
+    uses: ./.github/workflows/build-model.yml
+    with:
+      model_name: "base"
+      model_repo: "openai/whisper-base"
+      release_upload_url: ${{ needs.create-release.outputs.upload_url }}
+      release_tag : ${{ needs.create-release.outputs.tag }}
+
+  build-small:
+    needs: create-release
+    uses: ./.github/workflows/build-model.yml
+    with:
+      model_name: "small"
+      model_repo: "openai/whisper-small"
+      release_upload_url: ${{ needs.create-release.outputs.upload_url }}
+      release_tag : ${{ needs.create-release.outputs.tag }}
+
+  build-medium:
+    needs: create-release
+    uses: ./.github/workflows/build-model.yml
+    with:
+      model_name: "medium"
+      model_repo: "openai/whisper-medium"
+      release_upload_url: ${{ needs.create-release.outputs.upload_url }}
+      release_tag : ${{ needs.create-release.outputs.tag }}
+
+  build-large-v3:
+    needs: create-release
+    uses: ./.github/workflows/build-model.yml
+    with:
+      model_name: "large-v3"
+      model_repo: "openai/whisper-large-v3"
+      release_upload_url: ${{ needs.create-release.outputs.upload_url }}
+      release_tag : ${{ needs.create-release.outputs.tag }}
+
+  sign-manifest:
+    needs: [create-release, build-base, build-small, build-medium, build-large-v3]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download SHA256 artifacts from all model builds
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sha256-*
+          path: sha256s/
+          merge-multiple: true
+
+      - name: Build manifest and create signature
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+          GPG_SIGNING_KEY_PASSPHRASE: ${{ secrets.GPG_SIGNING_KEY_PASSPHRASE }}
+          RELEASE_TAG: ${{ needs.create-release.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          # Build asset list from release metadata, annotating with SHA-256 values
+          # read from the sidecar artifacts uploaded by each model build job.
+          assets_json='[]'
+          while IFS= read -r asset_name; do
+            # Skip sha256 sidecars and any previous manifest files
+            [[ "$asset_name" == *.sha256 ]] && continue
+            [[ "$asset_name" == manifest.json* ]] && continue
+
+            # Try to read the hash from the downloaded sidecar artifact
+            sidecar="sha256s/${asset_name}.sha256"
+            if [[ -f "$sidecar" ]]; then
+              hash=$(cat "$sidecar")
+            else
+              hash="unknown"
+            fi
+
+            size=$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+              --json assets --jq ".assets[] | select(.name == \"${asset_name}\") | .size")
+
+            assets_json=$(printf '%s' "$assets_json" | jq \
+              --arg name "$asset_name" --arg sha256 "$hash" --argjson size "${size:-0}" \
+              '. + [{"name":$name,"sha256":$sha256,"size":$size}]')
+          done < <(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --json assets --jq '.assets[].name' | sort)
+
+          jq -n \
+            --arg repo "$GITHUB_REPOSITORY" \
+            --arg tag "$RELEASE_TAG" \
+            --arg created_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson assets "$assets_json" \
+            '{"repo":$repo,"tag":$tag,"created_at":$created_at,"assets":$assets}' \
+            > manifest.json
+
+          # Import GPG key and create detached ASCII-armored signature
+          echo "$GPG_SIGNING_KEY" | gpg --batch --import
+          if [[ -n "${GPG_SIGNING_KEY_PASSPHRASE:-}" ]]; then
+            echo "$GPG_SIGNING_KEY_PASSPHRASE" | gpg --batch --pinentry-mode loopback \
+              --passphrase-fd 0 --armor --detach-sign \
+              --output manifest.json.sig manifest.json
+          else
+            gpg --batch --armor --detach-sign \
+              --output manifest.json.sig manifest.json
+          fi
+
+          gh release upload "$RELEASE_TAG" manifest.json manifest.json.sig \
+            --repo "$GITHUB_REPOSITORY" --clobber
+
+  publish-release:
+    needs: [create-release, build-base, build-small, build-medium, build-large-v3, sign-manifest]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release edit "${{ needs.create-release.outputs.tag }}" --draft=false --latest --repo "${{ github.repository }}"

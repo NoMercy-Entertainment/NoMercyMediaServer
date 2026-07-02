@@ -11,6 +11,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Moq" />
+    <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
     <PackageReference Include="xunit" />
@@ -23,6 +24,8 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <Using Include="FluentAssertions" />
+    <Using Include="Moq" />
   </ItemGroup>
 
   <ItemGroup>

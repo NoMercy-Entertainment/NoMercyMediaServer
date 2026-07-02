@@ -1,0 +1,104 @@
+name: 'Generate Release Manifest'
+description: >
+  Generates per-asset .sha256 sidecar files and a consolidated manifest.json
+  (and optionally a GPG-detached manifest.json.sig) for a directory of release
+  artifacts.  Intended to be called from any NoMercy-Entertainment release
+  workflow so that Binaries.cs can verify downloaded binaries.
+
+  Other repos in the NoMercy-Entertainment org can reference this action as:
+    uses: NoMercy-Entertainment/nomercy-media-server/.github/actions/generate-release-manifest@main
+
+inputs:
+  output-dir:
+    description: 'Directory containing the release artifacts to hash.'
+    required: true
+  version:
+    description: 'Release version string (e.g. 1.2.3).'
+    required: true
+  gpg-private-key:
+    description: >
+      ASCII-armored GPG private key used to sign manifest.json.
+      When omitted, signing is skipped and only manifest.json is produced.
+    required: false
+    default: ''
+
+outputs:
+  manifest-path:
+    description: 'Absolute path to the generated manifest.json.'
+    value: ${{ steps.build-manifest.outputs.manifest-path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Generate per-asset SHA-256 sidecars
+      shell: bash
+      run: |
+        OUTPUT_DIR="${{ inputs.output-dir }}"
+        for file in "$OUTPUT_DIR"/*; do
+          [ -f "$file" ] || continue
+          BASENAME=$(basename "$file")
+          # Skip files that are already sidecar metadata
+          case "$BASENAME" in
+            *.sha256|manifest.json|manifest.json.sig|release-info.json) continue ;;
+          esac
+          sha256sum "$file" | awk '{print $1}' > "${OUTPUT_DIR}/${BASENAME}.sha256"
+          echo "Generated SHA-256 for $BASENAME"
+        done
+
+    - name: Build manifest.json
+      id: build-manifest
+      shell: bash
+      run: |
+        OUTPUT_DIR="${{ inputs.output-dir }}"
+        VERSION="${{ inputs.version }}"
+        SHORT_SHA="${GITHUB_SHA::7}"
+        TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+        ASSETS_JSON="["
+        FIRST=true
+        for sha_file in "$OUTPUT_DIR"/*.sha256; do
+          [ -f "$sha_file" ] || continue
+          BASENAME=$(basename "$sha_file" .sha256)
+          ASSET_FILE="$OUTPUT_DIR/$BASENAME"
+          [ -f "$ASSET_FILE" ] || continue
+
+          SHA256=$(cat "$sha_file" | tr -d '[:space:]')
+          SIZE=$(stat -c%s "$ASSET_FILE" 2>/dev/null || stat -f%z "$ASSET_FILE")
+
+          if [ "$FIRST" = "true" ]; then
+            FIRST=false
+          else
+            ASSETS_JSON="$ASSETS_JSON,"
+          fi
+          ASSETS_JSON="$ASSETS_JSON
+          {\"name\":\"$BASENAME\",\"sha256\":\"$SHA256\",\"size\":$SIZE}"
+        done
+        ASSETS_JSON="$ASSETS_JSON
+        ]"
+
+        MANIFEST_PATH="$OUTPUT_DIR/manifest.json"
+        cat > "$MANIFEST_PATH" << EOF
+        {
+          "version": "${VERSION}",
+          "commit_sha": "${SHORT_SHA}",
+          "build_timestamp": "${TIMESTAMP}",
+          "assets": ${ASSETS_JSON}
+        }
+        EOF
+
+        echo "=== manifest.json ==="
+        cat "$MANIFEST_PATH"
+        echo "manifest-path=$MANIFEST_PATH" >> "$GITHUB_OUTPUT"
+
+    - name: Sign manifest.json
+      if: inputs.gpg-private-key != ''
+      shell: bash
+      env:
+        GPG_PRIVATE_KEY: ${{ inputs.gpg-private-key }}
+      run: |
+        OUTPUT_DIR="${{ inputs.output-dir }}"
+        echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+        gpg --armor --detach-sign --output "$OUTPUT_DIR/manifest.json.sig" "$OUTPUT_DIR/manifest.json"
+        echo "Signed manifest.json -> manifest.json.sig"
+        FINGERPRINT=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/{print $10; exit}')
+        echo "Signing fingerprint: $FINGERPRINT"

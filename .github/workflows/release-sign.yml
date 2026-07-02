@@ -1,0 +1,123 @@
+name: Release — Generate SHA256, Manifest and Signature (Reusable)
+# Reusable workflow: call this from any release job after staging release files
+# into an artifact. It generates per-asset .sha256 sidecars, builds a
+# manifest.json with name/sha256/size for each asset, creates a detached
+# ASCII-armored GPG signature (manifest.json.sig), and uploads all three to the
+# GitHub release.
+#
+# Required org secrets:
+#   GPG_SIGNING_KEY          — ASCII-armored private key (gpg --armor --export-secret-key)
+#   GPG_SIGNING_KEY_PASSPHRASE — passphrase for the key (omit if the key has none)
+#
+# Usage example (in a release job in another repo):
+#
+#   - name: Upload staged files as artifact
+#     uses: actions/upload-artifact@v4
+#     with:
+#       name: release-files
+#       path: release/
+#
+#   sign:
+#     needs: [my-build-job]
+#     uses: NoMercy-Entertainment/nomercy-media-server/.github/workflows/release-sign.yml@main
+#     with:
+#       artifact-name: release-files
+#       release-tag: v1.2.3
+#     secrets:
+#       GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+#       GPG_SIGNING_KEY_PASSPHRASE: ${{ secrets.GPG_SIGNING_KEY_PASSPHRASE }}
+
+on:
+  workflow_call:
+    inputs:
+      artifact-name:
+        description: >
+          Name of the Actions artifact that contains the staged release files.
+          Every file in this artifact will receive a .sha256 sidecar and be
+          listed in manifest.json.
+        required: true
+        type: string
+      release-tag:
+        description: >
+          Git tag of the GitHub release to upload manifest.json,
+          manifest.json.sig and the .sha256 sidecars to.
+        required: true
+        type: string
+    secrets:
+      GPG_SIGNING_KEY:
+        description: ASCII-armored GPG private key used to sign the manifest.
+        required: true
+      GPG_SIGNING_KEY_PASSPHRASE:
+        description: Passphrase for the GPG key (leave unset for unprotected keys).
+        required: false
+
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download release artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: sign-work/
+
+      - name: Generate per-asset SHA256, manifest and signature
+        env:
+          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+          GPG_SIGNING_KEY_PASSPHRASE: ${{ secrets.GPG_SIGNING_KEY_PASSPHRASE }}
+          RELEASE_TAG: ${{ inputs.release-tag }}
+        run: |
+          set -euo pipefail
+
+          # Per-asset .sha256 sidecar files (hex digest only, one line)
+          for f in sign-work/*; do
+            [[ -f "$f" ]] || continue
+            sha256sum "$f" | awk '{print $1}' > "${f}.sha256"
+          done
+
+          # Build manifest.json — list each main asset (exclude .sha256 sidecars)
+          assets_json='[]'
+          while IFS= read -r fname; do
+            [[ "$fname" == *.sha256 ]] && continue
+            fp="sign-work/${fname}"
+            hash=$(sha256sum "$fp" | awk '{print $1}')
+            size=$(stat -c%s "$fp")
+            assets_json=$(printf '%s' "$assets_json" | jq \
+              --arg name "$fname" --arg sha256 "$hash" --argjson size "$size" \
+              '. + [{"name":$name,"sha256":$sha256,"size":$size}]')
+          done < <(ls sign-work/ | sort)
+          jq -n \
+            --arg repo "$GITHUB_REPOSITORY" \
+            --arg tag "$RELEASE_TAG" \
+            --arg created_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson assets "$assets_json" \
+            '{"repo":$repo,"tag":$tag,"created_at":$created_at,"assets":$assets}' \
+            > sign-work/manifest.json
+
+          # Import GPG key and create detached ASCII-armored signature
+          echo "$GPG_SIGNING_KEY" | gpg --batch --import
+          if [[ -n "${GPG_SIGNING_KEY_PASSPHRASE:-}" ]]; then
+            echo "$GPG_SIGNING_KEY_PASSPHRASE" | gpg --batch --pinentry-mode loopback \
+              --passphrase-fd 0 --armor --detach-sign \
+              --output sign-work/manifest.json.sig sign-work/manifest.json
+          else
+            gpg --batch --armor --detach-sign \
+              --output sign-work/manifest.json.sig sign-work/manifest.json
+          fi
+
+          echo "📦 Signed artifacts:"
+          ls -lh sign-work/
+
+      - name: Upload SHA256 sidecars, manifest and signature to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Upload .sha256 sidecars, manifest.json and manifest.json.sig.
+          # Use --clobber so re-runs replace existing assets cleanly.
+          mapfile -t to_upload < <(find sign-work/ -maxdepth 1 -type f \( \
+            -name '*.sha256' -o -name 'manifest.json' -o -name 'manifest.json.sig' \))
+          gh release upload "${{ inputs.release-tag }}" \
+            "${to_upload[@]}" \
+            --repo "$GITHUB_REPOSITORY" --clobber

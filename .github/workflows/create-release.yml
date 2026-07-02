@@ -25,6 +25,13 @@ on:
         description: 'Release title (defaults to NoMercy MediaServer v{version})'
         required: false
         type: string
+    secrets:
+      PAT:
+        description: 'PAT for pushing to master'
+        required: true
+      GPG_PRIVATE_KEY:
+        description: 'ASCII-armored GPG private key for signing the release manifest'
+        required: false
 
 jobs:
   create_release:
@@ -92,14 +99,6 @@ jobs:
           VERSION="${{ inputs.version }}"
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-          # Generate .sha256 sidecar files for installer and bare-binary assets
-          for file in ./output/*.exe ./output/*.tar.gz ./output/*.dmg ./output/*.pkg; do
-            [ -f "$file" ] || continue
-            BASENAME=$(basename "$file")
-            sha256sum "$file" | awk '{print $1}' > "./output/${BASENAME}.sha256"
-            echo "Generated SHA-256 for $BASENAME"
-          done
-
           # Write release-info.json — the launcher can optionally fetch this to verify
           # which commit a release was built from
           cat > ./output/release-info.json << EOF
@@ -110,8 +109,15 @@ jobs:
           }
           EOF
 
-          echo "=== Release artifacts with checksums ==="
+          echo "=== Release artifacts ==="
           ls -la ./output/
+
+      - name: Generate manifest.json and SHA-256 sidecars
+        uses: ./.github/actions/generate-release-manifest
+        with:
+          output-dir: ./output
+          version: ${{ inputs.version }}
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
 
       - name: Write release notes
         run: |

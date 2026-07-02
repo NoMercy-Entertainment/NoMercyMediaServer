@@ -1,0 +1,478 @@
+name: CI/CD Pipeline
+
+# Single source of truth for the FFmpeg version produced by this build.
+# Must track `ffmpeg_version` in ffmpeg-base.dockerfile — bump both together.
+env:
+  FFMPEG_VERSION: "8.1.2"
+
+concurrency:
+  group: cicd-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: 'Force rebuild of all images'
+        required: true
+        type: boolean
+        default: true
+
+jobs:
+  # ── Detect which platforms need to (re)build ─────────────────────────────
+  detect-changes:
+    uses: ./.github/workflows/detect-changes.yml
+    with:
+      # A PR builds all platforms (it becomes the RC). Pushes to master keep
+      # normal diff-based detection. workflow_dispatch honours its input.
+      force_rebuild: ${{ inputs.force_rebuild || github.event_name == 'pull_request' }}
+
+  # ── Base image (every platform FROMs this) ───────────────────────────────
+  build-base:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.base-changed == 'true'
+    uses: ./.github/workflows/reusable-docker-build.yml
+    with:
+      dockerfile: ffmpeg-base.dockerfile
+      platform: base
+      secrets_repo: false
+      depends_on_base: false
+      labels: beast-unit
+      no_cache: ${{ inputs.force_rebuild || false }}
+    secrets:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+  # ── Platform builds (matrix from detect-changes) ─────────────────────────
+  # Skipped (zero matrix entries) when detect-changes returns "[]".
+  # always()+!cancelled() lets platforms run even when build-base was
+  # skipped (then we rely on the existing :latest base on the registry).
+  build-platforms:
+    needs: [detect-changes, build-base]
+    if: |
+      always() && !cancelled()
+      && needs.detect-changes.outputs.platforms-to-build != '[]'
+      && (needs.build-base.result == 'success' || needs.build-base.result == 'skipped')
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(needs.detect-changes.outputs.platforms-to-build) }}
+    uses: ./.github/workflows/reusable-docker-build.yml
+    with:
+      dockerfile: ffmpeg-${{ matrix.platform }}.dockerfile
+      platform: ${{ matrix.platform }}
+      secrets_repo: true
+      labels: beast-unit
+      no_cache: ${{ inputs.force_rebuild || false }}
+      # Pin every matrix build to the exact base produced this run. When the
+      # base was rebuilt (PRs, force_rebuild, or base-changed on master) it was
+      # pushed tagged with this commit SHA, so we FROM that immutable tag;
+      # otherwise fall back to the existing registry :latest. Combined with
+      # --pull in the reusable build, this guarantees the matrix never compiles
+      # against a stale local base image on a beast-unit runner.
+      base_tag: ${{ needs.detect-changes.outputs.base-changed == 'true' && github.sha || 'latest' }}
+    secrets:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      PAT_TOKEN: ${{ secrets.PAT }}
+
+  # ── Export the produced binaries straight from the built images ────────
+  # Runs on a beast-unit self-hosted runner. When the same runner did the
+  # build, the image is local and `docker create` is instant; when it ran
+  # elsewhere, `docker create` auto-pulls — `docker login` covers the
+  # private-registry case.
+  export-artifacts:
+    needs: [detect-changes, build-platforms]
+    if: |
+      always() && !cancelled()
+      && needs.build-platforms.result == 'success'
+    runs-on: [self-hosted, beast-unit]
+    steps:
+      - name: Log in to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Export artifacts from images
+        run: |
+          set -euo pipefail
+          mkdir -p downloads
+
+          declare -A EXT=(
+            [linux-x86_64]=tar.gz
+            [linux-aarch64]=tar.gz
+            [windows-x86_64]=zip
+            [darwin-x86_64]=tar.gz
+            [darwin-arm64]=tar.gz
+          )
+
+          # platforms-to-build is a JSON array; jq into a bash array.
+          mapfile -t PLATFORMS < <(echo '${{ needs.detect-changes.outputs.platforms-to-build }}' | jq -r '.[]')
+
+          for p in "${PLATFORMS[@]}"; do
+            ext="${EXT[$p]:-tar.gz}"
+            archive="ffmpeg-${FFMPEG_VERSION}-${p}.${ext}"
+            image="nomercyentertainment/ffmpeg-${p}:${{ github.sha }}"
+
+            echo "🚚 Exporting ${p} from ${image}"
+            # docker create auto-pulls when the image isn't local.
+            cid=$(docker create "${image}")
+            docker cp "${cid}:/build/${archive}" "downloads/${archive}"
+            docker rm -f "${cid}" >/dev/null
+            ls -lh "downloads/${archive}"
+          done
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: downloads/
+          retention-days: 30
+          if-no-files-found: error
+
+  # ── Minimal smoke gate: binary runs, reports the expected version, exits 0 ──
+  # The full codec/hardware suite (tests/tests.sh, tests/tests.ps1) is run
+  # MANUALLY by a contributor on real hardware against the RC prerelease.
+  smoke-test:
+    needs: [detect-changes, export-artifacts]
+    if: |
+      always() && !cancelled()
+      && needs.export-artifacts.result == 'success'
+      && needs.detect-changes.outputs.platforms-to-build != '[]'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.detect-changes.outputs.test-matrix) }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: downloads/
+
+      - name: Unpack binary
+        shell: bash
+        run: |
+          archive="downloads/ffmpeg-${FFMPEG_VERSION}-${{ matrix.platform }}.${{ matrix.ext }}"
+          if [[ ! -f "${archive}" ]]; then
+            echo "❌ Expected artifact missing: ${archive}"
+            ls -la downloads/ || true
+            exit 1
+          fi
+          case "${{ matrix.ext }}" in
+            tar.gz) tar -xzf "${archive}" ;;
+            zip)    unzip -o "${archive}" ;;
+          esac
+
+      - name: Smoke test (unix)
+        if: matrix.kind == 'unix'
+        shell: bash
+        run: |
+          chmod +x tests/smoke.sh
+          tests/smoke.sh "${GITHUB_WORKSPACE}" "${FFMPEG_VERSION}" "${{ matrix.platform }}"
+
+      - name: Smoke test (windows)
+        if: matrix.kind == 'windows'
+        shell: pwsh
+        run: ./tests/smoke.ps1 -Workspace $env:GITHUB_WORKSPACE -ExpectedVersion $env:FFMPEG_VERSION
+
+  # ── Publish/refresh the Release Candidate prerelease (PR only) ───────────
+  # Gives contributors version-stamped binaries to test manually on each
+  # platform. Deleted+recreated each run so assets and tag always match the
+  # latest PR head. Promoted to a real release on master merge (see release).
+  publish-rc:
+    needs: [detect-changes, export-artifacts, smoke-test]
+    if: |
+      github.event_name == 'pull_request'
+      && needs.export-artifacts.result == 'success'
+      && needs.smoke-test.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: downloads/
+
+      - name: Stage RC files with version-stamped names
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          VERSION="${{ needs.detect-changes.outputs.version }}"
+          for f in "downloads/ffmpeg-${FFMPEG_VERSION}-"*; do
+            [[ -f "$f" ]] || continue
+            base=$(basename "$f")
+            case "$base" in
+              *.tar.gz) stem="${base%.tar.gz}"; ext="tar.gz" ;;
+              *)        stem="${base%.*}";     ext="${base##*.}" ;;
+            esac
+            cp "$f" "release/${stem}-${VERSION}-rc.${ext}"
+          done
+          ls -lh release/
+
+      - name: Generate per-asset SHA256, manifest and signature
+        env:
+          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+          GPG_SIGNING_KEY_PASSPHRASE: ${{ secrets.GPG_SIGNING_KEY_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          RELEASE_TAG="${{ needs.detect-changes.outputs.version }}-rc"
+
+          # Per-asset .sha256 sidecar files
+          for f in release/*; do
+            [[ -f "$f" ]] || continue
+            sha256sum "$f" | awk '{print $1}' > "${f}.sha256"
+          done
+
+          # Build manifest.json (exclude .sha256 sidecars from the assets list)
+          assets_json='[]'
+          while IFS= read -r fname; do
+            [[ "$fname" == *.sha256 ]] && continue
+            fp="release/${fname}"
+            hash=$(sha256sum "$fp" | awk '{print $1}')
+            size=$(stat -c%s "$fp")
+            assets_json=$(printf '%s' "$assets_json" | jq \
+              --arg name "$fname" --arg sha256 "$hash" --argjson size "$size" \
+              '. + [{"name":$name,"sha256":$sha256,"size":$size}]')
+          done < <(ls release/ | sort)
+          jq -n \
+            --arg repo "$GITHUB_REPOSITORY" \
+            --arg tag "$RELEASE_TAG" \
+            --arg created_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson assets "$assets_json" \
+            '{"repo":$repo,"tag":$tag,"created_at":$created_at,"assets":$assets}' \
+            > release/manifest.json
+
+          # Import GPG key and create detached ASCII-armored signature
+          echo "$GPG_SIGNING_KEY" | gpg --batch --import
+          if [[ -n "${GPG_SIGNING_KEY_PASSPHRASE:-}" ]]; then
+            echo "$GPG_SIGNING_KEY_PASSPHRASE" | gpg --batch --pinentry-mode loopback \
+              --passphrase-fd 0 --armor --detach-sign \
+              --output release/manifest.json.sig release/manifest.json
+          else
+            gpg --batch --armor --detach-sign \
+              --output release/manifest.json.sig release/manifest.json
+          fi
+          ls -lh release/
+
+      - name: Remove previous RC for a clean refresh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete "${{ needs.detect-changes.outputs.version }}-rc" \
+            --repo "${GITHUB_REPOSITORY}" --cleanup-tag --yes 2>/dev/null || true
+
+      - name: Publish RC prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.detect-changes.outputs.version }}-rc
+          name: Release Candidate ${{ needs.detect-changes.outputs.version }}-rc
+          target_commitish: ${{ github.event.pull_request.head.sha }}
+          draft: false
+          prerelease: true
+          files: release/*
+          body: |
+            # FFmpeg ${{ needs.detect-changes.outputs.version }} — Release Candidate
+
+            **Not for production.** Built from PR #${{ github.event.pull_request.number }}
+            (branch `${{ github.head_ref }}`).
+
+            Download the binary for each platform and run the manual suite
+            (`tests/tests.sh` / `tests/tests.ps1`) on real hardware, then tick the
+            matching box in the PR checklist. All boxes must be checked before merge.
+
+            **Integrity verification:** Each archive ships with a `.sha256` sidecar.
+            `manifest.json` lists all assets with SHA-256 digests; `manifest.json.sig`
+            is a detached ASCII-armored GPG signature over `manifest.json`.
+
+  # ── Single required status context for the PR build path ─────────────────
+  # always() so it always reports; explicit result checks so any failed
+  # dependency reliably fails the gate. PR-only (skipped on master pushes).
+  pr-build:
+    needs: [detect-changes, build-base, build-platforms, export-artifacts, smoke-test]
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify the PR build path is green
+        run: |
+          base='${{ needs.build-base.result }}'
+          platforms='${{ needs.build-platforms.result }}'
+          export='${{ needs.export-artifacts.result }}'
+          smoke='${{ needs.smoke-test.result }}'
+          echo "base=$base platforms=$platforms export=$export smoke=$smoke"
+          # On a PR we force a full build, so build-base must succeed.
+          if [[ "$base" != "success" ]]; then echo "❌ build-base: $base"; exit 1; fi
+          if [[ "$platforms" != "success" ]]; then echo "❌ build-platforms: $platforms"; exit 1; fi
+          if [[ "$export" != "success" ]]; then echo "❌ export-artifacts: $export"; exit 1; fi
+          if [[ "$smoke" != "success" ]]; then echo "❌ smoke-test: $smoke"; exit 1; fi
+          echo "✅ PR build path passed."
+
+  # ── Vulnerability scan the freshly-built images ─────────────────────────
+  # Master-only — running Trivy on every PR adds 5-10 min for no marginal
+  # benefit; vulns appear when a base image is rebuilt, which only happens
+  # on master.
+  security-scan:
+    needs: [detect-changes, build-platforms]
+    if: |
+      always() && !cancelled()
+      && github.event_name == 'push' && github.ref == 'refs/heads/master'
+      && needs.build-platforms.result == 'success'
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(needs.detect-changes.outputs.platforms-to-build) }}
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - name: Log in to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: nomercyentertainment/ffmpeg-${{ matrix.platform }}:${{ github.sha }}
+          format: sarif
+          output: trivy-${{ matrix.platform }}.sarif
+
+      - name: Upload SARIF to code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-${{ matrix.platform }}.sarif
+          category: trivy-${{ matrix.platform }}
+
+  # ── GitHub release ──────────────────────────────────────────────────────
+  # Master push only, after the whole pipeline is green. Uses the version
+  # computed once by detect-changes.
+  release:
+    needs: [detect-changes, export-artifacts, smoke-test]
+    if: |
+      github.event_name == 'push' && github.ref == 'refs/heads/master'
+      && needs.export-artifacts.result == 'success'
+      && needs.smoke-test.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: downloads/
+
+      - name: Stage release files with version-stamped names
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          VERSION="${{ needs.detect-changes.outputs.version }}"
+          for f in "downloads/ffmpeg-${FFMPEG_VERSION}-"*; do
+            [[ -f "$f" ]] || continue
+            base=$(basename "$f")
+            # ffmpeg-8.1.2-linux-x86_64.tar.gz  →  ffmpeg-8.1.2-linux-x86_64-vX.Y.Z.tar.gz
+            stem="${base%.*}"
+            # handle .tar.gz two-part extension
+            case "$base" in
+              *.tar.gz) stem="${base%.tar.gz}"; ext="tar.gz" ;;
+              *)        stem="${base%.*}";     ext="${base##*.}" ;;
+            esac
+            cp "$f" "release/${stem}-${VERSION}.${ext}"
+          done
+          ls -lh release/
+
+      - name: Generate per-asset SHA256, manifest and signature
+        env:
+          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+          GPG_SIGNING_KEY_PASSPHRASE: ${{ secrets.GPG_SIGNING_KEY_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          RELEASE_TAG="${{ needs.detect-changes.outputs.version }}"
+
+          # Per-asset .sha256 sidecar files
+          for f in release/*; do
+            [[ -f "$f" ]] || continue
+            sha256sum "$f" | awk '{print $1}' > "${f}.sha256"
+          done
+
+          # Build manifest.json (exclude .sha256 sidecars from the assets list)
+          assets_json='[]'
+          while IFS= read -r fname; do
+            [[ "$fname" == *.sha256 ]] && continue
+            fp="release/${fname}"
+            hash=$(sha256sum "$fp" | awk '{print $1}')
+            size=$(stat -c%s "$fp")
+            assets_json=$(printf '%s' "$assets_json" | jq \
+              --arg name "$fname" --arg sha256 "$hash" --argjson size "$size" \
+              '. + [{"name":$name,"sha256":$sha256,"size":$size}]')
+          done < <(ls release/ | sort)
+          jq -n \
+            --arg repo "$GITHUB_REPOSITORY" \
+            --arg tag "$RELEASE_TAG" \
+            --arg created_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson assets "$assets_json" \
+            '{"repo":$repo,"tag":$tag,"created_at":$created_at,"assets":$assets}' \
+            > release/manifest.json
+
+          # Import GPG key and create detached ASCII-armored signature
+          echo "$GPG_SIGNING_KEY" | gpg --batch --import
+          if [[ -n "${GPG_SIGNING_KEY_PASSPHRASE:-}" ]]; then
+            echo "$GPG_SIGNING_KEY_PASSPHRASE" | gpg --batch --pinentry-mode loopback \
+              --passphrase-fd 0 --armor --detach-sign \
+              --output release/manifest.json.sig release/manifest.json
+          else
+            gpg --batch --armor --detach-sign \
+              --output release/manifest.json.sig release/manifest.json
+          fi
+          ls -lh release/
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.detect-changes.outputs.version }}
+          name: FFmpeg Build ${{ needs.detect-changes.outputs.version }}
+          draft: false
+          prerelease: false
+          files: release/*
+          body: |
+            # FFmpeg Cross-Platform Build ${{ needs.detect-changes.outputs.version }}
+
+            **Internal Build for NoMercy MediaServer**
+
+            Cross-platform FFmpeg ${{ env.FFMPEG_VERSION }} binaries.
+
+            ## Platforms
+            - Linux x86_64 / aarch64
+            - Windows x86_64
+            - macOS x86_64 / arm64 (Apple Silicon)
+
+            ## Integrity Verification
+            Each archive ships with a `.sha256` sidecar containing the hex digest.
+            `manifest.json` lists every asset with its SHA-256 hash and byte size.
+            `manifest.json.sig` is a detached ASCII-armored GPG signature over
+            `manifest.json`, signed with the NoMercy Entertainment org key.
+
+            All images scanned with Trivy; results in the Security tab.
+
+            ---
+            Built by [NoMercy Entertainment](https://nomercy.tv)
+
+      - name: Delete the promoted RC prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete "${{ needs.detect-changes.outputs.version }}-rc" \
+            --repo "${GITHUB_REPOSITORY}" --cleanup-tag --yes 2>/dev/null || true
+          echo "🧹 Removed RC ${{ needs.detect-changes.outputs.version }}-rc (promoted to final)."

@@ -21,6 +21,7 @@
     <PackageReference Include="FlexLabs.EntityFrameworkCore.Upsert" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
     <PackageReference Include="QRCoder" />
+    <PackageReference Include="BouncyCastle.Cryptography" />
   </ItemGroup>
 
   <ItemGroup>
@@ -47,5 +48,6 @@
     <EmbeddedResource Include="Resources\setup.css" />
     <EmbeddedResource Include="Resources\setup.js" />
     <EmbeddedResource Include="Resources\favicon.ico" />
+    <EmbeddedResource Include="Resources\nomercy-public-key.asc" />
   </ItemGroup>
 </Project>
