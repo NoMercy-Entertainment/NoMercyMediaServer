@@ -120,7 +120,7 @@ Encoding inheritance: `BaseVideo` → `X264`/`X265`/`AV1`, `BaseAudio` → forma
 ### Real-time Communication
 - `VideoHub`: Video playback control, progress tracking, device sync
 - `MusicHub`: Audio playback, playlist management
-- Located in: `src/NoMercy.Api/Controllers/Socket/`
+- Located in: `src/NoMercy.Api/Hubs/`
 
 ### Key Configuration Files
 - `src/NoMercy.Service/Program.cs`: Entry point, command-line parsing

@@ -25,5 +25,5 @@ public class Memory
     public double Total { get; set; }
 
     [JsonProperty("percentage")]
-    public double Percentage => Use / (Available + Use) * 100;
+    public double Percentage => Available + Use > 0 ? Use / (Available + Use) * 100 : 0;
 }

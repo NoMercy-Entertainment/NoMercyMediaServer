@@ -68,7 +68,7 @@ If a change is too big to stay green in one slice, split it.
 - **Web:** `NoMercy.Api` (controllers, DTOs, hubs, middleware), `NoMercy.Networking`
 - **Data:** `NoMercy.Database` (EF models, contexts, migrations, `ValueObjects/`),
   `NoMercy.Data` (repositories + services), `NoMercy.Storage` (filesystem facade)
-- **Domain:** `NoMercy.MediaProcessing`, `NoMercy.Encoder`, `NoMercy.MediaSources`,
+- **Domain:** `NoMercy.MediaProcessing`, `NoMercy.Encoder`,
   `NoMercy.OpticalMedia`, `NoMercy.Providers` (TMDB, etc.)
 - **Cross-cutting:** `NoMercy.NmSystem` (system ops), `NoMercy.Authorization`
   (user cache + policy), `NoMercy.Monitoring`, `NoMercy.Events`, `NoMercy.Setup`, `NoMercy.Resources`
