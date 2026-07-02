@@ -49,8 +49,12 @@ internal sealed class FileWatcherTestQueueContext : IQueueContext
 
     public void RemoveJob(QueueJobModel job) => Jobs.RemoveAll(j => j.Id == job.Id);
 
-    public QueueJobModel? GetNextJob(string queueName, byte maxAttempts, long? currentJobId) =>
-        Jobs.FirstOrDefault(j => string.IsNullOrEmpty(queueName) || j.Queue == queueName);
+    public QueueJobModel? GetNextJob(
+        string queueName,
+        byte maxAttempts,
+        long? currentJobId,
+        DateTime now
+    ) => Jobs.FirstOrDefault(j => string.IsNullOrEmpty(queueName) || j.Queue == queueName);
 
     public QueueJobModel? FindJob(int id) => Jobs.FirstOrDefault(j => j.Id == id);
 
@@ -87,6 +91,9 @@ internal sealed class FileWatcherTestQueueContext : IQueueContext
     public void AddFailedJob(FailedJobModel failedJob) { }
 
     public void RemoveFailedJob(FailedJobModel failedJob) { }
+
+    public void AddFailedJobAndRemoveJob(FailedJobModel failedJob, QueueJobModel job) =>
+        RemoveJob(job);
 
     public FailedJobModel? FindFailedJob(int id) => null;
 

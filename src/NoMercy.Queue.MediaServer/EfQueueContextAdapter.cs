@@ -19,16 +19,30 @@ namespace NoMercy.Queue.MediaServer;
 
 public class EfQueueContextAdapter : IQueueContext
 {
-    public static readonly Func<QueueContext, byte, string, long?, QueueJob?> ReserveJobQuery =
-        EF.CompileQuery(
-            (QueueContext queueContext, byte maxAttempts, string name, long? currentJobId) =>
-                queueContext
-                    .QueueJobs.Where(j => j.ReservedAt == null && j.Attempts <= maxAttempts)
-                    .Where(j => currentJobId == null)
-                    .Where(j => j.Queue == name)
-                    .OrderByDescending(j => j.Priority)
-                    .FirstOrDefault()
-        );
+    public static readonly Func<
+        QueueContext,
+        byte,
+        string,
+        long?,
+        DateTime,
+        QueueJob?
+    > ReserveJobQuery = EF.CompileQuery(
+        (
+            QueueContext queueContext,
+            byte maxAttempts,
+            string name,
+            long? currentJobId,
+            DateTime now
+        ) =>
+            queueContext
+                .QueueJobs.Where(j =>
+                    j.ReservedAt == null && j.Attempts < maxAttempts && j.AvailableAt <= now
+                )
+                .Where(j => currentJobId == null)
+                .Where(j => j.Queue == name)
+                .OrderByDescending(j => j.Priority)
+                .FirstOrDefault()
+    );
 
     public static readonly Func<QueueContext, string, bool> ExistsQuery = EF.CompileQuery(
         (QueueContext queueContext, string payloadString) =>
@@ -135,7 +149,12 @@ public class EfQueueContextAdapter : IQueueContext
         });
     }
 
-    public QueueJobModel? GetNextJob(string queueName, byte maxAttempts, long? currentJobId)
+    public QueueJobModel? GetNextJob(
+        string queueName,
+        byte maxAttempts,
+        long? currentJobId,
+        DateTime now
+    )
     {
         return Execute<QueueJobModel?>(context =>
         {
@@ -145,7 +164,7 @@ public class EfQueueContextAdapter : IQueueContext
                 return anyJob == null ? null : ToModel(anyJob);
             }
 
-            QueueJob? job = ReserveJobQuery(context, maxAttempts, queueName, currentJobId);
+            QueueJob? job = ReserveJobQuery(context, maxAttempts, queueName, currentJobId, now);
             return job == null ? null : ToModel(job);
         });
     }
@@ -254,6 +273,41 @@ public class EfQueueContextAdapter : IQueueContext
                 context.SaveChanges();
                 context.ChangeTracker.Clear();
             }
+        });
+    }
+
+    public void AddFailedJobAndRemoveJob(FailedJobModel failedJob, QueueJobModel job)
+    {
+        Execute(context =>
+        {
+            FailedJob failedEntity = new()
+            {
+                Uuid = failedJob.Uuid,
+                Connection = failedJob.Connection,
+                Queue = failedJob.Queue,
+                Payload = failedJob.Payload,
+                Exception = failedJob.Exception,
+                FailedAt = failedJob.FailedAt,
+                ParentJobId = failedJob.ParentJobId,
+            };
+            context.FailedJobs.Add(failedEntity);
+
+            QueueJob? jobEntity = context.QueueJobs.Find(job.Id);
+            if (jobEntity == null)
+            {
+                jobEntity = new()
+                {
+                    Id = job.Id,
+                    Payload = job.Payload,
+                    Queue = job.Queue,
+                };
+                context.QueueJobs.Attach(jobEntity);
+            }
+            context.QueueJobs.Remove(jobEntity);
+
+            context.SaveChanges();
+            context.ChangeTracker.Clear();
+            failedJob.Id = failedEntity.Id;
         });
     }
 

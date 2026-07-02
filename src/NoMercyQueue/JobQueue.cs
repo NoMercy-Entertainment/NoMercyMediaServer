@@ -56,7 +56,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
     {
         lock (_writeLock)
         {
-            QueueJobModel? job = context.GetNextJob("", 255, null);
+            QueueJobModel? job = context.GetNextJob("", 255, null, DateTime.UtcNow);
             if (job == null)
                 return job;
 
@@ -72,7 +72,12 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
         {
             lock (_writeLock)
             {
-                QueueJobModel? job = context.GetNextJob(name, maxAttempts, currentJobId);
+                QueueJobModel? job = context.GetNextJob(
+                    name,
+                    maxAttempts,
+                    currentJobId,
+                    DateTime.UtcNow
+                );
 
                 if (job == null)
                     return job;
@@ -94,9 +99,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
                             $"{{\"Message\":\"Skipped: parent job {job.ParentJobId} failed\"}}",
                         FailedAt = DateTime.UtcNow,
                     };
-                    context.AddFailedJob(skipped);
-                    context.RemoveJob(job);
-                    context.SaveChanges();
+                    context.AddFailedJobAndRemoveJob(skipped, job);
                     return null;
                 }
 
@@ -147,8 +150,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
                         FailedAt = DateTime.UtcNow,
                     };
 
-                    context.AddFailedJob(failedJob);
-                    context.RemoveJob(queueJob);
+                    context.AddFailedJobAndRemoveJob(failedJob, queueJob);
                 }
                 else
                 {

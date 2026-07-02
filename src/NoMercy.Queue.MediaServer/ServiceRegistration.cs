@@ -101,10 +101,13 @@ public static class ServiceRegistration
         });
         services.AddSingleton<JobDispatcher>(sp => sp.GetRequiredService<QueueRunner>().Dispatcher);
 
-        // Phase 4.14 — orphan job recovery on boot. Runs before QueueRunner
-        // resets reserved jobs, so we can distinguish first-time orphans
-        // (which deserve one retry) from repeat offenders (which get
-        // moved to FailedJobs).
+        // Phase 4.14 — orphan job recovery on boot. This hosted service's
+        // StartAsync only runs once ASP.NET Core starts the host (RunHost /
+        // RunWithHttpsRestart), which happens AFTER ServerBootstrapper calls
+        // QueueRunner.Initialize() (and therefore after Initialize's
+        // ResetAllReservedJobs() has already cleared every ReservedAt). Do not
+        // assume this service sees reservations Initialize() hasn't touched
+        // yet — ordering here is host-startup order, not registration order.
         services.AddHostedService<OrphanJobRecoveryHostedService>();
 
         return services;

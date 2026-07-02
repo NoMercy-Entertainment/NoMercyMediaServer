@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Data.Sqlite;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
@@ -58,7 +59,20 @@ public static class DatabaseBackupService
             string backupFileName = $"{dbName}.{timestamp}.db";
             string backupPath = Path.Combine(BackupRoot, backupFileName);
 
-            File.Copy(dbPath, backupPath, overwrite: false);
+            if (File.Exists(backupPath))
+                throw new IOException($"Backup file already exists: {backupPath}");
+
+            // SQLite's online-backup API (not File.Copy) so a database running in
+            // WAL mode is captured consistently — a plain file copy only sees the
+            // main .db file and silently misses committed-but-not-yet-checkpointed
+            // rows sitting in the -wal file.
+            using (SqliteConnection source = new($"Data Source={dbPath}"))
+            using (SqliteConnection destination = new($"Data Source={backupPath}"))
+            {
+                source.Open();
+                destination.Open();
+                source.BackupDatabase(destination);
+            }
 
             Logger.Setup(
                 $"Database backup created: {backupFileName} ({pendingMigrationCount} pending migration(s))"

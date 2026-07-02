@@ -189,7 +189,7 @@ public class SqliteQueueContextTests : IDisposable
             }
         );
 
-        QueueJobModel? next = _context.GetNextJob("worker", 3, null);
+        QueueJobModel? next = _context.GetNextJob("worker", 3, null, DateTime.UtcNow);
 
         Assert.NotNull(next);
         Assert.Equal("{\"type\":\"high\"}", next.Payload);
@@ -198,7 +198,7 @@ public class SqliteQueueContextTests : IDisposable
     [Fact]
     public void GetNextJob_ReturnsNullWhenNoJobsAvailable()
     {
-        QueueJobModel? next = _context.GetNextJob("empty-queue", 3, null);
+        QueueJobModel? next = _context.GetNextJob("empty-queue", 3, null, DateTime.UtcNow);
         Assert.Null(next);
     }
 
@@ -224,10 +224,89 @@ public class SqliteQueueContextTests : IDisposable
         };
         _context.AddJob(unreserved);
 
-        QueueJobModel? next = _context.GetNextJob("worker", 3, null);
+        QueueJobModel? next = _context.GetNextJob("worker", 3, null, DateTime.UtcNow);
 
         Assert.NotNull(next);
         Assert.Equal("{\"type\":\"unreserved\"}", next.Payload);
+    }
+
+    [Fact]
+    public void GetNextJob_JobWithFutureAvailableAt_IsNotReserved()
+    {
+        QueueJobModel future = new()
+        {
+            Payload = "{\"type\":\"future\"}",
+            Queue = "availability",
+            Priority = 1,
+            AvailableAt = DateTime.UtcNow.AddMinutes(5),
+        };
+        _context.AddJob(future);
+
+        QueueJobModel? next = _context.GetNextJob("availability", 3, null, DateTime.UtcNow);
+
+        Assert.Null(next);
+        QueueJobModel? unchanged = _context.FindJob(future.Id);
+        Assert.NotNull(unchanged);
+        Assert.Null(unchanged.ReservedAt);
+    }
+
+    [Fact]
+    public void GetNextJob_JobWithPastAvailableAt_IsReserved()
+    {
+        QueueJobModel past = new()
+        {
+            Payload = "{\"type\":\"past\"}",
+            Queue = "availability",
+            Priority = 1,
+            AvailableAt = DateTime.UtcNow.AddMinutes(-5),
+        };
+        _context.AddJob(past);
+
+        QueueJobModel? next = _context.GetNextJob("availability", 3, null, DateTime.UtcNow);
+
+        Assert.NotNull(next);
+        Assert.Equal("{\"type\":\"past\"}", next.Payload);
+    }
+
+    [Fact]
+    public void GetNextJob_JobAtMaxAttempts_IsNotReserved()
+    {
+        QueueJobModel atLimit = new()
+        {
+            Payload = "{\"type\":\"at-limit\"}",
+            Queue = "attempts-boundary",
+            Priority = 1,
+            Attempts = 3,
+            AvailableAt = DateTime.UtcNow,
+        };
+        _context.AddJob(atLimit);
+
+        QueueJobModel? next = _context.GetNextJob("attempts-boundary", 3, null, DateTime.UtcNow);
+
+        Assert.Null(next);
+        QueueJobModel? unchanged = _context.FindJob(atLimit.Id);
+        Assert.NotNull(unchanged);
+        Assert.Null(unchanged.ReservedAt);
+        Assert.Equal(3, unchanged.Attempts);
+    }
+
+    [Fact]
+    public void GetNextJob_JobOneUnderMaxAttempts_IsReserved()
+    {
+        QueueJobModel underLimit = new()
+        {
+            Payload = "{\"type\":\"under-limit\"}",
+            Queue = "attempts-boundary",
+            Priority = 1,
+            Attempts = 2,
+            AvailableAt = DateTime.UtcNow,
+        };
+        _context.AddJob(underLimit);
+
+        QueueJobModel? next = _context.GetNextJob("attempts-boundary", 3, null, DateTime.UtcNow);
+
+        Assert.NotNull(next);
+        Assert.Equal("{\"type\":\"under-limit\"}", next.Payload);
     }
 
     [Fact]
@@ -243,7 +322,7 @@ public class SqliteQueueContextTests : IDisposable
             }
         );
 
-        QueueJobModel? next = _context.GetNextJob("", 3, null);
+        QueueJobModel? next = _context.GetNextJob("", 3, null, DateTime.UtcNow);
         Assert.NotNull(next);
     }
 

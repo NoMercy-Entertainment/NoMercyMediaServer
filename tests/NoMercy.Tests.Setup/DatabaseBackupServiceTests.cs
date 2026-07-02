@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Data.Sqlite;
 using NoMercy.Service.Seeds;
 
 namespace NoMercy.Tests.Setup;
@@ -183,6 +184,60 @@ public sealed class DatabaseBackupServiceTests : IDisposable
 
         Assert.Equal(2, mediaBackups.Length);
         Assert.Equal(2, queueBackups.Length);
+    }
+
+    [Fact]
+    public void BackupBeforeMigration_WalResidentUncheckpointedRow_IsIncludedInBackup()
+    {
+        string dbPath = Path.Combine(_tempDir, "wal-media.db");
+        string[] backups;
+
+        using (SqliteConnection walConnection = new($"Data Source={dbPath}"))
+        {
+            walConnection.Open();
+            using (SqliteCommand walMode = walConnection.CreateCommand())
+            {
+                walMode.CommandText = "PRAGMA journal_mode=WAL;";
+                walMode.ExecuteNonQuery();
+            }
+            using (SqliteCommand createTable = walConnection.CreateCommand())
+            {
+                createTable.CommandText =
+                    "CREATE TABLE Probe (Id INTEGER PRIMARY KEY, Value TEXT NOT NULL);";
+                createTable.ExecuteNonQuery();
+            }
+            using (SqliteCommand insert = walConnection.CreateCommand())
+            {
+                insert.CommandText = "INSERT INTO Probe (Value) VALUES ('wal-resident-row');";
+                insert.ExecuteNonQuery();
+            }
+
+            Assert.True(File.Exists(dbPath + "-wal"));
+
+            bool backedUp = DatabaseBackupService.BackupBeforeMigration(
+                dbPath,
+                pendingMigrationCount: 1
+            );
+
+            Assert.True(backedUp);
+            backups = Directory.GetFiles(_backupDir, "wal-media.*.db");
+            Assert.Single(backups);
+        }
+
+        SqliteConnection.ClearAllPools();
+
+        object? value;
+        using (SqliteConnection verifyConnection = new($"Data Source={backups[0]}"))
+        {
+            verifyConnection.Open();
+            using SqliteCommand select = verifyConnection.CreateCommand();
+            select.CommandText = "SELECT Value FROM Probe;";
+            value = select.ExecuteScalar();
+        }
+
+        SqliteConnection.ClearAllPools();
+
+        Assert.Equal("wal-resident-row", value);
     }
 
     [Fact]

@@ -26,8 +26,13 @@ namespace NoMercy.Queue.MediaServer;
 /// Checkpoint-aware triage (Phase 4.14b): encoder-queue orphans that have a
 /// crash checkpoint are re-queued with Attempts=0 so the resume path gets a
 /// chance to pick up from the last-known keyframe position. Orphans with no
-/// checkpoint follow the original logic: Attempts&gt;0 → FailedJobs; first
-/// attempt → reset for one retry.
+/// checkpoint follow the original logic: a genuine first-time orphan (reserved
+/// exactly once — <c>Attempts &lt;= 1</c>, since <c>ReserveJob</c> increments
+/// Attempts in the same write that sets ReservedAt) gets one clean retry with
+/// its reservation released and its attempt budget refunded; an orphan that
+/// has already burned a prior attempt beyond that single reservation
+/// (<c>Attempts &gt; 1</c>) is a repeat offender and moves to FailedJobs so it
+/// can't retry forever.
 /// </summary>
 public class OrphanJobRecoveryHostedService(
     IServiceScopeFactory scopeFactory,
@@ -90,9 +95,9 @@ public class OrphanJobRecoveryHostedService(
                     }
                 }
 
-                if (orphan.Attempts > 0)
+                if (orphan.Attempts > 1)
                 {
-                    context.AddFailedJob(
+                    context.AddFailedJobAndRemoveJob(
                         new()
                         {
                             Uuid = Guid.NewGuid(),
@@ -101,13 +106,16 @@ public class OrphanJobRecoveryHostedService(
                             Payload = orphan.Payload,
                             Exception = InterruptedReason,
                             FailedAt = DateTime.UtcNow,
-                        }
+                        },
+                        orphan
                     );
-                    context.RemoveJob(orphan);
                     failed++;
                 }
                 else
                 {
+                    orphan.Attempts = (byte)Math.Max(0, orphan.Attempts - 1);
+                    orphan.ReservedAt = null;
+                    context.UpdateJob(orphan);
                     requeued++;
                 }
             }

@@ -239,13 +239,14 @@ public class QueueEngineEndToEndTests : IDisposable
 
     /// <summary>
     /// Seeds a job row directly into the EF-backed in-memory DB with
-    /// ReservedAt set far in the past and Attempts &gt; 0.
+    /// ReservedAt set far in the past and Attempts beyond the single-retry
+    /// budget orphan recovery grants a first-time orphan.
     /// Runs <see cref="OrphanJobRecoveryHostedService"/> and asserts the row
     /// is moved to FailedJobs — proving recovery works against the real
     /// EfQueueContextAdapter, not the in-memory-list stub.
     /// </summary>
     [Fact]
-    public async Task OrphanRecovery_StuckJobWithPriorAttempts_MovedToFailedJobsViaRealAdapter()
+    public async Task OrphanRecovery_StuckJobWithRepeatAttempts_MovedToFailedJobsViaRealAdapter()
     {
         QueueJob orphan = new()
         {
@@ -253,7 +254,7 @@ public class QueueEngineEndToEndTests : IDisposable
             Payload = SerializationHelper.Serialize(new TestJob { Message = "orphan" }),
             AvailableAt = DateTime.UtcNow.AddHours(-2),
             ReservedAt = DateTime.UtcNow.AddMinutes(-10),
-            Attempts = 1,
+            Attempts = 2,
         };
         _context.QueueJobs.Add(orphan);
         await _context.SaveChangesAsync();
@@ -300,7 +301,7 @@ public class QueueEngineEndToEndTests : IDisposable
             Payload = SerializationHelper.Serialize(new TestJob { Message = "first-time" }),
             AvailableAt = DateTime.UtcNow.AddHours(-1),
             ReservedAt = DateTime.UtcNow.AddMinutes(-5),
-            Attempts = 0,
+            Attempts = 1,
         };
         _context.QueueJobs.Add(firstTimeOrphan);
         await _context.SaveChangesAsync();
@@ -323,6 +324,10 @@ public class QueueEngineEndToEndTests : IDisposable
             .Should()
             .Be(1, "a first-attempt orphan must remain in queue for one retry");
         _context.FailedJobs.Count().Should().Be(0, "first-attempt orphan must not be failed");
+
+        QueueJob survivor = _context.QueueJobs.Single();
+        survivor.ReservedAt.Should().BeNull("the clean-retry reset must release the reservation");
+        survivor.Attempts.Should().Be(0, "the clean-retry reset must refund the attempt budget");
     }
 
     [Fact]

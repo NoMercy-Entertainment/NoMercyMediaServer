@@ -247,7 +247,7 @@ public class ComprehensiveQueueTests
                 }
             );
 
-            QueueJobModel? next = _adapter.GetNextJob("w", 3, null);
+            QueueJobModel? next = _adapter.GetNextJob("w", 3, null, DateTime.UtcNow);
 
             Assert.NotNull(next);
             Assert.Equal("{\"p\":10}", next.Payload);
@@ -275,7 +275,7 @@ public class ComprehensiveQueueTests
             };
             _adapter.AddJob(unreserved);
 
-            QueueJobModel? next = _adapter.GetNextJob("w", 3, null);
+            QueueJobModel? next = _adapter.GetNextJob("w", 3, null, DateTime.UtcNow);
 
             Assert.NotNull(next);
             Assert.Equal("{\"unreserved\":true}", next.Payload);
@@ -293,14 +293,14 @@ public class ComprehensiveQueueTests
                 }
             );
 
-            QueueJobModel? next = _adapter.GetNextJob("", 3, null);
+            QueueJobModel? next = _adapter.GetNextJob("", 3, null, DateTime.UtcNow);
             Assert.NotNull(next);
         }
 
         [Fact]
         public void GetNextJob_ReturnsNullWhenEmpty()
         {
-            QueueJobModel? next = _adapter.GetNextJob("empty", 3, null);
+            QueueJobModel? next = _adapter.GetNextJob("empty", 3, null, DateTime.UtcNow);
             Assert.Null(next);
         }
 
@@ -317,7 +317,7 @@ public class ComprehensiveQueueTests
                 }
             );
 
-            QueueJobModel? next = _adapter.GetNextJob("w", 3, 42L);
+            QueueJobModel? next = _adapter.GetNextJob("w", 3, 42L, DateTime.UtcNow);
             Assert.Null(next);
         }
 
@@ -710,8 +710,13 @@ public class ComprehensiveQueueTests
                 );
             }
 
-            QueueJobModel? sqliteNext = _sqliteContext.GetNextJob("parity", 3, null);
-            QueueJobModel? efNext = _efAdapter.GetNextJob("parity", 3, null);
+            QueueJobModel? sqliteNext = _sqliteContext.GetNextJob(
+                "parity",
+                3,
+                null,
+                DateTime.UtcNow
+            );
+            QueueJobModel? efNext = _efAdapter.GetNextJob("parity", 3, null, DateTime.UtcNow);
 
             Assert.NotNull(sqliteNext);
             Assert.NotNull(efNext);
@@ -735,8 +740,68 @@ public class ComprehensiveQueueTests
                 );
             }
 
-            QueueJobModel? sqliteNext = _sqliteContext.GetNextJob("parity", 3, 42L);
-            QueueJobModel? efNext = _efAdapter.GetNextJob("parity", 3, 42L);
+            QueueJobModel? sqliteNext = _sqliteContext.GetNextJob(
+                "parity",
+                3,
+                42L,
+                DateTime.UtcNow
+            );
+            QueueJobModel? efNext = _efAdapter.GetNextJob("parity", 3, 42L, DateTime.UtcNow);
+
+            Assert.Null(sqliteNext);
+            Assert.Null(efNext);
+        }
+
+        [Fact]
+        public void GetNextJob_FutureAvailableAt_BothProvidersAgreeNotReserved()
+        {
+            foreach (IQueueContext ctx in new[] { _sqliteContext, _efAdapter })
+            {
+                ctx.AddJob(
+                    new()
+                    {
+                        Payload = "{\"delayed\":true}",
+                        Queue = "parity-delay",
+                        AvailableAt = DateTime.UtcNow.AddMinutes(10),
+                    }
+                );
+            }
+
+            QueueJobModel? sqliteNext = _sqliteContext.GetNextJob(
+                "parity-delay",
+                3,
+                null,
+                DateTime.UtcNow
+            );
+            QueueJobModel? efNext = _efAdapter.GetNextJob("parity-delay", 3, null, DateTime.UtcNow);
+
+            Assert.Null(sqliteNext);
+            Assert.Null(efNext);
+        }
+
+        [Fact]
+        public void GetNextJob_AttemptsAtMax_BothProvidersAgreeNotReservedAgain()
+        {
+            foreach (IQueueContext ctx in new[] { _sqliteContext, _efAdapter })
+            {
+                ctx.AddJob(
+                    new()
+                    {
+                        Payload = "{\"at-limit\":true}",
+                        Queue = "parity-limit",
+                        Attempts = 3,
+                        AvailableAt = DateTime.UtcNow,
+                    }
+                );
+            }
+
+            QueueJobModel? sqliteNext = _sqliteContext.GetNextJob(
+                "parity-limit",
+                3,
+                null,
+                DateTime.UtcNow
+            );
+            QueueJobModel? efNext = _efAdapter.GetNextJob("parity-limit", 3, null, DateTime.UtcNow);
 
             Assert.Null(sqliteNext);
             Assert.Null(efNext);
@@ -760,8 +825,13 @@ public class ComprehensiveQueueTests
             }
 
             // After reset, both should return the job (no longer reserved)
-            QueueJobModel? sqliteNext = _sqliteContext.GetNextJob("parity", 3, null);
-            QueueJobModel? efNext = _efAdapter.GetNextJob("parity", 3, null);
+            QueueJobModel? sqliteNext = _sqliteContext.GetNextJob(
+                "parity",
+                3,
+                null,
+                DateTime.UtcNow
+            );
+            QueueJobModel? efNext = _efAdapter.GetNextJob("parity", 3, null, DateTime.UtcNow);
 
             Assert.NotNull(sqliteNext);
             Assert.NotNull(efNext);

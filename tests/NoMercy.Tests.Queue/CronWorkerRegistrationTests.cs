@@ -141,8 +141,12 @@ public class CronWorkerRegistrationTests
 
         public void RemoveJob(QueueJobModel job) { }
 
-        public QueueJobModel? GetNextJob(string queueName, byte maxAttempts, long? currentJobId) =>
-            null;
+        public QueueJobModel? GetNextJob(
+            string queueName,
+            byte maxAttempts,
+            long? currentJobId,
+            DateTime now
+        ) => null;
 
         public QueueJobModel? FindJob(int id) => null;
 
@@ -159,6 +163,8 @@ public class CronWorkerRegistrationTests
         public void AddFailedJob(FailedJobModel failedJob) { }
 
         public void RemoveFailedJob(FailedJobModel failedJob) { }
+
+        public void AddFailedJobAndRemoveJob(FailedJobModel failedJob, QueueJobModel job) { }
 
         public FailedJobModel? FindFailedJob(int id) => null;
 

@@ -26,7 +26,8 @@ namespace NoMercy.Tests.Queue;
 /// When <see cref="IOrphanCheckpointLookup"/> is registered, encoder-queue
 /// orphans with a crash checkpoint must be re-queued with Attempts=0 instead
 /// of being moved to FailedJobs. Orphans without a checkpoint keep the
-/// original behaviour.
+/// non-checkpoint recovery behaviour: a repeatedly-failing orphan
+/// (Attempts &gt; 1) dead-letters regardless of queue.
 /// </summary>
 public class OrphanJobRecoveryCheckpointTests
 {
@@ -139,7 +140,7 @@ public class OrphanJobRecoveryCheckpointTests
             Queue = EncoderQueue,
             Payload = "{\"OutputDirectory\":\"/media/output\"}",
             Priority = 5,
-            Attempts = 1,
+            Attempts = 2,
             ReservedAt = DateTime.UtcNow.AddMinutes(-5),
             AvailableAt = DateTime.UtcNow.AddHours(-1),
         };
@@ -173,7 +174,7 @@ public class OrphanJobRecoveryCheckpointTests
             Queue = LibraryQueue,
             Payload = "{\"Id\":\"job-lib\"}",
             Priority = 5,
-            Attempts = 1,
+            Attempts = 2,
             ReservedAt = DateTime.UtcNow.AddMinutes(-5),
             AvailableAt = DateTime.UtcNow.AddHours(-1),
         };
@@ -183,7 +184,7 @@ public class OrphanJobRecoveryCheckpointTests
         if (service.ExecuteTask is not null)
             await service.ExecuteTask;
 
-        // Library orphan with Attempts>0 always fails — lookup is not consulted.
+        // A repeatedly-failing (Attempts > 1) library orphan always dead-letters — lookup is not consulted.
         Assert.Empty(context.Jobs);
         Assert.Single(context.FailedJobs);
         lookup.Verify(
@@ -206,7 +207,7 @@ public class OrphanJobRecoveryCheckpointTests
             Queue = EncoderQueue,
             Payload = "{\"OutputDirectory\":\"/media/output\"}",
             Priority = 5,
-            Attempts = 1,
+            Attempts = 2,
             ReservedAt = DateTime.UtcNow.AddMinutes(-5),
             AvailableAt = DateTime.UtcNow.AddHours(-1),
         };
