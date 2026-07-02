@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Text;
+using System.Text.RegularExpressions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -40,8 +41,15 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}")]
-public class HomeController : BaseController
+public partial class HomeController : BaseController
 {
+    // YouTube video ids are exactly 11 chars of [A-Za-z0-9_-]. trailerId flows
+    // into shell command strings (yt-dlp/ffmpeg) and filesystem paths, so a
+    // strict match is the trust boundary that blocks command injection and
+    // path traversal before the value reaches Shell.Exec* or Path.Combine.
+    [GeneratedRegex("^[A-Za-z0-9_-]{11}$")]
+    private static partial Regex TrailerIdRegex();
+
     private readonly HomeService _homeService;
     private readonly IDbContextFactory<MediaContext> _contextFactory;
     private readonly IStorage _transcodeStorage;
@@ -236,6 +244,9 @@ public class HomeController : BaseController
         CancellationToken ct = default
     )
     {
+        if (!TrailerIdRegex().IsMatch(trailerId))
+            return NotFoundResponse("Trailer not found");
+
         string infoJsonPath = _transcodeStorage.CombinePath(trailerId, "info.json");
 
         if (await _transcodeStorage.ExistsAsync(infoJsonPath, ct))
@@ -277,6 +288,9 @@ public class HomeController : BaseController
         CancellationToken ct = default
     )
     {
+        if (!TrailerIdRegex().IsMatch(trailerId))
+            return NotFoundResponse("Trailer not found");
+
         string language = Language();
 
         if (!await _transcodeStorage.ExistsAsync(trailerId, ct))
@@ -441,6 +455,9 @@ public class HomeController : BaseController
         CancellationToken ct = default
     )
     {
+        if (!TrailerIdRegex().IsMatch(trailerId))
+            return NotFoundResponse("Trailer not found");
+
         if (!await _transcodeStorage.ExistsAsync(trailerId, ct))
             return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Trailer removed" });
 

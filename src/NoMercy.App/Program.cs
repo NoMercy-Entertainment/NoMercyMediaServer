@@ -114,9 +114,11 @@ internal class Program
 
                     if (!string.IsNullOrEmpty(error))
                     {
+                        // The Keycloak callback carries attacker-controllable error /
+                        // error_description params; HTML-encode before reflecting them.
                         string msg = !string.IsNullOrEmpty(errorDescription)
-                            ? $"Authorization failed: {errorDescription}"
-                            : $"Authorization failed: {error}";
+                            ? $"Authorization failed: {System.Net.WebUtility.HtmlEncode(errorDescription)}"
+                            : $"Authorization failed: {System.Net.WebUtility.HtmlEncode(error)}";
                         await context.Response.WriteAsync(
                             $"<html><body><h2>Authorization Failed</h2><p>{msg}</p></body></html>"
                         );

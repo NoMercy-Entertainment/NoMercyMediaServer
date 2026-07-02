@@ -15,6 +15,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Abstractions;
 using NoMercy.Providers.Helpers;
+using Serilog.Events;
 
 namespace NoMercy.Providers.OpenSubtitles.Client;
 
@@ -35,7 +36,7 @@ public class OpenSubtitlesBaseClient : ExternalApiClient
         where T2 : class
     {
         string xml = query.ToXml();
-        Logger.OpenSubs(xml);
+        Logger.OpenSubs(Redact(xml), LogEventLevel.Verbose);
 
         string newUrl = QueryHelpers.AddQueryString(
             url,
@@ -46,9 +47,19 @@ public class OpenSubtitlesBaseClient : ExternalApiClient
 
         await CacheController.Write(newUrl, response);
 
-        Logger.OpenSubs(response);
+        Logger.OpenSubs(Redact(response), LogEventLevel.Verbose);
 
         return response.FromXml<T2>();
+    }
+
+    // Mask the session token before the payload reaches the log sink. The XML-RPC
+    // body embeds OpenSubtitles.AccessToken as a bare string param, so logging it
+    // verbatim leaked the token on every call.
+    private static string Redact(string payload)
+    {
+        return string.IsNullOrEmpty(AccessToken) || string.IsNullOrEmpty(payload)
+            ? payload
+            : payload.Replace(AccessToken, "***");
     }
 
     private async Task<string> SendAsync(string url, string xml)
