@@ -110,21 +110,27 @@ public class MediaContext : DbContext
             .HasForeignKey(f => f.DriverId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Metadata owns its AudioTrack — delete the track when metadata is removed.
+        // Metadata optionally designates one Track as its AudioTrack; it does not own that
+        // Track. AudioTrackId is nullable, so deleting the Track clears the pointer instead
+        // of destroying the Metadata row — Metadata legitimately survives without one.
         modelBuilder
             .Entity<Metadata>()
             .HasOne(m => m.AudioTrack)
             .WithOne()
             .HasForeignKey<Metadata>(m => m.AudioTrackId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.SetNull);
 
-        // Track owns its Metadata row — delete metadata when the track is removed.
+        // Metadata is shared, reference-style data: many Tracks in the same folder can
+        // point at the same Metadata row via MetadataId, so no single Track owns it (same
+        // shape as VideoFile.MetadataId above, left at the file's default Restrict). Block
+        // deleting a Metadata row while any Track still references it, rather than
+        // cascading and wiping every other Track that shares it.
         modelBuilder
             .Entity<Track>()
             .HasOne(t => t.Metadata)
             .WithMany()
             .HasForeignKey(t => t.MetadataId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder
             .Model.GetEntityTypes()

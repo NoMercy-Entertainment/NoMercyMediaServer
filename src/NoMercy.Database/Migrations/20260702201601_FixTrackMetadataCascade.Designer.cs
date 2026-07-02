@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NoMercy.Database;
 
@@ -10,9 +11,11 @@ using NoMercy.Database;
 namespace NoMercy.Database.Migrations
 {
     [DbContext(typeof(MediaContext))]
-    partial class MediaContextModelSnapshot : ModelSnapshot
+    [Migration("20260702201601_FixTrackMetadataCascade")]
+    partial class FixTrackMetadataCascade
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.7");
@@ -292,66 +295,6 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("LibraryId");
 
                     b.ToTable("FolderLibrary");
-                });
-
-            modelBuilder.Entity("NoMercy.Database.Models.Libraries.ImportFailure", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("TEXT")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("ErrorMessage")
-                        .IsRequired()
-                        .HasMaxLength(4096)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("FilePath")
-                        .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("JobType")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTimeOffset>("LastAttemptAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("LibraryId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("Resolved")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("RetryCount")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("TEXT")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedAt");
-
-                    b.HasIndex("JobType");
-
-                    b.HasIndex("LibraryId");
-
-                    b.HasIndex("Resolved");
-
-                    b.ToTable("ImportFailures", t =>
-                        {
-                            t.HasTrigger("update_ImportFailures_updated_at");
-                        });
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Libraries.InboxItem", b =>
@@ -1505,9 +1448,6 @@ namespace NoMercy.Database.Migrations
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
-
-                    b.Property<int?>("LastEpisodeNumber")
-                        .HasColumnType("INTEGER");
 
                     b.Property<string>("MetadataId")
                         .HasColumnType("TEXT");
