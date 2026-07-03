@@ -44,6 +44,7 @@ public partial class MusicHub : ConnectionHub
     private readonly INetworkDiscovery? _networkDiscovery;
 
     private readonly IChromeCastService _chromeCast;
+    private readonly CastPanelWakeLauncher _castPanelWakeLauncher;
 
     private readonly ILogger<MusicHub> _logger;
 
@@ -62,6 +63,7 @@ public partial class MusicHub : ConnectionHub
         DeviceBusRegistry busRegistry,
         CastSessionTokenService castTokenService,
         IChromeCastService chromeCast,
+        CastPanelWakeLauncher castPanelWakeLauncher,
         MusicActiveDeviceRegistry activeDeviceRegistry,
         INetworkDiscovery? networkDiscovery = null
     )
@@ -78,6 +80,7 @@ public partial class MusicHub : ConnectionHub
         _busRegistry = busRegistry;
         _castTokenService = castTokenService;
         _chromeCast = chromeCast;
+        _castPanelWakeLauncher = castPanelWakeLauncher;
         _activeDeviceRegistry = activeDeviceRegistry;
         _networkDiscovery = networkDiscovery;
     }

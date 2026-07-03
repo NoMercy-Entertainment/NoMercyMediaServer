@@ -212,89 +212,36 @@ public partial class MusicHub
                 );
             }
 
-            // Panel wake (CEC OTP) via a server-side Cast LAUNCH — cold targets
-            // only. When the TV's MusicHub side is already live, cast_shell can
-            // miss the running APK on the Cast Connect path and fall back to the
-            // Web Receiver, replacing the app mid-playback and getting the
-            // session liveness-ended (live-confirmed 2026-07-03). Best-effort,
-            // async — some cast_shell builds don't honor third-party LAUNCHes.
-            // Resolve the receiver via its LAN IP rather than name — the Cast
-            // mDNS name (set in Android TV settings) doesn't match our DB's
-            // custom name (set in NoMercy onboarding). Async because the lookup
-            // may need to refresh mDNS discovery if the cache is stale.
-            //
-            // The LAUNCH payload now carries a LaunchCustomData bundle: APK
-            // ignores its auth fields (already authenticated), Web Receiver
-            // consumes them to bootstrap volatile in-memory auth on TVs that
-            // don't have the APK installed.
-            if (!targetIsLive)
-            {
-                string targetIp = targetTv.Ip;
-                Ulid targetUlid = targetTv.Id;
-                string serverIdString = Info.DeviceId.ToString();
-                string serverUrl = ResolveServerUrl();
-                string locale = ResolveSenderLocale();
-                CastIntent intent = ResolveMusicIntent(user.Id, deviceId);
+            // Panel wake (CEC OTP) via a server-side Cast LAUNCH. CastPanelWakeLauncher
+            // owns the cold-target-only gate (ShouldFireCastWake) plus the LAUNCH
+            // itself, resolving the receiver via its LAN IP rather than name — the
+            // Cast mDNS name (set in Android TV settings) doesn't match our DB's
+            // custom name (set in NoMercy onboarding). Best-effort, async — some
+            // cast_shell builds don't honor third-party LAUNCHes.
+            string targetIp = targetTv.Ip;
+            Ulid targetUlid = targetTv.Id;
+            string serverIdString = Info.DeviceId.ToString();
+            string serverUrl = ResolveServerUrl();
+            string locale = ResolveSenderLocale();
+            CastIntent intent = ResolveMusicIntent(user.Id, deviceId);
+            bool apkOnline = _busRegistry.IsOnline(targetUlid);
 
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        string? receiverName = await _chromeCast.FindReceiverNameByIpAsync(
-                            targetIp
-                        );
-                        if (string.IsNullOrEmpty(receiverName))
-                        {
-                            _logger.LogWarning(
-                                "No Chromecast receiver discovered at {TargetIp} — panel won't wake via CEC",
-                                targetIp
-                            );
-                            return;
-                        }
-
-                        LaunchCustomData? launchData = await _castTokenService.MintAsync(
+            _ = Task.Run(() =>
+                _castPanelWakeLauncher.LaunchIfColdAsync(
+                    targetIsLive,
+                    targetIp,
+                    apkOnline,
+                    () =>
+                        _castTokenService.MintAsync(
                             userId: user.Id,
                             serverId: serverIdString,
                             serverUrl: serverUrl,
                             deviceId: targetUlid,
                             intent: intent,
                             clientLocale: locale
-                        );
-
-                        if (launchData is null)
-                        {
-                            _logger.LogWarning(
-                                "Cast token mint failed for {TargetIp} — falling back to LAUNCH without customData",
-                                targetIp
-                            );
-                        }
-
-                        // SelectChromecast connects/reuses the pool entry for this
-                        // specific receiver. useAndroidReceiver is true only when
-                        // the APK is reachable on this TV (registered with the bus
-                        // registry); otherwise cast_shell would try the Cast
-                        // Connect path, fail to find the APK, and fall back to Web
-                        // Receiver — that fallback path drops customData and the
-                        // receiver hangs on its splash. Going straight to Web
-                        // Receiver preserves customData.
-                        bool apkOnline = _busRegistry.IsOnline(targetUlid);
-                        await _chromeCast.SelectChromecast(receiverName);
-                        await _chromeCast.LaunchAndroidReceiver(
-                            receiverName,
-                            launchData,
-                            useAndroidReceiver: apkOnline
-                        );
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(
-                            "Server-side Cast launch failed for {TargetIp}: {Message}",
-                            targetIp,
-                            ex.Message
-                        );
-                    }
-                });
-            }
+                        )
+                )
+            );
         }
 
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
