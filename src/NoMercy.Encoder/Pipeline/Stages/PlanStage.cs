@@ -790,9 +790,27 @@ public class PlanStage(
             Layout: layout,
             GenerateChapterThumbs: generateChapterThumbs,
             EmitSubtitleWebVttChunks: emitSubtitleChunks,
-            GlobalExtraFlags: profile.CustomArguments is { Count: > 0 }
-                ? new Dictionary<string, string>(profile.CustomArguments)
-                : null
+            GlobalExtraFlags: BuildGlobalExtraFlags(profile.CustomArguments)
         );
+    }
+
+    // Cap ffmpeg's global thread count so a single encode leaves the host usable
+    // instead of auto-threading across every core. Reserve ~a quarter of the cores
+    // (at least one) for the OS and whoever is using the machine. The user's own
+    // -threads in CustomArguments overrides this (user override is non-negotiable).
+    private static Dictionary<string, string> BuildGlobalExtraFlags(
+        Dictionary<string, string>? customArguments
+    )
+    {
+        int reserved = Math.Max(1, Environment.ProcessorCount / 4);
+        int encodeThreads = Math.Max(1, Environment.ProcessorCount - reserved);
+
+        Dictionary<string, string> flags = new() { ["-threads"] = encodeThreads.ToString() };
+
+        if (customArguments is { Count: > 0 })
+            foreach ((string key, string value) in customArguments)
+                flags[key] = value;
+
+        return flags;
     }
 }
