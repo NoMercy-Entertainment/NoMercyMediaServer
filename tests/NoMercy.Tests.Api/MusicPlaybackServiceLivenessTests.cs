@@ -186,6 +186,64 @@ public class MusicPlaybackServiceLivenessTests
         MusicPlaybackService.IsCallerTheActiveDevice(state, "device-a").Should().BeFalse();
     }
 
+    // ── TryRefreshHeartbeat ───────────────────────────────────────────────────
+    // The single gate MusicHub routes ReportPositionCommand/CurrentTimeCommand,
+    // PlaybackCommand, and GetStateCommand through. Covers both effects it must
+    // have together: proof-of-life for the staleness sweep, and (via its bool
+    // result) permission for the caller to move the authoritative position —
+    // a passive caller must get neither.
+
+    [Fact]
+    public void TryRefreshHeartbeat_RefreshesHeartbeatAndReturnsTrue_WhenCallerIsActiveDevice()
+    {
+        MusicPlayerState state = MakePlayingState("device-a", DateTime.UtcNow.AddSeconds(-10));
+
+        bool result = MusicPlaybackService.TryRefreshHeartbeat(state, "device-a");
+
+        result.Should().BeTrue();
+        state.LastActiveHeartbeatUtc.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public void TryRefreshHeartbeat_IsCaseInsensitive()
+    {
+        MusicPlayerState state = MakePlayingState("Device-A", DateTime.UtcNow.AddSeconds(-10));
+
+        MusicPlaybackService.TryRefreshHeartbeat(state, "device-a").Should().BeTrue();
+    }
+
+    [Fact]
+    public void TryRefreshHeartbeat_LeavesHeartbeatUntouched_AndReturnsFalse_WhenCallerIsPassive()
+    {
+        // A passive mirror's own report — e.g. a device that was just demoted by
+        // ChangeDeviceCommand and hasn't yet stopped its own reporting loop — must
+        // be a complete no-op: it may neither extend the active device's grace
+        // window nor (per the caller's use of the false return) overwrite the
+        // authoritative position with its own.
+        DateTime lastHeartbeat = DateTime.UtcNow.AddSeconds(-10);
+        MusicPlayerState state = MakePlayingState("device-a", lastHeartbeat);
+
+        MusicPlaybackService.TryRefreshHeartbeat(state, "device-b").Should().BeFalse();
+
+        state.LastActiveHeartbeatUtc.Should().Be(lastHeartbeat);
+    }
+
+    [Fact]
+    public void TryRefreshHeartbeat_ReturnsFalse_WhenCallerDeviceIdIsNull()
+    {
+        MusicPlayerState state = MakePlayingState("device-a", DateTime.UtcNow.AddSeconds(-10));
+
+        MusicPlaybackService.TryRefreshHeartbeat(state, null).Should().BeFalse();
+    }
+
+    [Fact]
+    public void TryRefreshHeartbeat_ReturnsFalse_WhenNoActiveDeviceRecorded()
+    {
+        MusicPlayerState state = MakePlayingState(null, DateTime.UtcNow.AddSeconds(-10));
+
+        MusicPlaybackService.TryRefreshHeartbeat(state, "device-a").Should().BeFalse();
+    }
+
     // ── EndStaleActiveSessionAsync ───────────────────────────────────────────
 
     [Fact]

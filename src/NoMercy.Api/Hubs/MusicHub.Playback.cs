@@ -429,6 +429,12 @@ public partial class MusicHub
         if (playerState is null)
             return null;
 
+        // A state read from the active device is free proof of life (no extra I/O)
+        // and closes the gap for a client that polls state rather than pushing
+        // position reports on its own cadence.
+        if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? caller))
+            MusicPlaybackService.TryRefreshHeartbeat(playerState, caller.DeviceId);
+
         return playerState;
     }
 
@@ -465,6 +471,14 @@ public partial class MusicHub
                     state.DeviceId = device.DeviceId;
                     state.VolumePercentage = device.VolumePercent ?? Device.DefaultVolumePercent;
                 }
+
+            // A command from the active device is proof of life just as much as a
+            // position report — seek/mute/shuffle/repeat never call StartPlaybackTimer
+            // (unlike play/next/previous), so without this an active device that is
+            // only being interacted with, never idly reporting position, could look
+            // stale to MusicPlaybackService's sweep despite being very much alive.
+            if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? caller))
+                MusicPlaybackService.TryRefreshHeartbeat(state, caller.DeviceId);
 
             UpdateActionsDisallows(state);
 
@@ -504,15 +518,16 @@ public partial class MusicHub
             if (DateTime.UtcNow < playerState.IgnoreCurrentTimeUntil)
                 return;
 
-            // Only the device the server considers active can prove the session
-            // is genuinely still playing somewhere — a stray report from a
-            // passive client must never mask a truly-dead active device from
-            // MusicPlaybackService's staleness sweep.
-            if (
-                ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? caller)
-                && MusicPlaybackService.IsCallerTheActiveDevice(playerState, caller.DeviceId)
-            )
-                playerState.LastActiveHeartbeatUtc = DateTime.UtcNow;
+            ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? caller);
+
+            // Only the device the server considers active may prove the session is
+            // genuinely still playing somewhere or move the authoritative position —
+            // a stray/passive report must never mask a truly-dead active device from
+            // MusicPlaybackService's staleness sweep, and must never snap everyone
+            // else's playback back to a passive mirror's own (possibly paused, torn
+            // down, or drifted) position. A passive report is a complete no-op.
+            if (!MusicPlaybackService.TryRefreshHeartbeat(playerState, caller?.DeviceId))
+                return;
 
             playerState.Time = positionMs.Value;
 

@@ -219,6 +219,25 @@ public class MusicPlaybackService
     }
 
     /// <summary>
+    /// Single entry point every inbound hub call that can prove the active device is
+    /// alive should route through — a position report, a playback command, or a cheap
+    /// state read. Refreshes <see cref="MusicPlayerState.LastActiveHeartbeatUtc"/> and
+    /// returns true only when <paramref name="callerDeviceId"/> is
+    /// <see cref="IsCallerTheActiveDevice"/>; a passive caller is a complete no-op so it
+    /// can never mask a truly-dead active device from <see cref="IsActiveDeviceStale"/>
+    /// nor (via the caller's own use of the return value) overwrite the active device's
+    /// authoritative position with its own.
+    /// </summary>
+    internal static bool TryRefreshHeartbeat(MusicPlayerState state, string? callerDeviceId)
+    {
+        if (!IsCallerTheActiveDevice(state, callerDeviceId))
+            return false;
+
+        state.LastActiveHeartbeatUtc = DateTime.UtcNow;
+        return true;
+    }
+
+    /// <summary>
     /// The active device stopped proving life while the session was still marked
     /// playing — a backgrounded/crashed player or an anonymous Cast Receiver that
     /// never cleanly disconnects. Ends the session outright (mirrors
