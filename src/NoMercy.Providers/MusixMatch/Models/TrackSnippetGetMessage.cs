@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Newtonsoft.Json;
+using NoMercy.Providers.MusixMatch.Converters;
 
 namespace NoMercy.Providers.MusixMatch.Models;
 
@@ -19,5 +20,6 @@ public class TrackSnippetGetMessage
     public TrackSnippetGetMessageHeader Header { get; set; } = new();
 
     [JsonProperty("body")]
+    [JsonConverter(typeof(ObjectOrEmptyArrayConverter<TrackSnippetGetMessageBody>))]
     public TrackSnippetGetMessageBody Body { get; set; } = new();
 }
