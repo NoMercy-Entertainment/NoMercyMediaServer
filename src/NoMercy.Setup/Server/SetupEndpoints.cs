@@ -421,7 +421,9 @@ public class SetupEndpoints
                 $"Silent SSO exchange failed: {ex.GetType().Name} — {ex.Message}",
                 LogEventLevel.Warning
             );
-            context.Response.StatusCode = StatusCodes.Status200OK;
+            // Return a non-2xx so the client's fetch treats this as a failure — a 200
+            // with an error body was silently swallowed and read as success.
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
             await WriteJsonResponse(
                 context.Response,
                 new { status = "error", message = ex.Message }
@@ -500,8 +502,12 @@ public class SetupEndpoints
 
         _state.TransitionTo(SetupPhase.Authenticating);
 
+        // Must byte-for-byte match the redirect_uri the browser sent to Keycloak.
+        // A hardcoded localhost fails with invalid_grant when the user reaches setup
+        // from a LAN IP or NAS hostname — derive it from the actual request host, the
+        // same way HandleExchange does.
         string redirectUri =
-            $"http://localhost:{RuntimeServerSettings.Current.InternalServerPort}/sso-callback";
+            $"{context.Request.Scheme}://{context.Request.Host.Value}/sso-callback";
         string responseTitle;
         string responseMessage;
         bool responseIsError;
@@ -557,8 +563,10 @@ public class SetupEndpoints
                 $"Token exchange failed: {ex.GetType().Name} — {ex.Message}",
                 LogEventLevel.Error
             );
-            _state.SetError($"Sign in failed: {ex.Message}");
+            // Transition first: TransitionTo clears ErrorMessage, so setting the error
+            // before it wiped the message the /setup/status poll surfaces to the user.
             _state.TransitionTo(SetupPhase.Unauthenticated);
+            _state.SetError($"Sign in failed: {ex.Message}");
 
             responseTitle = "Authentication Failed";
             responseMessage = $"Sign in failed: {ex.Message}";
@@ -648,6 +656,14 @@ public class SetupEndpoints
             );
 
             string deviceCodeResponse = await deviceResponse.Content.ReadAsStringAsync();
+
+            // A Keycloak 4xx returns an error body that still deserializes into a
+            // DeviceAuthResponse with empty fields — check the status first so a failed
+            // request isn't handed to the user as an empty-but-valid device code.
+            if (!deviceResponse.IsSuccessStatusCode)
+                throw new InvalidOperationException(
+                    $"Device code request failed ({(int)deviceResponse.StatusCode}): {deviceCodeResponse}"
+                );
 
             DeviceAuthResponse deviceData =
                 deviceCodeResponse.FromJson<DeviceAuthResponse>()
@@ -922,23 +938,34 @@ public class SetupEndpoints
 
                 string errorContent = await response.Content.ReadAsStringAsync();
                 dynamic? error = JsonConvert.DeserializeObject<dynamic>(errorContent);
-                if (error?.error?.ToString() != "authorization_pending")
+                string? errorCode = error?.error?.ToString();
+
+                // RFC 8628 §3.5: slow_down means keep polling but back off — it is NOT
+                // fatal. Treating it as fatal aborted an otherwise-recoverable device login.
+                if (errorCode == "slow_down")
                 {
-                    _state.SetError($"Device login failed: {error?.error_description}");
+                    intervalSec = Math.Clamp(intervalSec + 5, 1, 30);
+                    continue;
+                }
+
+                if (errorCode != "authorization_pending")
+                {
+                    // Transition first: TransitionTo clears ErrorMessage.
                     _state.TransitionTo(SetupPhase.Unauthenticated);
+                    _state.SetError($"Device login failed: {error?.error_description}");
                     return;
                 }
             }
             catch (Exception ex)
             {
-                _state.SetError($"Device login error: {ex.Message}");
                 _state.TransitionTo(SetupPhase.Unauthenticated);
+                _state.SetError($"Device login error: {ex.Message}");
                 return;
             }
         }
 
-        _state.SetError("Device authorization timed out");
         _state.TransitionTo(SetupPhase.Unauthenticated);
+        _state.SetError("Device authorization timed out");
     }
 
     // ── Private helpers ─────────────────────────────────────────────────────
