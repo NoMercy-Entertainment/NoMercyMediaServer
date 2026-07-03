@@ -140,7 +140,7 @@ public class BuildStageDrmTests
     }
 
     [Fact]
-    public async Task Drm_NoMatchingProcessor_ContinuesWithoutEncryption()
+    public async Task Drm_NoMatchingProcessor_FailsTheEncode()
     {
         string tempDir = Path.Combine(Path.GetTempPath(), $"drm-build-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
@@ -154,7 +154,8 @@ public class BuildStageDrmTests
             };
 
             // Empty processor list — the profile asks for AES-128 but nothing
-            // registered to handle it. Build should warn + continue.
+            // registered to handle it. Build must fail rather than silently
+            // shipping an unencrypted encode while reporting success.
             BuildStage stage = new(
                 options,
                 new FontExtractor(TestStorageFactory.CreateLocal()),
@@ -173,9 +174,9 @@ public class BuildStageDrmTests
 
             StageResult result = await stage.ExecuteAsync(input, context, default);
 
-            result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
-            FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
-            commands[0].Arguments.Should().NotContain("-hls_key_info_file");
+            result.Should().BeOfType<StageFailure>();
+            StageFailure failure = (StageFailure)result;
+            failure.Error.Message.Should().Contain("Aes128");
         }
         finally
         {

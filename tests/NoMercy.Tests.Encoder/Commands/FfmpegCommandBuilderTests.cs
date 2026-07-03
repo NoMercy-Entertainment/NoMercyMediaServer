@@ -166,6 +166,44 @@ public class FfmpegCommandBuilderTests
     }
 
     [Fact]
+    public void ExtraFlags_EmptyValue_EmitsBareFlagWithNoTrailingToken()
+    {
+        // "-an"/"-sn" are boolean ffmpeg flags with no value. Emitting the
+        // empty string as a second argv token (the pre-fix behavior) adds a
+        // stray empty argument ffmpeg treats as an unmapped output URL.
+        FfmpegCommand cmd = new FfmpegCommandBuilder()
+            .AddInput(new("/input.mkv"))
+            .AddOutput(
+                new(
+                    FilePath: "/output.mp4",
+                    ExtraFlags: new() { ["-an"] = "", ["-sn"] = "", ["-tag:v"] = "hvc1" }
+                )
+            )
+            .Build("ffmpeg");
+
+        int anIndex = Array.IndexOf(cmd.Arguments, "-an");
+        anIndex.Should().BeGreaterThan(-1);
+        cmd.Arguments[anIndex + 1].Should().NotBe(string.Empty, "no bare empty argv token");
+        cmd.Arguments[anIndex + 1].Should().Be("-sn", "the next real token must follow directly");
+
+        cmd.Arguments.Should().ContainInConsecutiveOrder("-tag:v", "hvc1");
+    }
+
+    [Fact]
+    public void GlobalExtraFlags_EmptyValue_EmitsBareFlagWithNoTrailingToken()
+    {
+        FfmpegCommand cmd = new FfmpegCommandBuilder()
+            .WithGlobalExtraFlags(new() { ["-vsync"] = "" })
+            .AddInput(new("/input.mkv"))
+            .AddOutput(new(FilePath: "/output.mp4"))
+            .Build("ffmpeg");
+
+        int flagIndex = Array.IndexOf(cmd.Arguments, "-vsync");
+        flagIndex.Should().BeGreaterThan(-1);
+        cmd.Arguments[flagIndex + 1].Should().Be("-i", "no bare empty argv token before the input");
+    }
+
+    [Fact]
     public void GlobalExtraFlags_NullIsNoOp()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()

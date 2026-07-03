@@ -167,9 +167,10 @@ public class PlaylistGenerator : IPlaylistGenerator
         // Video variants with measured bandwidth
         foreach (VideoOutputPlan video in plan.VideoOutputs)
         {
-            string codecTag = GetVideoCodecTag(video);
-            string audioCodecTag =
-                plan.AudioOutputs.Length > 0 ? $",{GetAudioCodecTag(plan.AudioOutputs[0])}" : "";
+            string? videoCodecTag = GetVideoCodecTag(video);
+            string? audioCodecTag =
+                plan.AudioOutputs.Length > 0 ? GetAudioCodecTag(plan.AudioOutputs[0]) : null;
+            string codecsAttr = BuildCodecsAttribute(videoCodecTag, audioCodecTag);
 
             // Use measured bandwidth. Apple requires BANDWIDTH = peak, AVERAGE-BANDWIDTH = average.
             // Combine video + audio bandwidth for the STREAM-INF (Apple spec section 4.10).
@@ -212,7 +213,7 @@ public class PlaylistGenerator : IPlaylistGenerator
                 activeSubs.Length > 0 ? ",SUBTITLES=\"subs\"" : ",CLOSED-CAPTIONS=NONE";
 
             sb.AppendLine(
-                $"#EXT-X-STREAM-INF:BANDWIDTH={peakBandwidth},AVERAGE-BANDWIDTH={avgBandwidth},RESOLUTION={video.Width}x{video.Height},FRAME-RATE={frameRate},CODECS=\"{codecTag}{audioCodecTag}\",VIDEO-RANGE={videoRange},AUDIO=\"{audioGroupId}\"{subsAttr}"
+                $"#EXT-X-STREAM-INF:BANDWIDTH={peakBandwidth},AVERAGE-BANDWIDTH={avgBandwidth},RESOLUTION={video.Width}x{video.Height},FRAME-RATE={frameRate}{codecsAttr},VIDEO-RANGE={videoRange},AUDIO=\"{audioGroupId}\"{subsAttr}"
             );
             sb.AppendLine($"{subDir}/{playlistFile}.m3u8");
         }
@@ -258,7 +259,7 @@ public class PlaylistGenerator : IPlaylistGenerator
     private static string GetAudioDisplayName(string language) =>
         Culture.EnglishLanguageName(language);
 
-    private static string GetVideoCodecTag(VideoOutputPlan video) =>
+    private static string? GetVideoCodecTag(VideoOutputPlan video) =>
         HlsCodecsStringBuilder.VideoCodecString(
             video.EncoderName,
             video.Profile,
@@ -266,8 +267,25 @@ public class PlaylistGenerator : IPlaylistGenerator
             video.TenBit
         );
 
-    private static string GetAudioCodecTag(AudioOutputPlan audio) =>
+    private static string? GetAudioCodecTag(AudioOutputPlan audio) =>
         HlsCodecsStringBuilder.AudioCodecString(audio.EncoderName);
+
+    /// <summary>
+    /// Builds the ",CODECS=&quot;...&quot;" clause (leading comma included) from
+    /// whichever of the video/audio tags are known. Returns an empty string —
+    /// omitting the whole attribute — when neither is known (e.g. both streams
+    /// are copy-mode), which is spec-legal and safer than a partially-guessed value.
+    /// </summary>
+    private static string BuildCodecsAttribute(string? videoCodec, string? audioCodec)
+    {
+        List<string> parts = [];
+        if (videoCodec is not null)
+            parts.Add(videoCodec);
+        if (audioCodec is not null)
+            parts.Add(audioCodec);
+
+        return parts.Count > 0 ? $",CODECS=\"{string.Join(",", parts)}\"" : string.Empty;
+    }
 
     private static string YesNo(bool value) => value ? "YES" : "NO";
 

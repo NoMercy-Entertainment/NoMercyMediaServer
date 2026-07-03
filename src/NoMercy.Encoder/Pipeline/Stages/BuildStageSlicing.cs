@@ -11,6 +11,7 @@
 
 using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Output;
+using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
 
 namespace NoMercy.Encoder.Pipeline.Stages;
@@ -41,8 +42,22 @@ internal static class BuildStageSlicing
         AudioOutputPlan[] audioSlice =
             task.Kind == EncodeTaskKind.Audio ? PickMany(plan.AudioOutputs, task) : [];
 
-        SubtitleOutputPlan[] subtitleSlice =
-            task.Kind == EncodeTaskKind.Subtitle ? PickMany(plan.SubtitleOutputs, task) : [];
+        // Burn-in subtitles are rendered into the video frames by the filter
+        // graph, not extracted as a standalone output. The Video task needs
+        // them in its slice so BuildFilterGraph can find them; a Subtitle task
+        // must never claim one — there is nothing to extract, so a task that
+        // ends up with only a burn-in entry builds an ffmpeg command with an
+        // input and no output, which ffmpeg rejects.
+        SubtitleOutputPlan[] subtitleSlice = task.Kind switch
+        {
+            EncodeTaskKind.Video => plan
+                .SubtitleOutputs.Where(s => s.Policy == SubtitlePolicy.BurnIn)
+                .ToArray(),
+            EncodeTaskKind.Subtitle => PickMany(plan.SubtitleOutputs, task)
+                .Where(s => s.Policy != SubtitlePolicy.BurnIn)
+                .ToArray(),
+            _ => [],
+        };
 
         ThumbnailOutputPlan? thumbsSlice =
             task.Kind == EncodeTaskKind.Thumbnails ? plan.Thumbnails : null;

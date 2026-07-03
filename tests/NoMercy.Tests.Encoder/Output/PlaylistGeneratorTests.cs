@@ -106,6 +106,18 @@ public class PlaylistGeneratorTests
     }
 
     [Fact]
+    public void MasterPlaylist_CopyVideo_OmitsCodecsInsteadOfLying()
+    {
+        // "copy" is a passthrough — the real codec could be anything. The
+        // master must never advertise avc1 (the old H.264-fallback bug) for
+        // a copy-mode variant; CODECS should list only the known audio codec.
+        string playlist = Generate(CreatePlan(encoderName: "copy"));
+
+        playlist.Should().NotContain("avc1.");
+        playlist.Should().Contain("CODECS=\"mp4a.40.2\"");
+    }
+
+    [Fact]
     public void MasterPlaylist_AudioGroup_Present()
     {
         string playlist = Generate(CreatePlan());

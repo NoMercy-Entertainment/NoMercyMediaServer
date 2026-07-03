@@ -140,9 +140,14 @@ public static class HlsCodecsStringBuilder
 
     /// <summary>
     /// Derives the CODECS string from FFmpeg encoder name + plan metadata.
-    /// Covers all video codecs the encoder supports.
+    /// Covers all video codecs the encoder supports. Returns null for stream
+    /// copy — the actual codec is whatever the source is, and advertising an
+    /// assumed H.264 lies to the player (some, e.g. hls.js, hard-reject the
+    /// master with manifestIncompatibleCodecsError when the CODECS value
+    /// doesn't match the real stream). Omitting the attribute is spec-legal;
+    /// RFC 8216 §4.4.6.2 has clients probe the stream directly when absent.
     /// </summary>
-    public static string VideoCodecString(
+    public static string? VideoCodecString(
         string encoderName,
         string? profile,
         string? level,
@@ -158,15 +163,18 @@ public static class HlsCodecsStringBuilder
             VideoCodecType.Av1 => ForAv1(level, tenBit),
             // VP9 — no RFC 6381 standardised short-form; use vp09 signaling
             VideoCodecType.Vp9 => $"vp09.00.41.{(tenBit ? "10" : "08")}",
+            VideoCodecType.Copy => null,
             // Fallback: treat as H.264 High 4.0
             _ => ForH264(profile ?? "high", level ?? "4.0"),
         };
     }
 
     /// <summary>
-    /// Derives the CODECS string from FFmpeg encoder name for audio.
+    /// Derives the CODECS string from FFmpeg encoder name for audio. Returns
+    /// null for stream copy — see <see cref="VideoCodecString"/> for why an
+    /// assumed value is worse than omitting the attribute.
     /// </summary>
-    public static string AudioCodecString(string encoderName, bool heAac = false)
+    public static string? AudioCodecString(string encoderName, bool heAac = false)
     {
         return encoderName.ToLowerInvariant() switch
         {
@@ -174,6 +182,7 @@ public static class HlsCodecsStringBuilder
             "ac3" => ForAc3(),
             "eac3" => ForEac3(),
             "libopus" or "opus" => "opus",
+            "copy" => null,
             _ => ForAacLc(),
         };
     }

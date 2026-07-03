@@ -728,10 +728,12 @@ public class PlanStage(
 
         if (media.StereoMode is not null && videoIsCopy && videoPlan.Length > 0)
         {
-            // MKV: -metadata:s:v stereo_mode=<value> tags the video track.
+            // MKV: -metadata:s:v stereo_mode=<value> tags the video track — the
+            // flag and the key=value pair are separate argv tokens, so the dict
+            // key must be just the flag, not "flag key" glued together.
             // MP4: stream-copy keeps the st3d box automatically when -c:v copy is
             //      used; the extra tag does not hurt non-MKV containers.
-            videoPlan[0].ExtraFlags["-metadata:s:v stereo_mode"] = media.StereoMode;
+            videoPlan[0].ExtraFlags["-metadata:s:v"] = $"stereo_mode={media.StereoMode}";
         }
 
         // VR spherical projection preservation: pass-through the sv3d/proj box

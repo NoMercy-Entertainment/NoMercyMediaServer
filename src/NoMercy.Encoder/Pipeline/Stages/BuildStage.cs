@@ -508,11 +508,13 @@ public class BuildStage(
         IDrmProcessor? processor = drmProcessors.FirstOrDefault(p => p.Method == drm.Method);
         if (processor is null)
         {
-            logger.LogWarning(
-                "No DRM processor registered for {Method} — encoding without DRM",
-                drm.Method
+            // DRM was explicitly requested by the profile — proceeding without
+            // it would ship an unencrypted output while reporting success.
+            // Fail the encode instead of silently downgrading to plaintext.
+            throw new InvalidOperationException(
+                $"DRM was requested ({drm.Method}) but no matching processor is registered — "
+                    + "refusing to ship an unencrypted encode."
             );
-            return input;
         }
 
         DrmArtifact artifact = await processor

@@ -115,8 +115,8 @@ public class IntroDetectSubscriber : IDisposable
     private async Task ProcessSeasonAsync(int seasonId, CancellationToken ct)
     {
         List<Episode> episodes;
-        HashSet<int> episodesWithManualIntro;
-        HashSet<int> episodesWithManualOutro;
+        HashSet<int> episodesWithIntro;
+        HashSet<int> episodesWithOutro;
 
         await using (MediaContext context = await _contextFactory.CreateDbContextAsync(ct))
         {
@@ -126,24 +126,24 @@ public class IntroDetectSubscriber : IDisposable
                 .OrderBy(e => e.EpisodeNumber)
                 .ToListAsync(ct);
 
-            // Two-step to avoid SQLite APPLY: fetch episode IDs with manual segments first.
+            // Two-step to avoid SQLite APPLY: fetch episode IDs with existing segments first.
             List<int> episodeIds = episodes.Select(e => e.Id).ToList();
 
-            List<ContentSegment> manualSegments = await context
+            // Every existing segment regardless of Source — a prior detector
+            // run's rows must block re-insertion on a rescan just as much as a
+            // manual one, or a repeated LibraryScanCompletedEvent duplicates
+            // every segment row on each pass.
+            List<ContentSegment> existingSegments = await context
                 .ContentSegments.AsNoTracking()
-                .Where(cs =>
-                    cs.EpisodeId != null
-                    && episodeIds.Contains(cs.EpisodeId!.Value)
-                    && cs.Source == "manual"
-                )
+                .Where(cs => cs.EpisodeId != null && episodeIds.Contains(cs.EpisodeId!.Value))
                 .ToListAsync(ct);
 
-            episodesWithManualIntro = manualSegments
+            episodesWithIntro = existingSegments
                 .Where(cs => cs.SegmentType == ContentSegmentType.Intro)
                 .Select(cs => cs.EpisodeId!.Value)
                 .ToHashSet();
 
-            episodesWithManualOutro = manualSegments
+            episodesWithOutro = existingSegments
                 .Where(cs => cs.SegmentType == ContentSegmentType.Outro)
                 .Select(cs => cs.EpisodeId!.Value)
                 .ToHashSet();
@@ -168,8 +168,8 @@ public class IntroDetectSubscriber : IDisposable
             return;
 
         // Fingerprint intro windows.
-        bool needIntro = episodeFiles.Any(ef => !episodesWithManualIntro.Contains(ef.Episode.Id));
-        bool needOutro = episodeFiles.Any(ef => !episodesWithManualOutro.Contains(ef.Episode.Id));
+        bool needIntro = episodeFiles.Any(ef => !episodesWithIntro.Contains(ef.Episode.Id));
+        bool needOutro = episodeFiles.Any(ef => !episodesWithOutro.Contains(ef.Episode.Id));
 
         if (!needIntro && !needOutro)
         {
@@ -200,7 +200,7 @@ public class IntroDetectSubscriber : IDisposable
                 {
                     foreach ((Episode episode, _) in introFingerprints)
                     {
-                        if (episodesWithManualIntro.Contains(episode.Id))
+                        if (episodesWithIntro.Contains(episode.Id))
                             continue;
 
                         newSegments.Add(
@@ -237,7 +237,7 @@ public class IntroDetectSubscriber : IDisposable
                 {
                     foreach ((Episode episode, _) in outroFingerprints)
                     {
-                        if (episodesWithManualOutro.Contains(episode.Id))
+                        if (episodesWithOutro.Contains(episode.Id))
                             continue;
 
                         newSegments.Add(
