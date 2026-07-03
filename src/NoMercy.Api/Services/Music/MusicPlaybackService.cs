@@ -12,6 +12,7 @@
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
@@ -29,6 +30,8 @@ public class MusicPlaybackService
     private readonly IServiceProvider _serviceProvider;
     private readonly IClientMessenger _clientMessenger;
     private readonly IEventBus? _eventBus;
+    private readonly MusicActiveDeviceRegistry _activeDeviceRegistry;
+    private readonly ILogger<MusicPlaybackService>? _logger;
     private readonly string[] _repeatStates = ["off", "one", "all"];
     private static int PlayerStateEventId => Interlocked.Increment(ref field);
 
@@ -36,13 +39,17 @@ public class MusicPlaybackService
         MusicPlayerStateManager stateManager,
         IServiceProvider serviceProvider,
         IClientMessenger clientMessenger,
-        IEventBus? eventBus = null
+        MusicActiveDeviceRegistry activeDeviceRegistry,
+        IEventBus? eventBus = null,
+        ILogger<MusicPlaybackService>? logger = null
     )
     {
         _stateManager = stateManager;
         _serviceProvider = serviceProvider;
         _clientMessenger = clientMessenger;
+        _activeDeviceRegistry = activeDeviceRegistry;
         _eventBus = eventBus;
+        _logger = logger;
     }
 
     private readonly ConcurrentDictionary<Guid, Timer> _timers = new();
@@ -52,6 +59,15 @@ public class MusicPlaybackService
     private const int CrossfadeLeewayMs = 10000; // Send PrepareCrossfade 10s before track end (gives time to buffer)
     private const int BroadcastDebounceMs = 150;
     private const int MinPlayTimeForRecordMs = 10_000;
+
+    // Both the Android and web clients throttle position reports to roughly once
+    // every 5s while playing (MusicHubAdapter/MusicPlayerEventBridge on Android,
+    // audioPlayer.ts on web all gate on ">5s since last send"). Three missed
+    // reports tolerates normal network jitter or a dropped packet without a false
+    // positive, while still recovering within one refresh cycle of a device that
+    // actually went dark — a backgrounded/crashed player, or a Cast Receiver whose
+    // WebSocket lingers after its cast session has effectively ended.
+    internal const int ActiveDeviceStaleTimeoutMs = 15_000;
 
     // Safety margin added on top of the client-reported fadeDuration when computing
     // CrossfadeTimeout.  If CrossfadeComplete never arrives within that window the server
@@ -68,8 +84,16 @@ public class MusicPlaybackService
         if (_timers.TryGetValue(user.Id, out Timer? existingTimer))
             existingTimer.Dispose();
 
-        if (!_stateManager.TryGetValue(user.Id, out MusicPlayerState? _))
+        if (!_stateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
             return;
+
+        // Any (re)start of the ticking loop counts as proof of life, regardless of
+        // who asked for it. Playback can be legitimately resumed remotely from any
+        // connected device (not just the active one), so gating this on caller
+        // identity would either reject a valid remote resume or reintroduce the
+        // exact bug this exists to prevent: resuming after a long pause must not
+        // make the active device look instantly stale to the check below.
+        playerState.LastActiveHeartbeatUtc = DateTime.UtcNow;
 
         SemaphoreSlim stateLock = GetStateLock(user.Id);
 
@@ -84,6 +108,12 @@ public class MusicPlaybackService
                         return;
                     if (!playerState.PlayState || playerState.CurrentItem is null)
                         return;
+
+                    if (IsActiveDeviceStale(playerState, DateTime.UtcNow))
+                    {
+                        await EndStaleActiveSessionAsync(user, playerState);
+                        return;
+                    }
 
                     playerState.Time += TimerInterval;
 
@@ -152,6 +182,95 @@ public class MusicPlaybackService
     {
         if (_timers.TryRemove(userId, out Timer? timer))
             timer.Dispose();
+    }
+
+    /// <summary>
+    /// True once the session says it's playing but the active device hasn't proven
+    /// life (see <see cref="StartPlaybackTimer"/> and
+    /// <see cref="NoMercy.Api.Hubs.MusicHub.ReportPositionCommand"/>) for
+    /// <see cref="ActiveDeviceStaleTimeoutMs"/>. Deliberately false while paused —
+    /// a paused/stopped session has no reporting cadence to fall behind on, and
+    /// <see cref="MusicPlaybackCommandHandler.HandleStop"/> already relies on the
+    /// active device staying sticky through a deliberate stop to block hijack;
+    /// treating "no report since I stopped" as staleness would undo that on a
+    /// timer.
+    /// </summary>
+    internal static bool IsActiveDeviceStale(MusicPlayerState state, DateTime nowUtc)
+    {
+        if (!state.PlayState || string.IsNullOrEmpty(state.DeviceId))
+            return false;
+
+        return nowUtc - state.LastActiveHeartbeatUtc
+            > TimeSpan.FromMilliseconds(ActiveDeviceStaleTimeoutMs);
+    }
+
+    /// <summary>
+    /// True when callerDeviceId is the device MusicPlayerState.DeviceId currently
+    /// names as active. Used to make sure only the active device's own position
+    /// reports can refresh <see cref="MusicPlayerState.LastActiveHeartbeatUtc"/> —
+    /// a stray report from a passive client must never mask a truly-dead active
+    /// device from <see cref="IsActiveDeviceStale"/>.
+    /// </summary>
+    internal static bool IsCallerTheActiveDevice(MusicPlayerState state, string? callerDeviceId)
+    {
+        return !string.IsNullOrEmpty(state.DeviceId)
+            && !string.IsNullOrEmpty(callerDeviceId)
+            && state.DeviceId.Equals(callerDeviceId, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// The active device stopped proving life while the session was still marked
+    /// playing — a backgrounded/crashed player or an anonymous Cast Receiver that
+    /// never cleanly disconnects. Ends the session outright (mirrors
+    /// <see cref="MusicPlaybackCommandHandler.HandleStop"/>'s shape) rather than
+    /// auto-promoting another connected-but-passive device: silently starting
+    /// audio somewhere the user never asked for it would be a worse surprise than
+    /// the bug this fixes. Clearing DeviceId — unlike a deliberate stop, which
+    /// keeps it to block hijack — is the deliberate difference: the device itself
+    /// is presumed gone, so the very next StartPlaybackCommand from any connected
+    /// device must be free to become active immediately.
+    /// </summary>
+    internal async Task EndStaleActiveSessionAsync(User user, MusicPlayerState state)
+    {
+        string? staleDeviceId = state.DeviceId;
+
+        _logger?.LogWarning(
+            "Music session for user {UserId}: active device {DeviceId} stopped reporting position for over {TimeoutMs}ms — ending the session",
+            user.Id,
+            staleDeviceId,
+            ActiveDeviceStaleTimeoutMs
+        );
+
+        RemoveTimer(user.Id);
+
+        if (!string.IsNullOrEmpty(staleDeviceId))
+            _activeDeviceRegistry.RemoveIfMatches(user.Id, staleDeviceId);
+
+        state.CurrentItem = null;
+        state.PlayState = false;
+        state.Time = 0;
+        state.Backlog = [];
+        state.Playlist = [];
+        state.CurrentList = new("", UriKind.Relative);
+        state.DeviceId = null;
+        state.Actions = new()
+        {
+            Disallows = new()
+            {
+                Previous = true,
+                Next = true,
+                Resuming = true,
+                Pausing = true,
+                Seeking = true,
+                Stopping = true,
+                Muting = true,
+                TogglingShuffle = true,
+                TogglingRepeatContext = true,
+                TogglingRepeatTrack = true,
+            },
+        };
+
+        await UpdatePlaybackState(user, state);
     }
 
     /// <summary>

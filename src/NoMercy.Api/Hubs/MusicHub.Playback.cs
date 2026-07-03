@@ -499,6 +499,16 @@ public partial class MusicHub
             if (DateTime.UtcNow < playerState.IgnoreCurrentTimeUntil)
                 return;
 
+            // Only the device the server considers active can prove the session
+            // is genuinely still playing somewhere — a stray report from a
+            // passive client must never mask a truly-dead active device from
+            // MusicPlaybackService's staleness sweep.
+            if (
+                ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? caller)
+                && MusicPlaybackService.IsCallerTheActiveDevice(playerState, caller.DeviceId)
+            )
+                playerState.LastActiveHeartbeatUtc = DateTime.UtcNow;
+
             playerState.Time = positionMs.Value;
 
             await _musicPlaybackService.UpdatePlaybackState(user, playerState);

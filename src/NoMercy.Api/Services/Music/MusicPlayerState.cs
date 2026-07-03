@@ -100,4 +100,13 @@ public class MusicPlayerState
     // cancel the suppression, preventing multi-device conflicts.
     [JsonIgnore]
     public string? CrossfadeDeviceId { get; set; }
+
+    // Proof-of-life clock for the active device (DeviceId above). Refreshed by
+    // MusicHub.ReportPositionCommand while playing and by
+    // MusicPlaybackService.StartPlaybackTimer on every (re)start of the ticking
+    // loop (a resume after a long pause must not look instantly stale). Defaults
+    // to "now" so a freshly-created session gets a full grace window before its
+    // first position report is due. See MusicPlaybackService.IsActiveDeviceStale.
+    [JsonIgnore]
+    public DateTime LastActiveHeartbeatUtc { get; set; } = DateTime.UtcNow;
 }

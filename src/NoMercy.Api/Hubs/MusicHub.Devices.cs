@@ -25,8 +25,9 @@ public partial class MusicHub
 {
     /// <summary>
     /// Returns the Client belonging to the connection that invoked this hub
-    /// method. Does NOT mutate CurrentDevice — use this when you need to log
-    /// who triggered an action but do not want to promote them to active.
+    /// method. Does NOT mutate the active-device registry — use this when you
+    /// need to log who triggered an action but do not want to promote them to
+    /// active.
     /// </summary>
     private Device GetCallerDevice(User user)
     {
@@ -47,7 +48,7 @@ public partial class MusicHub
     {
         Device caller = GetCallerDevice(user);
 
-        if (CurrentDevice.TryGetValue(user.Id, out Device? existing) && existing is not null)
+        if (_activeDeviceRegistry.TryGet(user.Id, out Device? existing) && existing is not null)
         {
             bool existingStillConnected = ConnectedClients.Clients.Values.Any(c =>
                 c.DeviceId.Equals(existing.DeviceId, StringComparison.OrdinalIgnoreCase)
@@ -56,7 +57,7 @@ public partial class MusicHub
                 return existing;
         }
 
-        CurrentDevice[user.Id] = caller;
+        _activeDeviceRegistry.Set(user.Id, caller);
         return caller;
     }
 
@@ -295,6 +296,13 @@ public partial class MusicHub
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
             playerState.DeviceId = deviceId;
+
+            // A manual switch always gives the newly-promoted device a fresh grace
+            // window — without this, a target that hasn't sent its first position
+            // report yet could inherit the previous device's stale heartbeat and
+            // get force-ended by MusicPlaybackService before it ever gets a chance
+            // to prove it's alive.
+            playerState.LastActiveHeartbeatUtc = DateTime.UtcNow;
         }
         else
         {
@@ -303,16 +311,16 @@ public partial class MusicHub
             return;
         }
 
-        // Keep the CurrentDevice registry in sync with playerState.DeviceId.
-        // Without this, CurrentDevice could still point at whoever last
-        // promoted themselves (e.g. the web client that initiated this
-        // ChangeDevice), while playerState says TV — and downstream calls
-        // that consult CurrentDevice would see a stale active.
+        // Keep the active-device registry in sync with playerState.DeviceId.
+        // Without this, the registry could still point at whoever last promoted
+        // themselves (e.g. the web client that initiated this ChangeDevice), while
+        // playerState says TV — and downstream calls that consult the registry
+        // would see a stale active.
         Device? targetClient = ConnectedClients.Clients.Values.FirstOrDefault(c =>
             c.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase)
         );
         if (targetClient is not null)
-            CurrentDevice[user.Id] = targetClient;
+            _activeDeviceRegistry.Set(user.Id, targetClient);
 
         EventPayload<BroadcastEventPayload> payload = new()
         {
@@ -359,7 +367,7 @@ public partial class MusicHub
             return;
 
         bool targetIsActive =
-            CurrentDevice.TryGetValue(user.Id, out Device? active)
+            _activeDeviceRegistry.TryGet(user.Id, out Device? active)
             && active.DeviceId.Equals(target.DeviceId, StringComparison.OrdinalIgnoreCase);
 
         target.VolumePercent = clamped;
@@ -402,7 +410,7 @@ public partial class MusicHub
     private Device? ResolveVolumeTarget(Guid userId, string? deviceId)
     {
         if (string.IsNullOrEmpty(deviceId))
-            return CurrentDevice.TryGetValue(userId, out Device? active) ? active : null;
+            return _activeDeviceRegistry.TryGet(userId, out Device? active) ? active : null;
 
         return ConnectedClients.Clients.Values.FirstOrDefault(client =>
             client.Sub.Equals(userId)

@@ -40,6 +40,7 @@ public partial class MusicHub : ConnectionHub
     private readonly MusicPlaybackCommandHandler _commandHandler;
     private readonly DeviceBusRegistry _busRegistry;
     private readonly CastSessionTokenService _castTokenService;
+    private readonly MusicActiveDeviceRegistry _activeDeviceRegistry;
     private readonly INetworkDiscovery? _networkDiscovery;
 
     private readonly IChromeCastService _chromeCast;
@@ -61,6 +62,7 @@ public partial class MusicHub : ConnectionHub
         DeviceBusRegistry busRegistry,
         CastSessionTokenService castTokenService,
         IChromeCastService chromeCast,
+        MusicActiveDeviceRegistry activeDeviceRegistry,
         INetworkDiscovery? networkDiscovery = null
     )
         : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
@@ -76,10 +78,10 @@ public partial class MusicHub : ConnectionHub
         _busRegistry = busRegistry;
         _castTokenService = castTokenService;
         _chromeCast = chromeCast;
+        _activeDeviceRegistry = activeDeviceRegistry;
         _networkDiscovery = networkDiscovery;
     }
 
-    private static readonly ConcurrentDictionary<Guid, Device> CurrentDevice = new();
     private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> CommandLocks = new();
 
     private static SemaphoreSlim GetUserLock(Guid userId)
@@ -173,6 +175,7 @@ public partial class MusicHub : ConnectionHub
         Ulid stoppedDeviceId = Ulid.Empty;
         Guid stoppedTrackId = Guid.Empty;
         string? stoppedTitle = null;
+        string? stoppedClientDeviceId = null;
 
         if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
             if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? state))
@@ -187,6 +190,7 @@ public partial class MusicHub : ConnectionHub
                     stoppedDeviceId = client.Id;
                     stoppedTrackId = state.CurrentItem?.Id ?? Guid.Empty;
                     stoppedTitle = state.CurrentItem?.Name;
+                    stoppedClientDeviceId = client.DeviceId;
                 }
 
         await base.OnDisconnectedAsync(exception);
@@ -205,7 +209,7 @@ public partial class MusicHub : ConnectionHub
 
             if (connectedDevices.Count == 0)
             {
-                CurrentDevice.TryRemove(user.Id, out _);
+                _activeDeviceRegistry.Remove(user.Id);
 
                 // Clean up CommandLock and player state — no connections remain for this user
                 if (CommandLocks.TryRemove(user.Id, out SemaphoreSlim? removedLock))
@@ -217,9 +221,9 @@ public partial class MusicHub : ConnectionHub
             else if (stopPlayback)
             {
                 // Remove current device if it was the disconnecting device
-                if (wasCurrentDevice)
+                if (wasCurrentDevice && !string.IsNullOrEmpty(stoppedClientDeviceId))
                 {
-                    CurrentDevice.TryRemove(user.Id, out _);
+                    _activeDeviceRegistry.RemoveIfMatches(user.Id, stoppedClientDeviceId);
                 }
 
                 playerState.PlayState = false;
