@@ -61,7 +61,7 @@ public class ArtistsController : BaseController
     }
 
     [HttpGet]
-    [Route("/api/v{version:apiVersion}/music/artists/{letter}")]
+    [Route("/api/v{version:apiVersion}/music/artists/letter/{letter}")]
     public async Task<IActionResult> Index(string letter, [FromQuery] PageRequestDto request)
     {
         Guid userId = User.UserId();

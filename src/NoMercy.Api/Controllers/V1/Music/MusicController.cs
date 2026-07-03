@@ -128,7 +128,7 @@ public class MusicController : BaseController
                 .Carousel()
                 .WithId("artists")
                 .WithTitle("Artists".Localize())
-                .WithMoreLink("/music/artists/_")
+                .WithMoreLink("/music/artists/letter/_")
                 .WithNavigation("playlists", "albums")
                 .WithItems(
                     data.LatestArtists.Select(item => Component.MusicCard(new MusicCardData(item)))
@@ -140,7 +140,7 @@ public class MusicController : BaseController
                 .Carousel()
                 .WithId("albums")
                 .WithTitle("Albums".Localize())
-                .WithMoreLink("/music/albums/_")
+                .WithMoreLink("/music/albums/letter/_")
                 .WithNavigation("artists", "genres")
                 .WithItems(
                     data.LatestAlbums.Select(item => Component.MusicCard(new MusicCardData(item)))
@@ -295,7 +295,6 @@ public class MusicController : BaseController
     [Route("search")]
     public async Task<IActionResult> Search([FromQuery] SearchQueryRequest request)
     {
-
         Guid userId = User.UserId();
         string country = Country();
         string normalizedQuery = request.Query.NormalizeSearch();
@@ -422,7 +421,6 @@ public class MusicController : BaseController
     [Route("search/{query}/{Type}")]
     public IActionResult TypeSearch(string query, string type)
     {
-
         return Ok(new PlaceholderResponse { Data = [] });
     }
 }

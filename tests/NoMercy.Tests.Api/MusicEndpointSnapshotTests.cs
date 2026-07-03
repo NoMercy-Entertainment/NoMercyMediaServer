@@ -225,7 +225,7 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Artists_Index_ReturnsComponentResponse()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/music/artists/_");
+        HttpResponseMessage response = await _client.GetAsync("/api/v1/music/artists/letter/_");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
@@ -332,7 +332,9 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         );
         Assert.Contains("Artist not found", memberBody);
 
-        HttpResponseMessage letterResponse = await _client.GetAsync("/api/v1/music/artists/a");
+        HttpResponseMessage letterResponse = await _client.GetAsync(
+            "/api/v1/music/artists/letter/a"
+        );
         string letterBody = await letterResponse.Content.ReadAsStringAsync();
         Assert.True(
             letterResponse.StatusCode == HttpStatusCode.OK,
@@ -350,7 +352,7 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Albums_Index_ReturnsComponentOrNotFound()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/music/albums/_");
+        HttpResponseMessage response = await _client.GetAsync("/api/v1/music/albums/letter/_");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
@@ -456,7 +458,9 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         );
         Assert.Contains("Albums not found", memberBody);
 
-        HttpResponseMessage letterResponse = await _client.GetAsync("/api/v1/music/albums/a");
+        HttpResponseMessage letterResponse = await _client.GetAsync(
+            "/api/v1/music/albums/letter/a"
+        );
         string letterBody = await letterResponse.Content.ReadAsStringAsync();
         Assert.True(
             letterResponse.StatusCode == HttpStatusCode.OK,
@@ -824,8 +828,8 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Theory]
     [InlineData("/api/v1/music")]
     [InlineData("/api/v1/music/start")]
-    [InlineData("/api/v1/music/artists/_")]
-    [InlineData("/api/v1/music/albums/_")]
+    [InlineData("/api/v1/music/artists/letter/_")]
+    [InlineData("/api/v1/music/albums/letter/_")]
     [InlineData("/api/v1/music/playlists")]
     [InlineData("/api/v1/music/genres")]
     [InlineData("/api/v1/music/tracks")]
