@@ -114,14 +114,17 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
         catch (Exception e)
         {
             if (e.Source == "Microsoft.EntityFrameworkCore.Relational")
+            {
+                logger?.LogDebug(e, "Queue DB contention reserving a job on {Queue}", name);
                 return null;
+            }
             if (attempt < MaxDbRetryAttempts)
             {
                 Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
                 return ReserveJob(name, currentJobId, attempt + 1);
             }
 
-            logger?.LogError("{Message}", e.Message);
+            logger?.LogError(e, "Failed to reserve a job on {Queue}", name);
         }
 
         return null;
@@ -163,7 +166,10 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
         catch (Exception e)
         {
             if (e.Source == "Microsoft.EntityFrameworkCore.Relational")
+            {
+                logger?.LogDebug(e, "Queue DB contention failing job {JobId}", queueJob.Id);
                 return;
+            }
             if (attempt < MaxDbRetryAttempts)
             {
                 Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
@@ -171,7 +177,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
             }
             else
             {
-                logger?.LogError("{Message}", e.Message);
+                logger?.LogError(e, "Failed to record job failure for {JobId}", queueJob.Id);
             }
         }
     }
@@ -228,7 +234,22 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
                 context.RemoveJob(queueJob);
             }
         }
-        catch (Exception) { }
+        catch (Exception e)
+        {
+            if (e.Source == "Microsoft.EntityFrameworkCore.Relational")
+            {
+                logger?.LogDebug(e, "Queue DB contention deleting job {JobId}", queueJob.Id);
+                return;
+            }
+            if (attempt < MaxDbRetryAttempts)
+            {
+                Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
+                DeleteJob(queueJob, attempt + 1);
+                return;
+            }
+
+            logger?.LogError(e, "Failed to delete queue job {JobId}", queueJob.Id);
+        }
     }
 
     public void RequeueFailedJob(int failedJobId, int attempt = 0)
@@ -258,7 +279,10 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
         catch (Exception e)
         {
             if (e.Source == "Microsoft.EntityFrameworkCore.Relational")
+            {
+                logger?.LogDebug(e, "Queue DB contention requeuing failed job {FailedJobId}", failedJobId);
                 return;
+            }
             if (attempt < MaxDbRetryAttempts)
             {
                 Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
@@ -266,7 +290,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
             }
             else
             {
-                logger?.LogError("{Message}", e.Message);
+                logger?.LogError(e, "Failed to requeue failed job {FailedJobId}", failedJobId);
             }
         }
     }
