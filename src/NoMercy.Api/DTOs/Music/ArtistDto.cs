@@ -65,7 +65,7 @@ public class ArtistDto
         Backdrop = img?.FilePath is not null
             ? new Uri($"/images/music{img.FilePath}", UriKind.Relative).ToString()
             : null;
-        Link = new($"/music/artist/{Id}", UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
         Type = "artist";
         Description = !string.IsNullOrEmpty(description)
             ? description
@@ -93,7 +93,7 @@ public class ArtistDto
         Backdrop = img?.FilePath is not null
             ? new Uri($"/images/music{img.FilePath}", UriKind.Relative).ToString()
             : null;
-        Link = new($"/music/artist/{Id}", UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
         Description = artistTrack.Artist.Description;
         Type = "artist";
         Disambiguation = artistTrack.Artist.Disambiguation;

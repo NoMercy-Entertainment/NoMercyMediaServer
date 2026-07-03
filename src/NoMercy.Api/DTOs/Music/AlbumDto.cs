@@ -69,7 +69,7 @@ public class AlbumDto
             ? new Uri($"/images/music{img.FilePath}", UriKind.Relative).ToString()
             : null;
         Disambiguation = albumArtist.Album.Disambiguation;
-        Link = new($"/music/album/{Id}", UriKind.Relative);
+        Link = new($"/music/albums/{Id}", UriKind.Relative);
         Description = !string.IsNullOrEmpty(description)
             ? description
             : albumArtist.Album.Description;
@@ -99,7 +99,7 @@ public class AlbumDto
             ? new Uri($"/images/music{img.FilePath}", UriKind.Relative).ToString()
             : null;
         Disambiguation = albumTrack.Album.Disambiguation;
-        Link = new($"/music/album/{Id}", UriKind.Relative);
+        Link = new($"/music/albums/{Id}", UriKind.Relative);
         Description = !string.IsNullOrEmpty(description)
             ? description
             : albumTrack.Album.Description;
@@ -128,7 +128,7 @@ public class AlbumDto
             ? new Uri($"/images/music{img.FilePath}", UriKind.Relative).ToString()
             : null;
         Disambiguation = album.Disambiguation;
-        Link = new($"/music/album/{Id}", UriKind.Relative);
+        Link = new($"/music/albums/{Id}", UriKind.Relative);
         Description = !string.IsNullOrEmpty(description) ? description : album.Description;
         Type = "album";
         ColorPalette = album.ColorPalette;

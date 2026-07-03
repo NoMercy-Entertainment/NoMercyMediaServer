@@ -71,7 +71,7 @@ public record CarouselResponseItemDto
         LibraryId = artist.LibraryId;
         Name = artist.Name;
         Type = "artist";
-        Link = new($"/music/artist/{Id}", UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
 
         Tracks = artist
             .ArtistTrack.Where(artistTrack => artistTrack.Track.Duration != null)
@@ -93,7 +93,7 @@ public record CarouselResponseItemDto
         LibraryId = album.LibraryId;
         Name = album.Name;
         Type = "album";
-        Link = new($"/music/album/{Id}", UriKind.Relative);
+        Link = new($"/music/albums/{Id}", UriKind.Relative);
 
         Tracks = album
             .AlbumTrack.Where(albumTrack => albumTrack.Track.Duration != null)
@@ -115,7 +115,7 @@ public record CarouselResponseItemDto
         LibraryId = artistUser.Artist.LibraryId;
         Name = artistUser.Artist.Name;
         Type = "artist";
-        Link = new($"/music/artist/{Id}", UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
 
         Tracks = artistUser
             .Artist.ArtistTrack.Where(artistTrack => artistTrack.Track.Duration != null)
@@ -137,7 +137,7 @@ public record CarouselResponseItemDto
         LibraryId = playlist.Album.LibraryId;
         Name = playlist.Album.Name;
         Type = "album";
-        Link = new($"/music/album/{Id}", UriKind.Relative);
+        Link = new($"/music/albums/{Id}", UriKind.Relative);
 
         Tracks = playlist
             .Album.AlbumTrack.Where(albumTrack => albumTrack.Track.Duration != null)

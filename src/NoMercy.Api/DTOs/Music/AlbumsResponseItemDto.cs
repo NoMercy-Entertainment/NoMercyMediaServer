@@ -78,7 +78,7 @@ public record AlbumsResponseItemDto
         Id = album.Id;
         Name = album.Name;
         Type = "album";
-        Link = new($"/music/album/{Id}", UriKind.Relative);
+        Link = new($"/music/albums/{Id}", UriKind.Relative);
 
         Tracks = album
             .AlbumTrack.Select(albumTrack => albumTrack.Track)
@@ -110,7 +110,7 @@ public record AlbumsResponseItemDto
         Id = album.Id;
         Name = album.Name;
         Type = "album";
-        Link = new($"/music/album/{Id}", UriKind.Relative);
+        Link = new($"/music/albums/{Id}", UriKind.Relative);
         Tracks = album.TrackCount;
     }
 }

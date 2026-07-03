@@ -99,7 +99,7 @@ public record TrackRowData
         {
             Id = at.ArtistId.ToString(),
             Name = at.Artist.Name,
-            Link = new($"/music/artist/{at.ArtistId}", UriKind.Relative),
+            Link = new($"/music/artists/{at.ArtistId}", UriKind.Relative),
             Type = "artist",
         });
     }
@@ -132,7 +132,7 @@ public record TrackRowData
             {
                 Id = at.ArtistId.ToString(),
                 Name = at.Artist.Name,
-                Link = new($"/music/artist/{at.ArtistId}", UriKind.Relative),
+                Link = new($"/music/artists/{at.ArtistId}", UriKind.Relative),
                 Type = "artist",
             });
         AlbumTrack = track
@@ -141,7 +141,7 @@ public record TrackRowData
             {
                 Id = at.AlbumId.ToString(),
                 Name = at.Album.Name,
-                Link = new($"/music/album/{at.AlbumId}", UriKind.Relative),
+                Link = new($"/music/albums/{at.AlbumId}", UriKind.Relative),
                 Type = "album",
             });
     }
@@ -169,14 +169,14 @@ public record TrackRowData
         {
             Id = at.Id.ToString(),
             Name = at.Name,
-            Link = new($"/music/artist/{at.Id}", UriKind.Relative),
+            Link = new($"/music/artists/{at.Id}", UriKind.Relative),
             Type = "artist",
         });
         AlbumTrack = track.Albums.Select(at => new TrackArtist
         {
             Id = at.Id.ToString(),
             Name = at.Name,
-            Link = new($"/music/album/{at.Id}", UriKind.Relative),
+            Link = new($"/music/albums/{at.Id}", UriKind.Relative),
             Type = "album",
         });
     }

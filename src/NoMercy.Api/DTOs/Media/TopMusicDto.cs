@@ -60,7 +60,7 @@ public record TopMusicDto
         Name = albumTrack.Album.Name;
         ColorPalette = albumTrack.Album.ColorPalette;
         Type = "album";
-        Link = new($"/music/album/{Id}", UriKind.Relative);
+        Link = new($"/music/albums/{Id}", UriKind.Relative);
         Cover = albumTrack.Album.Cover;
         Cover = Cover is not null
             ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
@@ -73,7 +73,7 @@ public record TopMusicDto
         Name = artistTrack.Artist.Name;
         ColorPalette = artistTrack.Artist.ColorPalette;
         Type = "artist";
-        Link = new($"/music/artist/{Id}", UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
         Cover = artistTrack.Artist.Cover;
         Cover = Cover is not null
             ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
@@ -88,8 +88,8 @@ public record TopMusicDto
         Type = item.Type;
         Link = item.Type switch
         {
-            "artist" => new($"/music/artist/{Id}", UriKind.Relative),
-            "album" => new($"/music/album/{Id}", UriKind.Relative),
+            "artist" => new($"/music/artists/{Id}", UriKind.Relative),
+            "album" => new($"/music/albums/{Id}", UriKind.Relative),
             "playlist" => new($"/music/playlists/{Id}", UriKind.Relative),
             _ => new($"/music/{Id}", UriKind.Relative),
         };

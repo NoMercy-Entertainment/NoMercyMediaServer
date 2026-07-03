@@ -328,7 +328,7 @@ public partial class MusicHub : ConnectionHub
         )
             return CastIntent.Idle();
 
-        string listType = parts[1];
+        string listType = MusicPlayerStateFactory.FromRouteSegment(parts[1]);
         string listId = parts[2];
         string trackId = state.CurrentItem.Id.ToString();
         int? resumeAt = state.Time > 0 ? state.Time / 1000 : null;

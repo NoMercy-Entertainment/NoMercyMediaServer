@@ -79,7 +79,7 @@ public record AlbumResponseItemDto
         Id = album.Id;
         LibraryId = album.LibraryId;
         Name = album.Name;
-        Link = new($"/music/album/{Id}", UriKind.Relative);
+        Link = new($"/music/albums/{Id}", UriKind.Relative);
         Type = "album";
 
         Artists = album

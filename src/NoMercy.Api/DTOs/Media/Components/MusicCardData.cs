@@ -76,7 +76,7 @@ public record MusicCardData
         Name = album.Name;
         Cover = album.Cover is not null ? $"/images/music{album.Cover}" : null;
         Type = "album";
-        Link = $"/music/album/{album.Id}";
+        Link = $"/music/albums/{album.Id}";
         ColorPalette = album.ColorPalette;
         Year = album.Year;
         Tracks = album.AlbumTrack.Count;
@@ -89,7 +89,7 @@ public record MusicCardData
         Name = artist.Name;
         Cover = artist.Cover is not null ? $"/images/music{artist.Cover}" : null;
         Type = "artist";
-        Link = $"/music/artist/{artist.Id}";
+        Link = $"/music/artists/{artist.Id}";
         ColorPalette = artist.ColorPalette;
         Disambiguation = artist.Disambiguation;
         Description = artist.Description;
@@ -145,7 +145,7 @@ public record MusicCardData
         Name = artist.Name;
         Cover = artist.Cover is not null ? $"/images/music{artist.Cover}" : null;
         Type = "artist";
-        Link = $"/music/artist/{artist.Id}";
+        Link = $"/music/artists/{artist.Id}";
         ColorPalette = ColorPalette.FromJsonOrNull(artist.ColorPalette);
         Disambiguation = artist.Disambiguation;
         Description = artist.Description;
@@ -159,7 +159,7 @@ public record MusicCardData
         Name = album.Name;
         Cover = album.Cover is not null ? $"/images/music{album.Cover}" : null;
         Type = "album";
-        Link = $"/music/album/{album.Id}";
+        Link = $"/music/albums/{album.Id}";
         ColorPalette = ColorPalette.FromJsonOrNull(album.ColorPalette);
         Year = album.Year;
         Tracks = album.TrackCount;
@@ -243,7 +243,7 @@ public record MusicHomeCardData
         Cover = album.Cover is not null ? $"/images/music{album.Cover}" : null;
         Cover = $"/images/music{album.Cover}";
         Type = "album";
-        Link = $"/music/album/{album.Id}";
+        Link = $"/music/albums/{album.Id}";
         ColorPalette = album.ColorPalette;
         Year = album.Year;
         Tracks = album.AlbumTrack.Count;
@@ -257,7 +257,7 @@ public record MusicHomeCardData
         Cover = artist.Cover is not null ? $"/images/music{artist.Cover}" : null;
         Cover = $"/images/music{artist.Cover}";
         Type = "artist";
-        Link = $"/music/artist/{artist.Id}";
+        Link = $"/music/artists/{artist.Id}";
         ColorPalette = artist.ColorPalette;
         Disambiguation = artist.Disambiguation;
         Description = artist.Description;

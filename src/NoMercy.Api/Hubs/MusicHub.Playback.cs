@@ -212,7 +212,9 @@ public partial class MusicHub
     private static bool IsSamePlaylist(MusicPlayerState state, string type, Guid listId)
     {
         return state.CurrentItem is not null
-            && state.CurrentList.ToString().Contains($"{type}/{listId}");
+            && state
+                .CurrentList.ToString()
+                .Contains($"{MusicPlayerStateFactory.ToRouteSegment(type)}/{listId}");
     }
 
     private static bool IsSamePlaylistAndTrack(
@@ -382,7 +384,10 @@ public partial class MusicHub
         state.CurrentItem = item;
         state.PlayState = true;
         state.Playlist = sortedPlaylist;
-        state.CurrentList = new($"/music/{type}/{listId}", UriKind.Relative);
+        state.CurrentList = new(
+            $"/music/{MusicPlayerStateFactory.ToRouteSegment(type)}/{listId}",
+            UriKind.Relative
+        );
         state.Backlog.Add(item);
         state.Time = 0;
         state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);

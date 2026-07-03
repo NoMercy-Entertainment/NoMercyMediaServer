@@ -35,7 +35,7 @@ public class MusicPlaybackServiceLivenessTests
         {
             DeviceId = deviceId,
             PlayState = true,
-            CurrentList = new("/music/album/test", UriKind.Relative),
+            CurrentList = new("/music/albums/test", UriKind.Relative),
             LastActiveHeartbeatUtc = lastHeartbeatUtc,
         };
     }

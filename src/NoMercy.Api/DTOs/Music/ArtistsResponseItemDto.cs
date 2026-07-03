@@ -60,7 +60,7 @@ public record ArtistsResponseItemDto
         Id = artist.Id;
         Name = artist.Name;
         Type = "artist";
-        Link = new($"/music/artist/{Id}", UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
 
         Tracks = artist.ArtistTrack.Select(artistTrack => artistTrack.Track).Count();
     }
@@ -77,7 +77,7 @@ public record ArtistsResponseItemDto
         Id = album.Id;
         Name = album.Name;
         Type = "artist";
-        Link = new($"/music/artist/{Id}", UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
 
         Tracks = album.AlbumTrack.Select(albumTrack => albumTrack.Track).Count();
     }
@@ -94,7 +94,7 @@ public record ArtistsResponseItemDto
         Id = artist.Id;
         Name = artist.Name;
         Type = "artist";
-        Link = new($"/music/artist/{Id}", UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
         Tracks = artist.TrackCount;
     }
 }

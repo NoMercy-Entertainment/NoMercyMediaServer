@@ -37,7 +37,7 @@ public class MusicPlayerStateFactory
             Duration = item.Duration.ToMilliSeconds(),
             Shuffle = false,
             Repeat = "off",
-            CurrentList = new($"/music/{type}/{listId}", UriKind.Relative),
+            CurrentList = new($"/music/{ToRouteSegment(type)}/{listId}", UriKind.Relative),
             Actions = new()
             {
                 Disallows = new()
@@ -61,4 +61,38 @@ public class MusicPlayerStateFactory
             },
         };
     }
+
+    /// <summary>
+    /// Maps a playback list `type` token to the REST route segment used in the
+    /// emitted `CurrentList` link. All five member routes (album, artist,
+    /// playlist, track, genre) are plural; the type token dispatched through
+    /// StartPlaybackCommand and MusicPlaylistManager.GetPlaylist stays singular.
+    /// <see cref="FromRouteSegment"/> is the inverse.
+    /// </summary>
+    public static string ToRouteSegment(string type) =>
+        type switch
+        {
+            "album" => "albums",
+            "artist" => "artists",
+            "playlist" => "playlists",
+            "track" => "tracks",
+            "genre" => "genres",
+            _ => type,
+        };
+
+    /// <summary>
+    /// Inverse of <see cref="ToRouteSegment"/>. Recovers the semantic playback
+    /// `type` token (e.g. for re-dispatching a cast handoff through
+    /// StartPlaybackCommand) from a `CurrentList` route segment.
+    /// </summary>
+    public static string FromRouteSegment(string segment) =>
+        segment switch
+        {
+            "albums" => "album",
+            "artists" => "artist",
+            "playlists" => "playlist",
+            "tracks" => "track",
+            "genres" => "genre",
+            _ => segment,
+        };
 }
