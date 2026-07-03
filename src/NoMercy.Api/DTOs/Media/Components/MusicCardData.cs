@@ -103,7 +103,7 @@ public record MusicCardData
         Name = playlist.Name;
         Cover = playlist.Cover is not null ? $"/images/music{playlist.Cover}" : null;
         Type = "playlist";
-        Link = $"/music/playlist/{playlist.Id}";
+        Link = $"/music/playlists/{playlist.Id}";
         Tracks = playlist.Tracks.Count;
     }
 
@@ -172,7 +172,7 @@ public record MusicCardData
         Name = playlist.Name;
         Cover = playlist.Cover is not null ? $"/images/music{playlist.Cover}" : null;
         Type = "playlist";
-        Link = $"/music/playlist/{playlist.Id}";
+        Link = $"/music/playlists/{playlist.Id}";
         ColorPalette = ColorPalette.FromJsonOrNull(playlist.ColorPalette);
         Tracks = playlist.TrackCount;
     }
