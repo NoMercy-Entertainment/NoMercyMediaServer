@@ -250,8 +250,8 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
 
         if (measuredVariantPaths.Count > 0 && !anyVariantMeasured)
         {
-            var missing = measuredVariantPaths.Where(p => !storage.Exists(p)).ToList();
-            var empty = measuredVariantPaths
+            List<string> missing = measuredVariantPaths.Where(p => !storage.Exists(p)).ToList();
+            List<string> empty = measuredVariantPaths
                 .Where(p => storage.Exists(p) && analyzer.Measure(p).PeakBandwidth == 0)
                 .ToList();
 
