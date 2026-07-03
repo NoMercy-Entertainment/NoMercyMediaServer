@@ -18,5 +18,15 @@ using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Data.Repositories;
 
-public partial class RecommendationRepository(IDbContextFactory<MediaContext> contextFactory)
-    : IRecommendationRepository { }
+public class RecommendationDiagnosticsDto
+{
+    public List<string> Libraries { get; set; } = [];
+    public int AnimeByLibraryType { get; set; }
+    public int AnimeByMediaType { get; set; }
+    public int TotalRecsWithTv { get; set; }
+    public int AnimeRecsByMediaType { get; set; }
+    public int TotalSimWithTv { get; set; }
+    public int AnimeSimByMediaType { get; set; }
+    public List<int> SampleAnimeIds { get; set; } = [];
+    public int SampleRecsCount { get; set; }
+}

@@ -18,5 +18,17 @@ using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Data.Repositories;
 
-public partial class RecommendationRepository(IDbContextFactory<MediaContext> contextFactory)
-    : IRecommendationRepository { }
+public class RecommendationCandidateDto
+{
+    public int MediaId { get; set; }
+    public string? Title { get; set; }
+    public string? TitleSort { get; set; }
+    public string? Overview { get; set; }
+    public string? Poster { get; set; }
+    public string? Backdrop { get; set; }
+    public string ColorPalette { get; set; } = string.Empty;
+    public string MediaType { get; set; } = string.Empty;
+    public string? SourceMediaType { get; set; }
+    public int SourceCount { get; set; }
+    public List<int> SourceIds { get; set; } = [];
+}
