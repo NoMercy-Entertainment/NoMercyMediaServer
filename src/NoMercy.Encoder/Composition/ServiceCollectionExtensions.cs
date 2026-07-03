@@ -156,6 +156,14 @@ public static class ServiceCollectionExtensions
         // because GetGpuSemaphore threw "device 'h264_nvenc' is not
         // registered" — see UnobservedTaskException entries in encoder logs
         // before this fix.
+        // Activate the live-headroom gate with the record's protective defaults
+        // (75% CPU / 80% GPU / 1 GB free). Without this registration the budget fell
+        // back to ResourceBudgetOptions.Disabled — the gate was built but dormant, so
+        // the encoder never backed off and could saturate a machine the user is
+        // actively using. TODO: surface CpuHeadroomPercent as a dashboard setting so a
+        // dedicated-encode-box operator can raise it toward 100 (max throughput).
+        services.TryAddSingleton(new ResourceBudgetOptions());
+
         services.AddSingleton<IResourceBudget>(sp =>
         {
             IHardwareCapabilities hw = sp.GetRequiredService<IHardwareCapabilities>();
