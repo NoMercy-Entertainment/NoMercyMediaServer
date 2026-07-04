@@ -219,8 +219,7 @@ public class WorkerSelfRegistrationService(
                 else
                 {
                     logger.LogWarning(
-                        "Distributed encoding license revoked (403 from coordinator) — "
-                            + "worker will stop re-registering. Resolve the license issue and restart."
+                        "Distributed encoding license revoked (403 from coordinator) — worker will stop re-registering. Resolve the license issue and restart."
                     );
                     tokenHolder.IsRevoked = true;
                 }

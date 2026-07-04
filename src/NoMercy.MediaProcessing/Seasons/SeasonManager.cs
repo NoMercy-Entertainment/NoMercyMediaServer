@@ -11,24 +11,25 @@
 
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
+using NoMercy.NmSystem;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Season;
 using NoMercy.Providers.TMDB.Models.TV;
-using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Seasons;
 
-public class SeasonManager(ISeasonRepository seasonRepository, JobDispatcher jobDispatcher)
-    : BaseManager,
-        ISeasonManager
+public class SeasonManager(
+    ISeasonRepository seasonRepository,
+    JobDispatcher jobDispatcher,
+    ILogger<SeasonManager> logger
+) : BaseManager, ISeasonManager
 {
     public async Task<IEnumerable<TmdbSeasonAppends>> StoreSeasonsAsync(
         TmdbTvShowAppends show,
@@ -39,7 +40,7 @@ public class SeasonManager(ISeasonRepository seasonRepository, JobDispatcher job
 
         await Parallel.ForEachAsync(
             show.Seasons,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (season, _) =>
             {
                 try
@@ -56,7 +57,7 @@ public class SeasonManager(ISeasonRepository seasonRepository, JobDispatcher job
                 }
                 catch (Exception e)
                 {
-                    Logger.MovieDb(e.Message, LogEventLevel.Error);
+                    logger.LogError(e.Message);
                 }
             }
         );
@@ -74,7 +75,7 @@ public class SeasonManager(ISeasonRepository seasonRepository, JobDispatcher job
         });
 
         await seasonRepository.StoreAsync(seasons);
-        Logger.MovieDb($"Show {show.Name}: Seasons stored", LogEventLevel.Debug);
+        logger.LogDebug("Show {Name}: Seasons stored", show.Name);
 
         foreach (Season season in seasons)
             jobDispatcher.DispatchColorPaletteJob("season", season.Id.ToString());
@@ -86,15 +87,29 @@ public class SeasonManager(ISeasonRepository seasonRepository, JobDispatcher job
 
     public Task UpdateSeasonAsync(string showName, TmdbSeasonAppends season)
     {
-        throw new NotImplementedException();
+        // Refresh the existing season's metadata in place; the show link (TvId)
+        // is left untouched because a season update never re-parents a season.
+        return seasonRepository.UpdateAsync(
+            new Season
+            {
+                Id = season.Id,
+                Title = season.Name,
+                AirDate = season.AirDate,
+                EpisodeCount = season.Episodes.Length,
+                Overview = season.Overview,
+                Poster = season.PosterPath,
+                SeasonNumber = season.SeasonNumber,
+            }
+        );
     }
 
     public async Task RemoveSeasonAsync(string showName, TmdbSeasonAppends season)
     {
         await seasonRepository.RemoveSeasonAsync(season.Id);
-        Logger.MovieDb(
-            $"Show {showName}: Season {season.SeasonNumber}: Removed",
-            LogEventLevel.Debug
+        logger.LogDebug(
+            "Show {ShowName}: Season {SeasonNumber}: Removed",
+            showName,
+            season.SeasonNumber
         );
     }
 
@@ -117,9 +132,10 @@ public class SeasonManager(ISeasonRepository seasonRepository, JobDispatcher job
             });
 
         await seasonRepository.StoreTranslationsAsync(translations);
-        Logger.MovieDb(
-            $"Show {showName}: Season {season.SeasonNumber}: Translations stored",
-            LogEventLevel.Debug
+        logger.LogDebug(
+            "Show {ShowName}: Season {SeasonNumber}: Translations stored",
+            showName,
+            season.SeasonNumber
         );
     }
 
@@ -142,9 +158,10 @@ public class SeasonManager(ISeasonRepository seasonRepository, JobDispatcher job
             .ToList();
 
         await seasonRepository.StoreImagesAsync(posters);
-        Logger.MovieDb(
-            $"Show {showName}: Season {season.SeasonNumber}: Images stored",
-            LogEventLevel.Debug
+        logger.LogDebug(
+            "Show {ShowName}: Season {SeasonNumber}: Images stored",
+            showName,
+            season.SeasonNumber
         );
 
         await using MediaContext db = new();

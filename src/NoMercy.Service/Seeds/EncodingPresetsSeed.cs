@@ -248,7 +248,7 @@ public static class EncodingPresetsSeed
         }
     }
 
-    private static V1VideoProfile MapVideo(IVideoProfile v) =>
+    private static V1VideoProfile MapVideo(VideoProfile v) =>
         new(
             Codec: v.Codec,
             Bitrate: v.Bitrate,
@@ -267,7 +267,7 @@ public static class EncodingPresetsSeed
             CustomArguments: v.CustomArguments
         );
 
-    private static V1AudioProfile MapAudio(IAudioProfile a) =>
+    private static V1AudioProfile MapAudio(AudioProfile a) =>
         new(
             Codec: a.Codec,
             Channels: a.Channels,
@@ -281,7 +281,7 @@ public static class EncodingPresetsSeed
             CustomPanMatrix: a.CustomPanMatrix
         );
 
-    private static V1SubtitleProfile MapSubtitle(ISubtitleProfile s) =>
+    private static V1SubtitleProfile MapSubtitle(SubtitleProfile s) =>
         new(
             Codec: s.Codec,
             PlaylistName: s.PlaylistName,

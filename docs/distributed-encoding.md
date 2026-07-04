@@ -211,14 +211,8 @@ attempt.
 ## Troubleshooting
 
 **Worker shows as "cooldown" after a bad task, I fixed the issue and want it back in rotation.**
-Re-register the worker — it resets the cooldown:
-
-```sh
-curl -X POST https://worker.example.com:7626/restart-distribution-service
-```
-
-Or just restart the worker process; it re-registers on boot with a fresh
-counter.
+Restart the worker process — it re-registers on boot with a fresh counter, which
+clears the cooldown.
 
 **Coordinator returns 503 on register/heartbeat.**
 The coordinator's `DistributedEncodingSigningKey` isn't set. Check

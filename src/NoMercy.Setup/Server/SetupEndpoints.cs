@@ -14,7 +14,7 @@ using System.Reflection;
 using System.Text;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
-using NoMercy.Networking.Certificate;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
@@ -192,12 +192,12 @@ public class SetupEndpoints
             status = "setup_required",
             phase = _state.CurrentPhase.ToString(),
             error = _state.ErrorMessage,
-            server_port = Config.InternalServerPort,
-            auth_base_url = Config.AuthBaseUrl.OrEmpty(),
-            client_id = Config.TokenClientId.OrEmpty(),
+            server_port = RuntimeServerSettings.Current.InternalServerPort,
+            auth_base_url = ExternalServicesConfig.Current.AuthBaseUrl.OrEmpty(),
+            client_id = ExternalServicesConfig.Current.TokenClientId.OrEmpty(),
             code_challenge = codeChallenge,
             pkce_state = pkceState,
-            is_first_boot = !Certificate.HasValidCertificate(),
+            is_first_boot = !Start.Certificate!.HasValidCertificate(),
         };
 
         await WriteJsonResponse(context.Response, response);
@@ -369,17 +369,18 @@ public class SetupEndpoints
 
         try
         {
-            if (string.IsNullOrEmpty(Config.TokenClientId))
+            if (string.IsNullOrEmpty(ExternalServicesConfig.Current.TokenClientId))
                 throw new InvalidOperationException("Auth configuration not available");
 
             List<KeyValuePair<string, string>> tokenBody = AuthManager.BuildAuthorizationCodeBody(
-                Config.TokenClientId,
+                ExternalServicesConfig.Current.TokenClientId,
                 body.Code,
                 redirectUri,
                 currentCodeVerifier
             );
 
-            string tokenEndpoint = $"{Config.AuthBaseUrl}protocol/openid-connect/token";
+            string tokenEndpoint =
+                $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
 
             using SystemHttpClient httpClient = new();
             httpClient.WithNoMercyUserAgent();
@@ -420,7 +421,9 @@ public class SetupEndpoints
                 $"Silent SSO exchange failed: {ex.GetType().Name} — {ex.Message}",
                 LogEventLevel.Warning
             );
-            context.Response.StatusCode = StatusCodes.Status200OK;
+            // Return a non-2xx so the client's fetch treats this as a failure — a 200
+            // with an error body was silently swallowed and read as success.
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
             await WriteJsonResponse(
                 context.Response,
                 new { status = "error", message = ex.Message }
@@ -499,24 +502,30 @@ public class SetupEndpoints
 
         _state.TransitionTo(SetupPhase.Authenticating);
 
-        string redirectUri = $"http://localhost:{Config.InternalServerPort}/sso-callback";
+        // Must byte-for-byte match the redirect_uri the browser sent to Keycloak.
+        // A hardcoded localhost fails with invalid_grant when the user reaches setup
+        // from a LAN IP or NAS hostname — derive it from the actual request host, the
+        // same way HandleExchange does.
+        string redirectUri =
+            $"{context.Request.Scheme}://{context.Request.Host.Value}/sso-callback";
         string responseTitle;
         string responseMessage;
         bool responseIsError;
 
         try
         {
-            if (string.IsNullOrEmpty(Config.TokenClientId))
+            if (string.IsNullOrEmpty(ExternalServicesConfig.Current.TokenClientId))
                 throw new InvalidOperationException("Auth configuration not available");
 
             List<KeyValuePair<string, string>> tokenBody = AuthManager.BuildAuthorizationCodeBody(
-                Config.TokenClientId,
+                ExternalServicesConfig.Current.TokenClientId,
                 code,
                 redirectUri,
                 currentCodeVerifier
             );
 
-            string tokenEndpoint = $"{Config.AuthBaseUrl}protocol/openid-connect/token";
+            string tokenEndpoint =
+                $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
 
             using SystemHttpClient httpClient = new();
             httpClient.WithNoMercyUserAgent();
@@ -554,8 +563,10 @@ public class SetupEndpoints
                 $"Token exchange failed: {ex.GetType().Name} — {ex.Message}",
                 LogEventLevel.Error
             );
-            _state.SetError($"Sign in failed: {ex.Message}");
+            // Transition first: TransitionTo clears ErrorMessage, so setting the error
+            // before it wiped the message the /setup/status poll surfaces to the user.
             _state.TransitionTo(SetupPhase.Unauthenticated);
+            _state.SetError($"Sign in failed: {ex.Message}");
 
             responseTitle = "Authentication Failed";
             responseMessage = $"Sign in failed: {ex.Message}";
@@ -616,7 +627,7 @@ public class SetupEndpoints
 
         context.Response.ContentType = "application/json";
 
-        if (string.IsNullOrEmpty(Config.TokenClientId))
+        if (string.IsNullOrEmpty(ExternalServicesConfig.Current.TokenClientId))
         {
             context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
             await WriteJsonResponse(
@@ -629,9 +640,12 @@ public class SetupEndpoints
         try
         {
             List<KeyValuePair<string, string>> deviceCodeBody =
-                AuthManager.BuildDeviceCodeRequestBody(Config.TokenClientId);
+                AuthManager.BuildDeviceCodeRequestBody(
+                    ExternalServicesConfig.Current.TokenClientId
+                );
 
-            string deviceCodeEndpoint = $"{Config.AuthBaseUrl}protocol/openid-connect/auth/device";
+            string deviceCodeEndpoint =
+                $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/auth/device";
 
             using SystemHttpClient httpClient = new();
             httpClient.WithNoMercyUserAgent();
@@ -642,6 +656,14 @@ public class SetupEndpoints
             );
 
             string deviceCodeResponse = await deviceResponse.Content.ReadAsStringAsync();
+
+            // A Keycloak 4xx returns an error body that still deserializes into a
+            // DeviceAuthResponse with empty fields — check the status first so a failed
+            // request isn't handed to the user as an empty-but-valid device code.
+            if (!deviceResponse.IsSuccessStatusCode)
+                throw new InvalidOperationException(
+                    $"Device code request failed ({(int)deviceResponse.StatusCode}): {deviceCodeResponse}"
+                );
 
             DeviceAuthResponse deviceData =
                 deviceCodeResponse.FromJson<DeviceAuthResponse>()
@@ -662,7 +684,8 @@ public class SetupEndpoints
 
             if (SetupTerminalUi.IsInteractiveTerminal)
             {
-                string setupPageUrl = $"http://localhost:{Config.InternalServerPort}/setup";
+                string setupPageUrl =
+                    $"http://localhost:{RuntimeServerSettings.Current.InternalServerPort}/setup";
                 SetupTerminalUi terminalUi = _terminalUi ?? new SetupTerminalUi();
                 terminalUi.Show(
                     deviceData.VerificationUriComplete,
@@ -803,7 +826,8 @@ public class SetupEndpoints
 
             if (Start.NetworkDiscovery is not null)
                 await Start.NetworkDiscovery.DiscoverExternalIpAsync();
-            await _serverRegistrationService.Init();
+            using CancellationTokenSource registrationTimeoutCts = new(TimeSpan.FromMinutes(2));
+            await _serverRegistrationService.Init().WaitAsync(registrationTimeoutCts.Token);
 
             _state.TransitionTo(SetupPhase.Registered);
             _terminalUi?.ShowProgress("Registered", "Setting up your server address...");
@@ -813,10 +837,10 @@ public class SetupEndpoints
             );
             _terminalUi?.SetStatus("Securing your connection...");
 
-            if (Certificate.HasValidCertificate())
+            if (Start.Certificate!.HasValidCertificate())
             {
                 string serverUrl =
-                    $"https://{Info.DeviceId}.nomercy.tv:{Config.ExternalServerPort}";
+                    $"https://{Info.DeviceId}.nomercy.tv:{RuntimeServerSettings.Current.ExternalServerPort}";
                 _state.SetServerUrl(serverUrl);
                 _state.TransitionTo(SetupPhase.CertificateAcquired);
                 _state.TransitionTo(SetupPhase.Complete);
@@ -827,6 +851,15 @@ public class SetupEndpoints
             {
                 _state.SetError("Registration completed but certificate was not acquired");
             }
+        }
+        catch (OperationCanceledException)
+        {
+            Logger.Setup(
+                "Post-auth registration timed out (registration_timeout)",
+                LogEventLevel.Error
+            );
+            _state.SetError("Registration timed out. Please check your connection and try again.");
+            _state.TransitionTo(SetupPhase.Authenticated);
         }
         catch (Exception ex)
         {
@@ -843,7 +876,7 @@ public class SetupEndpoints
 
     private async Task PollDeviceGrant(DeviceAuthResponse deviceData)
     {
-        if (string.IsNullOrEmpty(Config.TokenClientId))
+        if (string.IsNullOrEmpty(ExternalServicesConfig.Current.TokenClientId))
             return;
 
         // Don't transition to Authenticating here — that hides the login UI.
@@ -854,11 +887,12 @@ public class SetupEndpoints
             return;
 
         List<KeyValuePair<string, string>> tokenBody = AuthManager.BuildDeviceTokenBody(
-            Config.TokenClientId,
+            ExternalServicesConfig.Current.TokenClientId,
             deviceData.DeviceCode
         );
 
-        string tokenEndpoint = $"{Config.AuthBaseUrl}protocol/openid-connect/token";
+        string tokenEndpoint =
+            $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
         DateTime expiresAt = DateTime.UtcNow.AddSeconds(deviceData.ExpiresIn);
 
         using SystemHttpClient httpClient = new();
@@ -904,23 +938,34 @@ public class SetupEndpoints
 
                 string errorContent = await response.Content.ReadAsStringAsync();
                 dynamic? error = JsonConvert.DeserializeObject<dynamic>(errorContent);
-                if (error?.error?.ToString() != "authorization_pending")
+                string? errorCode = error?.error?.ToString();
+
+                // RFC 8628 §3.5: slow_down means keep polling but back off — it is NOT
+                // fatal. Treating it as fatal aborted an otherwise-recoverable device login.
+                if (errorCode == "slow_down")
                 {
-                    _state.SetError($"Device login failed: {error?.error_description}");
+                    intervalSec = Math.Clamp(intervalSec + 5, 1, 30);
+                    continue;
+                }
+
+                if (errorCode != "authorization_pending")
+                {
+                    // Transition first: TransitionTo clears ErrorMessage.
                     _state.TransitionTo(SetupPhase.Unauthenticated);
+                    _state.SetError($"Device login failed: {error?.error_description}");
                     return;
                 }
             }
             catch (Exception ex)
             {
-                _state.SetError($"Device login error: {ex.Message}");
                 _state.TransitionTo(SetupPhase.Unauthenticated);
+                _state.SetError($"Device login error: {ex.Message}");
                 return;
             }
         }
 
-        _state.SetError("Device authorization timed out");
         _state.TransitionTo(SetupPhase.Unauthenticated);
+        _state.SetError("Device authorization timed out");
     }
 
     // ── Private helpers ─────────────────────────────────────────────────────
@@ -1000,7 +1045,7 @@ public class SetupEndpoints
 
     internal static string BuildRedirectUri(HttpRequest request)
     {
-        int port = request.Host.Port ?? Config.InternalServerPort;
+        int port = request.Host.Port ?? RuntimeServerSettings.Current.InternalServerPort;
         return $"http://localhost:{port}/sso-callback";
     }
 

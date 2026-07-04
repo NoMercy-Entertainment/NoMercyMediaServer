@@ -82,7 +82,7 @@ public class LibraryManagerEventTests : IDisposable
         StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
         LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory, bus);
+        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory, NullLogger<LibraryManager>.Instance, bus);
 
         await manager.ProcessLibrary(Ulid.NewUlid());
 
@@ -125,7 +125,7 @@ public class LibraryManagerEventTests : IDisposable
         StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
         LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory, bus);
+        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory, NullLogger<LibraryManager>.Instance, bus);
 
         await manager.ProcessLibrary(libraryId);
 
@@ -160,7 +160,7 @@ public class LibraryManagerEventTests : IDisposable
         StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
         LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory);
+        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory, NullLogger<LibraryManager>.Instance);
 
         await manager.ProcessLibrary(libraryId);
     }
@@ -194,7 +194,7 @@ public class LibraryManagerEventTests : IDisposable
         StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
         LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory, bus);
+        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory, NullLogger<LibraryManager>.Instance, bus);
 
         await manager.ProcessLibrary(libraryId);
 
@@ -232,7 +232,7 @@ public class LibraryManagerEventTests : IDisposable
         StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
         LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory, bus);
+        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory, NullLogger<LibraryManager>.Instance, bus);
 
         await manager.ProcessLibrary(libraryId);
 

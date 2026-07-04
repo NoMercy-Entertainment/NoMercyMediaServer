@@ -18,7 +18,7 @@ namespace NoMercy.Cli.Commands;
 
 internal static class UpdateCommand
 {
-    public static Command Create(Option<string?> pipeOption)
+    public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
         Command command = new("update") { Description = "Download and stage a server update" };
 
@@ -26,12 +26,12 @@ internal static class UpdateCommand
             async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
-                using CliClient client = new(pipe);
+                using ICliClient client = clientFactory.Create(pipe);
 
                 // Step 1: Trigger download
                 Console.WriteLine("Downloading update...");
                 UpdateResponse? downloadResponse = await client.PostAsync<UpdateResponse>(
-                    "/manage/update",
+                    ApiRoutes.Update,
                     null,
                     ct
                 );
@@ -41,23 +41,30 @@ internal static class UpdateCommand
                     await Console.Error.WriteLineAsync(
                         downloadResponse?.Message ?? "Failed to download update."
                     );
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
 
                 Console.WriteLine(downloadResponse.Message);
 
                 // Step 2: Stop the server
                 Console.WriteLine("Stopping server...");
-                bool stopped = await client.PostAsync("/manage/stop", null, ct);
+                bool stopped = await client.PostAsync(ApiRoutes.Stop, null, ct);
                 if (!stopped)
                 {
                     await Console.Error.WriteLineAsync("Failed to send stop command.");
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
 
                 // Step 3: Wait for exit
                 Console.WriteLine("Waiting for server to exit...");
-                await WaitForServerExitAsync(TimeSpan.FromSeconds(30), ct);
+                bool exited = await WaitForServerExitAsync(client, TimeSpan.FromSeconds(30), ct);
+                if (!exited)
+                {
+                    await Console.Error.WriteLineAsync(
+                        "Warning: the server did not confirm it had stopped within 30s; "
+                            + "applying the update anyway."
+                    );
+                }
 
                 // Step 4: Apply the file swap
                 string tempPath = AppFiles.ServerTempExePath;
@@ -66,7 +73,7 @@ internal static class UpdateCommand
                 if (!File.Exists(tempPath))
                 {
                     await Console.Error.WriteLineAsync("No staged update file found.");
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
 
                 if (File.Exists(currentPath))
@@ -76,28 +83,65 @@ internal static class UpdateCommand
                 await FilePermissions.SetExecutionPermissions(currentPath);
 
                 Console.WriteLine("Update applied. Start the server to use the new version.");
-                return 0;
+                return (int)ExitCode.Success;
             }
         );
 
         return command;
     }
 
-    private static async Task WaitForServerExitAsync(TimeSpan timeout, CancellationToken ct)
+    private static async Task<bool> WaitForServerExitAsync(
+        ICliClient client,
+        TimeSpan timeout,
+        CancellationToken ct
+    )
     {
         using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(timeout);
 
-        while (!cts.Token.IsCancellationRequested)
+        while (true)
         {
+            if (await HasServerStoppedRespondingAsync(client, cts.Token))
+            {
+                return true;
+            }
+
             try
             {
                 await Task.Delay(500, cts.Token);
             }
             catch (OperationCanceledException)
             {
-                return;
+                // Re-throw a genuine caller cancellation; a fired timeout simply
+                // means the server never confirmed that it stopped.
+                ct.ThrowIfCancellationRequested();
+                return false;
             }
+        }
+    }
+
+    // Returns true only when the server's management endpoint is provably
+    // unreachable (connection refused / pipe closed), which means the process
+    // has exited and the file swap is safe. Any successful or merely
+    // unsuccessful HTTP response is treated as "still running" so a transient
+    // error can never trigger a premature swap.
+    private static async Task<bool> HasServerStoppedRespondingAsync(
+        ICliClient client,
+        CancellationToken ct
+    )
+    {
+        try
+        {
+            await client.GetRawAsync(ApiRoutes.Status, ct);
+            return false;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            return false;
+        }
+        catch
+        {
+            return true;
         }
     }
 

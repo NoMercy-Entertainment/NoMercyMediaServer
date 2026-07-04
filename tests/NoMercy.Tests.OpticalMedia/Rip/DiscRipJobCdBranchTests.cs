@@ -82,7 +82,7 @@ public class DiscRipJobCdBranchTests
         job.StorageFactory = Mock.Of<IStorageFactory>();
         job.StorageDriver = Mock.Of<IStorageDriver>();
         job.DriveLockRegistry = new DriveLockRegistry();
-        job.Logger = NullLogger<DiscRipJob>.Instance;
+        job.LoggerFactory = NullLoggerFactory.Instance;
         job.AudioMetadataWriter = tagWriter ?? Mock.Of<IAudioMetadataWriter>();
         job.MusicBrainzReleaseClient = mbClient ?? new MusicBrainzReleaseClient();
 

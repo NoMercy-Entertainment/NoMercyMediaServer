@@ -22,7 +22,6 @@
     <PackageReference Include="I18N.DotNet" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
     <PackageReference Include="Microsoft.Extensions.Localization" />
-    <PackageReference Include="MovieFileLibrary" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Pastel" />
     <PackageReference Include="Polly" />
@@ -30,15 +29,19 @@
     <PackageReference Include="Serilog.Formatting.Compact" />
     <PackageReference Include="Serilog.Sinks.Console" />
     <PackageReference Include="Serilog.Sinks.File" />
+    <PackageReference Include="HeyRed.ImageSharp.Heif" />
+    <PackageReference Include="LibHeif.Native" />
     <PackageReference Include="SixLabors.ImageSharp" />
+    <PackageReference Include="SecureStore" />
     <PackageReference Include="System.Management" />
     <PackageReference Include="DnsClient" />
     <PackageReference Include="TagLibSharp" />
     <PackageReference Include="Ulid" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj" />
     <ProjectReference Include="..\NoMercy.Storage\NoMercy.Storage.csproj" />
   </ItemGroup>
 
@@ -47,8 +50,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="Microsoft.Extensions.Configuration">
-      <HintPath>..\..\..\..\..\Program Files\dotnet\shared\Microsoft.AspNetCore.App\9.0.1\Microsoft.Extensions.Configuration.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\NoMercyQueue.Core\NoMercyQueue.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 </Project>

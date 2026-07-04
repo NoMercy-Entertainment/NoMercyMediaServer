@@ -16,6 +16,7 @@ using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
+using NoMercy.Storage.Common;
 
 namespace NoMercy.Storage.Drivers.S3;
 
@@ -30,11 +31,19 @@ namespace NoMercy.Storage.Drivers.S3;
 /// </summary>
 public sealed class S3StorageDriver : IStorageDriver, IDisposable
 {
+    public string BackendLabel => "S3";
+
     // SDK client kept only for CopyObject / server-side operations.
     private readonly IAmazonS3? _client;
 
     private readonly string _bucket;
     private readonly string _prefix;
+
+    // Multipart part size handed to the write stream. Larger parts mean fewer HTTP
+    // round-trips at the cost of a bigger in-flight buffer. Defaults to the write
+    // stream's own default; the throughput sweep sets it to measure the curve.
+    // Not exposed on IStorageDriver — an internal tuning seam only.
+    internal int StreamPartSize { get; set; } = 8 * 1024 * 1024;
 
     private readonly string? _endpoint;
     private readonly string? _region;
@@ -221,12 +230,21 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
 
         if (HasRawCredentials)
         {
+            // A child under the prefix proves the directory exists. ParseListXml
+            // filters the trailing-slash marker key out of its results, so an
+            // empty directory created via CreateDirectory (which writes just a
+            // "prefix/" marker object) needs a direct HEAD on the marker too.
             IEnumerable<(string key, bool isDir)> page = ListOnePage(
                 prefix,
                 delimiter: "/",
                 maxKeys: 1
             );
-            return page.Any();
+            if (page.Any())
+                return true;
+
+            using HttpRequestMessage marker = SignedRequest(HttpMethod.Head, prefix);
+            using HttpResponseMessage markerRes = Http.Send(marker);
+            return markerRes.IsSuccessStatusCode;
         }
 
         ListObjectsV2Request request = new()
@@ -329,17 +347,18 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
         string key = ToKey(path);
         if (_endpoint is null || _accessKey is null || _secretKey is null)
             throw new InvalidOperationException(
-                "S3UploadStream requires an explicit endpoint + accessKey + secretKey. "
+                "S3WriteStream requires an explicit endpoint + accessKey + secretKey. "
                     + "OpenWrite is currently not supported on the default-credential-chain path."
             );
-        return new S3UploadStream(
+        return new S3WriteStream(
             _client!,
             _bucket,
             key,
             _endpoint,
             _region!,
             _accessKey,
-            _secretKey
+            _secretKey,
+            partSize: StreamPartSize
         );
     }
 
@@ -539,7 +558,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                 string fileName = relPath.Contains('/')
                     ? relPath.Substring(relPath.LastIndexOf('/') + 1)
                     : relPath;
-                if (MatchesPattern(fileName, searchPattern))
+                if (StoragePatternMatcher.Matches(fileName, searchPattern))
                     results.Add(relPath);
             }
 
@@ -551,7 +570,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                     string dirName = relPath.Contains('/')
                         ? relPath.Substring(relPath.LastIndexOf('/') + 1)
                         : relPath;
-                    if (MatchesPattern(dirName, searchPattern))
+                    if (StoragePatternMatcher.Matches(dirName, searchPattern))
                         results.Add(relPath);
                 }
             }
@@ -595,7 +614,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                     ? relPath.Substring(relPath.LastIndexOf('/') + 1)
                     : relPath;
 
-                if (MatchesPattern(fileName, searchPattern))
+                if (StoragePatternMatcher.Matches(fileName, searchPattern))
                     results.Add(relPath);
             }
 
@@ -608,7 +627,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                         ? relPath.Substring(relPath.LastIndexOf('/') + 1)
                         : relPath;
 
-                    if (MatchesPattern(dirName, searchPattern))
+                    if (StoragePatternMatcher.Matches(dirName, searchPattern))
                         results.Add(relPath);
                 }
             }
@@ -680,7 +699,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                     ? relPath.Substring(relPath.LastIndexOf('/') + 1)
                     : relPath;
 
-                if (!MatchesPattern(fileName, searchPattern))
+                if (!StoragePatternMatcher.Matches(fileName, searchPattern))
                     continue;
 
                 results.Add(
@@ -704,7 +723,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                         ? relPath.Substring(relPath.LastIndexOf('/') + 1)
                         : relPath;
 
-                    if (MatchesPattern(dirName, searchPattern))
+                    if (StoragePatternMatcher.Matches(dirName, searchPattern))
                         results.Add(
                             new StorageEntryInfo(
                                 relPath,
@@ -746,7 +765,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                 string fileName = relPath.Contains('/')
                     ? relPath.Substring(relPath.LastIndexOf('/') + 1)
                     : relPath;
-                if (MatchesPattern(fileName, searchPattern))
+                if (StoragePatternMatcher.Matches(fileName, searchPattern))
                     results.Add(
                         new StorageEntryInfo(
                             relPath,
@@ -765,7 +784,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                     string dirName = relPath.Contains('/')
                         ? relPath.Substring(relPath.LastIndexOf('/') + 1)
                         : relPath;
-                    if (MatchesPattern(dirName, searchPattern))
+                    if (StoragePatternMatcher.Matches(dirName, searchPattern))
                         results.Add(
                             new StorageEntryInfo(
                                 relPath,
@@ -1151,31 +1170,4 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
     // -----------------------------------------------------------------------
     // Pattern matching (glob → regex)
     // -----------------------------------------------------------------------
-
-    private static bool MatchesPattern(string name, string pattern)
-    {
-        if (pattern == "*" || string.IsNullOrEmpty(pattern))
-            return true;
-
-        string regexPattern =
-            "^"
-            + string.Concat(
-                pattern.Select(c =>
-                    c switch
-                    {
-                        '*' => ".*",
-                        '?' => ".",
-                        '.' => "\\.",
-                        _ => System.Text.RegularExpressions.Regex.Escape(c.ToString()),
-                    }
-                )
-            )
-            + "$";
-
-        return System.Text.RegularExpressions.Regex.IsMatch(
-            name,
-            regexPattern,
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase
-        );
-    }
 }

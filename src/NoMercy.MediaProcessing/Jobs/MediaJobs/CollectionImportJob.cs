@@ -14,6 +14,7 @@
 // ---------------------------------------------------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
@@ -21,6 +22,7 @@ using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Collections;
 using NoMercy.MediaProcessing.Movies;
 using NoMercy.Providers.TMDB.Models.Collections;
+using NoMercy.Storage;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -30,6 +32,15 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 [Serializable]
 public class CollectionImportJob : AbstractMediaJob
 {
+    public CollectionImportJob() { }
+
+    public CollectionImportJob(
+        IStorageFactory storageFactory,
+        IStorageDriver storageDriver,
+        ILoggerFactory loggerFactory
+    )
+        : base(storageFactory, storageDriver, loggerFactory) { }
+
     public override string QueueName => "import";
     public override int Priority => 4;
 
@@ -43,14 +54,15 @@ public class CollectionImportJob : AbstractMediaJob
             movieRepository,
             jobDispatcher,
             StorageFactory,
-            StorageDriver
+            LoggerFactory.CreateLogger<MovieManager>()
         );
 
         CollectionRepository collectionRepository = new(context);
         CollectionManager collectionManager = new(
             collectionRepository,
             movieManager,
-            jobDispatcher
+            jobDispatcher,
+            LoggerFactory.CreateLogger<CollectionManager>()
         );
 
         Library collectionLibrary = await context
@@ -71,15 +83,15 @@ public class CollectionImportJob : AbstractMediaJob
         if (EventBusProvider.IsConfigured)
         {
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent { QueryKey = ["libraries", LibraryId.ToString()] }
+                new LibraryRefreshedEvent { QueryKey = ["libraries", LibraryId.ToString()] }
             );
 
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent { QueryKey = ["collection"] }
+                new LibraryRefreshedEvent { QueryKey = ["collection"] }
             );
 
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent { QueryKey = ["collection", Id.ToString()] }
+                new LibraryRefreshedEvent { QueryKey = ["collection", Id.ToString()] }
             );
         }
     }

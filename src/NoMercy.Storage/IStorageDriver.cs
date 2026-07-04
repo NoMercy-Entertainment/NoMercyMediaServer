@@ -20,6 +20,13 @@ namespace NoMercy.Storage;
 /// </summary>
 public interface IStorageDriver
 {
+    /// <summary>
+    /// Human-readable backend label ("Local", "NFS", "S3", "WebDAV") for user-facing
+    /// status text. Defaults to the concrete type name so new/test drivers need no
+    /// change; real drivers override with a clean label.
+    /// </summary>
+    string BackendLabel => GetType().Name;
+
     bool FileExists(string path);
     bool DirectoryExists(string path);
     void CreateDirectory(string path);

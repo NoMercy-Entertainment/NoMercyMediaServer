@@ -13,24 +13,47 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Music;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.FanArt.Models;
 using NoMercy.Providers.MusicBrainz.Models;
 using NoMercyQueue.Core.Interfaces;
-using Serilog.Events;
 using Image = NoMercy.Database.Models.Media.Image;
 
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using NoMercyQueue;
 namespace NoMercy.Data.Jobs;
 
 [Serializable]
-public class FanArtImagesJob : IShouldQueue
+public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
 {
+    [JsonIgnore]
+    public ILoggerFactory LoggerFactory { get; set; } = null!;
+
+    [JsonIgnore]
+    private ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
+
+    public void InjectStorageServices(IServiceProvider serviceProvider)
+    {
+        LoggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+    }
+
     public string QueueName => "image";
     public int Priority => 2;
 
     public MusicBrainzArtist? MusicBrainzArtist { get; set; }
     public MusicBrainzReleaseAppends? MusicBrainzRelease { get; set; }
+
+    // Constructor injection: the queue worker builds the job via
+    // ActivatorUtilities, so the logger factory arrives without the
+    // post-construction InjectStorageServices hook. The parameterless
+    // ctor below is kept for deserialization and direct construction.
+    [ActivatorUtilitiesConstructor]
+    public FanArtImagesJob(ILoggerFactory loggerFactory)
+    {
+        LoggerFactory = loggerFactory;
+    }
 
     public FanArtImagesJob()
     {
@@ -172,7 +195,7 @@ public class FanArtImagesJob : IShouldQueue
         {
             if (e.Message.Contains("404"))
                 return;
-            Logger.FanArt(e.Message, LogEventLevel.Verbose);
+            Log.LogTrace(e.Message);
         }
     }
 
@@ -189,7 +212,7 @@ public class FanArtImagesJob : IShouldQueue
 
             List<Image> covers = [];
             List<Image> cdArts = [];
-            foreach ((Guid _, Albums albums) in fanArt.Albums)
+            foreach ((Guid albumId, Albums albums) in fanArt.Albums)
             {
                 covers.AddRange(
                     albums.Cover.Select(image => new Image
@@ -198,7 +221,7 @@ public class FanArtImagesJob : IShouldQueue
                         Type = "cover",
                         VoteCount = image.Likes,
                         FilePath = "/" + image.Url.FileName(),
-                        ArtistId = musicBrainzRelease.Id,
+                        AlbumId = albumId,
                         Site = image.Url.BasePath(),
                         Name = fanArt.Name,
                     })
@@ -211,7 +234,7 @@ public class FanArtImagesJob : IShouldQueue
                         Type = "cdArt",
                         VoteCount = image.Likes,
                         FilePath = "/" + image.Url.FileName(),
-                        ArtistId = musicBrainzRelease.Id,
+                        AlbumId = albumId,
                         Site = image.Url.BasePath(),
                         Name = fanArt.Name,
                     })
@@ -263,7 +286,7 @@ public class FanArtImagesJob : IShouldQueue
         {
             if (e.Message.Contains("404"))
                 return;
-            Logger.FanArt(e.Message, LogEventLevel.Verbose);
+            Log.LogTrace(e.Message);
         }
     }
 }

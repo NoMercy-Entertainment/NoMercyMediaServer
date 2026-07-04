@@ -15,7 +15,6 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
 using static System.Int32;
 
 namespace NoMercy.Api.Services.Video;

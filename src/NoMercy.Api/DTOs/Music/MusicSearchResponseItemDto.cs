@@ -18,7 +18,7 @@ namespace NoMercy.Api.DTOs.Music;
 public record MusicSearchResponseItemDto
 {
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("cover")]
     public string? Cover { get; set; }
@@ -59,7 +59,7 @@ public record MusicSearchResponseItemDto
         Id = artist.Id;
         Name = artist.Name;
         Type = "artist";
-        Link = new($"/music/artist/{Id}", UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
 
         Tracks = artist.ArtistTrack.Select(artistTrack => artistTrack.Track).Count();
     }
@@ -76,7 +76,7 @@ public record MusicSearchResponseItemDto
         Id = album.Id;
         Name = album.Name;
         Type = "album";
-        Link = new($"/music/album/{Id}", UriKind.Relative);
+        Link = new($"/music/albums/{Id}", UriKind.Relative);
 
         Tracks = album.AlbumTrack.Select(artistTrack => artistTrack.Track).Count();
     }

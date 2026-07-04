@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
@@ -27,24 +28,18 @@ public class PlaylistGeneratorTests
         // that build a synthetic OutputPlan need to seed non-zero metrics so
         // the variant rows still render — otherwise the master is empty and
         // every codec-tag / structure assertion fails.
-        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> videoMetrics = plan
+        Dictionary<string, VariantMetrics> videoMetrics = plan
             .VideoOutputs.Where(v => !string.IsNullOrEmpty(v.MapLabel))
             .ToDictionary(
                 v => v.MapLabel,
-                _ => new HlsVariantAnalyzer.VariantMetrics(
-                    PeakBandwidth: 5_000_000,
-                    AverageBandwidth: 4_500_000
-                )
+                _ => new VariantMetrics(PeakBandwidth: 5_000_000, AverageBandwidth: 4_500_000)
             );
 
-        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> audioMetrics = plan
+        Dictionary<string, VariantMetrics> audioMetrics = plan
             .AudioOutputs.Where(a => !string.IsNullOrEmpty(a.MapLabel))
             .ToDictionary(
                 a => a.MapLabel,
-                _ => new HlsVariantAnalyzer.VariantMetrics(
-                    PeakBandwidth: 192_000,
-                    AverageBandwidth: 180_000
-                )
+                _ => new VariantMetrics(PeakBandwidth: 192_000, AverageBandwidth: 180_000)
             );
 
         PlaylistGenerator generator = new();
@@ -108,6 +103,18 @@ public class PlaylistGeneratorTests
         string playlist = Generate(CreatePlan(encoderName: "libsvtav1", tenBit: true));
 
         playlist.Should().Contain("av01.0.08M.10");
+    }
+
+    [Fact]
+    public void MasterPlaylist_CopyVideo_OmitsCodecsInsteadOfLying()
+    {
+        // "copy" is a passthrough — the real codec could be anything. The
+        // master must never advertise avc1 (the old H.264-fallback bug) for
+        // a copy-mode variant; CODECS should list only the known audio codec.
+        string playlist = Generate(CreatePlan(encoderName: "copy"));
+
+        playlist.Should().NotContain("avc1.");
+        playlist.Should().Contain("CODECS=\"mp4a.40.2\"");
     }
 
     [Fact]
@@ -199,14 +206,11 @@ public class PlaylistGeneratorTests
         // bail on the first fetch.
         PlaylistGenerator generator = new();
         OutputPlan plan = CreatePlan();
-        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> vidMetrics = new()
+        Dictionary<string, VariantMetrics> vidMetrics = new()
         {
             ["[v0]"] = new(5_000_000, 3_500_000),
         };
-        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> audMetrics = new()
-        {
-            ["0:a:0"] = new(0, 0),
-        };
+        Dictionary<string, VariantMetrics> audMetrics = new() { ["0:a:0"] = new(0, 0) };
 
         string playlist = generator.GenerateMasterPlaylist(
             plan,
@@ -225,14 +229,8 @@ public class PlaylistGeneratorTests
         // ship in the master.
         PlaylistGenerator generator = new();
         OutputPlan plan = CreatePlan();
-        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> vidMetrics = new()
-        {
-            ["[v0]"] = new(0, 0),
-        };
-        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> audMetrics = new()
-        {
-            ["0:a:0"] = new(192_000, 180_000),
-        };
+        Dictionary<string, VariantMetrics> vidMetrics = new() { ["[v0]"] = new(0, 0) };
+        Dictionary<string, VariantMetrics> audMetrics = new() { ["0:a:0"] = new(192_000, 180_000) };
 
         string playlist = generator.GenerateMasterPlaylist(
             plan,
@@ -275,14 +273,11 @@ public class PlaylistGeneratorTests
     {
         PlaylistGenerator generator = new();
         OutputPlan plan = CreatePlan();
-        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> vidMetrics = new()
+        Dictionary<string, VariantMetrics> vidMetrics = new()
         {
             ["[v0]"] = new(5_000_000, 3_500_000),
         };
-        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> audMetrics = new()
-        {
-            ["0:a:0"] = new(256_000, 192_000),
-        };
+        Dictionary<string, VariantMetrics> audMetrics = new() { ["0:a:0"] = new(256_000, 192_000) };
 
         string playlist = generator.GenerateMasterPlaylist(
             plan,

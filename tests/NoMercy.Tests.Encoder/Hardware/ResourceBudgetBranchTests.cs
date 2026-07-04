@@ -420,4 +420,95 @@ public class ResourceBudgetBranchTests
         lease.GpuSlots.Should().Be(1);
         budget.AvailableGpuEncoderSlots(gpu.Name).Should().Be(gpu.MaxEncoderSessions - 1);
     }
+
+    // ── Acquire(requirement, timeout) rollback ───────────────────────────────
+    //
+    // The sync Acquire had no timeout at all (blocked forever) and no
+    // rollback — a throw from GetGpuSemaphore or a mid-acquisition failure
+    // after GPU slots were already granted leaked them, since the caller
+    // never received a ResourceLease to release them with.
+
+    [Fact]
+    public void Acquire_WithTimeout_RollsBackGpuSlots_WhenCpuAcquisitionTimesOut()
+    {
+        // 3 GPU slots free, 0 CPU free (soaked). Acquire wants 1 GPU + 1 CPU
+        // with a short timeout. The GPU slot it grabbed must be released when
+        // the CPU wait times out, so the GPU stays available for the next
+        // caller.
+        GpuDevice gpu = Nvidia(sessions: 3);
+        ResourceBudget budget = new([gpu], cpuCores: 1);
+        ResourceLease cpuSoak = budget.Acquire(new(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 1));
+
+        Action act = () =>
+            budget.Acquire(
+                new ResourceRequirement(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 1),
+                TimeSpan.FromMilliseconds(50)
+            );
+
+        act.Should().Throw<TimeoutException>();
+        budget.AvailableGpuEncoderSlots(gpu.Name).Should().Be(3);
+
+        budget.Release(cpuSoak);
+    }
+
+    [Fact]
+    public void Acquire_WithTimeout_RollsBackFirstGpuSlot_WhenSecondGpuSlotTimesOut()
+    {
+        // 1 of 2 GPU slots free. Requesting 2 slots grabs the 1 free slot
+        // then times out waiting for the second — the first must roll back.
+        GpuDevice gpu = Nvidia(sessions: 2);
+        ResourceBudget budget = new([gpu], cpuCores: 4);
+        ResourceLease soak = budget.Acquire(
+            new(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 0)
+        );
+
+        Action act = () =>
+            budget.Acquire(
+                new ResourceRequirement(GpuDeviceKey: gpu.Name, GpuSlots: 2, CpuThreads: 0),
+                TimeSpan.FromMilliseconds(50)
+            );
+
+        act.Should().Throw<TimeoutException>();
+        budget.AvailableGpuEncoderSlots(gpu.Name).Should().Be(1);
+
+        budget.Release(soak);
+    }
+
+    [Fact]
+    public void Acquire_WithTimeout_ThrowsTimeoutException_WhenGpuFullySaturated()
+    {
+        GpuDevice gpu = Nvidia(sessions: 1);
+        ResourceBudget budget = new([gpu], cpuCores: 4);
+        ResourceLease soak = budget.Acquire(
+            new(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 0)
+        );
+
+        Action act = () =>
+            budget.Acquire(
+                new ResourceRequirement(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 0),
+                TimeSpan.FromMilliseconds(50)
+            );
+
+        act.Should().Throw<TimeoutException>().WithMessage("*GPU slot*");
+
+        budget.Release(soak);
+    }
+
+    [Fact]
+    public void Acquire_ParameterlessOverload_StillGrantsLease_WhenBudgetAvailable()
+    {
+        // The default-timeout overload must behave exactly like the old
+        // unconditional Acquire when the budget is NOT saturated.
+        GpuDevice gpu = Nvidia(sessions: 2);
+        ResourceBudget budget = new([gpu], cpuCores: 4);
+
+        ResourceLease lease = budget.Acquire(
+            new ResourceRequirement(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 1)
+        );
+
+        lease.Should().NotBeNull();
+        budget.AvailableGpuEncoderSlots(gpu.Name).Should().Be(1);
+        budget.Release(lease);
+        budget.AvailableGpuEncoderSlots(gpu.Name).Should().Be(2);
+    }
 }

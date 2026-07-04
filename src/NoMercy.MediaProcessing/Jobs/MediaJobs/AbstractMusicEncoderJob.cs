@@ -22,6 +22,7 @@ using NoMercy.Storage;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 
+using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -49,6 +50,12 @@ public abstract class AbstractMusicEncoderJob : IShouldQueue, IJobStorageInjecto
     [JsonIgnore]
     public IStorageDriver StorageDriver { get; set; } = null!;
 
+    [JsonIgnore]
+    public ILoggerFactory LoggerFactory { get; set; } = null!;
+
+    [JsonIgnore]
+    protected ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
+
     public abstract string QueueName { get; }
     public abstract int Priority { get; }
 
@@ -58,6 +65,7 @@ public abstract class AbstractMusicEncoderJob : IShouldQueue, IJobStorageInjecto
     {
         StorageFactory = serviceProvider.GetRequiredService<IStorageFactory>();
         StorageDriver = serviceProvider.GetRequiredService<IStorageDriver>();
+        LoggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
     }
 
     public void Dispose() { }

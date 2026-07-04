@@ -49,7 +49,7 @@ public record SpecialResponseItemDto
     public string MediaType { get; set; } = string.Empty;
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("collection")]
     public IEnumerable<SpecialItemDto>? Special { get; set; }
@@ -171,10 +171,10 @@ public record SpecialResponseItemDto
         NumberOfItems = special.Items.Count;
 
         int haveMovies = special.Items.Count(item =>
-            item.MovieId is not null && item.Movie?.VideoFiles.Count != 0
+            item.MovieId is not null && item.Movie?.VideoFiles.Count > 0
         );
         int haveEpisodes = special.Items.Count(item =>
-            item.EpisodeId is not null && item.Episode?.VideoFiles.Count != 0
+            item.EpisodeId is not null && item.Episode?.VideoFiles.Count > 0
         );
         HaveItems = haveMovies + haveEpisodes;
 
@@ -208,10 +208,10 @@ public record SpecialResponseItemDto
         NumberOfItems = special.Items.Count;
 
         int movies = special.Items.Count(item =>
-            item.MovieId is not null && item.Movie?.VideoFiles.Count != 0
+            item.MovieId is not null && item.Movie?.VideoFiles.Count > 0
         );
         int episodes = special.Items.Count(item =>
-            item.EpisodeId is not null && item.Episode?.VideoFiles.Count != 0
+            item.EpisodeId is not null && item.Episode?.VideoFiles.Count > 0
         );
 
         HaveItems = movies + episodes;
@@ -303,7 +303,7 @@ public record SpecialResponseItemDto
         Type = "specials";
         MediaType = "specials";
         Link = new($"/specials/{Id}", UriKind.Relative);
-        ColorPalette = IColorPalettes.FromJsonOrNull(detail.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(detail.ColorPalette);
         Backdrops = backdrops;
         Posters = posters;
         Cast = cast;

@@ -10,28 +10,29 @@
 // -----------------------------------------------------------------------------
 
 using System.Text;
+using System.Text.RegularExpressions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Api.Services;
+using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
-using Serilog.Events;
 
 namespace NoMercy.Api.Controllers.V1.Media;
 
@@ -40,32 +41,41 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}")]
-public class HomeController : BaseController
+public partial class HomeController : BaseController
 {
+    // YouTube video ids are exactly 11 chars of [A-Za-z0-9_-]. trailerId flows
+    // into shell command strings (yt-dlp/ffmpeg) and filesystem paths, so a
+    // strict match is the trust boundary that blocks command injection and
+    // path traversal before the value reaches Shell.Exec* or Path.Combine.
+    [GeneratedRegex("^[A-Za-z0-9_-]{11}$")]
+    private static partial Regex TrailerIdRegex();
+
     private readonly HomeService _homeService;
     private readonly IDbContextFactory<MediaContext> _contextFactory;
     private readonly IStorage _transcodeStorage;
 
+    private readonly ILogger<HomeController> _logger;
+
     public HomeController(
+        ILogger<HomeController> logger,
         HomeService homeService,
         IDbContextFactory<MediaContext> contextFactory,
         [FromKeyedServices("transcode")] IStorage transcodeStorage
     )
     {
+        _logger = logger;
         _homeService = homeService;
         _contextFactory = contextFactory;
         _transcodeStorage = transcodeStorage;
     }
 
     [HttpGet]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> Index(
         [FromQuery] PageRequestDto request,
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view home");
-
         Guid userId = User.UserId();
         string language = Language();
         string country = Country();
@@ -166,11 +176,9 @@ public class HomeController : BaseController
 
     [HttpGet("home")]
     [ResponseCache(NoStore = true)]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> Home(CancellationToken ct = default)
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view continue watching");
-
         ComponentResponse result = await _homeService.GetHomeData(
             User.UserId(),
             Language(),
@@ -181,14 +189,12 @@ public class HomeController : BaseController
     }
 
     [HttpPost("home/card")]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> HomeCard(
         [FromBody] CardRequestDto request,
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view home card");
-
         ComponentResponse result = await _homeService.GetHomeCard(
             User.UserId(),
             Language(),
@@ -200,11 +206,9 @@ public class HomeController : BaseController
     }
 
     [HttpGet("home/tv")]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> HomeTv(CancellationToken ct = default)
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view home tv");
-
         ComponentResponse result = await _homeService.GetHomeTvContent(
             User.UserId(),
             Language(),
@@ -215,14 +219,12 @@ public class HomeController : BaseController
     }
 
     [HttpPost("home/continue")]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> HomeContinue(
         [FromBody] CardRequestDto request,
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view continue watching");
-
         ComponentResponse result = await _homeService.GetHomeContinueContent(
             User.UserId(),
             Language(),
@@ -235,14 +237,15 @@ public class HomeController : BaseController
 
     [HttpHead]
     [Route("trailer/{trailerId}")]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> HasTrailer(
         int id,
         string trailerId,
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view tv shows");
+        if (!TrailerIdRegex().IsMatch(trailerId))
+            return NotFoundResponse("Trailer not found");
 
         string infoJsonPath = _transcodeStorage.CombinePath(trailerId, "info.json");
 
@@ -264,7 +267,7 @@ public class HomeController : BaseController
 
         if (!result.Success || string.IsNullOrEmpty(result.StandardOutput))
         {
-            Logger.Encoder(result.StandardError, LogEventLevel.Error);
+            _logger.LogError(result.StandardError);
             return NotFoundResponse("Trailer not found");
         }
 
@@ -278,14 +281,15 @@ public class HomeController : BaseController
 
     [HttpGet]
     [Route("trailer/{trailerId}")]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> Trailer(
         int id,
         string trailerId,
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view tv shows");
+        if (!TrailerIdRegex().IsMatch(trailerId))
+            return NotFoundResponse("Trailer not found");
 
         string language = Language();
 
@@ -298,7 +302,7 @@ public class HomeController : BaseController
 
         if (trailerInfo is null)
         {
-            Logger.Encoder("Trailer info is null", LogEventLevel.Error);
+            _logger.LogError("Trailer info is null");
             return NotFoundResponse("Trailer not found");
         }
 
@@ -318,7 +322,7 @@ public class HomeController : BaseController
                     PlaylistId = trailerInfo.Id!,
                     Tracks = trailerInfo
                         .Subtitles.Where(t => t.Value.Any(s => s.Ext == "vtt"))
-                        .Select(t => new IVideoTrack
+                        .Select(t => new VideoTrack
                         {
                             Label = t.Value.First(s => s.Ext == "vtt").Name,
                             File = $"/transcodes/{trailerId}/-.{t.Key}.vtt",
@@ -370,7 +374,7 @@ public class HomeController : BaseController
 
                     if (Software.IsWindows)
                     {
-                        Logger.Encoder($"cmd -c \"{sb}\"", LogEventLevel.Debug);
+                        _logger.LogDebug("cmd -c \"{Sb}\"", sb);
                         Shell.ExecSync(
                             "cmd",
                             $"/c \"{sb}\"",
@@ -379,7 +383,7 @@ public class HomeController : BaseController
                     }
                     else
                     {
-                        Logger.Encoder($"/bin/bash -c \"{sb}\"", LogEventLevel.Debug);
+                        _logger.LogDebug("/bin/bash -c \"{Sb}\"", sb);
                         Shell.ExecSync(
                             "/bin/bash",
                             $"-c \"{sb}\"",
@@ -389,9 +393,10 @@ public class HomeController : BaseController
                 }
                 catch (Exception ex)
                 {
-                    Logger.Encoder(
-                        $"Trailer download failed for {trailerId}: {ex.Message}",
-                        LogEventLevel.Error
+                    _logger.LogError(
+                        "Trailer download failed for {TrailerId}: {Message}",
+                        trailerId,
+                        ex.Message
                     );
                 }
             },
@@ -420,7 +425,7 @@ public class HomeController : BaseController
                 PlaylistId = trailerInfo.Id!,
                 Tracks = trailerInfo
                     .Subtitles.Where(t => t.Value.Any(s => s.Ext == "vtt"))
-                    .Select(t => new IVideoTrack
+                    .Select(t => new VideoTrack
                     {
                         Label = t.Value.First(s => s.Ext == "vtt").Name,
                         File = $"/transcodes/{trailerId}/-.{t.Key}.vtt",
@@ -443,14 +448,15 @@ public class HomeController : BaseController
 
     [HttpDelete]
     [Route("trailer/{trailerId}")]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> RemoveTrailer(
         int id,
         string trailerId,
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view tv shows");
+        if (!TrailerIdRegex().IsMatch(trailerId))
+            return NotFoundResponse("Trailer not found");
 
         if (!await _transcodeStorage.ExistsAsync(trailerId, ct))
             return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Trailer removed" });
@@ -460,13 +466,14 @@ public class HomeController : BaseController
         try
         {
             await _transcodeStorage.DeleteDirectoryAsync(trailerId, recursive: true, ct: ct);
-            Logger.Encoder($"Trailer folder deleted: {trailerAbsPath}");
+            _logger.LogInformation("Trailer folder deleted: {TrailerAbsPath}", trailerAbsPath);
         }
         catch (Exception ex)
         {
-            Logger.Encoder(
-                $"Failed to delete trailer folder {trailerAbsPath}: {ex.Message}",
-                LogEventLevel.Error
+            _logger.LogError(
+                "Failed to delete trailer folder {TrailerAbsPath}: {Message}",
+                trailerAbsPath,
+                ex.Message
             );
             return InternalServerErrorResponse("Failed to remove trailer");
         }

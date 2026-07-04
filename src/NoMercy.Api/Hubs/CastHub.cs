@@ -11,17 +11,18 @@
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
+using NoMercy.Authorization;
 using NoMercy.Data.Activity;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
-using NoMercy.Helpers.Extensions;
 using NoMercy.Networking;
 using NoMercy.Networking.Cast;
 using NoMercy.Networking.Messaging;
-using NoMercy.NmSystem.SystemCalls;
+using NoMercy.NmSystem.Auth;
 using Sharpcaster.Models.ChromecastStatus;
 using Sharpcaster.Models.Media;
 
@@ -31,16 +32,28 @@ public class CastHub : ConnectionHub
 {
     private readonly IClientMessenger _clientMessenger;
 
+    private readonly IAuthTokenStore _authTokenStore;
+
+    private readonly IChromeCastService _chromeCast;
+
+    private readonly ILogger<CastHub> _logger;
+
     public CastHub(
+        ILogger<CastHub> logger,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<MediaContext> contextFactory,
         ConnectedClients connectedClients,
         IClientMessenger clientMessenger,
-        IActivityLogger activityLogger
+        IActivityLogger activityLogger,
+        IAuthTokenStore authTokenStore,
+        IChromeCastService chromeCast
     )
         : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
+        _logger = logger;
+        _authTokenStore = authTokenStore;
         _clientMessenger = clientMessenger;
+        _chromeCast = chromeCast;
     }
 
     public class TimeData
@@ -196,58 +209,58 @@ public class CastHub : ConnectionHub
     public override async Task OnConnectedAsync()
     {
         await base.OnConnectedAsync();
-        Logger.Socket("Cast client connected");
+        _logger.LogInformation("Cast client connected");
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         await base.OnDisconnectedAsync(exception);
-        Logger.Socket("Cast client disconnected");
+        _logger.LogInformation("Cast client disconnected");
     }
 
     public string[] GetChromeCasts()
     {
-        return ChromeCast.GetChromeCasts();
+        return _chromeCast.GetChromeCasts();
     }
 
     public async Task SelectChromecast(string name)
     {
-        await ChromeCast.SelectChromecast(name);
+        await _chromeCast.SelectChromecast(name);
     }
 
     public async Task Launch()
     {
-        await ChromeCast.Launch();
+        await _chromeCast.Launch();
     }
 
     public async Task CastPlaylist(string value)
     {
-        await ChromeCast.CastPlaylist(value);
+        await _chromeCast.CastPlaylist(value, accessToken: _authTokenStore.AccessToken);
     }
 
     public ChromecastStatus? GetChromecastStatus()
     {
-        return ChromeCast.GetChromecastStatus();
+        return _chromeCast.GetChromecastStatus();
     }
 
     public MediaStatus? GetMediaStatus()
     {
-        return ChromeCast.GetMediaStatus();
+        return _chromeCast.GetMediaStatus();
     }
 
     public async Task Stop()
     {
-        await ChromeCast.Stop();
+        await _chromeCast.Stop();
     }
 
     public async Task Disconnect()
     {
-        await ChromeCast.Disconnect();
+        await _chromeCast.Disconnect();
     }
 
     public async Task Play()
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("Play", "castHub", user.Id);
@@ -255,7 +268,7 @@ public class CastHub : ConnectionHub
 
     public async Task Pause()
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("Pause", "castHub", user.Id);
@@ -263,7 +276,7 @@ public class CastHub : ConnectionHub
 
     public async Task Time(TimeData time)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("Time", "castHub", user.Id, time);
@@ -271,7 +284,7 @@ public class CastHub : ConnectionHub
 
     public async Task Ended()
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("Ended", "castHub", user.Id);
@@ -279,7 +292,7 @@ public class CastHub : ConnectionHub
 
     public async Task Volume(int volume)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("Volume", "castHub", user.Id, volume);
@@ -287,7 +300,7 @@ public class CastHub : ConnectionHub
 
     public async Task Muted(bool muted)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("Muted", "castHub", user.Id, muted);
@@ -295,7 +308,7 @@ public class CastHub : ConnectionHub
 
     public async Task Item(PlaylistItem item)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("Item", "castHub", user.Id, item);
@@ -303,7 +316,7 @@ public class CastHub : ConnectionHub
 
     public async Task Playlist(PlaylistItem[] item)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("Playlist", "castHub", user.Id, item);
@@ -311,7 +324,7 @@ public class CastHub : ConnectionHub
 
     public async Task SubtitleTracks(TextTrack[] subtitleTracks)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("SubtitleTracks", "castHub", user.Id, subtitleTracks);
@@ -319,7 +332,7 @@ public class CastHub : ConnectionHub
 
     public async Task CurrentSubtitleTrack(TextTrack subtitleTrack)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("CurrentSubtitleTrack", "castHub", user.Id, subtitleTrack);
@@ -327,7 +340,7 @@ public class CastHub : ConnectionHub
 
     public async Task AudioTracks(AudioTrack[] audioTrack)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("AudioTracks", "castHub", user.Id, audioTrack);
@@ -335,7 +348,7 @@ public class CastHub : ConnectionHub
 
     public async Task CurrentAudioTrack(AudioTrack audioTrack)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("CurrentAudioTrack", "castHub", user.Id, audioTrack);
@@ -343,7 +356,7 @@ public class CastHub : ConnectionHub
 
     public async Task GetPlayerState()
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("GetPlayerState", "castHub", user.Id);
@@ -351,7 +364,7 @@ public class CastHub : ConnectionHub
 
     public async Task PlayerState(CastPlayerState state)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("MusicPlayerState", "castHub", user.Id, state);
@@ -359,7 +372,7 @@ public class CastHub : ConnectionHub
 
     public async Task SetAudioTrack(int audioTrack)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("SetAudioTrack", "castHub", user.Id, audioTrack);
@@ -367,7 +380,7 @@ public class CastHub : ConnectionHub
 
     public async Task SetSubtitleTrack(int subtitleTrack)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("SetSubtitleTrack", "castHub", user.Id, subtitleTrack);
@@ -375,7 +388,7 @@ public class CastHub : ConnectionHub
 
     public async Task SetPlaylistItem(int item)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("SetPlaylistItem", "castHub", user.Id, item);
@@ -383,7 +396,7 @@ public class CastHub : ConnectionHub
 
     public async Task SetVolume(int volume)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("SetVolume", "castHub", user.Id, volume);
@@ -391,7 +404,7 @@ public class CastHub : ConnectionHub
 
     public async Task SetMuted(bool muted)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("SetMuted", "castHub", user.Id, muted);
@@ -399,7 +412,7 @@ public class CastHub : ConnectionHub
 
     public async Task SetSeek(int time)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("SetSeek", "castHub", user.Id, time);
@@ -407,7 +420,7 @@ public class CastHub : ConnectionHub
 
     public async Task SetNext()
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("SetNext", "castHub", user.Id);
@@ -415,7 +428,7 @@ public class CastHub : ConnectionHub
 
     public async Task SetPrevious()
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("SetPrevious", "castHub", user.Id);
@@ -423,7 +436,7 @@ public class CastHub : ConnectionHub
 
     public async Task SetPlay()
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("SetPlay", "castHub", user.Id);
@@ -431,7 +444,7 @@ public class CastHub : ConnectionHub
 
     public async Task SetPause()
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("SetPause", "castHub", user.Id);
@@ -439,7 +452,7 @@ public class CastHub : ConnectionHub
 
     public async Task SetStop()
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
         await _clientMessenger.SendTo("SetStop", "castHub", user.Id);

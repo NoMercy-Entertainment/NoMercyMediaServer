@@ -17,11 +17,11 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
+using NoMercy.Authorization;
 using NoMercy.Data.DTOs.Specials;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
-using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Media;
@@ -29,7 +29,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [ApiController]
 [Tags("Media Libraries")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "MediaAccess")]
 [Route("api/v{version:apiVersion}/libraries")]
 public class LibrariesController(
     ILibraryRepository libraryRepository,
@@ -41,8 +41,6 @@ public class LibrariesController(
     public async Task<IActionResult> Libraries(CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view libraries");
 
         List<LibrariesResponseItemDto> response = (await libraryRepository.GetLibraries(userId, ct))
             .Select(library => new LibrariesResponseItemDto(library))
@@ -56,8 +54,6 @@ public class LibrariesController(
     public async Task<IActionResult> Mobile(CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view libraries");
 
         string language = Language();
         string country = Country();
@@ -276,8 +272,6 @@ public class LibrariesController(
     public async Task<IActionResult> Tv(CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view libraries");
 
         string language = Language();
         string country = Country();
@@ -466,8 +460,6 @@ public class LibrariesController(
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view library");
 
         string language = Language();
         string country = Country();
@@ -566,8 +558,6 @@ public class LibrariesController(
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view library");
 
         string language = Language();
         string country = Country();
@@ -620,5 +610,31 @@ public class LibrariesController(
             .WithItems(concat.Select(item => Component.Card().WithData(item)));
 
         return Ok(ComponentResponse.From(response));
+    }
+
+    /// Dead-letter review: media items that failed to import after all retries.
+    /// Pass ?resolved=false to see only outstanding failures.
+    [HttpGet]
+    [Route("{libraryId}/import-failures")]
+    public async Task<IActionResult> ImportFailures(
+        Ulid libraryId,
+        [FromQuery] bool? resolved = null,
+        CancellationToken ct = default
+    )
+    {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
+        IQueryable<ImportFailure> query = context.ImportFailures.Where(f =>
+            f.LibraryId == libraryId
+        );
+
+        if (resolved is not null)
+            query = query.Where(f => f.Resolved == resolved);
+
+        List<ImportFailure> failures = (await query.ToListAsync(ct))
+            .OrderByDescending(f => f.LastAttemptAt)
+            .ToList();
+
+        return Ok(new { data = failures });
     }
 }

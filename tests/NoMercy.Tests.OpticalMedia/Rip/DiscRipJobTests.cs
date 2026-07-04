@@ -75,7 +75,7 @@ public class DiscRipJobTests
         job.StorageFactory = storageFactory ?? Mock.Of<IStorageFactory>();
         job.StorageDriver = storageDriver ?? Mock.Of<IStorageDriver>();
         job.DriveLockRegistry = lockRegistry ?? new DriveLockRegistry();
-        job.Logger = NullLogger<DiscRipJob>.Instance;
+        job.LoggerFactory = NullLoggerFactory.Instance;
 
         return job;
     }

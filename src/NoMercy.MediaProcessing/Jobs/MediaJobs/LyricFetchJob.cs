@@ -12,7 +12,7 @@
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.MediaProcessing.Recordings;
-using NoMercy.Providers.NoMercy.Client;
+using NoMercy.Providers.Lyrics;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -26,7 +26,7 @@ public class LyricFetchJob : AbstractLyricJob
         await Task.Delay(1000); // wait for
         await using MediaContext mediaContext = new();
         RecordingRepository recordingRepository = new(mediaContext);
-        dynamic? subtitles = await NoMercyLyricsClient.SearchLyrics(Track);
+        dynamic? subtitles = await new LyricsAggregator().SearchLyrics(Track);
         if (subtitles is null)
             return;
         await recordingRepository.UpdateTrackLyricsAsync(

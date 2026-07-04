@@ -20,18 +20,20 @@ using NoMercy.Api.DTOs.Management;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Encoder.LiveTranscode;
-using NoMercy.Helpers.Monitoring;
+using NoMercy.Monitoring;
 using NoMercy.Networking.Discovery;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Status;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Setup.Server;
 using NoMercy.Storage;
 using NoMercyQueue;
-using Serilog.Events;
 using Configuration = NoMercy.Database.Models.Common.Configuration;
 
+using Microsoft.Extensions.Logging;
 namespace NoMercy.Api.Controllers;
 
 [ApiController]
@@ -40,6 +42,8 @@ namespace NoMercy.Api.Controllers;
 [LocalhostOnly]
 [Tags("Management")]
 public class ManagementController(
+    ILogger<ManagementController> logger,
+    ResourceMonitor resourceMonitor,
     IHostApplicationLifetime appLifetime,
     AppDbContext appContext,
     QueueRunner queueRunner,
@@ -50,7 +54,10 @@ public class ManagementController(
     ISessionManager sessionManager,
     IStorageDriver storageDriver,
     IStorage storage,
-    IDbContextFactory<QueueContext> queueContextFactory
+    IDbContextFactory<QueueContext> queueContextFactory,
+    IBootStatus bootStatus,
+    IUpdateStatus updateStatus,
+    RuntimeServerSettings runtimeSettings
 ) : BaseController
 {
     [HttpGet("status")]
@@ -65,7 +72,7 @@ public class ManagementController(
         return Ok(
             new ManagementStatusDto
             {
-                Status = Config.Started ? "running" : "starting",
+                Status = bootStatus.IsStarted ? "running" : "starting",
                 ServerName = serverName,
                 Version = Software.GetReleaseVersion(),
                 Platform = Info.Platform,
@@ -76,9 +83,9 @@ public class ManagementController(
                 IsDev = Config.IsDev,
                 AutoStart = AutoStartupManager.IsEnabled(),
                 IsDocker = Screen.IsDocker,
-                UpdateAvailable = Config.UpdateAvailable,
-                RestartNeeded = Config.RestartNeeded,
-                LatestVersion = Config.LatestVersion,
+                UpdateAvailable = updateStatus.UpdateAvailable,
+                RestartNeeded = updateStatus.RestartNeeded,
+                LatestVersion = updateStatus.LatestVersion,
                 SetupPhase = setupState.CurrentPhase.ToString(),
                 InternalAddress = networkDiscovery.InternalAddress,
                 ExternalAddress = networkDiscovery.ExternalAddress,
@@ -239,7 +246,7 @@ public class ManagementController(
 
             if (storageDriver.FileExists(tempPath))
             {
-                Logger.Setup("Update already staged, skipping download.");
+                logger.LogInformation("Update already staged, skipping download.");
                 return Ok(
                     new
                     {
@@ -259,9 +266,7 @@ public class ManagementController(
                 && diskVer > runVer
             )
             {
-                Logger.Setup(
-                    $"Binary on disk is already {onDiskVersion} (running {runningVersion}), restart will apply the update."
-                );
+                logger.LogInformation("Binary on disk is already {OnDiskVersion} (running {RunningVersion}), restart will apply the update.", onDiskVersion, runningVersion);
                 return Ok(
                     new
                     {
@@ -271,7 +276,7 @@ public class ManagementController(
                 );
             }
 
-            Logger.Setup("Downloading server update on demand...");
+            logger.LogInformation("Downloading server update on demand...");
             ServerUpdateResult result = await new Binaries(
                 storageDriver,
                 storage
@@ -289,7 +294,7 @@ public class ManagementController(
                             status = "ok",
                             message = "This is an installer deployment. Use the installer to update.",
                             use_installer = true,
-                            latest_version = Config.LatestVersion,
+                            latest_version = updateStatus.LatestVersion,
                         }
                     );
 
@@ -310,17 +315,14 @@ public class ManagementController(
                 case ServerUpdateResult.Downloaded:
                     if (!storageDriver.FileExists(tempPath))
                     {
-                        Logger.Setup(
-                            $"Server update staged file missing at {tempPath} after successful download",
-                            LogEventLevel.Error
-                        );
+                        logger.LogError("Server update staged file missing at {TempPath} after successful download", tempPath);
                         return InternalServerErrorResponse(
                             "Download completed but staged file not found. This may be caused by antivirus software quarantining the file."
                         );
                     }
 
                     long fileSize = storageDriver.GetFileSize(tempPath);
-                    Logger.Setup($"Server update staged at {tempPath} ({fileSize} bytes)");
+                    logger.LogInformation("Server update staged at {TempPath} ({FileSize} bytes)", tempPath, fileSize);
                     return Ok(
                         new
                         {
@@ -337,7 +339,7 @@ public class ManagementController(
         }
         catch (Exception e)
         {
-            Logger.Setup($"Failed to download update: {e.Message}", LogEventLevel.Error);
+            logger.LogError("Failed to download update: {Message}", e.Message);
             return InternalServerErrorResponse("Failed to download update");
         }
     }
@@ -372,18 +374,18 @@ public class ManagementController(
         return Ok(
             new ManagementConfigDto
             {
-                InternalPort = Config.InternalServerPort,
-                ExternalPort = Config.ExternalServerPort,
+                InternalPort = runtimeSettings.InternalServerPort,
+                ExternalPort = runtimeSettings.ExternalServerPort,
                 ServerName = serverNameConfig?.Value ?? Environment.MachineName,
-                LibraryWorkers = Config.LibraryWorkers.Value,
-                ImportWorkers = Config.ImportWorkers.Value,
-                ExtrasWorkers = Config.ExtrasWorkers.Value,
-                EncoderWorkers = Config.EncoderWorkers.Value,
-                CronWorkers = Config.CronWorkers.Value,
-                ImageWorkers = Config.ImageWorkers.Value,
-                FileWorkers = Config.FileWorkers.Value,
-                MusicWorkers = Config.MusicWorkers.Value,
-                Swagger = Config.Swagger,
+                LibraryWorkers = runtimeSettings.LibraryWorkers.Value,
+                ImportWorkers = runtimeSettings.ImportWorkers.Value,
+                ExtrasWorkers = runtimeSettings.ExtrasWorkers.Value,
+                EncoderWorkers = runtimeSettings.EncoderWorkers.Value,
+                CronWorkers = runtimeSettings.CronWorkers.Value,
+                ImageWorkers = runtimeSettings.ImageWorkers.Value,
+                FileWorkers = runtimeSettings.FileWorkers.Value,
+                MusicWorkers = runtimeSettings.MusicWorkers.Value,
+                Swagger = runtimeSettings.Swagger,
             }
         );
     }
@@ -394,9 +396,12 @@ public class ManagementController(
     {
         if (request.LibraryWorkers is not null)
         {
-            Config.LibraryWorkers = new(Config.LibraryWorkers.Key, (int)request.LibraryWorkers);
+            runtimeSettings.LibraryWorkers = new(
+                runtimeSettings.LibraryWorkers.Key,
+                (int)request.LibraryWorkers
+            );
             await queueRunner.SetWorkerCount(
-                Config.LibraryWorkers.Key,
+                runtimeSettings.LibraryWorkers.Key,
                 (int)request.LibraryWorkers,
                 null
             );
@@ -404,9 +409,12 @@ public class ManagementController(
 
         if (request.ImportWorkers is not null)
         {
-            Config.ImportWorkers = new(Config.ImportWorkers.Key, (int)request.ImportWorkers);
+            runtimeSettings.ImportWorkers = new(
+                runtimeSettings.ImportWorkers.Key,
+                (int)request.ImportWorkers
+            );
             await queueRunner.SetWorkerCount(
-                Config.ImportWorkers.Key,
+                runtimeSettings.ImportWorkers.Key,
                 (int)request.ImportWorkers,
                 null
             );
@@ -414,9 +422,12 @@ public class ManagementController(
 
         if (request.ExtrasWorkers is not null)
         {
-            Config.ExtrasWorkers = new(Config.ExtrasWorkers.Key, (int)request.ExtrasWorkers);
+            runtimeSettings.ExtrasWorkers = new(
+                runtimeSettings.ExtrasWorkers.Key,
+                (int)request.ExtrasWorkers
+            );
             await queueRunner.SetWorkerCount(
-                Config.ExtrasWorkers.Key,
+                runtimeSettings.ExtrasWorkers.Key,
                 (int)request.ExtrasWorkers,
                 null
             );
@@ -424,9 +435,12 @@ public class ManagementController(
 
         if (request.EncoderWorkers is not null)
         {
-            Config.EncoderWorkers = new(Config.EncoderWorkers.Key, (int)request.EncoderWorkers);
+            runtimeSettings.EncoderWorkers = new(
+                runtimeSettings.EncoderWorkers.Key,
+                (int)request.EncoderWorkers
+            );
             await queueRunner.SetWorkerCount(
-                Config.EncoderWorkers.Key,
+                runtimeSettings.EncoderWorkers.Key,
                 (int)request.EncoderWorkers,
                 null
             );
@@ -434,9 +448,12 @@ public class ManagementController(
 
         if (request.CronWorkers is not null)
         {
-            Config.CronWorkers = new(Config.CronWorkers.Key, (int)request.CronWorkers);
+            runtimeSettings.CronWorkers = new(
+                runtimeSettings.CronWorkers.Key,
+                (int)request.CronWorkers
+            );
             await queueRunner.SetWorkerCount(
-                Config.CronWorkers.Key,
+                runtimeSettings.CronWorkers.Key,
                 (int)request.CronWorkers,
                 null
             );
@@ -444,9 +461,12 @@ public class ManagementController(
 
         if (request.ImageWorkers is not null)
         {
-            Config.ImageWorkers = new(Config.ImageWorkers.Key, (int)request.ImageWorkers);
+            runtimeSettings.ImageWorkers = new(
+                runtimeSettings.ImageWorkers.Key,
+                (int)request.ImageWorkers
+            );
             await queueRunner.SetWorkerCount(
-                Config.ImageWorkers.Key,
+                runtimeSettings.ImageWorkers.Key,
                 (int)request.ImageWorkers,
                 null
             );
@@ -454,9 +474,12 @@ public class ManagementController(
 
         if (request.FileWorkers is not null)
         {
-            Config.FileWorkers = new(Config.FileWorkers.Key, (int)request.FileWorkers);
+            runtimeSettings.FileWorkers = new(
+                runtimeSettings.FileWorkers.Key,
+                (int)request.FileWorkers
+            );
             await queueRunner.SetWorkerCount(
-                Config.FileWorkers.Key,
+                runtimeSettings.FileWorkers.Key,
                 (int)request.FileWorkers,
                 null
             );
@@ -464,9 +487,12 @@ public class ManagementController(
 
         if (request.MusicWorkers is not null)
         {
-            Config.MusicWorkers = new(Config.MusicWorkers.Key, (int)request.MusicWorkers);
+            runtimeSettings.MusicWorkers = new(
+                runtimeSettings.MusicWorkers.Key,
+                (int)request.MusicWorkers
+            );
             await queueRunner.SetWorkerCount(
-                Config.MusicWorkers.Key,
+                runtimeSettings.MusicWorkers.Key,
                 (int)request.MusicWorkers,
                 null
             );
@@ -552,7 +578,7 @@ public class ManagementController(
     {
         try
         {
-            Resource? resource = ResourceMonitor.Monitor();
+            Resource? resource = resourceMonitor.Monitor();
             List<ResourceMonitorDto> storage = StorageMonitor.Main();
 
             return Ok(

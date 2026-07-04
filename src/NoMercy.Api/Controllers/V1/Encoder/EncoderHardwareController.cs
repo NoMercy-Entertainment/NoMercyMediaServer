@@ -18,7 +18,6 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Startup;
-using NoMercy.Helpers.Extensions;
 using NoMercy.Resources;
 
 namespace NoMercy.Api.Controllers.V1.Encoder;
@@ -38,7 +37,7 @@ namespace NoMercy.Api.Controllers.V1.Encoder;
 [ApiController]
 [Tags("Encoder Hardware")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "Moderator")]
 [Route("api/v{version:apiVersion}/encoder/hardware")]
 public class EncoderHardwareController(
     IBenchmarkJobTracker tracker,
@@ -56,11 +55,6 @@ public class EncoderHardwareController(
     [HttpPost("benchmark")]
     public IActionResult StartBenchmark([FromBody] StartBenchmarkRequest? request)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse(
-                "You do not have permission to trigger a hardware benchmark"
-            );
-
         List<VideoCodecType> codecs = [];
 
         if (request?.Codecs is { Length: > 0 } rawCodecs)
@@ -98,11 +92,6 @@ public class EncoderHardwareController(
     [HttpGet("benchmark/{jobId}")]
     public IActionResult GetBenchmark(string jobId)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse(
-                "You do not have permission to view hardware benchmark status"
-            );
-
         BenchmarkJobStatus? job = tracker.Get(jobId);
         if (job is null)
             return NotFoundResponse($"No benchmark job with id '{jobId}' found");
@@ -118,11 +107,6 @@ public class EncoderHardwareController(
     [HttpGet("benchmark")]
     public IActionResult ListBenchmarks()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse(
-                "You do not have permission to list hardware benchmark jobs"
-            );
-
         return Ok(new { data = tracker.List() });
     }
 
@@ -133,15 +117,12 @@ public class EncoderHardwareController(
     /// tracked by the process registry.
     /// </summary>
     [HttpGet("utilization")]
-    public IActionResult GetUtilization()
+    public async Task<IActionResult> GetUtilization()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view hardware utilization");
-
         UtilizationSnapshot snap = new(
             CpuUsagePercent: monitor.GetCpuUsagePercent(),
             AvailableMemoryMb: monitor.GetAvailableMemoryMb(),
-            GpuSamples: monitor.SampleGpu(),
+            GpuSamples: await monitor.SampleGpuAsync(),
             ConcurrentNvencSessions: registry.CountConcurrentNvencSessions(),
             Gpus: hardware.Gpus
         );
@@ -158,9 +139,6 @@ public class EncoderHardwareController(
     [HttpGet("/api/v{version:apiVersion}/encoder/capabilities")]
     public IActionResult GetCapabilities()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view encoder capabilities");
-
         CapabilityReport? report = probe.GetCachedReport();
         return report is null
             ? Ok(

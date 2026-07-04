@@ -13,11 +13,8 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Music;
 using NoMercy.MediaProcessing.Jobs.Dto;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Dto;
 using NoMercy.Providers.MusicBrainz.Models;
-using NoMercyQueue;
-using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.MediaProcessing.Jobs;
 
@@ -97,4 +94,7 @@ public interface IJobDispatcher : NoMercyQueue.Core.Interfaces.IJobDispatcher
             string entityId,
             int? priority = null
         );
+
+    void DispatchJob<TJob, TChild>(IEnumerable<TChild> data, string name)
+        where TJob : AbstractShowExtraDataJob<TChild, string>, new();
 }

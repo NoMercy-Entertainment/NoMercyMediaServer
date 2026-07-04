@@ -32,4 +32,16 @@ public interface INetworkDiscovery
     string? ExternalAddressV6 { get; }
     bool Ipv6Enabled { get; }
     Task DiscoverExternalIpAsync();
+
+    /// <summary>
+    /// Forces a fresh external-IP / NAT discovery after an OS network change,
+    /// bypassing the one-shot completion gate (throttled internally).
+    /// </summary>
+    Task ForceRediscoveryAsync();
+
+    /// <summary>
+    /// True when the configured external server port is reachable from the public
+    /// internet (used by the port-forward connectivity strategy).
+    /// </summary>
+    Task<bool> IsPortOpenAsync();
 }

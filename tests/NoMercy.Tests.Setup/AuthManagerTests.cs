@@ -9,7 +9,9 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.NmSystem.Security;
 using System.IdentityModel.Tokens.Jwt;
+using NoMercy.NmSystem.Auth;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,6 +27,7 @@ public class AuthManagerTests : IDisposable
 {
     private readonly AppDbContext _appContext;
     private readonly AuthManager _authManager;
+    private readonly AuthTokenStore _authTokenStore = new();
 
     public AuthManagerTests()
     {
@@ -39,7 +42,7 @@ public class AuthManagerTests : IDisposable
         _appContext.Database.OpenConnection();
         _appContext.Database.EnsureCreated();
 
-        _authManager = new(_appContext, new LocalStorageDriver());
+        _authManager = new(_appContext, new LocalStorageDriver(), _authTokenStore);
     }
 
     public void Dispose()
@@ -47,7 +50,7 @@ public class AuthManagerTests : IDisposable
         _appContext.Database.CloseConnection();
         _appContext.Dispose();
         // Reset global access token to avoid state leaking between tests
-        Globals.Globals.AccessToken = null;
+        _authTokenStore.SetAccessToken(null);
     }
 
     // ── Helper ───────────────────────────────────────────────────────────────
@@ -174,14 +177,14 @@ public class AuthManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task StoreTokensAsync_SetsGlobalsAccessToken()
+    public async Task StoreTokensAsync_SetsAccessToken()
     {
         string jwt = CreateValidJwt(DateTime.UtcNow.AddHours(1));
-        Globals.Globals.AccessToken = null;
+        _authTokenStore.SetAccessToken(null);
 
         await _authManager.StoreTokensAsync(jwt, null, DateTime.UtcNow.AddHours(1), "Bearer");
 
-        Assert.Equal(jwt, Globals.Globals.AccessToken);
+        Assert.Equal(jwt, _authTokenStore.AccessToken);
     }
 
     [Fact]

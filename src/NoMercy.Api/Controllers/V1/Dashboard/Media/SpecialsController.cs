@@ -14,16 +14,17 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
-using NoMercy.Data.Logic;
+using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
 using NoMercy.Data.Requests;
+using NoMercy.Data.Services;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Storage;
 
@@ -32,22 +33,20 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 [ApiController]
 [Tags(tags: "Dashboard Specials")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "Moderator")]
 [Route("api/v{version:apiVersion}/dashboard/specials", Order = 11)]
 public class SpecialsController(
     // TODO: remove mediaContext once LibraryLogic accepts IDbContextFactory instead of MediaContext
     MediaContext mediaContext,
     ISpecialRepository specialRepository,
     IStorageDriver storageDriver,
-    IStorageFactory storageFactory
+    IStorageFactory storageFactory,
+    ILogger<LibraryLogic> libraryLogicLogger
 ) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view specials");
-
         List<Special> specials = await specialRepository.GetAllSpecialsAdminAsync();
 
         return Ok(
@@ -62,8 +61,6 @@ public class SpecialsController(
     public async Task<IActionResult> Store()
     {
         Guid userId = User.UserId();
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to create a new special");
 
         try
         {
@@ -89,9 +86,6 @@ public class SpecialsController(
     [Route("{id:ulid}")]
     public async Task<IActionResult> Show(Ulid id)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view the special");
-
         Special? special = await specialRepository.GetSpecialByIdAsync(id);
 
         if (special is null)
@@ -112,9 +106,6 @@ public class SpecialsController(
     [Route("{id:ulid}")]
     public async Task<IActionResult> Update(Ulid id, [FromBody] SpecialUpdateRequest request)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to update the special");
-
         try
         {
             Special? special = await specialRepository.UpdateSpecialAsync(
@@ -148,9 +139,6 @@ public class SpecialsController(
     [Route("{id:ulid}")]
     public async Task<IActionResult> Delete(Ulid id)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to delete the special");
-
         try
         {
             Special? special = await specialRepository.DeleteSpecialAsync(id);
@@ -177,9 +165,6 @@ public class SpecialsController(
     [Route("sort")]
     public async Task<IActionResult> Sort(Ulid id, [FromBody] LibrarySortRequest request)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to sort the specials");
-
         List<Special> specials = await specialRepository.GetAllSpecialsSortableAsync();
 
         if (specials.Count == 0)
@@ -199,9 +184,6 @@ public class SpecialsController(
     [Route("rescan")]
     public async Task<IActionResult> RescanAll()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to rescan all specials");
-
         List<Special> specialsList = await specialRepository.GetAllSpecialsForRescanAsync();
 
         if (specialsList.Count == 0)
@@ -223,12 +205,15 @@ public class SpecialsController(
     [Route("{id:ulid}/rescan")]
     public async Task<IActionResult> Rescan(Ulid id)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to rescan the special");
-
         // BLOCKER: LibraryLogic requires a raw MediaContext until it is refactored
         // to accept IDbContextFactory. Remove mediaContext from the ctor at that point.
-        LibraryLogic specialLogic = new(id, mediaContext, storageDriver, storageFactory);
+        LibraryLogic specialLogic = new(
+            id,
+            mediaContext,
+            storageDriver,
+            storageFactory,
+            libraryLogicLogger
+        );
 
         if (await specialLogic.Process())
             return Ok(
@@ -248,9 +233,6 @@ public class SpecialsController(
     [Route("{id:ulid}/items")]
     public async Task<IActionResult> GetItems(Ulid id)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view special items");
-
         List<SpecialItem> items = await specialRepository.GetSpecialItemsAdminAsync(id);
 
         List<SpecialItemResponseDto> result = items
@@ -307,9 +289,6 @@ public class SpecialsController(
         [FromBody] SpecialItemsUpdateRequest request
     )
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to update special items");
-
         List<SpecialItemReplacement> replacements = request
             .Items.Select(item => new SpecialItemReplacement(
                 item.MediaType,
@@ -336,9 +315,6 @@ public class SpecialsController(
     [Route("search")]
     public async Task<IActionResult> Search([FromQuery] string q, CancellationToken ct = default)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to search");
-
         if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
             return Ok(Array.Empty<SpecialSearchResultDto>());
 

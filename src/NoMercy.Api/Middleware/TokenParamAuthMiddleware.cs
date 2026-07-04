@@ -13,14 +13,17 @@ using System.Net;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using NoMercy.Authorization;
 using NoMercy.Database.Models.Users;
-using NoMercy.Helpers.Extensions;
-using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Middleware;
 
-public class TokenParamAuthMiddleware(RequestDelegate next)
+public class TokenParamAuthMiddleware(
+    RequestDelegate next,
+    ILogger<TokenParamAuthMiddleware> logger
+)
 {
     public async Task InvokeAsync(HttpContext context)
     {
@@ -47,7 +50,7 @@ public class TokenParamAuthMiddleware(RequestDelegate next)
         string url = context.Request.Path;
 
         if (
-            !ClaimsPrincipleExtensions.FolderIds.Any(x => url.StartsWith("/" + x))
+            !UserCache.Current.FolderIds.Any(x => url.StartsWith("/" + x))
             || context.Request.Headers.Authorization.ToString().Contains("Bearer")
         )
         {
@@ -59,7 +62,7 @@ public class TokenParamAuthMiddleware(RequestDelegate next)
 
         if (string.IsNullOrEmpty(claim))
         {
-            Logger.Http("Unauthorized request, no jwt: " + url);
+            logger.LogInformation("Unauthorized request, no jwt: {Url}", url);
             await WriteProblemAsync(
                 context,
                 statusCode: (int)HttpStatusCode.Unauthorized,
@@ -73,7 +76,7 @@ public class TokenParamAuthMiddleware(RequestDelegate next)
 
         if (!Guid.TryParse(claim, out Guid userId) || userId == Guid.Empty)
         {
-            Logger.Http("Unauthorized request, guid malformed or empty: " + url);
+            logger.LogInformation("Unauthorized request, guid malformed or empty: {Url}", url);
             await WriteProblemAsync(
                 context,
                 statusCode: (int)HttpStatusCode.Forbidden,
@@ -85,11 +88,11 @@ public class TokenParamAuthMiddleware(RequestDelegate next)
             return;
         }
 
-        User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
+        User? user = UserCache.Current.Users.FirstOrDefault(x => x.Id.Equals(userId));
 
         if (user is null)
         {
-            Logger.Http("Unauthorized request, user not found: " + url);
+            logger.LogInformation("Unauthorized request, user not found: {Url}", url);
             await WriteProblemAsync(
                 context,
                 statusCode: (int)HttpStatusCode.Forbidden,

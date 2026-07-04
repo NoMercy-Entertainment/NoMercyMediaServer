@@ -16,7 +16,7 @@ namespace NoMercy.Cli.Commands;
 
 internal static class StatusCommand
 {
-    public static Command Create(Option<string?> pipeOption)
+    public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
         Command command = new("status") { Description = "Show server status" };
 
@@ -24,16 +24,16 @@ internal static class StatusCommand
             async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
-                using CliClient client = new(pipe);
+                using ICliClient client = clientFactory.Create(pipe);
                 StatusResponse? status = await client.GetAsync<StatusResponse>(
-                    "/manage/status",
+                    ApiRoutes.Status,
                     ct
                 );
 
                 if (status is null)
                 {
                     await Console.Error.WriteLineAsync("Could not connect to server.");
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
 
                 TimeSpan uptime = TimeSpan.FromSeconds(status.UptimeSeconds);
@@ -48,7 +48,7 @@ internal static class StatusCommand
                 if (status.IsDev)
                     Console.WriteLine("Mode:         Development");
 
-                return 0;
+                return (int)ExitCode.Success;
             }
         );
 

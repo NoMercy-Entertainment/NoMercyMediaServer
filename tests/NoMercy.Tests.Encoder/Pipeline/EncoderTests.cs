@@ -347,7 +347,7 @@ public class EncoderTests : IDisposable
 
         EncodingRequest request = new(
             InputPath: "/movies/test.mkv",
-            OutputDirectory: "/output/test",
+            OutputDirectory: "/tmp/nmtest-output/test",
             Profile: BuildProfile()
         );
 
@@ -385,7 +385,7 @@ public class EncoderTests : IDisposable
 
         EncodingRequest request = new(
             InputPath: "/missing/file.mkv",
-            OutputDirectory: "/output/test",
+            OutputDirectory: "/tmp/nmtest-output/test",
             Profile: BuildProfile()
         );
 
@@ -403,7 +403,7 @@ public class EncoderTests : IDisposable
 
         EncodingRequest request = new(
             InputPath: "/missing/file.mkv",
-            OutputDirectory: "/output/test",
+            OutputDirectory: "/tmp/nmtest-output/test",
             Profile: BuildProfile()
         );
 
@@ -469,7 +469,7 @@ public class EncoderTests : IDisposable
 
         EncodingRequest request = new(
             InputPath: "/movies/test.mkv",
-            OutputDirectory: "/output/test",
+            OutputDirectory: "/tmp/nmtest-output/test",
             Profile: BuildProfile()
         );
 
@@ -513,7 +513,7 @@ public class EncoderTests : IDisposable
         Mock<IProgressObserver> progressMock = new();
         EncodingRequest request = new(
             InputPath: "/missing.mkv",
-            OutputDirectory: "/output/test",
+            OutputDirectory: "/tmp/nmtest-output/test",
             Profile: BuildProfile()
         );
 

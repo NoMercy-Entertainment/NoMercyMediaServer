@@ -12,12 +12,10 @@
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.CoverArt.Models;
 using NoMercy.Providers.Helpers;
-using NoMercy.Setup.Server;
 using NoMercy.Storage;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.PixelFormats;
-using Configuration = AcoustID.Configuration;
 using Image = SixLabors.ImageSharp.Image;
 
 namespace NoMercy.Providers.FanArt.Client;
@@ -37,20 +35,14 @@ public class FanArtImageClient : FanArtBaseClient
             "FanArtImageClient has not been initialized. Call FanArtImageClient.Initialize() at startup."
         );
 
-    public FanArtImageClient()
-    {
-        Configuration.ClientKey = ApiKeyStore.Current.AcousticIdKey;
-    }
+    public FanArtImageClient() { }
 
     public FanArtImageClient(Guid id)
-        : base(id)
-    {
-        Configuration.ClientKey = ApiKeyStore.Current.AcousticIdKey;
-    }
+        : base(id) { }
 
     public Task<CoverArtCovers?> Cover(bool priority = false)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             //
         };

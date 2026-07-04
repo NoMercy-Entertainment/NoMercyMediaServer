@@ -9,7 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.Providers.TMDB.Client.Mocks;
 using NoMercy.Providers.TMDB.Models.Genres;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Shared;
@@ -21,17 +20,17 @@ namespace NoMercy.Providers.TMDB.Client;
 
 public class TmdbMovieClient : TmdbBaseClient, ITmdbMovieClient
 {
-    private readonly MovieResponseMocks? _mockDataProvider;
+    private readonly Func<TmdbMovieAppends?>? _mockAppendsProvider;
 
     public TmdbMovieClient(
         int? id = 0,
         string[]? appendices = null,
-        MovieResponseMocks? mockDataProvider = null,
+        Func<TmdbMovieAppends?>? mockAppendsProvider = null,
         string? language = "en-US"
     )
         : base((int)id!, language!)
     {
-        _mockDataProvider = mockDataProvider;
+        _mockAppendsProvider = mockAppendsProvider;
     }
 
     public Task<TmdbMovieDetails?> Details(bool? priority = false)
@@ -51,9 +50,9 @@ public class TmdbMovieClient : TmdbBaseClient, ITmdbMovieClient
 
     public Task<TmdbMovieAppends?> WithAllAppends(bool? priority = false)
     {
-        if (_mockDataProvider != null)
+        if (_mockAppendsProvider != null)
         {
-            return Task.FromResult(_mockDataProvider.MockMovieAppendsResponse());
+            return Task.FromResult(_mockAppendsProvider());
         }
 
         return WithAppends(

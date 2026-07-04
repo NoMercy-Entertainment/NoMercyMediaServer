@@ -98,7 +98,16 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                     .GenreTvShows.Where(gt =>
                         gt.Tv.Library.LibraryUsers.Any(u => u.UserId == userId)
                     )
-                    .Where(gt => gt.Tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null)))
+                    .Where(gt => gt.Tv.Episodes.Any(e => (
+                        e.VideoFiles.Any(v => v.Folder != null)
+                        || e.Tv.Episodes.Any(o =>
+                            o.SeasonNumber == e.SeasonNumber
+                            && o.VideoFiles.Any(w =>
+                                w.Folder != null
+                                && w.LastEpisodeNumber != null
+                                && o.EpisodeNumber <= e.EpisodeNumber
+                                && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))
+                    )))
                     .Take(take)
             )
                 .ThenInclude(gt => gt.Tv)
@@ -107,7 +116,16 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                 .ThenInclude(gt => gt.Tv)
                     .ThenInclude(tv =>
                         tv.Episodes.Where(e =>
-                            e.SeasonNumber > 0 && e.VideoFiles.Any(v => v.Folder != null)
+                            e.SeasonNumber > 0 && (
+                                e.VideoFiles.Any(v => v.Folder != null)
+                                || e.Tv.Episodes.Any(o =>
+                                    o.SeasonNumber == e.SeasonNumber
+                                    && o.VideoFiles.Any(w =>
+                                        w.Folder != null
+                                        && w.LastEpisodeNumber != null
+                                        && o.EpisodeNumber <= e.EpisodeNumber
+                                        && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))
+                            )
                         )
                     )
                         .ThenInclude(e => e.VideoFiles.Where(v => v.Folder != null))
@@ -209,7 +227,16 @@ public class GenreRepository(MediaContext context) : IGenreRepository
             .GenreTv.AsNoTracking()
             .Where(gt => gt.GenreId == id)
             .Where(gt => gt.Tv.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(gt => gt.Tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null)))
+            .Where(gt => gt.Tv.Episodes.Any(e => (
+                e.VideoFiles.Any(v => v.Folder != null)
+                || e.Tv.Episodes.Any(o =>
+                    o.SeasonNumber == e.SeasonNumber
+                    && o.VideoFiles.Any(w =>
+                        w.Folder != null
+                        && w.LastEpisodeNumber != null
+                        && o.EpisodeNumber <= e.EpisodeNumber
+                        && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))
+            )))
             .OrderBy(gt => gt.Tv.TitleSort)
             .Skip(page * take)
             .Take(take)
@@ -239,7 +266,16 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                 NumberOfEpisodes = gt.Tv.NumberOfEpisodes,
                 EpisodesWithVideo = gt
                     .Tv.Episodes.Where(e => e.SeasonNumber > 0)
-                    .Count(e => e.VideoFiles.Any(v => v.Folder != null)),
+                    .Count(e => (
+                        e.VideoFiles.Any(v => v.Folder != null)
+                        || e.Tv.Episodes.Any(o =>
+                            o.SeasonNumber == e.SeasonNumber
+                            && o.VideoFiles.Any(w =>
+                                w.Folder != null
+                                && w.LastEpisodeNumber != null
+                                && o.EpisodeNumber <= e.EpisodeNumber
+                                && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))
+                    )),
                 CertificationRating = gt
                     .Tv.CertificationTvs.Where(c =>
                         c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country
@@ -333,7 +369,16 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                 ),
                 TvShowsWithVideo = genre.GenreTvShows.Count(gt =>
                     gt.Tv.Library.LibraryUsers.Any(u => u.UserId == userId)
-                    && gt.Tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null))
+                    && gt.Tv.Episodes.Any(e => (
+                        e.VideoFiles.Any(v => v.Folder != null)
+                        || e.Tv.Episodes.Any(o =>
+                            o.SeasonNumber == e.SeasonNumber
+                            && o.VideoFiles.Any(w =>
+                                w.Folder != null
+                                && w.LastEpisodeNumber != null
+                                && o.EpisodeNumber <= e.EpisodeNumber
+                                && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))
+                    ))
                 ),
             })
             .ToListAsync(ct);

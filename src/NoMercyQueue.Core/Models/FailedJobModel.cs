@@ -20,4 +20,6 @@ public class FailedJobModel
     public required string Payload { get; set; }
     public required string Exception { get; set; }
     public DateTime FailedAt { get; set; } = DateTime.UtcNow;
+
+    public int? ParentJobId { get; set; }
 }

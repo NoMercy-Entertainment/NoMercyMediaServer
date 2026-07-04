@@ -7,6 +7,10 @@ on:
       - 'tests/**'
       - 'docker/**'
       - '.github/**'
+      - 'Directory.Packages.props'
+      - 'Directory.Build.props'
+      - 'global.json'
+      - '**/*.sln'
     branches:
       - dev
   pull_request:
@@ -15,6 +19,10 @@ on:
       - 'tests/**'
       - 'docker/**'
       - '.github/**'
+      - 'Directory.Packages.props'
+      - 'Directory.Build.props'
+      - 'global.json'
+      - '**/*.sln'
     branches:
       - dev
   workflow_dispatch:
@@ -33,6 +41,7 @@ permissions:
 jobs:
   # Step 1: Run Tests
   test:
+    if: ${{ !contains(github.event.head_commit.message, '[test-only]') }}
     uses: ./.github/workflows/test.yml
     with:
       dotnet-version: "10.0.x"

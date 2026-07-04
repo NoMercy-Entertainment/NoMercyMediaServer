@@ -15,8 +15,8 @@ using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.DTOs.Media;
@@ -87,7 +87,7 @@ public class VideoPlaylistResponseDto
     public List<IChapter> Chapters { get; set; } = [];
 
     [JsonProperty("tracks")]
-    public List<IVideoTrack> Tracks { get; set; } = [];
+    public List<VideoTrack> Tracks { get; set; } = [];
 
     [JsonProperty("rating")]
     public RatingClass? ContentRating { get; set; }
@@ -188,7 +188,7 @@ public class VideoPlaylistResponseDto
         ];
 
         Tracks = videoFile
-            .Tracks.Select(t => new IVideoTrack
+            .Tracks.Select(t => new VideoTrack
             {
                 Label = t.Label,
                 File = $"{baseFolder}{t.File}",
@@ -299,7 +299,7 @@ public class VideoPlaylistResponseDto
         ];
 
         Tracks = videoFile
-            .Tracks.Select(t => new IVideoTrack
+            .Tracks.Select(t => new VideoTrack
             {
                 Label = t.Label,
                 File = $"{baseFolder}{t.File}",
@@ -327,13 +327,6 @@ public class VideoPlaylistResponseDto
         Captions = videoFile.Metadata?.Subtitles ?? [];
         Qualities = videoFile.Metadata?.Video ?? [];
 
-        if (index is null)
-            return;
-        SeasonName = "Collection";
-        Season = 0;
-        Episode = index;
-        EpisodeId = movie.Id;
-
         ContentRating = movie
             .CertificationMovies.Where(certificationMovie =>
                 certificationMovie.Certification.Iso31661 == "US"
@@ -348,11 +341,18 @@ public class VideoPlaylistResponseDto
                 ),
             })
             .FirstOrDefault();
+
+        if (index is null)
+            return;
+        SeasonName = "Collection";
+        Season = 0;
+        Episode = index;
+        EpisodeId = movie.Id;
     }
 
     private record Subs
     {
-        public List<IVideoTrack> TextTracks { get; set; } = [];
+        public List<VideoTrack> TextTracks { get; set; } = [];
     }
 
     public class Subtitle
@@ -386,7 +386,7 @@ public class VideoPlaylistResponseDto
             subtitleList = null;
         }
 
-        List<IVideoTrack> textTracks = [];
+        List<VideoTrack> textTracks = [];
 
         foreach (Subtitle sub in subtitleList ?? [])
         {

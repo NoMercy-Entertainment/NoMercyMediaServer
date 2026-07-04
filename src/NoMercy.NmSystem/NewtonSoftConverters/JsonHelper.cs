@@ -12,6 +12,8 @@
 using System.Globalization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using NoMercy.NmSystem.SystemCalls;
+using Serilog.Events;
 
 namespace NoMercy.NmSystem.NewtonSoftConverters;
 
@@ -33,11 +35,13 @@ public static class JsonHelper
         NullValueHandling = NullValueHandling.Include, // Include null values
         DefaultValueHandling = DefaultValueHandling.Include, // Include default values
 
-        // Error handling
+        // Error handling — stay resilient (Handled = true) but surface the cause at
+        // Verbose so a silently-dropped field is diagnosable instead of vanishing.
         Error = (_, ev) =>
         {
+            Logger.App($"JSON error: {ev.ErrorContext.Error.Message}", LogEventLevel.Verbose);
             ev.ErrorContext.Handled = true;
-        }, // Handle errors silently
+        },
 
         // Type handling
         TypeNameHandling = TypeNameHandling.None, // Do not include type names

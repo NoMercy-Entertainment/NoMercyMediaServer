@@ -14,15 +14,14 @@ using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.MusicBrainz.Models;
-using Serilog.Events;
-
+using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.ReleaseGroups;
 
 public class ReleaseGroupManager(
     IReleaseGroupRepository releaseGroupRepository,
-    JobDispatcher jobDispatcher
+    JobDispatcher jobDispatcher,
+    ILogger<ReleaseGroupManager> logger
 ) : BaseManager, IReleaseGroupManager
 {
     public async Task Store(
@@ -31,7 +30,7 @@ public class ReleaseGroupManager(
         CoverArtImageManagerManager.CoverPalette? coverPalette
     )
     {
-        Logger.MusicBrainz($"Storing Release Group: {releaseGroup.Title}", LogEventLevel.Verbose);
+        logger.LogTrace("Storing Release Group: {Title}", releaseGroup.Title);
 
         ReleaseGroup insert = new()
         {
@@ -52,6 +51,6 @@ public class ReleaseGroupManager(
         await releaseGroupRepository.Store(insert);
         jobDispatcher.DispatchColorPaletteJob("releasegroup", insert.Id.ToString());
 
-        Logger.MusicBrainz($"Release Group {releaseGroup.Title} stored", LogEventLevel.Verbose);
+        logger.LogTrace("Release Group {Title} stored", releaseGroup.Title);
     }
 }

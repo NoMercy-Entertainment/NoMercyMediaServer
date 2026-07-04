@@ -11,8 +11,8 @@
 
 using System.Globalization;
 using System.Text.RegularExpressions;
+using NoMercy.Providers.Abstractions;
 using NoMercy.Providers.Lrclib.Models;
-using NoMercy.Providers.MusixMatch.Models;
 using NoMercy.Providers.NoMercy.Models;
 
 namespace NoMercy.Providers.Lrclib.Client;
@@ -31,7 +31,7 @@ public partial class LrclibClient : LrclibBaseClient
         bool priority = false
     )
     {
-        Dictionary<string, string> additionalArguments = new()
+        Dictionary<string, string?> additionalArguments = new()
         {
             { "artist_name", string.Join(",", artists) },
             { "track_name", trackName },
@@ -70,7 +70,7 @@ public partial class LrclibClient : LrclibBaseClient
         bool priority = false
     )
     {
-        Dictionary<string, string> additionalArguments = new() { { "track_name", trackName } };
+        Dictionary<string, string?> additionalArguments = new() { { "track_name", trackName } };
         string artistName = string.Join(",", artists);
         if (!string.IsNullOrEmpty(artistName))
             additionalArguments.Add("artist_name", artistName);
@@ -90,7 +90,7 @@ public partial class LrclibClient : LrclibBaseClient
             return null;
 
         bool hasSynced = !string.IsNullOrEmpty(result.SyncedLyrics);
-        MusixMatchFormattedLyric[]? lines = ConvertToMusixmatchLyrics(
+        LyricLine[]? lines = ConvertToMusixmatchLyrics(
             hasSynced ? result.SyncedLyrics : result.PlainLyrics
         );
         if (lines is null)
@@ -105,26 +105,26 @@ public partial class LrclibClient : LrclibBaseClient
         );
     }
 
-    private static MusixMatchFormattedLyric[]? ConvertToMusixmatchLyrics(string? lyrics)
+    private static LyricLine[]? ConvertToMusixmatchLyrics(string? lyrics)
     {
         if (string.IsNullOrEmpty(lyrics))
             return null;
         string[] lines = lyrics.Split(['\r', '\n'], StringSplitOptions.None);
 
-        List<MusixMatchFormattedLyric> lyricLines = [];
+        List<LyricLine> lyricLines = [];
         foreach (string line in lines)
         {
             string trimmedLine = line.Trim();
             if (string.IsNullOrEmpty(trimmedLine))
                 continue;
-            MusixMatchFormattedLyric? lyricLine = MakeLyricLine(trimmedLine);
+            LyricLine? lyricLine = MakeLyricLine(trimmedLine);
             if (lyricLine != null)
                 lyricLines.Add(lyricLine);
         }
         return lyricLines.Count == 0 ? null : lyricLines.ToArray();
     }
 
-    private static MusixMatchFormattedLyric? MakeLyricLine(string trimmedLine)
+    private static LyricLine? MakeLyricLine(string trimmedLine)
     {
         if (string.IsNullOrEmpty(trimmedLine))
             return null;

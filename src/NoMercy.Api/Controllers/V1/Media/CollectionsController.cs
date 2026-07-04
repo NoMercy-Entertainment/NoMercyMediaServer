@@ -9,28 +9,24 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
+using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Movies;
-using NoMercy.Helpers.Extensions;
-using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Collections;
-using NoMercyQueue.Core.Interfaces;
-using Serilog.Events;
+using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 
 namespace NoMercy.Api.Controllers.V1.Media;
 
@@ -43,7 +39,8 @@ public class CollectionsController(
     ICollectionRepository collectionRepository,
     ILibraryRepository libraryRepository,
     IJobDispatcher jobDispatcher,
-    ICollectionMetadataProvider collectionMetadataProvider
+    ICollectionMetadataProvider collectionMetadataProvider,
+    ILogger<CollectionsController> logger
 ) : BaseController
 {
     [HttpGet]
@@ -55,7 +52,7 @@ public class CollectionsController(
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view collections");
 
         string language = Language();
@@ -115,7 +112,7 @@ public class CollectionsController(
     public async Task<IActionResult> Collection(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view collections");
 
         string language = Language();
@@ -149,7 +146,7 @@ public class CollectionsController(
     public async Task<IActionResult> Available(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view collections");
 
         Collection? collection = await collectionRepository.GetAvailableCollectionAsync(userId, id);
@@ -176,7 +173,7 @@ public class CollectionsController(
     public async Task<IActionResult> Watch(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view collections");
 
         string language = Language();
@@ -216,7 +213,7 @@ public class CollectionsController(
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to like collections");
 
         bool success = await collectionRepository.LikeAsync(id, userId, request.Value, ct);
@@ -243,7 +240,7 @@ public class CollectionsController(
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to manage watch list");
 
         bool success = await collectionRepository.AddToWatchListAsync(id, userId, request.Add);
@@ -263,11 +260,9 @@ public class CollectionsController(
     }
 
     [HttpDelete]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> DeleteMovie(int id, CancellationToken ct = default)
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to delete movies");
-
         await collectionRepository.DeleteAsync(id, ct);
 
         return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Movie deleted" });
@@ -275,11 +270,9 @@ public class CollectionsController(
 
     [HttpPost]
     [Route("rescan")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Rescan(int id, CancellationToken ct = default)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to rescan movies");
-
         Collection? collection = await collectionRepository.GetCollectionForRescanAsync(id, ct);
 
         if (collection is null)
@@ -297,7 +290,7 @@ public class CollectionsController(
         }
         catch (Exception e)
         {
-            Logger.Encoder(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
             return InternalServerErrorResponse(e.Message);
         }
 
@@ -313,11 +306,9 @@ public class CollectionsController(
 
     [HttpPost]
     [Route("refresh")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Refresh(int id, CancellationToken ct = default)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to refresh movies");
-
         Collection? collection = await collectionRepository.GetCollectionWithMovieLibrariesAsync(
             id,
             ct
@@ -338,7 +329,7 @@ public class CollectionsController(
         }
         catch (Exception e)
         {
-            Logger.Encoder(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
             return InternalServerErrorResponse(e.Message);
         }
 
@@ -354,11 +345,9 @@ public class CollectionsController(
 
     [HttpPost]
     [Route("add")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Add(int id, CancellationToken ct = default)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to add tv shows");
-
         Library? library = await libraryRepository.GetLibraryByTypeAsync(
             MediaTypes.MovieMediaType,
             ct: ct
@@ -387,7 +376,7 @@ public class CollectionsController(
         }
         catch (Exception e)
         {
-            Logger.Encoder(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
             return InternalServerErrorResponse(e.Message);
         }
 

@@ -9,10 +9,10 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Events;
 using NoMercy.Events.Inbox;
 using NoMercy.Networking.Messaging;
-using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.EventHandlers;
 
@@ -21,8 +21,15 @@ public class SignalRInboxEventHandler : IDisposable
     private readonly IClientMessenger _clientMessenger;
     private readonly List<IDisposable> _subscriptions = [];
 
-    public SignalRInboxEventHandler(IEventBus eventBus, IClientMessenger clientMessenger)
+    private readonly ILogger<SignalRInboxEventHandler> _logger;
+
+    public SignalRInboxEventHandler(
+        ILogger<SignalRInboxEventHandler> logger,
+        IEventBus eventBus,
+        IClientMessenger clientMessenger
+    )
     {
+        _logger = logger;
         _clientMessenger = clientMessenger;
         _subscriptions.Add(eventBus.Subscribe<InboxItemDetectedEvent>(OnItemDetected));
         _subscriptions.Add(eventBus.Subscribe<InboxItemUpdatedEvent>(OnItemUpdated));
@@ -42,8 +49,11 @@ public class SignalRInboxEventHandler : IDisposable
             }
         );
 
-        Logger.Socket(
-            $"Inbox item detected: {@event.Id} ({@event.DetectedType}, {@event.Confidence})"
+        _logger.LogInformation(
+            "Inbox item detected: {Id} ({DetectedType}, {Confidence})",
+            @event.Id,
+            @event.DetectedType,
+            @event.Confidence
         );
     }
 
@@ -55,7 +65,7 @@ public class SignalRInboxEventHandler : IDisposable
             new { @event.Id, @event.Status }
         );
 
-        Logger.Socket($"Inbox item updated: {@event.Id} → {@event.Status}");
+        _logger.LogInformation("Inbox item updated: {Id} → {Status}", @event.Id, @event.Status);
     }
 
     public void Dispose()

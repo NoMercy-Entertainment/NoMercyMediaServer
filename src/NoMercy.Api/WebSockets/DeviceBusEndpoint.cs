@@ -16,11 +16,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NoMercy.Api.Services.Music;
+using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
-using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.WebSockets;
 
@@ -44,7 +45,9 @@ public sealed class DeviceBusEndpoint(
             return;
         }
 
-        User? user = HttpContext.User.User();
+        User? user = HttpContext
+            .RequestServices.GetRequiredService<IUserCache>()
+            .GetUser(HttpContext.User.UserId());
         if (user is null)
         {
             HttpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
@@ -186,13 +189,49 @@ public sealed class DeviceBusEndpoint(
             : "tv";
 
         await using MediaContext ctx = await contextFactory.CreateDbContextAsync();
-        // Look up by DeviceId first — that's the primary unique key MusicHub already
-        // uses (== ANDROID_ID for Android clients). Falls back to Fingerprint match
-        // for legacy device-bus rows that pre-date the ID alignment. Either way,
-        // upsert by setting both columns + ownership so the row is whole.
-        Device? device = await ctx.Devices.FirstOrDefaultAsync(d =>
-            d.DeviceId == fingerprint || (d.Fingerprint == fingerprint && d.OwnerUserId == user.Id)
+        (Device device, Guid? previousOwner) = await ResolveOwnedDeviceAsync(
+            ctx,
+            fingerprint,
+            user.Id,
+            deviceName,
+            deviceType
         );
+
+        await registry.Register(device.Id, ws);
+
+        // If the device just moved to a different account, refresh the previous
+        // owner so the device disappears from their list immediately.
+        if (previousOwner is { } previous && previous != user.Id)
+            await registry.BroadcastChange(previous);
+        return device;
+    }
+
+    /// <summary>
+    /// Resolves the device row for <paramref name="fingerprint"/> and pins its
+    /// ownership to <paramref name="userId"/> — the account the device is currently
+    /// authenticated as — creating the row when it does not exist. Returns the
+    /// device together with the previous owner (<see langword="null"/> for a brand
+    /// new device) so the caller can refresh a prior owner's list on a transfer.
+    /// Ownership deliberately follows the session: a device logged into a new
+    /// account must stop surfacing on the account that paired it first.
+    /// </summary>
+    public static async Task<(Device device, Guid? previousOwner)> ResolveOwnedDeviceAsync(
+        MediaContext ctx,
+        string fingerprint,
+        Guid userId,
+        string deviceName,
+        string deviceType
+    )
+    {
+        // DeviceId is globally unique (== ANDROID_ID for Android clients); the
+        // Fingerprint fallback matches legacy device-bus rows that pre-date the ID
+        // alignment. The lookup is intentionally NOT scoped by owner so a device
+        // that moves accounts is found and re-owned rather than duplicated.
+        Device? device = await ctx.Devices.FirstOrDefaultAsync(d =>
+            d.DeviceId == fingerprint || d.Fingerprint == fingerprint
+        );
+
+        Guid? previousOwner = device?.OwnerUserId;
 
         if (device is null)
         {
@@ -200,7 +239,7 @@ public sealed class DeviceBusEndpoint(
             {
                 DeviceId = fingerprint,
                 Fingerprint = fingerprint,
-                OwnerUserId = user.Id,
+                OwnerUserId = userId,
                 Name = deviceName,
                 Type = deviceType,
                 IsActive = true,
@@ -209,9 +248,8 @@ public sealed class DeviceBusEndpoint(
         }
         else
         {
-            // Existing MusicHub-registered row — backfill the device-bus columns.
             device.Fingerprint = fingerprint;
-            device.OwnerUserId ??= user.Id;
+            device.OwnerUserId = userId;
             if (string.IsNullOrEmpty(device.Type))
                 device.Type = deviceType;
         }
@@ -219,8 +257,6 @@ public sealed class DeviceBusEndpoint(
         device.WsConnectedAt = DateTime.UtcNow;
         device.IsActive = true;
         await ctx.SaveChangesAsync();
-
-        await registry.Register(device.Id, ws);
-        return device;
+        return (device, previousOwner);
     }
 }

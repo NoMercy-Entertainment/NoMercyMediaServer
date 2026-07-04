@@ -9,12 +9,15 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Diagnostics;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.BuildingBlocks.Drm;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.NmSystem.Information;
 using NoMercy.Storage;
+using NoMercy.Tests.Encoder.Integration;
 
 namespace NoMercy.Tests.Encoder.BuildingBlocks.Drm;
 
@@ -288,32 +291,120 @@ public class CencDrmProcessorTests
         spec.Should().Be("in=/out/video.mp4,stream=video,output=/out/video_enc.mp4,drm_label=HD");
     }
 
-    // ── Integration (skipped unless packager binary is present) ──────────
+    // ── Integration: real shaka-packager end-to-end ─────────────────────────
+    // Runs when the packager binary is resolvable — via SHAKA_PACKAGER_PATH or
+    // the standard binaries location (AppFiles.ShakaPackagerPath, downloaded by
+    // the server's binaries step alongside ffmpeg). Skips with a clear reason
+    // only when neither the packager nor the fork ffmpeg is present.
 
-    [Fact(Skip = "needs shaka-packager binary on PATH or ShakaPackagerPathOverride set")]
+    [SkippableFact]
     public async Task PackageAsync_WithRealPackager_ProducesMpd()
     {
-        // This test exercises the real shaka-packager binary end-to-end.
-        // It is skipped in CI unless the binary is explicitly provided.
-        // To run locally: set SHAKA_PACKAGER_PATH env or place `packager`
-        // on PATH, then remove the Skip attribute temporarily.
+        string? packagerPath =
+            NoMercyFfmpegProbe.ResolveShakaPackagerPath()
+            ?? (File.Exists(AppFiles.ShakaPackagerPath) ? AppFiles.ShakaPackagerPath : null);
+        Skip.If(
+            packagerPath is null,
+            "shaka-packager binary not present — set SHAKA_PACKAGER_PATH or run the "
+                + "server binaries step (downloads it alongside ffmpeg)."
+        );
 
-        string? packagerPath = Environment.GetEnvironmentVariable("SHAKA_PACKAGER_PATH");
-        if (string.IsNullOrWhiteSpace(packagerPath))
-            return; // guard: Skip attribute already prevents this, but belt-and-braces
+        string? ffmpegPath = ResolveFfmpegForFixture();
+        Skip.If(ffmpegPath is null, "ffmpeg not resolvable for fixture generation.");
 
         string tmpDir = Path.Combine(Path.GetTempPath(), $"cenc-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tmpDir);
 
         try
         {
-            // Real test would create a test mp4, run ffmpeg, then run packager.
-            // Placeholder: just verify the path resolves.
-            File.Exists(packagerPath).Should().BeTrue();
+            // 1) Generate a tiny fragmented mp4 the packager can ingest.
+            string inputMp4 = Path.Combine(tmpDir, "input.mp4");
+            await RunProcessAsync(
+                ffmpegPath!,
+                [
+                    "-y",
+                    "-f",
+                    "lavfi",
+                    "-i",
+                    "testsrc2=size=320x180:rate=25:duration=2",
+                    "-c:v",
+                    "libx264",
+                    "-preset",
+                    "ultrafast",
+                    "-pix_fmt",
+                    "yuv420p",
+                    inputMp4,
+                ]
+            );
+            File.Exists(inputMp4).Should().BeTrue("ffmpeg must produce the input clip");
+
+            // 2) Package it with real CENC raw-key encryption via the processor.
+            //    The packager writes real files, so storage.Exists must reflect the
+            //    real filesystem (not the always-false default mock).
+            EncoderOptions opts = new() { ShakaPackagerPathOverride = packagerPath };
+            IStorage storage = Mock.Of<IStorage>(s => s.Exists(It.IsAny<string>()) == false);
+            Mock.Get(storage).Setup(s => s.Exists(It.IsAny<string>())).Returns<string>(File.Exists);
+            CencDrmProcessor processor = new(
+                opts,
+                new ProcessRunner(NullLogger<ProcessRunner>.Instance),
+                NullLogger<CencDrmProcessor>.Instance,
+                storage
+            );
+
+            string manifestPath = Path.Combine(tmpDir, "manifest.mpd");
+            CencStreamDescriptor descriptor = new(
+                inputMp4,
+                "video",
+                Path.Combine(tmpDir, "video_enc.mp4"),
+                "SD"
+            );
+
+            string resultManifest = await processor.PackageAsync(
+                tmpDir,
+                [descriptor],
+                CencConfig(),
+                manifestPath,
+                CancellationToken.None
+            );
+
+            // 3) A real MPD with ContentProtection must have been produced.
+            File.Exists(resultManifest).Should().BeTrue("packager must produce the MPD");
+            string mpd = await File.ReadAllTextAsync(resultManifest);
+            mpd.Should().Contain("<MPD", "output must be a DASH manifest");
+            mpd.Should().Contain("ContentProtection", "CENC encryption must be signalled");
         }
         finally
         {
             Directory.Delete(tmpDir, recursive: true);
         }
+    }
+
+    private static string? ResolveFfmpegForFixture()
+    {
+        string candidate = AppFiles.FfmpegPath;
+        if (File.Exists(candidate))
+            return candidate;
+        return NoMercyFfmpegProbe.ResolveFfmpegPath();
+    }
+
+    private static async Task RunProcessAsync(string fileName, string[] args)
+    {
+        ProcessStartInfo psi = new()
+        {
+            FileName = fileName,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        foreach (string arg in args)
+            psi.ArgumentList.Add(arg);
+
+        using Process process = Process.Start(psi)!;
+        string stderr = await process.StandardError.ReadToEndAsync();
+        await process.StandardOutput.ReadToEndAsync();
+        await process.WaitForExitAsync();
+        if (process.ExitCode != 0)
+            throw new InvalidOperationException($"{fileName} failed: {stderr}");
     }
 }

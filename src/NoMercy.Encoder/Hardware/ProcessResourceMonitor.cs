@@ -37,6 +37,14 @@ public class ProcessResourceMonitor : IResourceMonitor
     private long _lastLinuxTotal;
     private DateTime _lastSystemSampleAt = DateTime.MinValue;
     private double _lastSystemCpuPercent;
+
+    // Separate from _lastCpuTime (GetCpuUsagePercent's baseline, guarded by
+    // _snapshotLock): SampleProcessFamilyCpu used to read/write that SAME field
+    // under _systemSnapshotLock instead, so the two samplers clobbered each
+    // other's baseline whenever both were called (e.g. GetSystemCpuUsagePercent
+    // falling back to the process-family sampler on macOS while something else
+    // still polls GetCpuUsagePercent).
+    private TimeSpan _lastProcessFamilyCpuTime = TimeSpan.Zero;
     private readonly Lock _systemSnapshotLock = new();
 
     private readonly ILogger<ProcessResourceMonitor>? _logger;
@@ -105,7 +113,9 @@ public class ProcessResourceMonitor : IResourceMonitor
     /// sampler such as <c>NvmlGpuSampler</c>. The unsupported warning is logged
     /// once at startup (rule <c>hardware.gpu_telemetry_unsupported</c>).
     /// </remarks>
-    public virtual IReadOnlyList<GpuProcessSample> SampleGpu()
+    public virtual Task<IReadOnlyList<GpuProcessSample>> SampleGpuAsync(
+        CancellationToken cancellationToken = default
+    )
     {
         if (!_gpuWarningLogged)
         {
@@ -117,7 +127,7 @@ public class ProcessResourceMonitor : IResourceMonitor
             );
         }
 
-        return [];
+        return Task.FromResult<IReadOnlyList<GpuProcessSample>>([]);
     }
 
     public long GetAvailableMemoryMb()
@@ -239,7 +249,7 @@ public class ProcessResourceMonitor : IResourceMonitor
     /// and every running ffmpeg child. Catches the encoder load even when
     /// the OS-specific sampler is unavailable.
     /// </summary>
-    private double SampleProcessFamilyCpu()
+    internal double SampleProcessFamilyCpu()
     {
         try
         {
@@ -269,17 +279,17 @@ public class ProcessResourceMonitor : IResourceMonitor
             lock (_systemSnapshotLock)
             {
                 double elapsedMs = (now - _lastSystemSampleAt).TotalMilliseconds;
-                double cpuMs = (totalCpu - _lastCpuTime).TotalMilliseconds;
+                double cpuMs = (totalCpu - _lastProcessFamilyCpuTime).TotalMilliseconds;
 
                 if (_lastSystemSampleAt == DateTime.MinValue || elapsedMs < 1)
                 {
                     _lastSystemSampleAt = now;
-                    _lastCpuTime = totalCpu;
+                    _lastProcessFamilyCpuTime = totalCpu;
                     return _lastSystemCpuPercent;
                 }
 
                 _lastSystemSampleAt = now;
-                _lastCpuTime = totalCpu;
+                _lastProcessFamilyCpuTime = totalCpu;
 
                 int cores = Math.Max(1, Environment.ProcessorCount);
                 double percent = Math.Clamp(cpuMs / elapsedMs / cores * 100.0, 0, 100);
@@ -320,5 +330,7 @@ public sealed class NullResourceMonitor : IResourceMonitor
 
     public long GetAvailableMemoryMb() => 0;
 
-    public IReadOnlyList<GpuProcessSample> SampleGpu() => [];
+    public Task<IReadOnlyList<GpuProcessSample>> SampleGpuAsync(
+        CancellationToken cancellationToken = default
+    ) => Task.FromResult<IReadOnlyList<GpuProcessSample>>([]);
 }

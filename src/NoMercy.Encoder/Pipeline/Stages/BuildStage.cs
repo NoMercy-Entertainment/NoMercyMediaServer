@@ -18,9 +18,7 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Metadata;
-using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Output;
-using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Storage;
@@ -121,12 +119,12 @@ public class BuildStage(
                     );
                 }
 
-                string variantStats = VariantStatsPath(
+                string variantStats = TwoPassCommandBuilder.VariantStatsPath(
                     input.StatsFilePath!,
                     input.Pass1VariantIndex
                 );
 
-                FfmpegCommand pass1 = BuildPass1Command(
+                FfmpegCommand pass1 = TwoPassCommandBuilder.BuildPass1Command(
                     input.Plan.OutputPlan,
                     context.MediaInfo,
                     input.InputPath,
@@ -217,8 +215,7 @@ public class BuildStage(
                 );
                 input = input with { Plan = input.Plan with { OutputPlan = sliced } };
                 logger.LogInformation(
-                    "[{CorrelationId}] Sliced plan for {Kind} task #{Idx}: "
-                        + "{V} video / {A} audio / {S} sub / thumbs={T}",
+                    "[{CorrelationId}] Sliced plan for {Kind} task #{Idx}: {V} video / {A} audio / {S} sub / thumbs={T}",
                     context.CorrelationId,
                     taskFilter.Kind,
                     taskFilter.OutputIndex,
@@ -252,7 +249,7 @@ public class BuildStage(
             builder.WithGlobalExtraFlags(input.Plan.OutputPlan.GlobalExtraFlags);
 
             TimeSpan? resumeSeek = ResolveResumeSeek(input.ResumeFromMs);
-            bool useGpuResident = UsesGpuResidentPath(input.Plan.OutputPlan);
+            bool useGpuResident = FilterGraphAssembler.UsesGpuResidentPath(input.Plan.OutputPlan);
             builder.AddInput(
                 new(
                     input.InputPath,
@@ -314,23 +311,31 @@ public class BuildStage(
 
             string? filterGraph;
 
+            string? pgsThumbnailLabel = null;
             if (isPgsBurnIn)
             {
+                // The overlay output must be split into one distinct pad per
+                // consumer — each video rung plus the thumbnail branch — or
+                // ffmpeg aborts on a pad mapped more than once.
+                bool pgsIncludesThumbnails = input.Plan.OutputPlan.Thumbnails is not null;
                 PgsBurnInFilterChain chain = pgsBurnInFilterBuilder!.Build(
                     videoStreamIndex: 0,
-                    subtitleStreamIndex: burnInPlan!.SourceIndex
+                    subtitleStreamIndex: burnInPlan!.SourceIndex,
+                    videoOutputCount: input.Plan.OutputPlan.VideoOutputs.Length,
+                    includeThumbnails: pgsIncludesThumbnails
                 );
                 filterGraph = chain.FilterComplex;
-                // Override the video map label in every video output to [burned].
-                OutputPlan pgsRemapped = RemapVideoToBurnedLabel(
+                pgsThumbnailLabel = chain.ThumbnailLabel;
+                // Give each video output its own split pad.
+                OutputPlan pgsRemapped = FilterGraphAssembler.RemapVideoToBurnedLabels(
                     input.Plan.OutputPlan,
-                    chain.MapLabel
+                    chain.VideoLabels
                 );
                 input = input with { Plan = input.Plan with { OutputPlan = pgsRemapped } };
             }
             else
             {
-                filterGraph = BuildFilterGraph(
+                filterGraph = FilterGraphAssembler.BuildFilterGraph(
                     input.Plan.OutputPlan,
                     context.MediaInfo,
                     input.InputPath,
@@ -346,7 +351,10 @@ public class BuildStage(
             OutputPlan effectivePlan = input.Plan.OutputPlan;
             if (input.Pass == EncodingPass.Two && !string.IsNullOrEmpty(input.StatsFilePath))
             {
-                effectivePlan = InjectPass2Flags(effectivePlan, input.StatsFilePath);
+                effectivePlan = TwoPassCommandBuilder.InjectPass2Flags(
+                    effectivePlan,
+                    input.StatsFilePath
+                );
             }
 
             // Video + audio outputs via the output strategy (HLS, MKV, etc.)
@@ -367,10 +375,16 @@ public class BuildStage(
             {
                 ThumbnailOutputPlan thumbs = input.Plan.OutputPlan.Thumbnails;
 
+                // The normal filter graph defines a [thumbs] pad; the PGS overlay
+                // path bypasses it, so read from the dedicated split pad it
+                // produced instead — otherwise -map [thumbs] references a label
+                // that no filtergraph defines and ffmpeg aborts.
+                string thumbnailMapLabel = pgsThumbnailLabel ?? "[thumbs]";
+
                 builder.AddOutput(
                     new(
                         FilePath: $"thumbs_{thumbs.Width}x{thumbs.Height}.webp",
-                        MapStreams: ["[thumbs]"],
+                        MapStreams: [thumbnailMapLabel],
                         ExtraFlags: new()
                         {
                             ["-f"] = "spritevtt",
@@ -385,7 +399,7 @@ public class BuildStage(
             List<FfmpegCommand> bitmapSubCommands = [];
             if (input.Plan.OutputPlan.SubtitleOutputs.Length > 0 && context.MediaInfo is not null)
             {
-                AddTextSubtitleOutputs(
+                SubtitleCommandBuilder.AddTextSubtitleOutputs(
                     builder,
                     input.Plan.OutputPlan,
                     context.MediaInfo,
@@ -395,7 +409,7 @@ public class BuildStage(
                     effectiveStorage
                 );
 
-                bitmapSubCommands = BuildBitmapSubtitleCommands(
+                bitmapSubCommands = SubtitleCommandBuilder.BuildBitmapSubtitleCommands(
                     options.FfmpegPath,
                     input.InputPath,
                     input.Plan.OutputPlan,
@@ -409,7 +423,14 @@ public class BuildStage(
 
             FfmpegCommand mainCommand = builder.Build(options.FfmpegPath, input.OutputDirectory);
             bool copyMode = IsCopyMode(input.Plan.OutputPlan);
-            mainCommand = InjectMetadataArgs(mainCommand, context.MediaItem, context, copyMode);
+            mainCommand = MetadataInjectionBuilder.InjectMetadataArgs(
+                metadataInjector,
+                metadataMerger,
+                mainCommand,
+                context.MediaItem,
+                context,
+                copyMode
+            );
 
             logger.LogInformation(
                 "[{CorrelationId}] FFmpeg command: {Executable} {Args}",
@@ -487,11 +508,13 @@ public class BuildStage(
         IDrmProcessor? processor = drmProcessors.FirstOrDefault(p => p.Method == drm.Method);
         if (processor is null)
         {
-            logger.LogWarning(
-                "No DRM processor registered for {Method} — encoding without DRM",
-                drm.Method
+            // DRM was explicitly requested by the profile — proceeding without
+            // it would ship an unencrypted output while reporting success.
+            // Fail the encode instead of silently downgrading to plaintext.
+            throw new InvalidOperationException(
+                $"DRM was requested ({drm.Method}) but no matching processor is registered — "
+                    + "refusing to ship an unencrypted encode."
             );
-            return input;
         }
 
         DrmArtifact artifact = await processor
@@ -512,774 +535,6 @@ public class BuildStage(
         OutputPlan newOutputPlan = input.Plan.OutputPlan with { VideoOutputs = encryptedVideos };
         ExecutionPlan newPlan = input.Plan with { OutputPlan = newOutputPlan };
         return input with { Plan = newPlan };
-    }
-
-    /// <summary>
-    /// Adds text subtitle outputs (WebVTT, ASS) to the main FFmpeg command builder.
-    /// Bitmap subtitles are handled separately via BuildBitmapSubtitleCommands.
-    /// </summary>
-    private static void AddTextSubtitleOutputs(
-        FfmpegCommandBuilder builder,
-        OutputPlan plan,
-        MediaInfo mediaInfo,
-        string outputDirectory,
-        string mediaTitle,
-        ISubtitleExtractor subtitleExtractor,
-        IStorage storage
-    )
-    {
-        foreach (SubtitleOutputPlan subPlan in plan.SubtitleOutputs)
-        {
-            if (subPlan.Policy == SubtitlePolicy.BurnIn)
-                continue;
-
-            if (subPlan.Action is not (StreamAction.Extract or StreamAction.Copy))
-                continue;
-
-            if (subPlan.SourceIndex >= mediaInfo.SubtitleStreams.Count)
-                continue;
-
-            SubtitleStreamInfo stream = mediaInfo.SubtitleStreams[subPlan.SourceIndex];
-
-            // Only text subtitles in the main command
-            if (!stream.IsTextBased)
-                continue;
-
-            SubtitleOutputInfo info = subtitleExtractor.ResolveOutput(
-                subPlan,
-                stream,
-                outputDirectory,
-                mediaTitle
-            );
-
-            // Ensure subtitle directory exists (storage-relative parent of OutputPath).
-            string? parentDir = storage.GetParent(info.OutputPath);
-            if (parentDir is not null)
-                storage.CreateDirectory(storage.CombinePath(outputDirectory, parentDir));
-
-            // FFmpeg gets the relative path (CWD = output directory)
-            builder.AddOutput(
-                new(
-                    FilePath: info.OutputPath,
-                    SubtitleCodec: info.FfmpegCodec,
-                    MapStreams: [$"0:s:{info.SourceIndex}"]
-                )
-            );
-        }
-    }
-
-    /// <summary>
-    /// Builds separate FFmpeg commands for bitmap subtitle extraction.
-    /// Bitmap subs (dvd_subtitle, PGS) can't be muxed to .sub+.idx in a multi-output command.
-    /// They're extracted as MKS (Matroska subtitle container) which preserves the original format.
-    /// </summary>
-    private static List<FfmpegCommand> BuildBitmapSubtitleCommands(
-        string ffmpegPath,
-        string inputPath,
-        OutputPlan plan,
-        MediaInfo mediaInfo,
-        string outputDirectory,
-        string mediaTitle,
-        ISubtitleExtractor subtitleExtractor,
-        IStorage storage
-    )
-    {
-        List<FfmpegCommand> commands = [];
-
-        foreach (SubtitleOutputPlan subPlan in plan.SubtitleOutputs)
-        {
-            if (subPlan.Policy == SubtitlePolicy.BurnIn)
-                continue;
-
-            if (subPlan.Action is not (StreamAction.Extract or StreamAction.Copy))
-                continue;
-
-            if (subPlan.SourceIndex >= mediaInfo.SubtitleStreams.Count)
-                continue;
-
-            SubtitleStreamInfo stream = mediaInfo.SubtitleStreams[subPlan.SourceIndex];
-
-            // Only bitmap subtitles here
-            if (stream.IsTextBased)
-                continue;
-
-            SubtitleOutputInfo info = subtitleExtractor.ResolveOutput(
-                subPlan,
-                stream,
-                outputDirectory,
-                mediaTitle
-            );
-
-            // Ensure subtitle directory exists (storage-relative parent of OutputPath).
-            string? parentDir = storage.GetParent(info.OutputPath);
-            if (parentDir is not null)
-                storage.CreateDirectory(storage.CombinePath(outputDirectory, parentDir));
-
-            // Use MKS (Matroska) container for bitmap subs.
-            // Must specify -f matroska explicitly — FFmpeg doesn't auto-detect .mks.
-            string outputPath = Path.ChangeExtension(info.OutputPath, ".mks");
-
-            FfmpegCommand cmd = new FfmpegCommandBuilder()
-                .WithGlobalOptions(new(ProgressPipe: false, Overwrite: true))
-                .AddInput(new(inputPath))
-                .AddOutput(
-                    new(
-                        FilePath: outputPath,
-                        SubtitleCodec: "copy",
-                        MapStreams: [$"0:s:{info.SourceIndex}"],
-                        ExtraFlags: new() { ["-f"] = "matroska" }
-                    )
-                )
-                .Build(ffmpegPath, outputDirectory);
-
-            commands.Add(cmd);
-        }
-
-        return commands;
-    }
-
-    /// <summary>
-    /// Returns a copy of <paramref name="plan"/> with <c>-pass 2</c> +
-    /// <c>-passlogfile</c> injected into every video output's extra flags,
-    /// so the shared output strategy emits them on the FFmpeg command.
-    /// Each variant gets its own stats file (keyed on index) — the strategy
-    /// generates the matching set in pass 1.
-    /// </summary>
-    private static OutputPlan InjectPass2Flags(OutputPlan plan, string statsFilePath)
-    {
-        VideoOutputPlan[] updated = plan
-            .VideoOutputs.Select(
-                (v, index) =>
-                {
-                    Dictionary<string, string> flags = new(v.ExtraFlags)
-                    {
-                        ["-pass"] = "2",
-                        ["-passlogfile"] = VariantStatsPath(statsFilePath, index),
-                    };
-                    return v with { ExtraFlags = flags };
-                }
-            )
-            .ToArray();
-
-        return plan with
-        {
-            VideoOutputs = updated,
-        };
-    }
-
-    /// <summary>
-    /// Per-variant stats path — each variant writes its own <c>-0.log</c>
-    /// and <c>-0.log.mbtree</c> so measurements stay independent. Appending
-    /// <c>_v{index}</c> to the base path keeps them colocated.
-    /// </summary>
-    internal static string VariantStatsPath(string basePath, int variantIndex) =>
-        $"{basePath}_v{variantIndex}";
-
-    /// <summary>
-    /// Builds the pass-1 FFmpeg command: video-only analysis that writes its
-    /// stats to <paramref name="statsFilePath"/> and discards actual output.
-    /// <paramref name="variantIndex"/> picks which variant to analyze — the
-    /// strategy loops 0..N-1 for multi-variant profiles.
-    /// </summary>
-    private static FfmpegCommand BuildPass1Command(
-        OutputPlan plan,
-        MediaInfo? mediaInfo,
-        string inputPath,
-        string outputDirectory,
-        string statsFilePath,
-        string ffmpegPath,
-        int variantIndex = 0
-    )
-    {
-        VideoOutputPlan video = plan.VideoOutputs[variantIndex];
-
-        FfmpegCommandBuilder builder = new();
-        builder.AddInput(new(inputPath));
-
-        // Pass 1 analyzes the single target variant — strip the other variants,
-        // audio, subtitles, and thumbnails so the filter graph only produces
-        // the one video label. Much cheaper than decoding + filtering 4 variants
-        // when only one is being measured.
-        OutputPlan videoOnly = plan with
-        {
-            VideoOutputs = [video],
-            AudioOutputs = [],
-            SubtitleOutputs = [],
-            Thumbnails = null,
-        };
-        // Pass 1 never burns subtitles — no builder needed.
-        string? filterGraph = BuildFilterGraph(
-            videoOnly,
-            mediaInfo,
-            inputPath,
-            assBurnInFilterBuilder: null
-        );
-        if (filterGraph is not null)
-            builder.WithFilterComplex(filterGraph);
-
-        // Pass 1 output: video encoder settings + -pass 1 + null sink.
-        Dictionary<string, string> extraFlags = new(video.ExtraFlags)
-        {
-            ["-pass"] = "1",
-            ["-passlogfile"] = statsFilePath,
-            ["-an"] = string.Empty,
-            ["-sn"] = string.Empty,
-            ["-f"] = "null",
-        };
-
-        builder.AddOutput(
-            new(
-                FilePath: "-",
-                VideoCodec: video.EncoderName,
-                VideoBitrateKbps: video.BitrateKbps > 0 ? video.BitrateKbps : null,
-                Preset: video.Preset,
-                Profile: video.Profile,
-                Level: video.Level,
-                PixelFormat: video.TenBit ? video.PixelFormat : null,
-                MapStreams: [video.MapLabel],
-                ExtraFlags: extraFlags
-            )
-        );
-
-        return builder.Build(ffmpegPath, outputDirectory);
-    }
-
-    /// <summary>
-    /// Reduces a multi-variant <see cref="OutputPlan"/> down to just the
-    /// outputs a single <see cref="DecomposedTask"/> needs to emit. Returns
-    /// the plan unchanged for <see cref="EncodeTaskKind.Whole"/>, leaves
-    /// <see cref="EncodeTaskKind.Chapters"/> to the dedicated chapter branch,
-    /// and lets <see cref="EncodeTaskKind.Pass1"/> / <see cref="EncodeTaskKind.Pass2"/>
-    /// keep using Pass1VariantIndex for their own slicing.
-    ///
-    /// When <see cref="DecomposedTask.SourceIndexes"/> is set the slice
-    /// includes every entry it lists (smart-batched bucket of rungs sharing
-    /// one ffmpeg via filter_complex split); otherwise the legacy single
-    /// <see cref="DecomposedTask.OutputIndex"/> slice is used.
-    ///
-    /// Acquired subtitles are kept on Subtitle tasks (the consumer) and
-    /// dropped from Video / Audio / Thumbnails tasks so they don't add
-    /// spurious <c>-i</c> inputs to encodes that won't consume them.
-    /// Chapters / Drm / Layout are preserved as metadata across all slices.
-    /// </summary>
-    /// <summary>
-    /// GPU-resident when the plan carries a resolved GpuAccel plan, has video
-    /// outputs, and requests no thumbnails (sprite generation needs a CPU
-    /// download that would break the GPU-memory chain). Drives both the
-    /// <c>-hwaccel</c> decode flags and the GPU scale branch.
-    /// </summary>
-    private static bool UsesGpuResidentPath(OutputPlan plan) =>
-        plan.GpuAccel is not null && plan.Thumbnails is null && plan.VideoOutputs.Length > 0;
-
-    private static string? BuildFilterGraph(
-        OutputPlan plan,
-        MediaInfo? mediaInfo,
-        string inputPath,
-        AssBurnInFilterBuilder? assBurnInFilterBuilder
-    )
-    {
-        VideoOutputPlan[] videoOutputs = plan.VideoOutputs;
-
-        // No video outputs or no filter-graph labels — nothing to build
-        if (videoOutputs.Length == 0 || !videoOutputs.Any(v => v.MapLabel.StartsWith('[')))
-            return null;
-
-        // Source dimensions are required to decide copy vs. scale
-        if (mediaInfo is null || mediaInfo.VideoStreams.Count == 0)
-            return null;
-
-        int sourceWidth = mediaInfo.VideoStreams[0].Width;
-        int sourceHeight = mediaInfo.VideoStreams[0].Height;
-        bool sourceIs10Bit = mediaInfo.VideoStreams[0].BitDepth > 8;
-        bool hasThumbnails = plan.Thumbnails is not null;
-        bool sourceIsHdr = mediaInfo.VideoStreams[0].IsHdr;
-        string? thumbnailTonemapChain = videoOutputs
-            .Select(v => v.TonemapFilterChain)
-            .FirstOrDefault(c => !string.IsNullOrEmpty(c));
-
-        // First text-based subtitle output with BurnIn mode (PGS burn-in uses
-        // the overlay path handled before this method is called).
-        string? burnInExpr = ResolveBurnInExpression(
-            plan.SubtitleOutputs,
-            mediaInfo,
-            inputPath,
-            assBurnInFilterBuilder
-        );
-
-        FilterGraphBuilder fg = new();
-
-        // GPU-resident path: frames are decoded into GPU memory (-hwaccel set on
-        // the input) and scaled on the GPU. Eligibility guarantees no tonemap /
-        // crop / burn-in, so every branch is just a GPU scale. Sprites need a CPU
-        // download, so this path is skipped when thumbnails are requested.
-        if (UsesGpuResidentPath(plan))
-        {
-            string scaleFilter = plan.GpuAccel!.ScaleFilter;
-            if (videoOutputs.Length == 1)
-            {
-                VideoOutputPlan only = videoOutputs[0];
-                fg.AddGpuScale(
-                    "0:v:0",
-                    scaleFilter,
-                    only.Width,
-                    only.Height,
-                    only.MapLabel.Trim('[', ']')
-                );
-            }
-            else
-            {
-                List<string> splitLabels = videoOutputs.Select((_, i) => $"gsplit{i}").ToList();
-                fg.AddSplit("0:v:0", splitLabels.ToArray());
-                for (int i = 0; i < videoOutputs.Length; i++)
-                {
-                    VideoOutputPlan rung = videoOutputs[i];
-                    fg.AddGpuScale(
-                        splitLabels[i],
-                        scaleFilter,
-                        rung.Width,
-                        rung.Height,
-                        rung.MapLabel.Trim('[', ']')
-                    );
-                }
-            }
-
-            return fg.HasFilters ? fg.Build() : null;
-        }
-
-        // Tonemap once: when any SDR consumer (rung or sprite) needs the same
-        // HDR→SDR tonemap chain we run it ONCE on the source and route every
-        // consumer from the shared [sdr] intermediate. Per-frame the
-        // zscale/tonemap chain is the most expensive filter in the graph —
-        // running it per branch burns CPU for identical output, and a sprite
-        // sampling raw HDR shows crushed colours. Only genuinely mixed tonemap
-        // chains (different algorithms per rung) fall through to the per-branch
-        // legacy path below.
-        bool[] needsTonemapPerBranch = new bool[videoOutputs.Length];
-        for (int i = 0; i < videoOutputs.Length; i++)
-        {
-            needsTonemapPerBranch[i] =
-                videoOutputs[i].ConvertHdrToSdr && videoOutputs[i].TonemapFilterChain is not null;
-        }
-
-        string? sharedTonemap = null;
-        bool dedupeTonemap = false;
-        if (needsTonemapPerBranch.Count(needs => needs) >= 1)
-        {
-            string?[] tonemapChains = videoOutputs
-                .Where((_, idx) => needsTonemapPerBranch[idx])
-                .Select(video => video.TonemapFilterChain)
-                .ToArray();
-            if (tonemapChains.Distinct().Count() == 1)
-            {
-                sharedTonemap = tonemapChains[0];
-                dedupeTonemap = true;
-            }
-        }
-
-        // Total split branches: one per video output + one for thumbnails (if enabled)
-        int totalBranches = videoOutputs.Length + (hasThumbnails ? 1 : 0);
-
-        if (totalBranches == 1 && !hasThumbnails)
-        {
-            // Single video, no thumbnails — no split needed
-            VideoOutputPlan single = videoOutputs[0];
-            string outputLabel = single.MapLabel.Trim('[', ']');
-            BuildBranchFilter(
-                fg,
-                "0:v:0",
-                outputLabel,
-                single,
-                sourceWidth,
-                sourceHeight,
-                sourceIs10Bit,
-                burnInExpr,
-                tonemapAlreadyApplied: false
-            );
-        }
-        else if (dedupeTonemap)
-        {
-            // Shared HDR→SDR tonemap: run tonemap once, then split.
-            //
-            // Branches split into two groups:
-            //   - HDR-pass branches (needsTonemap=false): use [0:v:0] directly
-            //   - SDR-tonemapped branches: use [sdr] intermediate
-            // Thumbnails (SDR-friendly format) branch from [sdr] when present.
-            int sdrBranchCount = needsTonemapPerBranch.Count(needs => needs);
-            int hdrPassBranchCount = videoOutputs.Length - sdrBranchCount;
-            int thumbsFromSdr = hasThumbnails ? 1 : 0;
-
-            int sourceSplitCount = hdrPassBranchCount + 1; // +1 for tonemap source
-
-            List<string> sourceSplitLabels = new();
-            for (int i = 0; i < hdrPassBranchCount; i++)
-                sourceSplitLabels.Add($"hdr{i}");
-            sourceSplitLabels.Add("tonemap_in");
-
-            if (sourceSplitCount == 1)
-            {
-                // Only one downstream consumer of [0:v:0] — the tonemap input.
-                // No source split needed; tonemap directly from [0:v:0].
-                fg.AddFilter("0:v:0", sharedTonemap!, "sdr");
-            }
-            else
-            {
-                fg.AddSplit("0:v:0", sourceSplitLabels.ToArray());
-                fg.AddFilter("tonemap_in", sharedTonemap!, "sdr");
-            }
-
-            // Split [sdr] into per-SDR-branch labels + thumbnail source.
-            int sdrSplitCount = sdrBranchCount + thumbsFromSdr;
-            List<string> sdrSplitLabels = new();
-            for (int i = 0; i < sdrBranchCount; i++)
-                sdrSplitLabels.Add($"sdr{i}");
-            if (hasThumbnails)
-                sdrSplitLabels.Add("thumbsrc");
-
-            if (sdrSplitCount == 1)
-            {
-                // One consumer of [sdr] — feed it directly without a split.
-                // Rewrite the consumer's input label later.
-            }
-            else
-            {
-                fg.AddSplit("sdr", sdrSplitLabels.ToArray());
-            }
-
-            int hdrIdx = 0;
-            int sdrIdx = 0;
-            string sdrInputForSingleConsumer = "sdr";
-            for (int i = 0; i < videoOutputs.Length; i++)
-            {
-                VideoOutputPlan video = videoOutputs[i];
-                string outputLabel = video.MapLabel.Trim('[', ']');
-                string inputLabel;
-                bool tonemapApplied;
-
-                if (needsTonemapPerBranch[i])
-                {
-                    inputLabel =
-                        sdrSplitCount == 1 ? sdrInputForSingleConsumer : sdrSplitLabels[sdrIdx++];
-                    tonemapApplied = true;
-                }
-                else
-                {
-                    inputLabel = sourceSplitCount == 1 ? "0:v:0" : $"hdr{hdrIdx++}";
-                    tonemapApplied = false;
-                }
-
-                BuildBranchFilter(
-                    fg,
-                    inputLabel,
-                    outputLabel,
-                    video,
-                    sourceWidth,
-                    sourceHeight,
-                    sourceIs10Bit,
-                    burnInExpr,
-                    tonemapAlreadyApplied: tonemapApplied
-                );
-            }
-
-            if (hasThumbnails)
-            {
-                ThumbnailOutputPlan thumbs = plan.Thumbnails!;
-                string thumbInput = sdrSplitCount == 1 ? sdrInputForSingleConsumer : "thumbsrc";
-                fg.AddFilter(
-                    thumbInput,
-                    $"format=yuvj420p,fps=1/{thumbs.IntervalSeconds},scale={thumbs.Width}:-2",
-                    "thumbs"
-                );
-            }
-        }
-        else
-        {
-            // Legacy path: no dedupe possible (mixed tonemap params, single
-            // tonemap branch, or none at all). Split source N+1 ways and let
-            // each branch run its own filter chain.
-            List<string> splitLabels = videoOutputs.Select((_, i) => $"split{i}").ToList();
-            if (hasThumbnails)
-                splitLabels.Add("thumbsrc");
-
-            fg.AddSplit("0:v:0", splitLabels.ToArray());
-
-            for (int i = 0; i < videoOutputs.Length; i++)
-            {
-                VideoOutputPlan video = videoOutputs[i];
-                string outputLabel = video.MapLabel.Trim('[', ']');
-
-                BuildBranchFilter(
-                    fg,
-                    splitLabels[i],
-                    outputLabel,
-                    video,
-                    sourceWidth,
-                    sourceHeight,
-                    sourceIs10Bit,
-                    burnInExpr,
-                    tonemapAlreadyApplied: false
-                );
-            }
-
-            // Thumbnail branch — uses HDR source directly when no dedupe is
-            // possible (thumbnails from HDR may show crushed colors but this
-            // branch only fires in the rare mixed-tonemap fallback).
-            if (hasThumbnails)
-            {
-                ThumbnailOutputPlan thumbs = plan.Thumbnails!;
-                fg.AddFilter(
-                    "thumbsrc",
-                    ThumbnailFilterResolver.Resolve(
-                        thumbs.IntervalSeconds,
-                        thumbs.Width,
-                        sourceIsHdr,
-                        thumbnailTonemapChain
-                    ),
-                    "thumbs"
-                );
-            }
-        }
-
-        return fg.HasFilters ? fg.Build() : null;
-    }
-
-    /// <summary>
-    /// Builds the filter chain for a single video output branch.
-    /// Pipeline: tonemap (HDR→SDR) → scale (resolution) → format (pixel format) → burn-in subs.
-    /// Each step is skipped when not needed.
-    ///
-    /// <paramref name="tonemapAlreadyApplied"/> is set by the dedupe path
-    /// in <see cref="BuildFilterGraph"/> when the source has been
-    /// pre-tonemapped once (shared <c>[sdr]</c> intermediate) — this branch
-    /// then skips its own tonemap chain and the implicit 8-bit conversion
-    /// it carries.
-    /// </summary>
-    private static void BuildBranchFilter(
-        IFilterGraphBuilder fg,
-        string inputLabel,
-        string outputLabel,
-        VideoOutputPlan video,
-        int sourceWidth,
-        int sourceHeight,
-        bool sourceIs10Bit,
-        string? burnInExpr,
-        bool tonemapAlreadyApplied
-    )
-    {
-        bool needsCrop = !string.IsNullOrWhiteSpace(video.CropFilter);
-        bool needsTonemap =
-            !tonemapAlreadyApplied && video.ConvertHdrToSdr && video.TonemapFilterChain is not null;
-        bool needsScale = video.Width != sourceWidth || video.Height != sourceHeight;
-        bool needs8BitConversion = !tonemapAlreadyApplied && sourceIs10Bit && !video.TenBit;
-        bool needsBurnIn = burnInExpr is not null;
-
-        if (!needsCrop && !needsTonemap && !needsScale && !needs8BitConversion && !needsBurnIn)
-        {
-            fg.AddFilter(inputLabel, "copy", outputLabel);
-            return;
-        }
-
-        // Determine whether we need to terminate the tonemap/scale/format chain on
-        // an intermediate label (because burn-in goes after) or on the output label.
-        string videoChainEnd = needsBurnIn ? $"{outputLabel}_presub" : outputLabel;
-
-        string currentLabel = inputLabel;
-
-        // Step 0: Crop (remove letterbox / pillarbox). Must run before tonemap /
-        // scale so the later filters operate on the real picture region.
-        if (needsCrop)
-        {
-            bool hasDownstreamWork =
-                needsTonemap || needsScale || needs8BitConversion || needsBurnIn;
-            string cropOut = hasDownstreamWork ? $"{outputLabel}_cropped" : videoChainEnd;
-            fg.AddFilter(currentLabel, $"crop={video.CropFilter}", cropOut);
-            currentLabel = cropOut;
-
-            if (!hasDownstreamWork)
-                return;
-        }
-
-        // Step 1: Tonemap (HDR→SDR) — outputs yuv420p, so 8-bit conversion is included
-        if (needsTonemap)
-        {
-            string nextLabel = needsScale ? $"{outputLabel}_tonemapped" : videoChainEnd;
-            fg.AddFilter(currentLabel, video.TonemapFilterChain!, nextLabel);
-            currentLabel = nextLabel;
-
-            needs8BitConversion = false;
-
-            if (!needsScale && !needsBurnIn)
-                return;
-        }
-
-        // Step 2: Scale + format
-        if (needsScale && needs8BitConversion)
-        {
-            string intermediate = $"{outputLabel}_scaled";
-            fg.AddScaleWidth(currentLabel, video.Width, intermediate);
-            fg.AddFilter(intermediate, $"format={video.PixelFormat}", videoChainEnd);
-            currentLabel = videoChainEnd;
-        }
-        else if (needsScale)
-        {
-            fg.AddScaleWidth(currentLabel, video.Width, videoChainEnd);
-            currentLabel = videoChainEnd;
-        }
-        else if (needs8BitConversion)
-        {
-            fg.AddFilter(currentLabel, $"format={video.PixelFormat}", videoChainEnd);
-            currentLabel = videoChainEnd;
-        }
-        else if (needsBurnIn && !needsTonemap)
-        {
-            // No video processing yet — but we still need to land on the intermediate label
-            // so the subtitles filter below can read from it.
-            fg.AddFilter(currentLabel, "copy", videoChainEnd);
-            currentLabel = videoChainEnd;
-        }
-
-        // Step 3: Burn-in subtitles — always last (after resolution is final).
-        if (needsBurnIn)
-        {
-            fg.AddFilter(currentLabel, burnInExpr!, outputLabel);
-        }
-    }
-
-    /// <summary>
-    /// Resolves the first text-based burn-in subtitle output into an FFmpeg
-    /// filter expression. Returns null when no burn-in subtitle is requested
-    /// or when the first burn-in track is bitmap-based (PGS/DVD — those use
-    /// the overlay path handled separately before <see cref="BuildFilterGraph"/>
-    /// is called).
-    ///
-    /// <para>For ASS/SSA sources the expression uses libass via the
-    /// <c>ass=</c> filter routed through <see cref="AssBurnInFilterBuilder"/>,
-    /// which applies correct filter-graph escaping and threads the
-    /// <c>fontsdir</c> hint when present. All other text codecs fall back to
-    /// the generic <c>subtitles=</c> filter with stream-index selection.</para>
-    /// </summary>
-    private static string? ResolveBurnInExpression(
-        SubtitleOutputPlan[] subs,
-        MediaInfo mediaInfo,
-        string inputPath,
-        AssBurnInFilterBuilder? assBurnInFilterBuilder
-    )
-    {
-        SubtitleOutputPlan? burnIn = subs.FirstOrDefault(s => s.Policy == SubtitlePolicy.BurnIn);
-        if (burnIn is null)
-            return null;
-
-        // Only text-based codecs here — bitmap (PGS/DVD) uses the overlay path.
-        if (burnIn.SourceIndex < mediaInfo.SubtitleStreams.Count)
-        {
-            SubtitleStreamInfo stream = mediaInfo.SubtitleStreams[burnIn.SourceIndex];
-            if (!stream.IsTextBased)
-                return null;
-
-            // ASS/SSA: route through dedicated builder for libass + fontsdir.
-            if (
-                assBurnInFilterBuilder is not null
-                && (
-                    stream.Codec.Equals("ass", StringComparison.OrdinalIgnoreCase)
-                    || stream.Codec.Equals("ssa", StringComparison.OrdinalIgnoreCase)
-                )
-            )
-            {
-                return assBurnInFilterBuilder.Build(inputPath);
-            }
-        }
-
-        // Generic text subtitle fallback: subtitles= filter with stream-index.
-        // Delegate to shared escape logic so both code paths stay in sync.
-        string escaped = AssBurnInFilterBuilder.EscapeForFilterGraph(inputPath);
-
-        return $"subtitles='{escaped}':si={burnIn.SourceIndex}";
-    }
-
-    /// <summary>
-    /// Returns a copy of <paramref name="plan"/> with every video output's
-    /// <see cref="VideoOutputPlan.MapLabel"/> replaced by
-    /// <paramref name="burnedLabel"/>. Used for PGS burn-in where the
-    /// <c>overlay</c> filter emits a single composited output pad that all
-    /// video encoders must read from.
-    /// </summary>
-    private static OutputPlan RemapVideoToBurnedLabel(OutputPlan plan, string burnedLabel)
-    {
-        VideoOutputPlan[] remapped = plan
-            .VideoOutputs.Select(v => v with { MapLabel = burnedLabel })
-            .ToArray();
-
-        return plan with
-        {
-            VideoOutputs = remapped,
-        };
-    }
-
-    /// <summary>
-    /// Splices -metadata / per-stream metadata / disposition / attachment
-    /// args from <paramref name="mediaItem"/> into <paramref name="command"/>
-    /// just before the last argument (output filename). When no injector is
-    /// configured or the media item is null, the command is returned unchanged.
-    ///
-    /// For copy-mode encodes (<paramref name="isCopyMode"/> true), MetadataMerger
-    /// is called first to apply field-level source-vs-DB precedence rules.
-    /// For transcode encodes source metadata is discarded and DB tracks are used
-    /// directly (streams are re-encoded from scratch, so source tags don't survive).
-    /// </summary>
-    private FfmpegCommand InjectMetadataArgs(
-        FfmpegCommand command,
-        MediaItemRef? mediaItem,
-        EncodingContext context,
-        bool isCopyMode
-    )
-    {
-        if (metadataInjector is null || mediaItem is null)
-            return command;
-
-        IReadOnlyList<TrackMetadata> tracks = ResolveTracksForInjection(context, isCopyMode);
-
-        MetadataInjectionContext ctx = new(Media: mediaItem, Tracks: tracks, AttachmentPaths: []);
-
-        IReadOnlyList<string> metaArgs = metadataInjector.BuildArgs(ctx);
-        if (metaArgs.Count == 0)
-            return command;
-
-        // Insert the metadata flags before the last argument (output filepath).
-        string[] original = command.Arguments;
-        string[] updated = new string[original.Length + metaArgs.Count];
-        int insertAt = original.Length - 1;
-        Array.Copy(original, updated, insertAt);
-        for (int i = 0; i < metaArgs.Count; i++)
-            updated[insertAt + i] = metaArgs[i];
-        updated[^1] = original[^1];
-
-        return command with
-        {
-            Arguments = updated,
-        };
-    }
-
-    /// <summary>
-    /// Resolves the track list to pass to MetadataInjector.
-    /// When <paramref name="isCopyMode"/> is true and both SourceTracks and
-    /// DbTracks are present on the context, MetadataMerger applies field-level
-    /// precedence rules. Otherwise DB tracks (or an empty list) are used.
-    /// </summary>
-    private IReadOnlyList<TrackMetadata> ResolveTracksForInjection(
-        EncodingContext context,
-        bool isCopyMode
-    )
-    {
-        IReadOnlyList<TrackMetadata> dbTracks = context.DbTracks ?? [];
-
-        if (
-            !isCopyMode
-            || metadataMerger is null
-            || context.SourceTracks is null
-            || context.SourceTracks.Count == 0
-        )
-            return dbTracks;
-
-        return metadataMerger.Merge(context.SourceTracks, dbTracks);
     }
 
     /// <summary>

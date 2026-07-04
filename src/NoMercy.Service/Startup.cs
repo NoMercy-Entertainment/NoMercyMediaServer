@@ -12,8 +12,6 @@
 using Asp.Versioning.ApiExplorer;
 using NoMercy.Service.Configuration;
 
-using Microsoft.Extensions.Configuration;
-
 namespace NoMercy.Service;
 
 public class Startup

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -20,28 +20,31 @@ public class MusicBrainzReleaseGroupClient : MusicBrainzBaseClient
     public MusicBrainzReleaseGroupClient(Guid? id)
         : base((Guid)id!) { }
 
-    public Task<MusicBrainzReleaseAppends?> WithAppends(string[] appendices, bool? priority = false)
+    public Task<MusicBrainzReleaseGroupDetails?> WithAppends(
+        string[] appendices,
+        bool? priority = false
+    )
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             ["inc"] = string.Join("+", appendices),
             ["fmt"] = "json",
         };
 
-        return Get<MusicBrainzReleaseAppends>("release-group/" + Id, queryParams, priority);
+        return Get<MusicBrainzReleaseGroupDetails>("release-group/" + Id, queryParams, priority);
     }
 
-    public Task<MusicBrainzReleaseAppends?> WithAllAppends(bool? priority = false)
+    public Task<MusicBrainzReleaseGroupDetails?> WithAllAppends(bool? priority = false)
     {
         return WithAppends(["artists", "releases"], priority);
     }
 
-    public Task<MusicBrainzReleaseAppends?> SearchReleaseGroups(
+    public Task<MusicBrainzReleaseGroupSearchResponse?> SearchReleaseGroups(
         string query,
         bool? priority = false
     )
     {
-        Dictionary<string, string> queryParams = new() { ["query"] = query, ["fmt"] = "json" };
-        return Get<MusicBrainzReleaseAppends>("release-group", queryParams, priority);
+        Dictionary<string, string?> queryParams = new() { ["query"] = query, ["fmt"] = "json" };
+        return Get<MusicBrainzReleaseGroupSearchResponse>("release-group", queryParams, priority);
     }
 }

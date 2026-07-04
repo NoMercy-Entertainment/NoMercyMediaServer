@@ -18,7 +18,7 @@ public interface IPlaylistGenerator
     string GenerateMasterPlaylist(
         OutputPlan plan,
         string mediaTitle,
-        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> videoMetrics,
-        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> audioMetrics
+        Dictionary<string, VariantMetrics> videoMetrics,
+        Dictionary<string, VariantMetrics> audioMetrics
     );
 }

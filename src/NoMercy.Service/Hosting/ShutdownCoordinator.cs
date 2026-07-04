@@ -9,8 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.NmSystem.SystemCalls;
-
 namespace NoMercy.Service.Hosting;
 
 public class ShutdownCoordinator : IShutdownCoordinator, IDisposable

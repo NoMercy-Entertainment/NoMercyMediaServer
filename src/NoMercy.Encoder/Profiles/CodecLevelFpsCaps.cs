@@ -108,6 +108,14 @@ public static class CodecLevelFpsCaps
     }
 
     /// <summary>
+    /// True when the codec has a known-level table, so a level not found by
+    /// <see cref="Lookup"/> is genuinely invalid (rather than merely a codec
+    /// whose levels this catalogue does not enumerate, e.g. AV1).
+    /// </summary>
+    public static bool HasLevelTable(VideoCodecType codec) =>
+        codec is VideoCodecType.H264 or VideoCodecType.H265 or VideoCodecType.Vp9;
+
+    /// <summary>
     /// Returns the first level in the table for the given codec whose
     /// <see cref="LevelCap.MaxLumaSamplesPerSec"/> is at least
     /// <paramref name="requiredSamplesPerSec"/>, or null when none fits.

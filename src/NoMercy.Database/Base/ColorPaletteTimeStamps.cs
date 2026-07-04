@@ -25,9 +25,9 @@ public class ColorPaletteTimeStamps : Timestamps
     public string? _colorPalette { get; set; } = "";
 
     [NotMapped]
-    public IColorPalettes? ColorPalette
+    public ColorPalette? ColorPalette
     {
-        get => IColorPalettes.FromJsonOrNull(_colorPalette);
+        get => ColorPalette.FromJsonOrNull(_colorPalette);
         set => _colorPalette = JsonConvert.SerializeObject(value);
     }
 }

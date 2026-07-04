@@ -19,7 +19,7 @@ namespace NoMercy.Cli.Commands;
 
 internal static class StartCommand
 {
-    public static Command Create(Option<string?> pipeOption)
+    public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
         Command command = new("start") { Description = "Start the server" };
 
@@ -35,10 +35,10 @@ internal static class StartCommand
                 string? pipe = parseResult.GetValue(pipeOption);
                 bool dev = parseResult.GetValue(devOption);
 
-                if (await IsServerRunning(pipe, ct))
+                if (await IsServerRunning(clientFactory, pipe, ct))
                 {
                     Console.WriteLine("Server is already running.");
-                    return 0;
+                    return (int)ExitCode.Success;
                 }
 
                 ProcessStartInfo? startInfo = FindServerStartInfo(dev);
@@ -46,7 +46,7 @@ internal static class StartCommand
                 if (startInfo is null)
                 {
                     await Console.Error.WriteLineAsync("Could not find server executable.");
-                    return 1;
+                    return (int)ExitCode.ConfigurationError;
                 }
 
                 try
@@ -57,16 +57,16 @@ internal static class StartCommand
                     if (started)
                     {
                         Console.WriteLine("Server started.");
-                        return 0;
+                        return (int)ExitCode.Success;
                     }
 
                     await Console.Error.WriteLineAsync("Failed to start server.");
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
                 catch (Exception e)
                 {
                     await Console.Error.WriteLineAsync($"Failed to start server: {e.Message}");
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
             }
         );
@@ -74,12 +74,16 @@ internal static class StartCommand
         return command;
     }
 
-    private static async Task<bool> IsServerRunning(string? pipe, CancellationToken ct)
+    private static async Task<bool> IsServerRunning(
+        ICliClientFactory clientFactory,
+        string? pipe,
+        CancellationToken ct
+    )
     {
         try
         {
-            using CliClient client = new(pipe);
-            StatusResponse? status = await client.GetAsync<StatusResponse>("/manage/status", ct);
+            using ICliClient client = clientFactory.Create(pipe);
+            StatusResponse? status = await client.GetAsync<StatusResponse>(ApiRoutes.Status, ct);
             return status is not null;
         }
         catch

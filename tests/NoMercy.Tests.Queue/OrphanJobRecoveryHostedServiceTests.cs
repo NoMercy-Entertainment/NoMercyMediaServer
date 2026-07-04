@@ -40,7 +40,7 @@ public class OrphanJobRecoveryHostedServiceTests
     }
 
     [Fact]
-    public async Task StartAsync_OrphanWithPriorAttempts_MovedToFailedJobs()
+    public async Task StartAsync_OrphanWithRepeatAttempts_MovedToFailedJobs()
     {
         (OrphanJobRecoveryHostedService service, TestQueueContextAdapter context) = BuildService();
         QueueJobModel orphan = new()
@@ -48,13 +48,15 @@ public class OrphanJobRecoveryHostedServiceTests
             Queue = EncoderQueue,
             Payload = "{\"id\":\"job-1\"}",
             Priority = 5,
-            Attempts = 1,
+            Attempts = 2,
             ReservedAt = DateTime.UtcNow.AddMinutes(-5),
             AvailableAt = DateTime.UtcNow.AddHours(-1),
         };
         context.AddJob(orphan);
 
         await service.StartAsync(CancellationToken.None);
+        if (service.ExecuteTask is not null)
+            await service.ExecuteTask;
 
         Assert.Empty(context.Jobs);
         Assert.Single(context.FailedJobs);
@@ -67,7 +69,7 @@ public class OrphanJobRecoveryHostedServiceTests
     }
 
     [Fact]
-    public async Task StartAsync_FirstTimeOrphan_LeftForRetry()
+    public async Task StartAsync_FirstTimeOrphan_ReservationClearedAndAttemptRefunded()
     {
         (OrphanJobRecoveryHostedService service, TestQueueContextAdapter context) = BuildService();
         QueueJobModel orphan = new()
@@ -75,16 +77,21 @@ public class OrphanJobRecoveryHostedServiceTests
             Queue = EncoderQueue,
             Payload = "{\"id\":\"job-2\"}",
             Priority = 5,
-            Attempts = 0,
+            Attempts = 1,
             ReservedAt = DateTime.UtcNow.AddMinutes(-2),
             AvailableAt = DateTime.UtcNow.AddHours(-1),
         };
         context.AddJob(orphan);
 
         await service.StartAsync(CancellationToken.None);
+        if (service.ExecuteTask is not null)
+            await service.ExecuteTask;
 
         Assert.Single(context.Jobs);
         Assert.Empty(context.FailedJobs);
+        QueueJobModel survivor = context.Jobs[0];
+        Assert.Null(survivor.ReservedAt);
+        Assert.Equal(0, survivor.Attempts);
     }
 
     [Fact]
@@ -103,6 +110,8 @@ public class OrphanJobRecoveryHostedServiceTests
         context.AddJob(reserved);
 
         await service.StartAsync(CancellationToken.None);
+        if (service.ExecuteTask is not null)
+            await service.ExecuteTask;
 
         Assert.Single(context.Jobs);
         Assert.Empty(context.FailedJobs);
@@ -124,6 +133,8 @@ public class OrphanJobRecoveryHostedServiceTests
         context.AddJob(pending);
 
         await service.StartAsync(CancellationToken.None);
+        if (service.ExecuteTask is not null)
+            await service.ExecuteTask;
 
         Assert.Single(context.Jobs);
         Assert.Empty(context.FailedJobs);

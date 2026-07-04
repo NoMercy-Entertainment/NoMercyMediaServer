@@ -19,7 +19,7 @@ namespace NoMercy.Api.DTOs.Music;
 public record AlbumsResponseTrackDto
 {
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("cover")]
     public string? Cover { get; set; }
@@ -95,7 +95,7 @@ public record AlbumsResponseTrackDto
         Quality = artistTrack.Track.Quality;
         Track = artistTrack.Track.TrackNumber;
         Type = "track";
-        Link = new($"/music/album/{artistTrack.AlbumId}", UriKind.Relative);
+        Link = new($"/music/albums/{artistTrack.AlbumId}", UriKind.Relative);
 
         Album = artistTrack
             .Track.AlbumTrack.Select(albumTrack => new AlbumDto(albumTrack, country))

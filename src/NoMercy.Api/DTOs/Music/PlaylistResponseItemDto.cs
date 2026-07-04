@@ -30,7 +30,7 @@ public record PlaylistResponseItemDto
     public Uri Link { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("country")]
     public string? Country { get; set; }

@@ -22,15 +22,11 @@ namespace NoMercy.Encoder.Strategies.Shared;
 /// </summary>
 internal static class TaskResourceHelper
 {
-    private static readonly string[] GpuEncoderTokens =
-    [
-        "nvenc",
-        "amf",
-        "qsv",
-        "vaapi",
-        "videotoolbox",
-        "cuvid",
-    ];
+    private static readonly IReadOnlyList<string> GpuEncoderTokens = NoMercy
+        .Encoder
+        .Hardware
+        .GpuEncoderTokens
+        .VendorPrefixes;
 
     public static ResourceRequirement ForVideoOutput(VideoOutputPlan video)
     {

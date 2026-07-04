@@ -51,7 +51,7 @@ public class BuildStageAcquisitionTests
     public async Task NoAcquiredSubtitles_CommandContainsOnlySourceInput()
     {
         ExecutionPlan plan = BuildPlan(acquiredSubtitles: []);
-        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test");
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test");
 
         StageResult result = await _stage.ExecuteAsync(input, _context, CancellationToken.None);
 
@@ -79,7 +79,7 @@ public class BuildStageAcquisitionTests
         );
 
         ExecutionPlan plan = BuildPlan(acquiredSubtitles: [sub]);
-        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test");
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test");
 
         StageResult result = await _stage.ExecuteAsync(input, _context, CancellationToken.None);
 
@@ -106,7 +106,7 @@ public class BuildStageAcquisitionTests
         );
 
         ExecutionPlan plan = BuildPlan(acquiredSubtitles: [sub]);
-        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test");
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test");
 
         StageResult result = await _stage.ExecuteAsync(input, _context, CancellationToken.None);
 
@@ -142,7 +142,7 @@ public class BuildStageAcquisitionTests
         );
 
         ExecutionPlan plan = BuildPlan(acquiredSubtitles: [enSub, nlSub]);
-        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test");
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test");
 
         StageResult result = await _stage.ExecuteAsync(input, _context, CancellationToken.None);
 
@@ -179,7 +179,7 @@ public class BuildStageAcquisitionTests
         );
 
         ExecutionPlan plan = BuildPlan(acquiredSubtitles: [exact, notExact]);
-        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test");
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test");
 
         StageResult result = await _stage.ExecuteAsync(input, _context, CancellationToken.None);
 

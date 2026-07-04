@@ -15,4 +15,11 @@ public interface IJobDispatcher
 {
     void Dispatch(IShouldQueue job);
     void Dispatch(IShouldQueue job, string onQueue, int priority);
+    void DispatchChild(
+        IShouldQueue job,
+        string onQueue,
+        int priority,
+        int parentJobId,
+        string groupTag
+    );
 }

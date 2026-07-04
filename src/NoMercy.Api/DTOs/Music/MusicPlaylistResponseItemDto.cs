@@ -30,7 +30,7 @@ public record MusicPlaylistResponseItemDto
     public string? Cover { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("created_at")]
     public DateTime CreatedAt { get; set; }

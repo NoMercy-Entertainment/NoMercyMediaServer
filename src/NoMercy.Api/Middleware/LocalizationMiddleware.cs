@@ -43,18 +43,23 @@ public class LocalizationMiddleware
             return;
         }
 
-        // if the language string does not match the format "{language}-{country}" we add the uppercase version of the language
-        if (!userLanguages.Contains("-"))
-            userLanguages = userLanguages + "-" + userLanguages.ToUpper();
+        // Pick the highest quality-weighted language tag per RFC 7231 rather
+        // than blindly taking the first comma-separated entry.
+        string bestLanguage = ParseBestLanguage(userLanguages);
 
-        string[]? firstLang = userLanguages.Split(',').FirstOrDefault()?.Split('-');
+        // if the language string does not match the format "{language}-{country}"
+        // we add the uppercase version of the language
+        if (!bestLanguage.Contains("-"))
+            bestLanguage = bestLanguage + "-" + bestLanguage.ToUpper();
 
-        if (firstLang is not null && firstLang.Length > 0 && !string.IsNullOrEmpty(firstLang[0]))
-            context.Request.Headers.AcceptLanguage = firstLang;
-        else
-            context.Request.Headers.AcceptLanguage = "en-US".Split('-');
+        string[] langParts = bestLanguage.Split('-');
 
-        string language = firstLang?.FirstOrDefault() ?? "en";
+        context.Request.Headers.AcceptLanguage =
+            langParts.Length > 0 && !string.IsNullOrEmpty(langParts[0])
+                ? langParts
+                : "en-US".Split('-');
+
+        string language = langParts.FirstOrDefault() ?? "en";
         if (string.IsNullOrEmpty(language))
             language = "en";
 
@@ -63,6 +68,42 @@ public class LocalizationMiddleware
         LocalizationHelper.GlobalLocalizer = localizer;
 
         await _next(context);
+    }
+
+    /// <summary>
+    /// Selects the best language tag from an Accept-Language header by RFC 7231
+    /// quality weight (q=). Falls back to "en-US" when the header is empty or
+    /// only contains the "*" wildcard. Ties keep header order.
+    /// </summary>
+    public static string ParseBestLanguage(string acceptLanguageHeader)
+    {
+        if (string.IsNullOrEmpty(acceptLanguageHeader))
+            return "en-US";
+
+        return acceptLanguageHeader
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(part =>
+                {
+                    ReadOnlySpan<char> p = part.AsSpan().Trim();
+                    int qIdx = p.IndexOf(";q=", StringComparison.OrdinalIgnoreCase);
+                    string lang = (qIdx >= 0 ? p[..qIdx] : p).ToString().Trim();
+                    double weight =
+                        qIdx >= 0
+                        && double.TryParse(
+                            p[(qIdx + 3)..],
+                            System.Globalization.NumberStyles.Float,
+                            System.Globalization.CultureInfo.InvariantCulture,
+                            out double q
+                        )
+                            ? q
+                            : 1.0;
+                    return (lang, weight);
+                })
+                .Where(x => x.lang != "*")
+                .OrderByDescending(x => x.weight)
+                .Select(x => x.lang)
+                .FirstOrDefault()
+            ?? "en-US";
     }
 
     private static Localizer LoadLocalizer(string lang)

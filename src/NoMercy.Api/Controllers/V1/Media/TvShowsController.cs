@@ -9,27 +9,24 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
+using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.Helpers.Extensions;
-using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Providers.Other;
+using NoMercy.Providers.KitsuIo;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.TV;
-using NoMercyQueue.Core.Interfaces;
-using Serilog.Events;
+using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 
 namespace NoMercy.Api.Controllers.V1.Media;
 
@@ -42,7 +39,8 @@ public class TvShowsController(
     ITvShowRepository tvShowRepository,
     ILibraryRepository libraryRepository,
     IJobDispatcher jobDispatcher,
-    ITvShowMetadataProvider tvShowMetadataProvider
+    ITvShowMetadataProvider tvShowMetadataProvider,
+    ILogger<TvShowsController> logger
 ) : BaseController
 {
     [HttpGet]
@@ -50,7 +48,7 @@ public class TvShowsController(
     public async Task<IActionResult> Tv(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view tv shows");
 
         string language = Language();
@@ -81,11 +79,9 @@ public class TvShowsController(
     }
 
     [HttpDelete]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> DeleteTv(int id, CancellationToken ct = default)
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to delete shows");
-
         await tvShowRepository.DeleteAsync(id, ct);
 
         return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Show deleted" });
@@ -96,7 +92,7 @@ public class TvShowsController(
     public async Task<IActionResult> Available(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view tv shows");
 
         bool available = await tvShowRepository.GetTvAvailableAsync(userId, id, ct);
@@ -119,7 +115,7 @@ public class TvShowsController(
     public async Task<IActionResult> Watch(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view tv shows");
 
         string language = Language();
@@ -159,7 +155,7 @@ public class TvShowsController(
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to like tv shows");
 
         bool success = await tvShowRepository.LikeAsync(id, userId, request.Value, ct);
@@ -186,7 +182,7 @@ public class TvShowsController(
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to manage watch list");
 
         bool success = await tvShowRepository.AddToWatchListAsync(id, userId, request.Add, ct);
@@ -207,11 +203,9 @@ public class TvShowsController(
 
     [HttpPost]
     [Route("rescan")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Rescan(int id, CancellationToken ct = default)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to rescan tv shows");
-
         Tv? tv = await tvShowRepository.GetTvWithLibraryAsync(id, ct);
 
         if (tv is null)
@@ -223,7 +217,7 @@ public class TvShowsController(
         }
         catch (Exception e)
         {
-            Logger.Encoder(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
             return InternalServerErrorResponse(e.Message);
         }
 
@@ -239,15 +233,13 @@ public class TvShowsController(
 
     [HttpPost]
     [Route("refresh")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Refresh(
         int id,
         [FromQuery] Ulid? libraryId = null,
         CancellationToken ct = default
     )
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to refresh tv shows");
-
         Tv? tv = await tvShowRepository.GetTvWithLibraryAsync(id, ct);
 
         if (tv is null)
@@ -273,7 +265,7 @@ public class TvShowsController(
             if (show == null)
                 return NotFoundResponse("Tv show not found");
 
-            bool isAnime = await KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear());
+            bool isAnime = await KitsuIoClient.IsAnime(show.Name, show.FirstAirDate.ParseYear());
 
             // Require Japanese origin to avoid false positives on western co-productions
             if (
@@ -307,15 +299,13 @@ public class TvShowsController(
 
     [HttpPost]
     [Route("add")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Add(
         int id,
         [FromQuery] Ulid? libraryId = null,
         CancellationToken ct = default
     )
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to add tv shows");
-
         Library? library;
 
         if (libraryId is not null)
@@ -331,7 +321,7 @@ public class TvShowsController(
             if (show == null)
                 return NotFoundResponse("Tv show not found");
 
-            bool isAnime = await KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear());
+            bool isAnime = await KitsuIoClient.IsAnime(show.Name, show.FirstAirDate.ParseYear());
 
             if (
                 isAnime
@@ -357,7 +347,7 @@ public class TvShowsController(
         }
         catch (Exception e)
         {
-            Logger.Encoder(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
             return InternalServerErrorResponse(e.Message);
         }
 
@@ -376,7 +366,7 @@ public class TvShowsController(
     public async Task<IActionResult> Missing(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view library");
         string language = Language();
 

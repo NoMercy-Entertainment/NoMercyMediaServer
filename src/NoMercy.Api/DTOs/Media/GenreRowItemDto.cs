@@ -15,9 +15,8 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.DTOs.Media;
 
@@ -60,7 +59,7 @@ public record GenreRowItemDto
     public IEnumerable<string> Tags { get; set; } = [];
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("rating")]
     public RatingClass? Rating { get; set; }
@@ -183,7 +182,7 @@ public record GenreRowItemDto
         Tags = [];
         Videos = [];
 
-        ColorPalette = IColorPalettes.FromJsonOrNull(movie.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(movie.ColorPalette);
 
         if (movie.CertificationRating != null)
         {
@@ -218,7 +217,7 @@ public record GenreRowItemDto
         Tags = [];
         Videos = [];
 
-        ColorPalette = IColorPalettes.FromJsonOrNull(tv.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(tv.ColorPalette);
 
         if (tv.CertificationRating != null)
         {

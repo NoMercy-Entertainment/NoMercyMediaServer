@@ -68,17 +68,19 @@ public class WorkerSourceController(
     )
     {
         if (!encoderOptions.IsDistributedEncodingEnabled)
-            return StatusCode(StatusCodes.Status503ServiceUnavailable);
+            return ServiceUnavailableResponse(
+                "Distributed encoding is not enabled on this server."
+            );
 
         if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(sig))
-            return BadRequest(new { error = "path and sig query parameters are required" });
+            return BadRequestResponse("path and sig query parameters are required");
 
         // Freshness check first — cheap reject for stale / replayed requests.
         DateTimeOffset requestTime = DateTimeOffset.FromUnixTimeSeconds(ts);
         if ((DateTimeOffset.UtcNow - requestTime).Duration() > MaxSignatureAge)
         {
             logger.LogWarning("Rejected worker-source request: signature too old");
-            return Unauthorized(new { error = "signature expired" });
+            return UnauthenticatedResponse("signature expired");
         }
 
         // Signature verification.
@@ -100,7 +102,7 @@ public class WorkerSourceController(
                 "Rejected worker-source request: signature mismatch for path {Path}",
                 path
             );
-            return Unauthorized(new { error = "signature invalid" });
+            return UnauthenticatedResponse("signature invalid");
         }
 
         // Library membership check — only serve paths the server already

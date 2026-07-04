@@ -9,11 +9,13 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Audio;
+using NoMercy.Tests.Encoder.Storage;
 
 namespace NoMercy.Tests.Encoder.Strategies.Audio;
 
@@ -51,7 +53,11 @@ public class SingleFileAudioStrategiesTests
     [Fact]
     public void Mp3Strategy_DeclaresMp3SinglePass()
     {
-        Mp3Strategy strategy = new(MockEncoder());
+        Mp3Strategy strategy = new(
+            MockEncoder(),
+            NullLogger<Mp3Strategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
 
         strategy.Format.Should().Be(OutputFormat.Mp3);
         strategy.EncodeMode.Should().Be(EncodeMode.SinglePass);
@@ -60,7 +66,11 @@ public class SingleFileAudioStrategiesTests
     [Fact]
     public void FlacStrategy_DeclaresFlacSinglePass()
     {
-        FlacStrategy strategy = new(MockEncoder());
+        FlacStrategy strategy = new(
+            MockEncoder(),
+            NullLogger<FlacStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
 
         strategy.Format.Should().Be(OutputFormat.Flac);
         strategy.EncodeMode.Should().Be(EncodeMode.SinglePass);
@@ -69,7 +79,11 @@ public class SingleFileAudioStrategiesTests
     [Fact]
     public void OggStrategy_DeclaresOggSinglePass()
     {
-        OggStrategy strategy = new(MockEncoder());
+        OggStrategy strategy = new(
+            MockEncoder(),
+            NullLogger<OggStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
 
         strategy.Format.Should().Be(OutputFormat.Ogg);
         strategy.EncodeMode.Should().Be(EncodeMode.SinglePass);
@@ -96,7 +110,11 @@ public class SingleFileAudioStrategiesTests
                     Metrics: null
                 )
             );
-        Mp3Strategy strategy = new(encoderMock.Object);
+        Mp3Strategy strategy = new(
+            encoderMock.Object,
+            NullLogger<Mp3Strategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
 
         EncodingResult result = await strategy.EncodeAsync(
             new EncodingRequest("/in.flac", "/out", null!),
@@ -133,7 +151,11 @@ public class SingleFileAudioStrategiesTests
                     Metrics: null
                 )
             );
-        FlacStrategy strategy = new(encoderMock.Object);
+        FlacStrategy strategy = new(
+            encoderMock.Object,
+            NullLogger<FlacStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
 
         EncodingResult result = await strategy.EncodeAsync(
             new EncodingRequest("/in.wav", "/out", null!),
@@ -165,7 +187,11 @@ public class SingleFileAudioStrategiesTests
                     Metrics: null
                 )
             );
-        OggStrategy strategy = new(encoderMock.Object);
+        OggStrategy strategy = new(
+            encoderMock.Object,
+            NullLogger<OggStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
 
         EncodingResult result = await strategy.EncodeAsync(
             new EncodingRequest("/in.flac", "/out", null!),

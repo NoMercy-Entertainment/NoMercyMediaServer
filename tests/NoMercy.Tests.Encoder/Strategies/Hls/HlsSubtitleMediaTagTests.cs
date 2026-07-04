@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
@@ -26,18 +27,12 @@ public class HlsSubtitleMediaTagTests
     {
         // Seed non-zero metrics so the variant rows render — GenerateMasterPlaylist
         // skips any variant whose measured bandwidth is zero (dead-variant guard).
-        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> videoMetrics = plan
+        Dictionary<string, VariantMetrics> videoMetrics = plan
             .VideoOutputs.Where(v => !string.IsNullOrEmpty(v.MapLabel))
-            .ToDictionary(
-                v => v.MapLabel,
-                _ => new HlsVariantAnalyzer.VariantMetrics(5_000_000, 4_500_000)
-            );
-        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> audioMetrics = plan
+            .ToDictionary(v => v.MapLabel, _ => new VariantMetrics(5_000_000, 4_500_000));
+        Dictionary<string, VariantMetrics> audioMetrics = plan
             .AudioOutputs.Where(a => !string.IsNullOrEmpty(a.MapLabel))
-            .ToDictionary(
-                a => a.MapLabel,
-                _ => new HlsVariantAnalyzer.VariantMetrics(192_000, 180_000)
-            );
+            .ToDictionary(a => a.MapLabel, _ => new VariantMetrics(192_000, 180_000));
 
         PlaylistGenerator gen = new();
         return gen.GenerateMasterPlaylist(plan, "Test.Movie", videoMetrics, audioMetrics);

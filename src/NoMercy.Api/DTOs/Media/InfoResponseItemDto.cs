@@ -14,9 +14,8 @@ using NoMercy.Api.DTOs.Common;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
@@ -47,7 +46,7 @@ public record InfoResponseItemDto
     public string? Logo { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("watched")]
     public bool Watched { get; set; }

@@ -73,8 +73,13 @@ public class MusicPlayerState
     [JsonProperty("volume_percentage")]
     public int VolumePercentage { get; set; }
 
+    // Case-insensitive: device ids are compared OrdinalIgnoreCase everywhere else in
+    // MusicHub, and this map is keyed by the same ids (ResolveTransferVolume,
+    // ApplyDeviceVolume). A case-sensitive map would silently miss a remembered
+    // volume the moment a caller's casing didn't match the one that first wrote it.
     [JsonProperty("device_volumes")]
-    public Dictionary<string, int> DeviceVolumes { get; set; } = new();
+    public Dictionary<string, int> DeviceVolumes { get; set; } =
+        new(StringComparer.OrdinalIgnoreCase);
 
     [JsonProperty("seek_offset")]
     public int SeekOffset { get; set; }
@@ -100,4 +105,13 @@ public class MusicPlayerState
     // cancel the suppression, preventing multi-device conflicts.
     [JsonIgnore]
     public string? CrossfadeDeviceId { get; set; }
+
+    // Proof-of-life clock for the active device (DeviceId above). Refreshed by
+    // MusicHub.ReportPositionCommand while playing and by
+    // MusicPlaybackService.StartPlaybackTimer on every (re)start of the ticking
+    // loop (a resume after a long pause must not look instantly stale). Defaults
+    // to "now" so a freshly-created session gets a full grace window before its
+    // first position report is due. See MusicPlaybackService.IsActiveDeviceStale.
+    [JsonIgnore]
+    public DateTime LastActiveHeartbeatUtc { get; set; } = DateTime.UtcNow;
 }

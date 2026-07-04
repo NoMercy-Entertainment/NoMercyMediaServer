@@ -10,8 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Providers.TMDB.Client;
-using NoMercy.Providers.TMDB.Client.Mocks;
-using NoMercy.Setup.Server;
+using NoMercy.Tests.Common;
 
 namespace NoMercy.Tests.Providers.TMDB;
 
@@ -92,7 +91,7 @@ public abstract class TmdbTestBase : IDisposable
         string language = "en-US"
     )
     {
-        return new(movieId, null, MockDataProvider, language);
+        return new(movieId, null, () => MockDataProvider.MockMovieAppendsResponse(), language);
     }
 
     /// <summary>

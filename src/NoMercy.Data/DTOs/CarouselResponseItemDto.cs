@@ -20,7 +20,7 @@ namespace NoMercy.Data.DTOs;
 public record CarouselResponseItemDto
 {
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("cover")]
     public string? Cover { get; set; }
@@ -71,7 +71,7 @@ public record CarouselResponseItemDto
         LibraryId = artist.LibraryId;
         Name = artist.Name;
         Type = "artist";
-        Link = new($"/music/artist/{Id}", UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
 
         Tracks = artist
             .ArtistTrack.DistinctBy(artistTrack => artistTrack.Track.Name.ToLower())
@@ -91,7 +91,7 @@ public record CarouselResponseItemDto
         LibraryId = album.LibraryId;
         Name = album.Name;
         Type = "album";
-        Link = new($"/music/album/{Id}", UriKind.Relative);
+        Link = new($"/music/albums/{Id}", UriKind.Relative);
 
         Tracks = album.AlbumTrack.DistinctBy(albumTrack => albumTrack.Track.Name.ToLower()).Count();
     }
@@ -110,7 +110,7 @@ public record CarouselResponseItemDto
         LibraryId = artistUser.Artist.LibraryId;
         Name = artistUser.Artist.Name;
         Type = "artist";
-        Link = new($"/music/artist/{Id}", UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
 
         Tracks = artistUser
             .Artist.ArtistTrack.DistinctBy(artistTrack => artistTrack.Track.Name.ToLower())
@@ -130,7 +130,7 @@ public record CarouselResponseItemDto
         LibraryId = playlist.Album.LibraryId;
         Name = playlist.Album.Name;
         Type = "album";
-        Link = new($"/music/album/{Id}", UriKind.Relative);
+        Link = new($"/music/albums/{Id}", UriKind.Relative);
 
         Tracks = playlist
             .Album.AlbumTrack.DistinctBy(albumTrack => albumTrack.Track.Name.ToLower())
@@ -179,7 +179,7 @@ public record CarouselResponseItemDto
 
     public CarouselResponseItemDto(ArtistCardDto artist)
     {
-        ColorPalette = IColorPalettes.FromJsonOrNull(artist.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(artist.ColorPalette);
         Cover = artist.Cover ?? artist.ThumbImagePath;
         Cover = Cover is not null
             ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
@@ -191,13 +191,13 @@ public record CarouselResponseItemDto
         LibraryId = artist.LibraryId;
         Name = artist.Name;
         Type = "artist";
-        Link = new($"/music/artist/{Id}", UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
         Tracks = artist.TrackCount;
     }
 
     public CarouselResponseItemDto(AlbumCardDto album)
     {
-        ColorPalette = IColorPalettes.FromJsonOrNull(album.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(album.ColorPalette);
         Cover = album.Cover is not null
             ? new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString()
             : null;
@@ -208,13 +208,13 @@ public record CarouselResponseItemDto
         LibraryId = album.LibraryId;
         Name = album.Name;
         Type = "album";
-        Link = new($"/music/album/{Id}", UriKind.Relative);
+        Link = new($"/music/albums/{Id}", UriKind.Relative);
         Tracks = album.TrackCount;
     }
 
     public CarouselResponseItemDto(PlaylistCardDto playlist)
     {
-        ColorPalette = IColorPalettes.FromJsonOrNull(playlist.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(playlist.ColorPalette);
         Cover = playlist.Cover is not null
             ? new Uri($"/images/music{playlist.Cover}", UriKind.Relative).ToString()
             : null;

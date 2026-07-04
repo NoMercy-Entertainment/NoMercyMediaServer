@@ -35,6 +35,7 @@ public static class EncoderRuleId
 
     // ---- Codec / level / container ---------------------------------------
     public const string LevelResolutionMismatch = "level.resolution_mismatch";
+    public const string LevelInvalid = "level.invalid";
     public const string CodecContainerMismatch = "codec.container_mismatch";
 
     // ---- Audio -----------------------------------------------------------
@@ -52,6 +53,7 @@ public static class EncoderRuleId
     // ---- Bit depth -------------------------------------------------------
     public const string BitDepthNoHardwareSupport = "bit_depth.no_hardware_support";
     public const string BitDepthVp9ProfileMismatch = "bit_depth.vp9_profile_mismatch";
+    public const string BitDepthH26xProfilePromoted = "bit_depth.h26x_profile_promoted";
     public const string BitDepthAutoDowngrade = "bit_depth.auto_downgrade";
     public const string BitDepthStrictViolation = "bit_depth.strict_violation";
 
@@ -90,6 +92,9 @@ public static class EncoderRuleId
     public const string DrmKeyMissing = "drm.key_missing";
     public const string DrmHttpNotHttps = "drm.http_not_https";
     public const string ImportHttpNotHttps = "import.http_not_https";
+    public const string ImportFetchFailed = "import.fetch_failed";
+    public const string ImportSourceMissing = "import.source_missing";
+    public const string ImportJsonMalformed = "import.json_malformed";
     public const string ImportSignatureInvalid = "import.signature_invalid";
     public const string ImportPublisherUntrusted = "import.publisher_untrusted";
     public const string ImportUnsignedRequiresFlag = "import.unsigned_requires_flag";

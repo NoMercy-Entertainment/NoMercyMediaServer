@@ -1,0 +1,147 @@
+name: Release Tesseract Training Data
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name for the release'
+        required: true
+        default: 'v1.0.0'
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare tessdata for release
+        run: |
+          # Copy configs directory into tessdata if it exists
+          if [ -d "configs" ]; then
+            cp -r configs tessdata/
+          fi
+
+          # List files for verification
+          echo "Files in tessdata directory:"
+          ls -la tessdata/
+
+      - name: Create archive
+        run: |
+          # Create tar.gz archive
+          tar -czf tesseract-traineddata.tar.gz tessdata/
+
+          # Show archive info
+          echo "Archive created:"
+          ls -lh tesseract-traineddata.tar.gz
+
+      - name: Determine tag name
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag_name=${{ github.event.inputs.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag_name=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate per-asset SHA256, manifest and signature
+        env:
+          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+          GPG_SIGNING_KEY_PASSPHRASE: ${{ secrets.GPG_SIGNING_KEY_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          RELEASE_TAG="${{ steps.tag.outputs.tag_name }}"
+
+          # Per-asset .sha256 sidecar for the archive
+          sha256sum tesseract-traineddata.tar.gz | awk '{print $1}' \
+            > tesseract-traineddata.tar.gz.sha256
+
+          # Per-asset .sha256 sidecars for every individual traineddata file
+          for f in tessdata/*.traineddata; do
+            [[ -f "$f" ]] || continue
+            sha256sum "$f" | awk '{print $1}' > "${f}.sha256"
+          done
+
+          # Build manifest.json: archive + individual traineddata files
+          assets_json='[]'
+
+          # Archive entry
+          hash=$(sha256sum tesseract-traineddata.tar.gz | awk '{print $1}')
+          size=$(stat -c%s tesseract-traineddata.tar.gz)
+          assets_json=$(printf '%s' "$assets_json" | jq \
+            --arg name "tesseract-traineddata.tar.gz" \
+            --arg sha256 "$hash" \
+            --argjson size "$size" \
+            '. + [{"name":$name,"sha256":$sha256,"size":$size}]')
+
+          # Individual tessdata file entries
+          while IFS= read -r f; do
+            fname=$(basename "$f")
+            hash=$(sha256sum "$f" | awk '{print $1}')
+            size=$(stat -c%s "$f")
+            assets_json=$(printf '%s' "$assets_json" | jq \
+              --arg name "$fname" --arg sha256 "$hash" --argjson size "$size" \
+              '. + [{"name":$name,"sha256":$sha256,"size":$size}]')
+          done < <(ls tessdata/*.traineddata | sort)
+
+          jq -n \
+            --arg repo "$GITHUB_REPOSITORY" \
+            --arg tag "$RELEASE_TAG" \
+            --arg created_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson assets "$assets_json" \
+            '{"repo":$repo,"tag":$tag,"created_at":$created_at,"assets":$assets}' \
+            > manifest.json
+
+          # Import GPG key and create detached ASCII-armored signature
+          echo "$GPG_SIGNING_KEY" | gpg --batch --import
+          if [[ -n "${GPG_SIGNING_KEY_PASSPHRASE:-}" ]]; then
+            echo "$GPG_SIGNING_KEY_PASSPHRASE" | gpg --batch --pinentry-mode loopback \
+              --passphrase-fd 0 --armor --detach-sign \
+              --output manifest.json.sig manifest.json
+          else
+            gpg --batch --armor --detach-sign \
+              --output manifest.json.sig manifest.json
+          fi
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag_name }}
+          name: Tesseract Training Data ${{ steps.tag.outputs.tag_name }}
+          body: |
+            ## Tesseract Training Data Release
+
+            This release contains Tesseract OCR training data files (tessdata) for multiple languages.
+
+            ### Contents
+            - Language training data files (*.traineddata)
+            - Configuration files
+
+            ### Usage
+            1. Download the `tesseract-traineddata.tar.gz` file
+            2. Extract it to your Tesseract tessdata directory
+            3. Use with Tesseract OCR for multi-language text recognition
+
+            **Archive:** `tesseract-traineddata.tar.gz`
+
+            ### Integrity Verification
+            Each asset ships with a `.sha256` sidecar containing the hex digest.
+            `manifest.json` lists every asset with its SHA-256 hash and byte size.
+            `manifest.json.sig` is a detached ASCII-armored GPG signature over
+            `manifest.json`, signed with the NoMercy Entertainment org key.
+          files: |
+            tesseract-traineddata.tar.gz
+            tesseract-traineddata.tar.gz.sha256
+            tessdata/*.traineddata
+            tessdata/*.traineddata.sha256
+            manifest.json
+            manifest.json.sig
+          draft: false
+          prerelease: false

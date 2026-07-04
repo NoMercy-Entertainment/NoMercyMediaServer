@@ -10,4 +10,4 @@
 // -----------------------------------------------------------------------------
 
 // Shared record lives in NoMercy.Resources.
-global using ResourceLease = NoMercy.Resources.ResourceLease;
+global using ResourceLease = NoMercyQueue.Core.Resources.ResourceLease;

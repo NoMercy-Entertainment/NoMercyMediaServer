@@ -10,7 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Newtonsoft.Json;
-using NoMercy.Helpers.Monitoring;
+using NoMercy.Monitoring;
 
 namespace NoMercy.Api.DTOs.Dashboard;
 

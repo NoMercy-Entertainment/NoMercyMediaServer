@@ -25,11 +25,14 @@ public class SqliteQueueContext : IQueueContext
         byte,
         string,
         long?,
+        DateTime,
         QueueJobEntity?
     > ReserveJobQuery = EF.CompileQuery(
-        (QueueDbContext context, byte maxAttempts, string name, long? currentJobId) =>
+        (QueueDbContext context, byte maxAttempts, string name, long? currentJobId, DateTime now) =>
             context
-                .QueueJobs.Where(j => j.ReservedAt == null && j.Attempts <= maxAttempts)
+                .QueueJobs.Where(j =>
+                    j.ReservedAt == null && j.Attempts < maxAttempts && j.AvailableAt <= now
+                )
                 .Where(j => currentJobId == null)
                 .Where(j => j.Queue == name)
                 .OrderByDescending(j => j.Priority)
@@ -82,7 +85,12 @@ public class SqliteQueueContext : IQueueContext
         SaveAndClear();
     }
 
-    public QueueJobModel? GetNextJob(string queueName, byte maxAttempts, long? currentJobId)
+    public QueueJobModel? GetNextJob(
+        string queueName,
+        byte maxAttempts,
+        long? currentJobId,
+        DateTime now
+    )
     {
         if (string.IsNullOrEmpty(queueName))
         {
@@ -90,7 +98,7 @@ public class SqliteQueueContext : IQueueContext
             return anyJob == null ? null : ToModel(anyJob);
         }
 
-        QueueJobEntity? job = ReserveJobQuery(_context, maxAttempts, queueName, currentJobId);
+        QueueJobEntity? job = ReserveJobQuery(_context, maxAttempts, queueName, currentJobId, now);
         if (job == null)
             return null;
 
@@ -167,8 +175,7 @@ public class SqliteQueueContext : IQueueContext
 
     public bool IsParentFailed(int parentJobId)
     {
-        string parentPayloadPrefix = $"\"Id\":{parentJobId},";
-        return _context.FailedJobs.AsNoTracking().Any(f => f.Payload.Contains(parentPayloadPrefix));
+        return _context.FailedJobs.AsNoTracking().Any(f => f.ParentJobId == parentJobId);
     }
 
     public void AddFailedJob(FailedJobModel failedJob)
@@ -181,6 +188,7 @@ public class SqliteQueueContext : IQueueContext
             Payload = failedJob.Payload,
             Exception = failedJob.Exception,
             FailedAt = failedJob.FailedAt,
+            ParentJobId = failedJob.ParentJobId,
         };
         _context.FailedJobs.Add(entity);
     }
@@ -192,6 +200,37 @@ public class SqliteQueueContext : IQueueContext
         {
             _context.FailedJobs.Remove(entity);
         }
+    }
+
+    public void AddFailedJobAndRemoveJob(FailedJobModel failedJob, QueueJobModel job)
+    {
+        FailedJobEntity failedEntity = new()
+        {
+            Uuid = failedJob.Uuid,
+            Connection = failedJob.Connection,
+            Queue = failedJob.Queue,
+            Payload = failedJob.Payload,
+            Exception = failedJob.Exception,
+            FailedAt = failedJob.FailedAt,
+            ParentJobId = failedJob.ParentJobId,
+        };
+        _context.FailedJobs.Add(failedEntity);
+
+        QueueJobEntity? jobEntity = _context.QueueJobs.Find(job.Id);
+        if (jobEntity == null)
+        {
+            jobEntity = new()
+            {
+                Id = job.Id,
+                Payload = job.Payload,
+                Queue = job.Queue,
+            };
+            _context.QueueJobs.Attach(jobEntity);
+        }
+        _context.QueueJobs.Remove(jobEntity);
+
+        SaveAndClear();
+        failedJob.Id = failedEntity.Id;
     }
 
     public FailedJobModel? FindFailedJob(int id)
@@ -216,6 +255,7 @@ public class SqliteQueueContext : IQueueContext
                 Payload = j.Payload,
                 Exception = j.Exception,
                 FailedAt = j.FailedAt,
+                ParentJobId = j.ParentJobId,
             })
             .ToList();
     }
@@ -330,6 +370,7 @@ public class SqliteQueueContext : IQueueContext
             Payload = entity.Payload,
             Exception = entity.Exception,
             FailedAt = entity.FailedAt,
+            ParentJobId = entity.ParentJobId,
         };
     }
 

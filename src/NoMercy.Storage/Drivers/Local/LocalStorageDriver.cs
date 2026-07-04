@@ -13,6 +13,8 @@ namespace NoMercy.Storage.Drivers.Local;
 
 public sealed class LocalStorageDriver : IStorageDriver
 {
+    public string BackendLabel => "Local";
+
     public char DirectorySeparator => Path.DirectorySeparatorChar;
 
     public string CombinePath(string parent, string child) => Path.Combine(parent, child);
@@ -86,6 +88,29 @@ public sealed class LocalStorageDriver : IStorageDriver
         Directory.Exists(directory)
             ? Directory.EnumerateFileSystemEntries(directory, searchPattern, option)
             : [];
+
+    public IEnumerable<StorageEntryInfo> EnumerateEntries(
+        string directory,
+        string searchPattern,
+        SearchOption option
+    )
+    {
+        // Single-pass metadata: DirectoryInfo enumeration carries size,
+        // last-write and is-directory from the OS readdir, so there is no extra
+        // stat per entry (the default IStorageDriver implementation does N extra
+        // DirectoryExists/GetFileSize/GetLastWriteTimeUtc calls). Same empty-on-
+        // missing-directory contract as EnumerateFileSystemEntries.
+        if (!Directory.Exists(directory))
+            yield break;
+
+        DirectoryInfo root = new(directory);
+        foreach (FileSystemInfo info in root.EnumerateFileSystemInfos(searchPattern, option))
+        {
+            bool isDir = info is DirectoryInfo;
+            long size = info is FileInfo file ? file.Length : 0L;
+            yield return new StorageEntryInfo(info.FullName, isDir, size, info.LastWriteTimeUtc);
+        }
+    }
 
     public string GetFullPath(string path) => Path.GetFullPath(path);
 

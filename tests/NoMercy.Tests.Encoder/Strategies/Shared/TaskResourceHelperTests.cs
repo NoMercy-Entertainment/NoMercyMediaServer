@@ -11,7 +11,6 @@
 
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Strategies.Shared;
-using NoMercy.Resources;
 
 namespace NoMercy.Tests.Encoder.Strategies.Shared;
 

@@ -39,17 +39,46 @@ public static class Shell
         public bool Success => ExitCode == 0;
     }
 
-    public static async Task<ExecResult> ExecAsync(
+    public static Task<ExecResult> ExecAsync(
         string executable,
         string arguments,
         ExecOptions? options = null
+    ) => ExecCoreAsync(executable, psi => psi.Arguments = arguments, options);
+
+    /// <summary>
+    /// Runs <paramref name="executable"/> with each entry passed as a
+    /// discrete argv token via <see cref="ProcessStartInfo.ArgumentList"/>.
+    /// Prefer this overload over the raw-string overload whenever an
+    /// argument may contain untrusted or user-controlled content (paths
+    /// with spaces/quotes/shell metacharacters) — no shell re-parses the
+    /// tokens, so nothing needs escaping.
+    /// </summary>
+    public static Task<ExecResult> ExecAsync(
+        string executable,
+        IReadOnlyList<string> arguments,
+        ExecOptions? options = null
+    ) =>
+        ExecCoreAsync(
+            executable,
+            psi =>
+            {
+                foreach (string argument in arguments)
+                    psi.ArgumentList.Add(argument);
+            },
+            options
+        );
+
+    private static async Task<ExecResult> ExecCoreAsync(
+        string executable,
+        Action<ProcessStartInfo> configureArguments,
+        ExecOptions? options
     )
     {
         options ??= new();
         using Process process = new();
 
         process.StartInfo.FileName = executable;
-        process.StartInfo.Arguments = arguments;
+        configureArguments(process.StartInfo);
         process.StartInfo.WorkingDirectory = options.WorkingDirectory.OrEmpty();
 
         if (options.CaptureStdOut)
@@ -126,6 +155,21 @@ public static class Shell
         }
     }
 
+    /// <summary>
+    /// Escapes a single value for safe interpolation into a POSIX shell
+    /// command string (e.g. an <see cref="ExecCommand"/> argument that pipes
+    /// through <c>awk</c>/<c>grep</c> and therefore genuinely needs a
+    /// shell). Wraps the value in single quotes and escapes any embedded
+    /// single quote using the standard <c>'\''</c> close-escape-reopen
+    /// sequence, so no shell metacharacter in the value is ever interpreted.
+    /// Prefer the argv-based <see cref="ExecAsync(string, IReadOnlyList{string}, ExecOptions?)"/>
+    /// overload instead whenever a shell isn't actually required.
+    /// </summary>
+    public static string EscapeShellArgument(string value)
+    {
+        return "'" + value.Replace("'", "'\\''") + "'";
+    }
+
     public static string ExecCommand(string command)
     {
         try
@@ -152,7 +196,7 @@ public static class Shell
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error running command: {ex.Message}");
+            Logger.Error($"Error running command: {ex.Message}");
         }
 
         return "Unknown";
@@ -161,6 +205,15 @@ public static class Shell
     public static ExecResult ExecSync(
         string executable,
         string arguments,
+        ExecOptions? options = null
+    )
+    {
+        return ExecAsync(executable, arguments, options).GetAwaiter().GetResult();
+    }
+
+    public static ExecResult ExecSync(
+        string executable,
+        IReadOnlyList<string> arguments,
         ExecOptions? options = null
     )
     {
@@ -374,13 +427,15 @@ public static class Shell
 
     public static class ProcessHelper
     {
-#if WINDOWS
+        [System.Runtime.Versioning.SupportedOSPlatform("windows")]
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool AttachConsole(uint dwProcessId);
 
+        [System.Runtime.Versioning.SupportedOSPlatform("windows")]
         [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
         private static extern bool FreeConsole();
 
+        [System.Runtime.Versioning.SupportedOSPlatform("windows")]
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool GenerateConsoleCtrlEvent(
             CtrlTypes dwCtrlEvent,
@@ -394,19 +449,16 @@ public static class Shell
 
         public static void SendCtrlC(Process process)
         {
+            if (!OperatingSystem.IsWindows())
+                throw new PlatformNotSupportedException(
+                    "SendCtrlC is only supported on Windows platforms."
+                );
+
             if (AttachConsole((uint)process.Id))
             {
                 GenerateConsoleCtrlEvent(CtrlTypes.CTRL_C_EVENT, 0);
                 FreeConsole();
             }
         }
-#else
-        public static void SendCtrlC(Process process)
-        {
-            throw new PlatformNotSupportedException(
-                "SendCtrlC is only supported on Windows platforms."
-            );
-        }
-#endif
     }
 }

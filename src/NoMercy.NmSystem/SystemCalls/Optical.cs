@@ -94,7 +94,7 @@ public static class Optical
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Failed to run command '{command}': {ex.Message}");
+            Logger.Error($"[ERROR] Failed to run command '{command}': {ex.Message}");
         }
 
         return outputLines;
@@ -157,7 +157,7 @@ public static class Optical
         }
         catch (Exception ex)
         {
-            Console.WriteLine(
+            Logger.Error(
                 $"[ERROR] Failed to open Windows optical drive '{drivePath}': {ex.Message}"
             );
             return false;
@@ -187,7 +187,7 @@ public static class Optical
         }
         catch (Exception ex)
         {
-            Console.WriteLine(
+            Logger.Error(
                 $"[ERROR] Failed to close Windows optical drive '{drivePath}': {ex.Message}"
             );
             return false;
@@ -208,12 +208,12 @@ public static class Optical
     {
         try
         {
-            RunShellCommand($"eject {drivePath}");
+            Shell.ExecSync("eject", [drivePath]);
             return true;
         }
         catch (Exception ex)
         {
-            Console.WriteLine(
+            Logger.Error(
                 $"[ERROR] Failed to open Linux optical drive '{drivePath}': {ex.Message}"
             );
             return false;
@@ -224,12 +224,12 @@ public static class Optical
     {
         try
         {
-            RunShellCommand($"eject -t {drivePath}");
+            Shell.ExecSync("eject", ["-t", drivePath]);
             return true;
         }
         catch (Exception ex)
         {
-            Console.WriteLine(
+            Logger.Error(
                 $"[ERROR] Failed to close Linux optical drive '{drivePath}': {ex.Message}"
             );
             return false;
@@ -244,12 +244,12 @@ public static class Optical
     {
         try
         {
-            RunShellCommand($"drutil eject {drivePath}");
+            Shell.ExecSync("drutil", ["eject", drivePath]);
             return true;
         }
         catch (Exception ex)
         {
-            Console.WriteLine(
+            Logger.Error(
                 $"[ERROR] Failed to open macOS optical drive '{drivePath}': {ex.Message}"
             );
             return false;
@@ -260,12 +260,12 @@ public static class Optical
     {
         try
         {
-            RunShellCommand($"drutil tray close {drivePath}");
+            Shell.ExecSync("drutil", ["tray", "close", drivePath]);
             return true;
         }
         catch (Exception ex)
         {
-            Console.WriteLine(
+            Logger.Error(
                 $"[ERROR] Failed to close macOS optical drive '{drivePath}': {ex.Message}"
             );
             return false;

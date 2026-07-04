@@ -17,11 +17,11 @@ using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
-using NoMercy.NmSystem.Information;
-using Serilog.Events;
-using Logger = NoMercy.NmSystem.SystemCalls.Logger;
-
+using Microsoft.Extensions.Logging;
+using NoMercy.Storage;
+using NoMercy.Providers.AcoustId;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -30,6 +30,16 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 [Serializable]
 public class ReleaseImportJob : AbstractMusicFolderJob
 {
+    public ReleaseImportJob() { }
+
+    public ReleaseImportJob(
+        IStorageFactory storageFactory,
+        IStorageDriver storageDriver,
+        IAudioFingerprinter audioFingerprinter,
+        ILoggerFactory loggerFactory
+    )
+        : base(storageFactory, storageDriver, audioFingerprinter, loggerFactory) { }
+
     public override string QueueName => "import";
     public override int Priority => 4;
 
@@ -54,7 +64,7 @@ public class ReleaseImportJob : AbstractMusicFolderJob
 
         if (rootFolders.Count == 0)
         {
-            Logger.App("Processing folder: " + InputFolder, LogEventLevel.Verbose);
+            Log.LogTrace("Processing folder: {InputFolder}", InputFolder);
             Folder baseFolder = albumLibrary
                 .FolderLibraries.Select(folderLibrary => folderLibrary.Folder)
                 .First(f =>
@@ -71,10 +81,10 @@ public class ReleaseImportJob : AbstractMusicFolderJob
 
         Parallel.ForEach(
             rootFolders,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             folder =>
             {
-                Logger.App("Processing folder: " + folder.Path);
+                Log.LogInformation("Processing folder: {Path}", folder.Path);
                 Folder baseFolder = albumLibrary
                     .FolderLibraries.Select(folderLibrary => folderLibrary.Folder)
                     .First(f =>

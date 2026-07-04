@@ -24,12 +24,12 @@ using NoMercy.Encoder.Progress;
 namespace NoMercy.Encoder.Pipeline;
 
 public class Encoder(
-    AnalyzeStage analyzeStage,
-    ValidateStage validateStage,
-    PlanStage planStage,
-    BuildStage buildStage,
-    ExecuteStage executeStage,
-    FinalizeStage finalizeStage,
+    IAnalysisStage analyzeStage,
+    IValidationStage validateStage,
+    IPlanStage planStage,
+    IBuildStage buildStage,
+    IExecutionStage executeStage,
+    IFinalizeStage finalizeStage,
     ILogger<Encoder> logger,
     IProfileOverride? profileOverride = null
 ) : IEncoder
@@ -137,8 +137,7 @@ public class Encoder(
         {
             executionResults = [];
             logger.LogInformation(
-                "[{CorrelationId}] FinalizeOnly run — skipping Build + Execute; "
-                    + "finalizing against the existing tempDir contents.",
+                "[{CorrelationId}] FinalizeOnly run — skipping Build + Execute; finalizing against the existing tempDir contents.",
                 context.CorrelationId
             );
         }
@@ -199,8 +198,7 @@ public class Encoder(
         {
             finalizeOutput = new(request.OutputDirectory, 0);
             logger.LogDebug(
-                "[{CorrelationId}] Per-task run — skipping FinalizeStage; coordinator handles "
-                    + "master playlist, chapters, fonts.json, manifest.",
+                "[{CorrelationId}] Per-task run — skipping FinalizeStage; coordinator handles master playlist, chapters, fonts.json, manifest.",
                 context.CorrelationId
             );
         }

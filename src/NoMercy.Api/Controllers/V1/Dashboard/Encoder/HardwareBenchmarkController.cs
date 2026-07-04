@@ -14,7 +14,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercy.Encoder.Hardware;
-using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 
@@ -26,11 +25,9 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 public class HardwareBenchmarkController(IHardwareBenchmark benchmark) : BaseController
 {
     [HttpGet]
+    [Authorize(Policy = "Moderator")]
     public IActionResult GetCachedIndex()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view hardware benchmarks");
-
         SpeedIndex index = benchmark.GetCachedIndex();
         BenchmarkProgress? progress = benchmark.CurrentProgress;
         return Ok(
@@ -63,13 +60,9 @@ public class HardwareBenchmarkController(IHardwareBenchmark benchmark) : BaseCon
     }
 
     [HttpPost("run")]
+    [Authorize(Policy = "Owner")]
     public async Task<IActionResult> RunBenchmark(CancellationToken ct)
     {
-        if (!User.IsOwner())
-            return UnauthorizedResponse(
-                "Only the server owner can trigger a hardware benchmark run"
-            );
-
         SpeedIndex result = await benchmark.CalibrateAsync(ct);
         return Ok(new { measurements = result.Measurements.Count, message = "Benchmark complete" });
     }

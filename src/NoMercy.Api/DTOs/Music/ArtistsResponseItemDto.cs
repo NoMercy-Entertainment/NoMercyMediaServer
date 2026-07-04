@@ -19,7 +19,7 @@ namespace NoMercy.Api.DTOs.Music;
 public record ArtistsResponseItemDto
 {
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("cover")]
     public string? Cover { get; set; }
@@ -60,7 +60,7 @@ public record ArtistsResponseItemDto
         Id = artist.Id;
         Name = artist.Name;
         Type = "artist";
-        Link = new($"/music/artist/{Id}", UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
 
         Tracks = artist.ArtistTrack.Select(artistTrack => artistTrack.Track).Count();
     }
@@ -77,14 +77,14 @@ public record ArtistsResponseItemDto
         Id = album.Id;
         Name = album.Name;
         Type = "artist";
-        Link = new($"/music/artist/{Id}", UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
 
         Tracks = album.AlbumTrack.Select(albumTrack => albumTrack.Track).Count();
     }
 
     public ArtistsResponseItemDto(ArtistCardDto artist)
     {
-        ColorPalette = IColorPalettes.FromJsonOrNull(artist.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(artist.ColorPalette);
         Cover = artist.Cover ?? artist.ThumbImagePath;
         Cover = !string.IsNullOrEmpty(Cover)
             ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
@@ -94,7 +94,7 @@ public record ArtistsResponseItemDto
         Id = artist.Id;
         Name = artist.Name;
         Type = "artist";
-        Link = new($"/music/artist/{Id}", UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
         Tracks = artist.TrackCount;
     }
 }

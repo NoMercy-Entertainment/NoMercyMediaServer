@@ -138,17 +138,14 @@ public sealed class LocalStorage : IStorage
             : SearchOption.TopDirectoryOnly;
         string effectivePattern = string.IsNullOrEmpty(pattern) ? "*" : pattern;
 
-        foreach (string entry in _driver.EnumerateFileSystemEntries(safe, effectivePattern, option))
+        foreach (StorageEntryInfo info in _driver.EnumerateEntries(safe, effectivePattern, option))
         {
             ct.ThrowIfCancellationRequested();
-            bool isDir = _driver.DirectoryExists(entry);
-            long size = isDir ? 0L : _driver.GetFileSize(entry);
-            DateTime utc = _driver.GetLastWriteTimeUtc(entry);
             yield return new StorageEntry(
-                ToScopeRelative(entry),
-                isDir,
-                size,
-                new DateTimeOffset(utc, TimeSpan.Zero)
+                ToScopeRelative(info.Path),
+                info.IsDirectory,
+                info.Size,
+                new DateTimeOffset(info.LastWriteUtc, TimeSpan.Zero)
             );
             await Task.Yield();
         }
@@ -320,6 +317,13 @@ public sealed class LocalStorage : IStorage
     /// fully-qualified paths still work. Without this resolution, relative
     /// sub-paths canonicalize against the process CWD via Path.GetFullPath
     /// and fail the under-root guard check.
+    ///
+    /// Rootedness is checked with <see cref="StoragePathGuard.IsRootedAnyStyle"/>,
+    /// not the OS-native <see cref="Path.IsPathRooted"/>: on Linux the latter
+    /// returns false for a Windows drive-letter or UNC path, which would
+    /// otherwise fall into the "relative" branch below and get silently
+    /// joined under root — passing the under-root check for a path that was
+    /// never actually inside it.
     /// </summary>
     private string ResolveAgainstScopedRoot(string path)
     {
@@ -331,7 +335,7 @@ public sealed class LocalStorage : IStorage
         if (string.IsNullOrEmpty(path))
             return root;
 
-        if (Path.IsPathRooted(path))
+        if (StoragePathGuard.IsRootedAnyStyle(path))
             return path;
 
         string normalized = path.Replace('\\', '/').TrimStart('/');

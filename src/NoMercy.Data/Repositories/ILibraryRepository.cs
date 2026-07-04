@@ -199,8 +199,6 @@ public interface ILibraryRepository
 
     Task<int> AddLanguageLibraryAsync(LanguageLibrary[] languageLibraries);
 
-    Task SaveChangesAsync();
-
     Task<int> SyncEncoderProfileFolderAsync(
         List<EncoderProfileFolder> encoderProfileFolders,
         List<Folder> folders

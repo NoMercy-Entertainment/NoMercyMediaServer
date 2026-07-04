@@ -27,7 +27,7 @@ internal static partial class LogsCommand
     [GeneratedRegex(@"(\x1b|\\u001[bB])\[[0-9;]*[A-Za-z]")]
     private static partial Regex AnsiEscapeRegex();
 
-    public static Command Create(Option<string?> pipeOption)
+    public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
         Option<int> tailOption = new("--tail", "-n")
         {
@@ -63,33 +63,33 @@ internal static partial class LogsCommand
                 string? level = parseResult.GetValue(levelOption);
                 string? type = parseResult.GetValue(typeOption);
 
-                using CliClient client = new(pipe);
+                using ICliClient client = clientFactory.Create(pipe);
 
                 // Fetch initial batch
                 string query = BuildQuery(tail, level, type);
                 List<LogEntryResponse>? logs = await client.GetAsync<List<LogEntryResponse>>(
-                    $"/manage/logs{query}",
+                    $"{ApiRoutes.Logs}{query}",
                     ct
                 );
 
                 if (logs is null)
                 {
                     await Console.Error.WriteLineAsync("Could not connect to server.");
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
 
                 foreach (LogEntryResponse entry in logs)
                     PrintEntry(entry);
 
                 if (!follow)
-                    return 0;
+                    return (int)ExitCode.Success;
 
                 // Stream via SSE
                 using IpcClient ipc = new(pipe);
                 try
                 {
                     using HttpResponseMessage response = await ipc.GetStreamAsync(
-                        "/manage/logs/stream?backfill=0",
+                        $"{ApiRoutes.LogsStream}?backfill=0",
                         ct
                     );
 
@@ -158,10 +158,10 @@ internal static partial class LogsCommand
                 catch (Exception ex)
                 {
                     await Console.Error.WriteLineAsync($"Stream disconnected: {ex.Message}");
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
 
-                return 0;
+                return (int)ExitCode.Success;
             }
         );
 

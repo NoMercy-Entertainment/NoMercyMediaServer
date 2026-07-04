@@ -11,6 +11,7 @@
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NoMercy.NmSystem.Lifecycle;
 
 namespace NoMercy.Encoder.Startup;
 
@@ -28,24 +29,28 @@ public sealed class FfmpegCapabilityProbeBackgroundService : BackgroundService
     private readonly IHostApplicationLifetime _lifetime;
     private readonly ILogger<FfmpegCapabilityProbeBackgroundService> _logger;
     private readonly TimeSpan _initialGrace;
+    private readonly IServerPhaseTracker _phaseTracker;
 
     public FfmpegCapabilityProbeBackgroundService(
         IFfmpegCapabilityProbe probe,
         IHostApplicationLifetime lifetime,
-        ILogger<FfmpegCapabilityProbeBackgroundService> logger
+        ILogger<FfmpegCapabilityProbeBackgroundService> logger,
+        IServerPhaseTracker phaseTracker
     )
-        : this(probe, lifetime, logger, DefaultInitialGrace) { }
+        : this(probe, lifetime, logger, phaseTracker, DefaultInitialGrace) { }
 
     internal FfmpegCapabilityProbeBackgroundService(
         IFfmpegCapabilityProbe probe,
         IHostApplicationLifetime lifetime,
         ILogger<FfmpegCapabilityProbeBackgroundService> logger,
+        IServerPhaseTracker phaseTracker,
         TimeSpan initialGrace
     )
     {
         _probe = probe;
         _lifetime = lifetime;
         _logger = logger;
+        _phaseTracker = phaseTracker;
         _initialGrace = initialGrace;
     }
 
@@ -57,6 +62,7 @@ public sealed class FfmpegCapabilityProbeBackgroundService : BackgroundService
 
         try
         {
+            await _phaseTracker.WhenReachedAsync(BootStage.All, stoppingToken).ConfigureAwait(false);
             await Task.Delay(_initialGrace, stoppingToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)

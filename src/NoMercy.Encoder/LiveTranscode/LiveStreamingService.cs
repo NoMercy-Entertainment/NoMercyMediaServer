@@ -26,10 +26,16 @@ namespace NoMercy.Encoder.LiveTranscode;
 public class LiveStreamingService(
     ILogger<LiveStreamingService> logger,
     IStorage storage,
-    ILiveSessionTransport? transport = null
+    ILiveSessionTransport? transport = null,
+    ISessionManager? sessionManager = null
 ) : ILiveStreamingService
 {
     private readonly ConcurrentDictionary<string, LiveRuntimeSession> _runtimes = new();
+
+    // Tombstone of recently removed sessions so the API can distinguish an
+    // expired/ended session (410 Gone) from one that never existed (404).
+    private readonly ConcurrentDictionary<string, DateTime> _recentlyRemoved = new();
+    private static readonly TimeSpan TombstoneWindow = TimeSpan.FromMinutes(30);
 
     public IReadOnlyCollection<string> ActiveSessionIds => _runtimes.Keys.ToList();
 
@@ -100,14 +106,52 @@ public class LiveStreamingService(
 
     public async Task RemoveAsync(string sessionId)
     {
-        if (_runtimes.TryRemove(sessionId, out LiveRuntimeSession? runtime))
+        try
         {
-            logger.LogDebug("Removing live session {SessionId}", sessionId);
-            await runtime.DisposeAsync().ConfigureAwait(false);
-
-            if (!string.IsNullOrWhiteSpace(runtime.ScratchDirectory))
+            if (_runtimes.TryRemove(sessionId, out LiveRuntimeSession? runtime))
             {
-                TryDeleteScratch(runtime.ScratchDirectory, sessionId);
+                logger.LogDebug("Removing live session {SessionId}", sessionId);
+                await runtime.DisposeAsync().ConfigureAwait(false);
+
+                if (!string.IsNullOrWhiteSpace(runtime.ScratchDirectory))
+                {
+                    TryDeleteScratch(runtime.ScratchDirectory, sessionId);
+                }
+            }
+        }
+        finally
+        {
+            // Atomic teardown: even if disposing the runtime threw, the session
+            // is always pulled from the manager and tombstoned, so it can never
+            // linger as a ghost and a later request gets 410 Gone.
+            sessionManager?.RemoveSession(sessionId);
+            RecordRemoved(sessionId);
+        }
+    }
+
+    public bool WasRecentlyRemoved(string sessionId)
+    {
+        if (!_recentlyRemoved.TryGetValue(sessionId, out DateTime removedAt))
+            return false;
+        if (DateTime.UtcNow - removedAt > TombstoneWindow)
+        {
+            _recentlyRemoved.TryRemove(sessionId, out _);
+            return false;
+        }
+        return true;
+    }
+
+    private void RecordRemoved(string sessionId)
+    {
+        _recentlyRemoved[sessionId] = DateTime.UtcNow;
+        // Keep the tombstone set bounded by pruning expired entries.
+        if (_recentlyRemoved.Count > 256)
+        {
+            DateTime cutoff = DateTime.UtcNow - TombstoneWindow;
+            foreach (KeyValuePair<string, DateTime> kv in _recentlyRemoved)
+            {
+                if (kv.Value < cutoff)
+                    _recentlyRemoved.TryRemove(kv.Key, out _);
             }
         }
     }
@@ -183,7 +227,7 @@ public class LiveStreamingService(
 
         string sessionId = runtime.Session.SessionId;
         string relativeUrl =
-            $"/api/v1/streaming/live/sessions/{sessionId}/segment/{segment.Index}.ts";
+            $"/api/v1/streaming/live/sessions/{sessionId}/segment/{runtime.CurrentEpoch}/{segment.Index}.ts";
 
         SegmentReadyMessage message = new(
             Index: segment.Index,

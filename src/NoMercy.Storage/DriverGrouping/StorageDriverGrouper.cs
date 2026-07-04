@@ -58,7 +58,12 @@ public static class StorageDriverGrouper
             string endpointKey = kv.Key;
             List<FolderRootInput> members = kv.Value;
             StorageEndpointKind kind = DetectEndpoint(members[0].AbsoluteRootPath).Kind;
-            string driverType = "local";
+            // The endpoint kind drives path math (UNC uses '\\' separators and a
+            // \\server\share root), but a UNC folder is still served by the local
+            // driver — Windows mounts the share and LocalStorage reads it natively.
+            // The dedicated SMB driver is only used for folders configured as an
+            // explicit SMB endpoint, never inferred from a UNC path here.
+            const string driverType = "local";
 
             string driverRoot = ComputeCommonAncestor(
                 members.Select(m => m.AbsoluteRootPath).ToList(),

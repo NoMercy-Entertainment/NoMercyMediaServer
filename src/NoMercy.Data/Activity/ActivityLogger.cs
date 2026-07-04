@@ -247,8 +247,3 @@ public class ActivityLogger : IActivityLogger
         return JsonConvert.SerializeObject(metadata);
     }
 }
-
-public interface IActivityHubBroadcaster
-{
-    Task BroadcastAsync(ActivityLog row, CancellationToken ct = default);
-}

@@ -44,6 +44,17 @@ public class JobDispatcher : IJobDispatcher
         Dispatcher.Dispatch(job, onQueue, priority);
     }
 
+    public void DispatchChild(
+        IShouldQueue job,
+        string onQueue,
+        int priority,
+        int parentJobId,
+        string groupTag
+    )
+    {
+        Dispatcher.DispatchChild(job, onQueue, priority, parentJobId, groupTag);
+    }
+
     private QueueJobDispatcher Dispatcher =>
         field
         ?? throw new InvalidOperationException(
@@ -127,7 +138,7 @@ public class JobDispatcher : IJobDispatcher
         Dispatcher.Dispatch(job);
     }
 
-    internal virtual void DispatchJob<TJob, TChild>(IEnumerable<TChild> data, string name)
+    public virtual void DispatchJob<TJob, TChild>(IEnumerable<TChild> data, string name)
         where TJob : AbstractShowExtraDataJob<TChild, string>, new()
     {
         TJob job = new() { Storage = data, Name = name };

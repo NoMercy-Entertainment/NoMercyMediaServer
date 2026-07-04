@@ -9,26 +9,23 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
+using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Movies;
-using NoMercy.Helpers.Extensions;
-using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
-using NoMercyQueue.Core.Interfaces;
-using Serilog.Events;
+using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 
 namespace NoMercy.Api.Controllers.V1.Media;
 
@@ -42,7 +39,8 @@ public class MoviesController(
     ILibraryRepository libraryRepository,
     IJobDispatcher jobDispatcher,
     IMovieMetadataProvider movieMetadataProvider,
-    IServerConfiguration config
+    IServerConfiguration config,
+    ILogger<MoviesController> logger
 ) : BaseController
 {
     [HttpGet]
@@ -50,7 +48,7 @@ public class MoviesController(
     public async Task<IActionResult> Movie(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view movies");
 
         string language = Language();
@@ -63,7 +61,11 @@ public class MoviesController(
 
         try
         {
-            TmdbMovieAppends? movieAppends = await movieMetadataProvider.GetMovieAsync(id, language, ct);
+            TmdbMovieAppends? movieAppends = await movieMetadataProvider.GetMovieAsync(
+                id,
+                language,
+                ct
+            );
 
             if (movieAppends is null)
                 return NotFoundResponse("Movie not found");
@@ -82,11 +84,9 @@ public class MoviesController(
     }
 
     [HttpDelete]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> DeleteMovie(int id, CancellationToken ct = default)
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to delete movies");
-
         await movieRepository.DeleteAsync(id, ct);
 
         return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Movie deleted" });
@@ -97,7 +97,7 @@ public class MoviesController(
     public async Task<IActionResult> Available(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view movies");
 
         string language = Language();
@@ -123,7 +123,7 @@ public class MoviesController(
     public async Task<IActionResult> Watch(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view movies");
 
         string language = Language();
@@ -131,7 +131,12 @@ public class MoviesController(
 
         IEnumerable<VideoPlaylistResponseDto> playlist = (
             await movieRepository.GetMoviePlaylistAsync(userId, id, language, country, ct)
-        ).Select(movie => new VideoPlaylistResponseDto(movie, MediaTypes.MovieMediaType, id, country));
+        ).Select(movie => new VideoPlaylistResponseDto(
+            movie,
+            MediaTypes.MovieMediaType,
+            id,
+            country
+        ));
 
         if (!playlist.Any())
             return NotFoundResponse("Movie not found");
@@ -148,7 +153,7 @@ public class MoviesController(
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to like movies");
 
         bool success = await movieRepository.LikeMovieAsync(id, userId, request.Value, ct);
@@ -175,7 +180,7 @@ public class MoviesController(
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to manage watch list");
 
         bool success = await movieRepository.AddToWatchListAsync(id, userId, request.Add, ct);
@@ -196,11 +201,9 @@ public class MoviesController(
 
     [HttpPost]
     [Route("rescan")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Rescan(int id, CancellationToken ct = default)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to rescan movies");
-
         Movie? movie = await movieRepository.GetMovieForRescanAsync(id, ct);
 
         if (movie is null)
@@ -212,7 +215,7 @@ public class MoviesController(
         }
         catch (Exception e)
         {
-            Logger.Encoder(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
             return InternalServerErrorResponse(e.Message);
         }
 
@@ -228,11 +231,9 @@ public class MoviesController(
 
     [HttpPost]
     [Route("refresh")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Refresh(int id, CancellationToken ct = default)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to refresh movies");
-
         Movie? movie = await movieRepository.GetMovieForRefreshAsync(id, ct);
 
         if (movie is null)
@@ -244,7 +245,7 @@ public class MoviesController(
         }
         catch (Exception e)
         {
-            Logger.Encoder(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
             return InternalServerErrorResponse(e.Message);
         }
 
@@ -260,15 +261,13 @@ public class MoviesController(
 
     [HttpPost]
     [Route("add")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Add(
         int id,
         [FromQuery] Ulid? libraryId = null,
         CancellationToken ct = default
     )
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to add movies");
-
         Library? library;
 
         if (libraryId is not null)
@@ -296,7 +295,7 @@ public class MoviesController(
         }
         catch (Exception e)
         {
-            Logger.Encoder(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
             return InternalServerErrorResponse(e.Message);
         }
 

@@ -9,7 +9,9 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.NmSystem.Security;
 using Microsoft.AspNetCore.DataProtection;
+using NoMercy.NmSystem.Auth;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,7 +40,7 @@ public class SetupModeMiddlewareTests
         dbContext.Database.OpenConnection();
         dbContext.Database.EnsureCreated();
 
-        AuthManager authManager = new(dbContext, new LocalStorageDriver());
+        AuthManager authManager = new(dbContext, new LocalStorageDriver(), new AuthTokenStore());
         return new(state, authManager, new FakeServerRegistrationService());
     }
 

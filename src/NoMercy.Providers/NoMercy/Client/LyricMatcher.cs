@@ -89,7 +89,7 @@ public static class LyricMatcher
             return 100;
         if (a.Contains(b) || b.Contains(a))
             return 95;
-        return Str.MatchPercentage(a, b);
+        return FuzzyMatcher.MatchPercentage(a, b);
     }
 
     private static double ArtistMatch(IReadOnlyList<string> wantedArtists, string got)
@@ -108,7 +108,7 @@ public static class LyricMatcher
             double score =
                 a == b ? 100
                 : b.Contains(a) || a.Contains(b) ? 95
-                : Str.MatchPercentage(a, b);
+                : FuzzyMatcher.MatchPercentage(a, b);
             if (score > best)
                 best = score;
         }

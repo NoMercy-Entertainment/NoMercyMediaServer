@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.IdentityModel.Tokens.Jwt;
+using NoMercy.NmSystem.Auth;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Auth;
@@ -30,13 +31,17 @@ public class DegradedModeRecovery : IDegradedModeRecovery
     private readonly IServerRegistrationService _serverRegistrationService;
     private readonly INetworkDiscovery? _networkDiscovery;
 
+    private readonly IAuthTokenStore _authTokenStore;
+
     public DegradedModeRecovery(
+        IAuthTokenStore authTokenStore,
         IApiKeyLoader apiKeyLoader,
         IApiKeyStore apiKeyStore,
         IServerRegistrationService serverRegistrationService,
         INetworkDiscovery? networkDiscovery = null
     )
     {
+        _authTokenStore = authTokenStore;
         _apiKeyLoader = apiKeyLoader;
         _apiKeyStore = apiKeyStore;
         _serverRegistrationService = serverRegistrationService;
@@ -88,7 +93,7 @@ public class DegradedModeRecovery : IDegradedModeRecovery
 
             if (!tasks.Authenticated && tasks.ApiKeysLoaded)
             {
-                string? token = Globals.Globals.AccessToken;
+                string? token = _authTokenStore.AccessToken;
                 if (string.IsNullOrEmpty(token))
                 {
                     // Auth not ready — AuthManager background refresh will handle it
@@ -129,7 +134,7 @@ public class DegradedModeRecovery : IDegradedModeRecovery
                     // is not sufficient — nomercy-tv will reject an expired JWT.
                     bool tokenNeedsRefresh = true;
 
-                    string? registrationToken = Globals.Globals.AccessToken;
+                    string? registrationToken = _authTokenStore.AccessToken;
                     if (!string.IsNullOrEmpty(registrationToken))
                     {
                         try

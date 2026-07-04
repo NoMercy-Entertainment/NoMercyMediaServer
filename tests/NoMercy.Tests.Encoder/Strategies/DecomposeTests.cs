@@ -362,7 +362,11 @@ public class DecomposeTests
     [Fact]
     public void MkvStrategy_Decompose_AlwaysReturnsWholeTask()
     {
-        IEncodingStrategy strategy = new MkvStrategy(MockEncoder());
+        IEncodingStrategy strategy = new MkvStrategy(
+            MockEncoder(),
+            NullLogger<MkvStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = MakePlan(videoCount: 2, audioCount: 1);
 
         DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);

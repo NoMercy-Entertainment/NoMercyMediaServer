@@ -16,7 +16,6 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Distribution;
-using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 
@@ -33,7 +32,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 [ApiController]
 [Tags("Distribution Dispatch")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "Owner")]
 [Route("api/v{version:apiVersion}/distribution/workers/dispatch")]
 public class CoordinatorDispatchController(
     IWorkerDispatcher dispatcher,
@@ -53,8 +52,6 @@ public class CoordinatorDispatchController(
         CancellationToken ct
     )
     {
-        if (!User.IsOwner())
-            return UnauthorizedResponse("Only the server owner can dispatch encode jobs");
 
         if (request.Tasks is not { Count: > 0 })
             return BadRequestResponse("tasks must be a non-empty array");
@@ -101,8 +98,6 @@ public class CoordinatorDispatchController(
     [HttpGet("{taskId}/status")]
     public IActionResult GetTaskStatus(string taskId)
     {
-        if (!User.IsOwner())
-            return UnauthorizedResponse("Only the server owner can view task status");
 
         TaskProgressSnapshot? snapshot = progressStore
             .GetAll()

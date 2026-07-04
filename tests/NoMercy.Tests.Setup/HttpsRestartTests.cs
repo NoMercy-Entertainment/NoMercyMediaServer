@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Information;
 using NoMercy.Setup.Server;
@@ -57,7 +58,10 @@ public class CertificateAvailabilityTests : IDisposable
         // indicate no valid certificate is present.
         try
         {
-            bool result = Certificate.HasValidCertificate();
+            bool result = new CertificateService(
+                NullLogger<CertificateService>.Instance,
+                null!
+            ).HasValidCertificate();
             Assert.False(result, "No certificate should be present in the test environment");
         }
         catch (SqliteException)
@@ -154,7 +158,10 @@ public class HttpToHttpsTransitionTests
         bool hasCert = false;
         try
         {
-            hasCert = Certificate.HasValidCertificate();
+            hasCert = new CertificateService(
+                NullLogger<CertificateService>.Instance,
+                null!
+            ).HasValidCertificate();
         }
         catch (SqliteException)
         {

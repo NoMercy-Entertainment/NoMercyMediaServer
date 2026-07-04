@@ -27,12 +27,16 @@ public static class PlanStageExtensions
     /// Returns a <see cref="PlanResult"/> when <paramref name="result"/>
     /// is a <see cref="StageSuccess{ExecutionPlan}"/>; otherwise null.
     /// </summary>
-    public static PlanResult? AsPlanResult(this StageResult result, EncodingContext context)
+    public static PlanResult? AsPlanResult(
+        this StageResult result,
+        EncodingContext context,
+        IPlanResultProjector projector
+    )
     {
         ArgumentNullException.ThrowIfNull(context);
 
         if (result is StageSuccess<ExecutionPlan> success)
-            return PlanResultProjector.FromExecutionPlan(success.Value, context);
+            return projector.FromExecutionPlan(success.Value, context);
 
         return null;
     }

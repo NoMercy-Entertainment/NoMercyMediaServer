@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Data.Sqlite;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
@@ -58,7 +59,31 @@ public static class DatabaseBackupService
             string backupFileName = $"{dbName}.{timestamp}.db";
             string backupPath = Path.Combine(BackupRoot, backupFileName);
 
-            File.Copy(dbPath, backupPath, overwrite: false);
+            if (File.Exists(backupPath))
+                throw new IOException($"Backup file already exists: {backupPath}");
+
+            // SQLite's online-backup API (not File.Copy) so a database running in
+            // WAL mode is captured consistently — a plain file copy only sees the
+            // main .db file and silently misses committed-but-not-yet-checkpointed
+            // rows sitting in the -wal file.
+            //
+            // Pooling=False on both ends: these connections are opened once for a
+            // single backup and immediately disposed. With the default pooled
+            // behaviour, Microsoft.Data.Sqlite keeps the native handle (and the
+            // underlying OS file handle) alive in the pool after Dispose() so it
+            // can be reused by a future connection with the same connection
+            // string — but the backup path is unique per timestamp, so that
+            // handle is never reused. Left pooled, every backup ever taken over
+            // the process's lifetime would leak an open handle on the backup
+            // file, keeping it locked against deletion/pruning/manual access on
+            // Windows.
+            using (SqliteConnection source = new($"Data Source={dbPath}; Pooling=False;"))
+            using (SqliteConnection destination = new($"Data Source={backupPath}; Pooling=False;"))
+            {
+                source.Open();
+                destination.Open();
+                source.BackupDatabase(destination);
+            }
 
             Logger.Setup(
                 $"Database backup created: {backupFileName} ({pendingMigrationCount} pending migration(s))"

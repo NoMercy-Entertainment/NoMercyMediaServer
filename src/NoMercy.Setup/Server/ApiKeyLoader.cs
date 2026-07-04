@@ -10,16 +10,15 @@
 // -----------------------------------------------------------------------------
 
 using System.Text;
+using NoMercy.NmSystem.Auth;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Dto;
 using NoMercy.Storage;
-using Serilog.Events;
-using Config = NoMercy.NmSystem.Information.Config;
 
 namespace NoMercy.Setup.Server;
 
@@ -30,8 +29,12 @@ public class ApiKeyLoader : IApiKeyLoader
     private readonly IStorageDriver _storageDriver;
     private static readonly int[] BackoffSeconds = [30, 60, 300, 900, 1800];
 
-    public ApiKeyLoader(ILogger<ApiKeyLoader> logger, IApiKeyStore apiKeyStore, IStorageDriver storageDriver)
+    private readonly IAuthTokenStore _authTokenStore;
+
+    public ApiKeyLoader(
+        IAuthTokenStore authTokenStore,ILogger<ApiKeyLoader> logger, IApiKeyStore apiKeyStore, IStorageDriver storageDriver)
     {
+        _authTokenStore = authTokenStore;
         _logger = logger;
         _apiKeyStore = apiKeyStore;
         _storageDriver = storageDriver;
@@ -87,8 +90,8 @@ public class ApiKeyLoader : IApiKeyLoader
         {
             _logger.LogInformation("Requesting server info");
 
-            GenericHttpClient apiClient = new(Config.ApiBaseUrl);
-            apiClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
+            GenericHttpClient apiClient = new(ExternalServicesConfig.Current.ApiBaseUrl);
+            apiClient.SetDefaultHeaders(ExternalServicesConfig.Current.UserAgent, _authTokenStore.AccessToken);
 
             string content = await apiClient.SendAndReadAsync(HttpMethod.Get, "v1/info");
 

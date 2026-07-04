@@ -9,8 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.NmSystem.Information;
-
 namespace NoMercy.NmSystem.FileSystem;
 
 public static class Folders
@@ -42,7 +40,7 @@ public static class Folders
             if (recursive)
                 Parallel.ForEach(
                     directoryInfo.GetDirectories(),
-                    Config.ParallelOptions,
+                    SystemParallelism.Options,
                     subDirectory =>
                         Interlocked.Add(
                             ref startDirectorySize,

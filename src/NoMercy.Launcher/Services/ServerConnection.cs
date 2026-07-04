@@ -19,6 +19,17 @@ namespace NoMercy.Launcher.Services;
 public sealed class ServerConnection : IDisposable
 {
     private IpcClient? _client;
+    private readonly string? _pipeNameOrSocketPath;
+
+    /// <param name="pipeNameOrSocketPath">
+    /// Overrides the management pipe/socket the connection targets. Null means
+    /// the machine-global default — tests pass a unique name so a dev server
+    /// running on the same machine can never answer for them.
+    /// </param>
+    public ServerConnection(string? pipeNameOrSocketPath = null)
+    {
+        _pipeNameOrSocketPath = pipeNameOrSocketPath;
+    }
 
     public bool IsConnected { get; internal set; }
 
@@ -27,7 +38,7 @@ public sealed class ServerConnection : IDisposable
         try
         {
             Disconnect();
-            _client = new();
+            _client = new(_pipeNameOrSocketPath);
 
             using HttpResponseMessage response = await _client.GetAsync(
                 "/manage/status",

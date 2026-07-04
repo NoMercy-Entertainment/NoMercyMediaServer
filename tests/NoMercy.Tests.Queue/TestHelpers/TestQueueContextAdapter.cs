@@ -34,9 +34,16 @@ public class TestQueueContextAdapter : IQueueContext
         Jobs.RemoveAll(j => j.Id == job.Id);
     }
 
-    public QueueJobModel? GetNextJob(string queueName, byte maxAttempts, long? currentJobId)
+    public QueueJobModel? GetNextJob(
+        string queueName,
+        byte maxAttempts,
+        long? currentJobId,
+        DateTime now
+    )
     {
-        return Jobs.Where(j => j.ReservedAt == null && j.Attempts <= maxAttempts)
+        return Jobs.Where(j =>
+                j.ReservedAt == null && j.Attempts < maxAttempts && j.AvailableAt <= now
+            )
             .Where(j => currentJobId == null)
             .Where(j => string.IsNullOrEmpty(queueName) || j.Queue == queueName)
             .OrderByDescending(j => j.Priority)
@@ -92,6 +99,12 @@ public class TestQueueContextAdapter : IQueueContext
     public void RemoveFailedJob(FailedJobModel failedJob)
     {
         FailedJobs.RemoveAll(j => j.Id == failedJob.Id);
+    }
+
+    public void AddFailedJobAndRemoveJob(FailedJobModel failedJob, QueueJobModel job)
+    {
+        AddFailedJob(failedJob);
+        RemoveJob(job);
     }
 
     public FailedJobModel? FindFailedJob(int id)

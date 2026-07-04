@@ -17,7 +17,7 @@ namespace NoMercy.Cli.Commands;
 
 internal static class AutoStartCommand
 {
-    public static Command Create(Option<string?> pipeOption)
+    public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
         Command statusCmd = new("status") { Description = "Check if autostart is enabled" };
 
@@ -25,20 +25,20 @@ internal static class AutoStartCommand
             async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
-                using CliClient client = new(pipe);
+                using ICliClient client = clientFactory.Create(pipe);
                 AutoStartResponse? response = await client.GetAsync<AutoStartResponse>(
-                    "/manage/autostart",
+                    ApiRoutes.AutoStart,
                     ct
                 );
 
                 if (response is null)
                 {
                     await Console.Error.WriteLineAsync("Could not retrieve autostart status.");
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
 
                 Console.WriteLine($"Autostart:    {(response.Enabled ? "enabled" : "disabled")}");
-                return 0;
+                return (int)ExitCode.Success;
             }
         );
 
@@ -47,7 +47,7 @@ internal static class AutoStartCommand
         enableCmd.SetAction(
             async (parseResult, ct) =>
             {
-                return await SetAutoStart(parseResult, pipeOption, true, ct);
+                return await SetAutoStart(clientFactory, parseResult, pipeOption, true, ct);
             }
         );
 
@@ -56,7 +56,7 @@ internal static class AutoStartCommand
         disableCmd.SetAction(
             async (parseResult, ct) =>
             {
-                return await SetAutoStart(parseResult, pipeOption, false, ct);
+                return await SetAutoStart(clientFactory, parseResult, pipeOption, false, ct);
             }
         );
 
@@ -69,6 +69,7 @@ internal static class AutoStartCommand
     }
 
     private static async Task<int> SetAutoStart(
+        ICliClientFactory clientFactory,
         ParseResult parseResult,
         Option<string?> pipeOption,
         bool enabled,
@@ -76,20 +77,20 @@ internal static class AutoStartCommand
     )
     {
         string? pipe = parseResult.GetValue(pipeOption);
-        using CliClient client = new(pipe);
+        using ICliClient client = clientFactory.Create(pipe);
 
         string json = JsonConvert.SerializeObject(new { enabled });
         StringContent content = new(json, Encoding.UTF8, "application/json");
 
-        bool ok = await client.PostAsync("/manage/autostart", content, ct);
+        bool ok = await client.PostAsync(ApiRoutes.AutoStart, content, ct);
 
         if (ok)
         {
             Console.WriteLine($"Autostart {(enabled ? "enabled" : "disabled")}.");
-            return 0;
+            return (int)ExitCode.Success;
         }
 
-        return 1;
+        return (int)ExitCode.ServerError;
     }
 
     private class AutoStartResponse

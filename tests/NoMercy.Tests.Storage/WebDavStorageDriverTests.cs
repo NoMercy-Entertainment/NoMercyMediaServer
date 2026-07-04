@@ -10,14 +10,13 @@
 // -----------------------------------------------------------------------------
 
 using System.Net;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Drivers.WebDav;
 using NoMercy.Storage.Factory;
 using NoMercy.Storage.Remote;
+using NoMercy.Tests.Storage.Container;
 using WebDav;
 
 namespace NoMercy.Tests.Storage;
@@ -252,7 +251,7 @@ public class WebDavStorageDriverFactoryTests
         Mock<ICredentialResolver> credResolver = new();
         credResolver.Setup(r => r.Resolve(It.IsAny<string>())).Returns(("alice", "s3cr3t"));
 
-        StorageFactory factory = new(
+        StorageFactory factory = new StorageFactory(
             new LocalStorageDriver(),
             NullLogger<StorageFactory>.Instance,
             driverResolver.Object,
@@ -266,119 +265,22 @@ public class WebDavStorageDriverFactoryTests
 }
 
 // ============================================================================
-// Integration tests — require Docker + WebDAV container
+// Integration tests — run against the shared all-in-one storage container
+// (WebDAV). The container is started once for the whole assembly by the
+// StorageBackends collection fixture and torn down after the last test.
 // ============================================================================
 
-/// <summary>
-/// Starts a bytemark/webdav container once per test class.
-/// Tests are skipped when Docker is not reachable.
-/// </summary>
-public sealed class WebDavFixture : IAsyncLifetime
+[Collection("StorageBackends")]
+public class WebDavStorageDriverIntegrationTests(StorageBackendsFixture fix)
 {
-    private IContainer? _container;
-    public bool Available { get; private set; }
-    public string? BaseUrl { get; private set; }
-
-    public const string Username = "testuser";
-    public const string Password = "testpass";
-
-    public async Task InitializeAsync()
-    {
-        if (!await DockerAvailableAsync())
-        {
-            Available = false;
-            return;
-        }
-
-        try
-        {
-            _container = new ContainerBuilder()
-                .WithImage("bytemark/webdav:latest")
-                .WithPortBinding(80, assignRandomHostPort: true)
-                .WithEnvironment("AUTH_TYPE", "Basic")
-                .WithEnvironment("USERNAME", Username)
-                .WithEnvironment("PASSWORD", Password)
-                .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(80))
-                .Build();
-
-            await _container.StartAsync();
-
-            int port = _container.GetMappedPublicPort(80);
-            // bytemark/webdav serves at /
-            BaseUrl = $"http://localhost:{port}/";
-            Available = true;
-        }
-        catch (Exception)
-        {
-            Available = false;
-        }
-    }
-
-    public async Task DisposeAsync()
-    {
-        if (_container is not null)
-            await _container.DisposeAsync();
-    }
-
-    public WebDavStorageDriver BuildDriver()
-    {
-        // Integration tests inject an already-configured WebDavClient directly,
-        // bypassing the factory credential flow.
-        WebDavClient client = new(
-            new WebDavClientParams
-            {
-                BaseAddress = new Uri(BaseUrl!),
-                Credentials = new NetworkCredential(Username, Password),
-            }
-        );
-
-        return new WebDavStorageDriver(client, BaseUrl!);
-    }
-
-    private static async Task<bool> DockerAvailableAsync()
-    {
-        try
-        {
-            using HttpClient http = new();
-            http.Timeout = TimeSpan.FromSeconds(3);
-            HttpResponseMessage response = await http.GetAsync("http://localhost:2375/info");
-            return response.IsSuccessStatusCode;
-        }
-        catch
-        {
-            try
-            {
-                using System.Diagnostics.Process proc = new();
-                proc.StartInfo = new System.Diagnostics.ProcessStartInfo("docker", "info")
-                {
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                };
-                proc.Start();
-                await proc.WaitForExitAsync();
-                return proc.ExitCode == 0;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-    }
-}
-
-[Collection("WebDavIntegration")]
-public class WebDavStorageDriverIntegrationTests(WebDavFixture webDav)
-    : IClassFixture<WebDavFixture>
-{
-    private const string SkipReason = "Docker not available";
+    private string SkipReason => fix.StartupError ?? "storage container not available";
 
     [SkippableFact]
     public async Task RoundTrip_write_read_delete()
     {
-        Skip.If(!webDav.Available, SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
-        WebDavStorageDriver driver = webDav.BuildDriver();
+        WebDavStorageDriver driver = fix.BuildWebDavDriver();
         string path = $"roundtrip-{Ulid.NewUlid()}.txt";
         byte[] data = "hello webdav"u8.ToArray();
 
@@ -397,9 +299,9 @@ public class WebDavStorageDriverIntegrationTests(WebDavFixture webDav)
     [SkippableFact]
     public async Task LargeFile_write_read()
     {
-        Skip.If(!webDav.Available, SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
-        WebDavStorageDriver driver = webDav.BuildDriver();
+        WebDavStorageDriver driver = fix.BuildWebDavDriver();
         string path = $"large-{Ulid.NewUlid()}.bin";
 
         byte[] data = new byte[12 * 1024 * 1024];
@@ -417,9 +319,9 @@ public class WebDavStorageDriverIntegrationTests(WebDavFixture webDav)
     [SkippableFact]
     public async Task Mkcol_recursive_creation()
     {
-        Skip.If(!webDav.Available, SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
-        WebDavStorageDriver driver = webDav.BuildDriver();
+        WebDavStorageDriver driver = fix.BuildWebDavDriver();
         string dir = $"a-{Ulid.NewUlid()}/b/c";
 
         driver.CreateDirectory(dir);
@@ -431,9 +333,9 @@ public class WebDavStorageDriverIntegrationTests(WebDavFixture webDav)
     [SkippableFact]
     public async Task Propfind_enumerate_with_pattern()
     {
-        Skip.If(!webDav.Available, SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
-        WebDavStorageDriver driver = webDav.BuildDriver();
+        WebDavStorageDriver driver = fix.BuildWebDavDriver();
         string dirName = $"enum-{Ulid.NewUlid()}";
         driver.CreateDirectory(dirName);
 
@@ -463,9 +365,9 @@ public class WebDavStorageDriverIntegrationTests(WebDavFixture webDav)
     [SkippableFact]
     public async Task MoveFile_renames_resource()
     {
-        Skip.If(!webDav.Available, SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
-        WebDavStorageDriver driver = webDav.BuildDriver();
+        WebDavStorageDriver driver = fix.BuildWebDavDriver();
         string src = $"move-src-{Ulid.NewUlid()}.txt";
         string dst = $"move-dst-{Ulid.NewUlid()}.txt";
         byte[] data = "move me"u8.ToArray();
@@ -484,9 +386,9 @@ public class WebDavStorageDriverIntegrationTests(WebDavFixture webDav)
     [SkippableFact]
     public async Task CopyFile_duplicates_resource()
     {
-        Skip.If(!webDav.Available, SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
-        WebDavStorageDriver driver = webDav.BuildDriver();
+        WebDavStorageDriver driver = fix.BuildWebDavDriver();
         string src = $"copy-src-{Ulid.NewUlid()}.txt";
         string dst = $"copy-dst-{Ulid.NewUlid()}.txt";
         byte[] data = "copy me"u8.ToArray();
@@ -506,16 +408,16 @@ public class WebDavStorageDriverIntegrationTests(WebDavFixture webDav)
     [SkippableFact]
     public async Task BasicAuth_wrong_password_fails()
     {
-        Skip.If(!webDav.Available, SkipReason);
+        Skip.If(!fix.Available, SkipReason);
 
         WebDavClient badClient = new(
             new WebDavClientParams
             {
-                BaseAddress = new Uri(webDav.BaseUrl!),
+                BaseAddress = new Uri(fix.WebDavBaseUrl),
                 Credentials = new NetworkCredential("testuser", "wrongpassword"),
             }
         );
-        WebDavStorageDriver driver = new(badClient, webDav.BaseUrl!);
+        WebDavStorageDriver driver = new(badClient, fix.WebDavBaseUrl);
 
         // Propfind on root with wrong creds should return an HTTP error (401/403).
         // Some servers return 401 as non-successful; the driver returns false (not exception)
@@ -524,9 +426,6 @@ public class WebDavStorageDriverIntegrationTests(WebDavFixture webDav)
         result.Should().BeFalse("401/403 responses should be treated as 'not found'");
     }
 }
-
-[CollectionDefinition("WebDavIntegration")]
-public class WebDavIntegrationCollection : ICollectionFixture<WebDavFixture> { }
 
 // ============================================================================
 // Unit tests — EnumerateFileSystemEntries contract (no Docker)

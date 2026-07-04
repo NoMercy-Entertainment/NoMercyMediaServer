@@ -9,12 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-/*
- * This file is part of the NoMercy Entertainment application.
- * Copyright (c) NoMercy Entertainment. All rights reserved.
- * Licensed under the MIT License.
- */
-
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;

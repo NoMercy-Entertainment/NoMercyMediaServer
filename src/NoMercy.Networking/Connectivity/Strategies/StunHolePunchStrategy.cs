@@ -11,10 +11,10 @@
 
 using System.Net;
 using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Dto;
-using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
-using Serilog.Events;
+using NoMercy.NmSystem.Status;
 using STUN.Enums;
 using STUN.Messages;
 using STUN.Messages.StunAttributeValues;
@@ -30,6 +30,19 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
     public int Priority => 2;
     public ConnectivityType Type => ConnectivityType.StunHolePunch;
 
+    private readonly IConnectivityStatus _connectivityStatus;
+
+    private readonly ILogger<StunHolePunchStrategy> _logger;
+
+    public StunHolePunchStrategy(
+        ILogger<StunHolePunchStrategy> logger,
+        IConnectivityStatus connectivityStatus
+    )
+    {
+        _logger = logger;
+        _connectivityStatus = connectivityStatus;
+    }
+
     private static readonly (string Host, int Port)[] StunServers =
     [
         ("stun.l.google.com", 19302),
@@ -40,7 +53,7 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
     {
         try
         {
-            int localPort = Config.StunPort;
+            int localPort = RuntimeServerSettings.Current.StunPort;
             _stunSocket = new(localPort);
 
             // Send STUN binding request to first server
@@ -51,7 +64,7 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
             );
             if (firstResult is null)
             {
-                Logger.Setup("STUN binding request to primary server failed", LogEventLevel.Debug);
+                _logger.LogDebug("STUN binding request to primary server failed");
                 return false;
             }
 
@@ -66,8 +79,8 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
             if (secondResult is null)
             {
                 // Only one server responded, assume restricted cone
-                Config.StunPublicIp = firstResult.Address.ToString();
-                Config.StunPublicPort = firstResult.Port;
+                _connectivityStatus.StunPublicIp = firstResult.Address.ToString();
+                _connectivityStatus.StunPublicPort = firstResult.Port;
             }
             else if (
                 firstResult.Port == secondResult.Port
@@ -75,8 +88,8 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
             )
             {
                 // Same public IP:port from different servers → Full Cone or Restricted Cone
-                Config.StunPublicIp = firstResult.Address.ToString();
-                Config.StunPublicPort = firstResult.Port;
+                _connectivityStatus.StunPublicIp = firstResult.Address.ToString();
+                _connectivityStatus.StunPublicPort = firstResult.Port;
             }
             else if (
                 firstResult.Address.Equals(secondResult.Address)
@@ -84,27 +97,25 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
             )
             {
                 // Same IP but different port → Symmetric NAT, hole-punch won't work
-                Logger.Setup(
-                    "Symmetric NAT detected — STUN hole-punch not viable",
-                    LogEventLevel.Debug
-                );
+                _logger.LogDebug("Symmetric NAT detected — STUN hole-punch not viable");
                 Cleanup();
                 return false;
             }
             else
             {
                 // Different IPs → Symmetric NAT
-                Logger.Setup(
-                    "Symmetric NAT detected (different IPs) — STUN hole-punch not viable",
-                    LogEventLevel.Debug
+                _logger.LogDebug(
+                    "Symmetric NAT detected (different IPs) — STUN hole-punch not viable"
                 );
                 Cleanup();
                 return false;
             }
 
-            Config.NatStatus = NatStatus.HolePunched;
-            Logger.Setup(
-                $"STUN discovered public endpoint: {Config.StunPublicIp}:{Config.StunPublicPort}"
+            _connectivityStatus.NatStatus = NatStatus.HolePunched;
+            _logger.LogInformation(
+                "STUN discovered public endpoint: {StunPublicIp}:{StunPublicPort}",
+                _connectivityStatus.StunPublicIp,
+                _connectivityStatus.StunPublicPort
             );
 
             // Start keep-alive to maintain NAT mapping
@@ -123,7 +134,7 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
                     }
                     catch (Exception ex)
                     {
-                        Logger.Setup($"STUN keep-alive failed: {ex.Message}", LogEventLevel.Debug);
+                        _logger.LogDebug("STUN keep-alive failed: {Message}", ex.Message);
                     }
                 },
                 null,
@@ -135,7 +146,7 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
         }
         catch (Exception ex)
         {
-            Logger.Setup($"STUN hole-punch failed: {ex.Message}", LogEventLevel.Debug);
+            _logger.LogDebug("STUN hole-punch failed: {Message}", ex.Message);
             Cleanup();
             return false;
         }
@@ -195,9 +206,11 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
         }
         catch (Exception ex)
         {
-            Logger.Setup(
-                $"STUN request to {host}:{port} failed: {ex.Message}",
-                LogEventLevel.Debug
+            _logger.LogDebug(
+                "STUN request to {Host}:{Port} failed: {Message}",
+                host,
+                port,
+                ex.Message
             );
             return null;
         }

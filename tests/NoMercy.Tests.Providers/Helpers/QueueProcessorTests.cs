@@ -29,12 +29,6 @@ public class QueueProcessorTests
         );
 
         int callCount = 0;
-        List<Exception> rejectedErrors = [];
-        queue.Reject += (_, args) =>
-        {
-            if (args.Error is not null)
-                rejectedErrors.Add(args.Error);
-        };
 
         // First task throws
         try
@@ -71,7 +65,7 @@ public class QueueProcessorTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task Queue_RejectsFailedTasks_WithErrorEvent()
+    public async Task Queue_PropagatesFailure_ToCaller()
     {
         ProviderQueue queue = new(
             new()
@@ -82,15 +76,11 @@ public class QueueProcessorTests
             }
         );
 
-        List<Exception> rejectedErrors = [];
-        queue.Reject += (_, args) =>
-        {
-            if (args.Error is not null)
-                rejectedErrors.Add(args.Error);
-        };
-
         InvalidOperationException thrownException = new("Test error for rejection");
+        Exception? caught = null;
 
+        // Failures surface to the caller via the per-task TaskCompletionSource
+        // (the old Reject event was removed as dead code).
         try
         {
             await queue.Enqueue<string>(
@@ -102,16 +92,13 @@ public class QueueProcessorTests
                 "http://test/reject"
             );
         }
-        catch (InvalidOperationException)
+        catch (InvalidOperationException ex)
         {
-            // Expected
+            caught = ex;
         }
 
-        rejectedErrors
-            .Should()
-            .ContainSingle()
-            .Which.Message.Should()
-            .Be("Test error for rejection");
+        caught.Should().NotBeNull();
+        caught!.Message.Should().Be("Test error for rejection");
     }
 
     [Fact]

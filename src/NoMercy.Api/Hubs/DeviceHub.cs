@@ -16,11 +16,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Api.WebSockets;
+using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Activity;
 using NoMercy.Database.Models.Users;
 using NoMercy.Encoder.Devices;
-using NoMercy.Helpers.Extensions;
 using NoMercy.Networking;
 using NoMercy.Networking.Devices;
 using NoMercy.Networking.Http;
@@ -87,7 +87,7 @@ public sealed class DeviceHub : ConnectionHub
 
     public async Task<List<DeviceListItem>> GetDevices()
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return [];
 
@@ -117,7 +117,7 @@ public sealed class DeviceHub : ConnectionHub
 
     public async Task<WakeResult> WakeForMusic(string deviceId)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return new WakeResult("not_owned");
 
@@ -141,9 +141,35 @@ public sealed class DeviceHub : ConnectionHub
         return new WakeResult("cast_fallback");
     }
 
+    public async Task<WakeResult> WakeForVideo(string deviceId)
+    {
+        User? user = UserCacheService.GetUser(Context.User.UserId());
+        if (user is null)
+            return new WakeResult("not_owned");
+
+        if (!Ulid.TryParse(deviceId, out Ulid id))
+            return new WakeResult("not_owned");
+
+        await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
+        Device? device = await ctx.Devices.FindAsync(id);
+        if (device is null || device.OwnerUserId != user.Id)
+            return new WakeResult("not_owned");
+
+        if (_busRegistry.IsOnline(device.Id))
+        {
+            bool sent = await _busRegistry.SendAsync(
+                device.Id,
+                new { type = "wake_for_video", session_id = Guid.NewGuid().ToString() }
+            );
+            return new WakeResult(sent ? "wake_sent" : "no_route");
+        }
+
+        return new WakeResult("cast_fallback");
+    }
+
     public async Task<List<DeviceDropNoticeDto>> PendingNotices()
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return [];
 

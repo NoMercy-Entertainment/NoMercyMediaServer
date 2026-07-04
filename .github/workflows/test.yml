@@ -35,14 +35,16 @@ jobs:
           --blame-hang-timeout 5m
           --filter "(Category=Unit|Category=ErrorHandling|Category=Characterization)&Category!=Integration"
 
-  # Full-suite coverage job — runs on master or manual dispatch (the release path).
-  # MUST block: it is the only job that runs uncategorized tests (e.g. the plugin
-  # suite, which carries no Category trait and is excluded from the fast `test`
-  # filter). With continue-on-error a red full suite sailed straight to release.
+  # Full-suite coverage job — runs on EVERY invocation of this reusable workflow
+  # (every push/PR to dev, plus master and manual dispatch). It is the only job
+  # that runs uncategorized tests: whole projects like Authorization and Storage,
+  # and the plugin suite, carry no Category trait and are excluded from the fast
+  # `test` filter. It previously gated on refs/heads/master, so on the real
+  # release path (push/PR to dev) it never ran and uncategorized regressions
+  # sailed straight through. It must block the release path.
   coverage:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
-    
+
     steps:
       - uses: actions/checkout@v5
         with:
@@ -79,11 +81,14 @@ jobs:
           --settings tests/coverletArgs.runsettings
           --verbosity minimal
 
-  # Integration tests - only runs on master, releases, or manually
+  # Integration tests - run on the dev release path (direct pushes to dev), master,
+  # releases, or manually. PRs (github.ref = refs/pull/N/merge) don't match the
+  # branch refs, so these expensive ffmpeg-backed tests run post-merge on dev, not
+  # on every PR — but they no longer skip the release path entirely.
   integration_tests:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master' || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
-    
+    if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/master' || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+
     steps:
       - uses: actions/checkout@v5
         with:

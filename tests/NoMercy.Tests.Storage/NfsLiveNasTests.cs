@@ -9,96 +9,50 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.Net.Sockets;
 using NoMercy.Storage.Drivers.Nfs;
 using NoMercy.Storage.Remote;
+using NoMercy.Tests.Storage.Container;
 
 namespace NoMercy.Tests.Storage;
 
 // ============================================================================
-// Live NAS tests — target a real NFS server (defaults to Stoney's TrueNAS at
-// 192.168.2.120:/mnt/vault/Media). Override via env vars NMS_NAS_HOST,
-// NMS_NAS_EXPORT, NMS_NAS_VERSION.
+// NFS tests — target the shared StorageBackends container (kernel nfsd at
+// 127.0.0.1, export "/"). The container seeds the following layout:
 //
-// These tests skip when the NAS is unreachable, so they don't break CI on
-// machines outside the LAN. They're meant to drive bug-hunting against the
-// real libnfs↔TrueNAS interaction without round-tripping through the dev
-// server / Rider.
+//   /Music/                                                  — directory
+//   /Music/A/  /Music/B/ ... /Music/E/                       — directories
+//   /Music/A/artist$/                                        — directory (literal $)
+//   /Music/A/artist$/[2025] album$/                          — directory (brackets + $)
+//   /Music/A/artist$/[2025] album$/01 track one.mp3          — file ("ID3" header)
+//   /Music/A/artist$/[2025] album$/02 track two [feat. Tëst].mp3  — UTF-8 filename
 //
-// Path layout the tests rely on (relative to the export root):
-//   Music/                       — directory
-//   Music/B/bbno$/               — directory
-//   Music/B/bbno$/[2025] bbno$/  — directory
-//   Music/B/bbno$/[2025] bbno$/03 gigolo.mp3 — file ≥ 4 MB
-//   Music/B/bbno$/[2025] bbno$/04 eat slay love [bbno$ & Käärijä].mp3
-//                                — file with non-ASCII filename
+// Tests skip when the container is unavailable or when the libnfs native
+// library is not present, so they don't break CI on machines without it.
 // ============================================================================
 
-public sealed class LiveNasFixture
+[Collection("StorageBackends")]
+public class NfsLiveNasTests(StorageBackendsFixture fix)
 {
-    public string Host { get; } =
-        Environment.GetEnvironmentVariable("NMS_NAS_HOST") ?? "192.168.2.120";
-    public string Export { get; } =
-        Environment.GetEnvironmentVariable("NMS_NAS_EXPORT") ?? "/mnt/vault/Media";
-    public int Version { get; } =
-        int.TryParse(Environment.GetEnvironmentVariable("NMS_NAS_VERSION"), out int v) ? v : 4;
+    private const string Skip_Unavailable =
+        "StorageBackends container not available or libnfs native library missing";
 
-    public bool? _reachable;
-
-    public bool Reachable
-    {
-        get
-        {
-            if (_reachable.HasValue)
-                return _reachable.Value;
-
-            try
-            {
-                using TcpClient tcp = new();
-                IAsyncResult result = tcp.BeginConnect(Host, 2049, null, null);
-                bool ok = result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(2));
-                if (ok)
-                    tcp.EndConnect(result);
-                _reachable = ok && tcp.Connected;
-            }
-            catch
-            {
-                _reachable = false;
-            }
-            return _reachable.Value;
-        }
-    }
-
-    public NfsStorageDriver Mount()
-    {
-        NfsDriverConfig config = NfsDriverConfig.For(
-            server: Host,
-            export: Export,
-            version: Version,
-            uid: 0,
-            gid: 0
-        );
-        return new NfsStorageDriver(config);
-    }
-}
-
-public class NfsLiveNasTests(LiveNasFixture fix) : IClassFixture<LiveNasFixture>
-{
-    private const string Skip_Unreachable =
-        "NAS not reachable — set NMS_NAS_HOST/NMS_NAS_EXPORT to point at a live NFS server";
-
-    private const string KnownDir = "Music/B/bbno$";
-    private const string KnownDeepDir = "Music/B/bbno$/[2025] bbno$";
-    private const string KnownFile = "Music/B/bbno$/[2025] bbno$/03 gigolo.mp3";
+    private const string KnownDir = "Music/A/artist$";
+    private const string KnownDeepDir = "Music/A/artist$/[2025] album$";
+    private const string KnownFile = "Music/A/artist$/[2025] album$/01 track one.mp3";
     private const string KnownUtf8File =
-        "Music/B/bbno$/[2025] bbno$/04 eat slay love [bbno$ & Käärijä].mp3";
+        "Music/A/artist$/[2025] album$/02 track two [feat. Tëst].mp3";
 
     private NfsStorageDriver Mount()
     {
-        Skip.If(!fix.Reachable, Skip_Unreachable);
+        Skip.If(!fix.Available, Skip_Unavailable);
+        NfsStorageDriver? driver = fix.TryBuildNfsDriver();
+        Skip.If(
+            driver is null,
+            "libnfs native library not loadable; container NFS driver unavailable"
+        );
         try
         {
-            return fix.Mount();
+            return driver;
         }
         catch (DllNotFoundException ex)
         {
@@ -239,8 +193,8 @@ public class NfsLiveNasTests(LiveNasFixture fix) : IClassFixture<LiveNasFixture>
         entries
             .Should()
             .Contain(
-                e => e.Contains("Käärijä", StringComparison.Ordinal),
-                "libnfs returns NFS3/4 names as UTF-8; CharSet.Ansi mangled them to 'KÃ¤Ã¤rijÃ¤'"
+                e => e.Contains("Tëst", StringComparison.Ordinal),
+                "libnfs returns NFS3/4 names as UTF-8; CharSet.Ansi mangled them to mojibake"
             );
     }
 
@@ -251,14 +205,14 @@ public class NfsLiveNasTests(LiveNasFixture fix) : IClassFixture<LiveNasFixture>
     [SkippableFact]
     public void RemoteStorage_List_marks_subdirs_correctly()
     {
-        Skip.If(!fix.Reachable, Skip_Unreachable);
+        Skip.If(!fix.Available, Skip_Unavailable);
         using NfsStorageDriver driver = Mount();
         RemoteStorage rs = new(driver);
 
         IReadOnlyList<StorageEntry> entries = rs.List("Music", pattern: null, recursive: false);
         entries.Should().NotBeEmpty();
 
-        // 'Music' on the export contains alphabet directories (#, A, B, ...).
+        // 'Music' on the export contains alphabet directories (A, B, ...).
         // Every direct child should report IsDirectory == true.
         IReadOnlyList<StorageEntry> dirs = [.. entries.Where(e => e.IsDirectory)];
         dirs.Should()
@@ -273,9 +227,9 @@ public class NfsLiveNasTests(LiveNasFixture fix) : IClassFixture<LiveNasFixture>
     public void ListDirectories_marks_subdirs_as_directories()
     {
         using NfsStorageDriver driver = Mount();
-        List<(string Name, bool IsDirectory)> entries = driver.ListDirectories("Music/B/bbno$");
+        List<(string Name, bool IsDirectory)> entries = driver.ListDirectories("Music/A/artist$");
 
-        // The bbno$ folder contains album subdirectories like "[2025] bbno$".
+        // The artist$ folder contains album subdirectories like "[2025] album$".
         // ListDirectories filters to only directories, so any returned entry
         // must be IsDirectory == true.
         entries.Should().NotBeEmpty();

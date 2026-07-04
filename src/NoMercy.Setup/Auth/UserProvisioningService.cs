@@ -12,8 +12,7 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
-using NoMercy.Helpers.Extensions;
-using NoMercy.NmSystem.Extensions;
+using NoMercy.Authorization;
 
 namespace NoMercy.Setup.Auth;
 
@@ -49,6 +48,6 @@ public class UserProvisioningService : IUserProvisioningService
             )
             .RunAsync();
 
-        ClaimsPrincipleExtensions.AddUser(user);
+        UserCache.Current.AddUser(user);
     }
 }

@@ -10,10 +10,11 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Logging;
 
 namespace NoMercy.Events;
 
-public class InMemoryEventBus : IEventBus
+public class InMemoryEventBus(ILogger<InMemoryEventBus>? logger = null) : IEventBus
 {
     private readonly ConcurrentDictionary<Type, List<Delegate>> _handlers = new();
     private readonly object _lock = new();
@@ -35,7 +36,22 @@ public class InMemoryEventBus : IEventBus
         foreach (Delegate handler in snapshot)
         {
             ct.ThrowIfCancellationRequested();
-            await ((Func<TEvent, CancellationToken, Task>)handler)(@event, ct);
+            try
+            {
+                await ((Func<TEvent, CancellationToken, Task>)handler)(@event, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError(
+                    ex,
+                    "Event handler for {EventType} failed — other handlers will still execute",
+                    typeof(TEvent).Name
+                );
+            }
         }
     }
 

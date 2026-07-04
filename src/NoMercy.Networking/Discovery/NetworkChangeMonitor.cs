@@ -13,12 +13,14 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Networking.Connectivity;
+using NoMercy.NmSystem.Auth;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
-using Serilog.Events;
+using NoMercy.NmSystem.Status;
 
 namespace NoMercy.Networking.Discovery;
 
@@ -26,21 +28,33 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
 {
     private readonly INetworkDiscovery _networkDiscovery;
     private readonly IConnectivityManager _connectivityManager;
+    private readonly IConnectivityStatus _connectivityStatus;
     private readonly SemaphoreSlim _reevaluationLock = new(1, 1);
 
+    private readonly IAuthTokenStore _authTokenStore;
+
+    private readonly ILogger<NetworkChangeMonitor> _logger;
+
     public NetworkChangeMonitor(
+        ILogger<NetworkChangeMonitor> logger,
+        IAuthTokenStore authTokenStore,
         INetworkDiscovery networkDiscovery,
-        IConnectivityManager connectivityManager
+        IConnectivityManager connectivityManager,
+        IConnectivityStatus connectivityStatus
     )
     {
+        _logger = logger;
+        _authTokenStore = authTokenStore;
         _networkDiscovery = networkDiscovery;
         _connectivityManager = connectivityManager;
+        _connectivityStatus = connectivityStatus;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
         NetworkChange.NetworkAddressChanged += OnNetworkAddressChanged;
-        Logger.Setup("Network change monitor started", LogEventLevel.Debug);
+        NetworkChange.NetworkAvailabilityChanged += OnNetworkAvailabilityChanged;
+        _logger.LogDebug("Network change monitor started");
         return Task.CompletedTask;
     }
 
@@ -58,11 +72,11 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
             if (newIp == oldIp)
                 return;
 
-            Logger.Setup($"Network address changed: {oldIp} → {newIp}");
+            _logger.LogInformation("Network address changed: {OldIp} → {NewIp}", oldIp, newIp);
             _networkDiscovery.InternalIp = newIp;
 
-            // Re-discover external IP
-            await _networkDiscovery.DiscoverExternalIpAsync();
+            // Re-discover external IP (force past the one-shot completion gate)
+            await _networkDiscovery.ForceRediscoveryAsync();
 
             // Re-evaluate connectivity strategies
             await _connectivityManager.EvaluateAsync(CancellationToken.None);
@@ -72,11 +86,30 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            Logger.Setup($"Network change handling failed: {ex.Message}", LogEventLevel.Warning);
+            _logger.LogWarning("Network change handling failed: {Message}", ex.Message);
         }
         finally
         {
             _reevaluationLock.Release();
+        }
+    }
+
+    private async void OnNetworkAvailabilityChanged(object? sender, NetworkAvailabilityEventArgs e)
+    {
+        if (!e.IsAvailable)
+            return;
+
+        try
+        {
+            await _networkDiscovery.ForceRediscoveryAsync();
+            await _connectivityManager.EvaluateAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                "Network availability change handling failed: {Message}",
+                ex.Message
+            );
         }
     }
 
@@ -154,26 +187,26 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
                 { "internal_ip", _networkDiscovery.RegistrationInternalIp },
                 { "internal_ipv6", _networkDiscovery.InternalIpV6.OrEmpty() },
                 { "external_ipv6", _networkDiscovery.ExternalIpV6.OrEmpty() },
-                { "internal_port", Config.InternalServerPort.ToString() },
-                { "external_port", Config.ExternalServerPort.ToString() },
+                { "internal_port", RuntimeServerSettings.Current.InternalServerPort.ToString() },
+                { "external_port", RuntimeServerSettings.Current.ExternalServerPort.ToString() },
                 { "version", Software.Version!.ToString() },
                 { "platform", Info.Platform },
-                { "stun_public_ip", Config.StunPublicIp.OrEmpty() },
-                { "stun_public_port", (Config.StunPublicPort?.ToString()).OrEmpty() },
-                { "stun_nat_type", Config.NatStatus.ToString() },
+                { "stun_public_ip", _connectivityStatus.StunPublicIp.OrEmpty() },
+                { "stun_public_port", (_connectivityStatus.StunPublicPort?.ToString()).OrEmpty() },
+                { "stun_nat_type", _connectivityStatus.NatStatus.ToString() },
             };
 
-            Logger.Register("Your IP address has changed, updating server information...");
+            _logger.LogInformation("Your IP address has changed, updating server information...");
 
-            string? token = Globals.Globals.AccessToken;
+            string? token = _authTokenStore.AccessToken;
             if (string.IsNullOrEmpty(token))
             {
-                Logger.Setup("Skipping network change ping — no auth token", LogEventLevel.Verbose);
+                _logger.LogTrace("Skipping network change ping — no auth token");
                 return;
             }
 
-            GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
-            authClient.SetDefaultHeaders(Config.UserAgent, token);
+            GenericHttpClient authClient = new(ExternalServicesConfig.Current.ApiServerBaseUrl);
+            authClient.SetDefaultHeaders(ExternalServicesConfig.Current.UserAgent, token);
             string response = await authClient.SendAndReadAsync(
                 HttpMethod.Post,
                 "ping",
@@ -185,23 +218,25 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
             if (data == null)
                 throw new("Failed to update server information");
 
-            Logger.Register("Server information updated successfully");
+            _logger.LogInformation("Server information updated successfully");
         }
         catch (Exception ex)
         {
-            Logger.Setup($"Failed to send IP update: {ex.Message}", LogEventLevel.Warning);
+            _logger.LogWarning("Failed to send IP update: {Message}", ex.Message);
         }
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
         NetworkChange.NetworkAddressChanged -= OnNetworkAddressChanged;
+        NetworkChange.NetworkAvailabilityChanged -= OnNetworkAvailabilityChanged;
         return Task.CompletedTask;
     }
 
     public void Dispose()
     {
         NetworkChange.NetworkAddressChanged -= OnNetworkAddressChanged;
+        NetworkChange.NetworkAvailabilityChanged -= OnNetworkAvailabilityChanged;
         _reevaluationLock.Dispose();
         GC.SuppressFinalize(this);
     }

@@ -21,27 +21,49 @@ namespace NoMercy.Tests.Api;
 [Trait("Category", "Unit")]
 public class LocalizationMiddlewareTests
 {
+    [Theory]
+    [InlineData("en-US,nl;q=0.9", "en-US")]
+    [InlineData("nl;q=1.0,en;q=0.5", "nl")]
+    [InlineData("nl-NL,nl;q=0.9,en;q=0.8", "nl-NL")]
+    [InlineData("en;q=0.8,nl;q=0.9", "nl")]
+    [InlineData("*,nl;q=1.0", "nl")]
+    [InlineData("", "en-US")]
+    public void ParseBestLanguage_PicksHighestQualityWeight(string header, string expected)
+    {
+        Assert.Equal(expected, LocalizationMiddleware.ParseBestLanguage(header));
+    }
+
     [Fact]
     public void ApplicationConfiguration_HasSingleUseRequestLocalizationCall()
     {
-        string sourceFile = Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "..",
-            "..",
-            "src",
-            "NoMercy.Service",
-            "Configuration",
-            "ApplicationConfiguration.cs"
+        string sourceFile = FindRepoFile(
+            Path.Combine("src", "NoMercy.Service", "Configuration", "ApplicationConfiguration.cs")
         );
 
-        string source = File.ReadAllText(Path.GetFullPath(sourceFile));
+        string source = File.ReadAllText(sourceFile);
 
         int count = Regex.Matches(source, @"UseRequestLocalization\s*\(").Count;
 
         Assert.Equal(1, count);
+    }
+
+    // Walk up from the test assembly instead of a fixed ".." chain — the output
+    // directory depth changes under a redirected BaseOutputPath.
+    private static string FindRepoFile(string relativePath)
+    {
+        string dir = AppContext.BaseDirectory;
+        while (dir != null!)
+        {
+            string candidate = Path.Combine(dir, relativePath);
+            if (File.Exists(candidate))
+                return candidate;
+
+            dir = Path.GetDirectoryName(dir)!;
+        }
+
+        throw new FileNotFoundException(
+            $"Could not locate {relativePath} above {AppContext.BaseDirectory}"
+        );
     }
 
     [Fact]

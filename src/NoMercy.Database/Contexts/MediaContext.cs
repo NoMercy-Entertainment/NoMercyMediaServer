@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using NoMercy.Database.Models.Encoder;
 using NoMercy.Database.Models.Storage;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Database;
@@ -33,7 +34,7 @@ public class MediaContext : DbContext
     // parameterizes instance references in a filter (re-read per query) but
     // constant-folds a static reference into the cached model, which would
     // freeze the value at first build and ignore a runtime toggle.
-    public bool ShowAdultContent => Config.ShowAdultContent;
+    public bool ShowAdultContent => RuntimeServerSettings.Current.ShowAdultContent;
 
     [DbFunction("normalize_search", IsBuiltIn = true)]
     public static string NormalizeSearch(string? input) =>
@@ -109,21 +110,27 @@ public class MediaContext : DbContext
             .HasForeignKey(f => f.DriverId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Metadata owns its AudioTrack — delete the track when metadata is removed.
+        // Metadata optionally designates one Track as its AudioTrack; it does not own that
+        // Track. AudioTrackId is nullable, so deleting the Track clears the pointer instead
+        // of destroying the Metadata row — Metadata legitimately survives without one.
         modelBuilder
             .Entity<Metadata>()
             .HasOne(m => m.AudioTrack)
             .WithOne()
             .HasForeignKey<Metadata>(m => m.AudioTrackId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.SetNull);
 
-        // Track owns its Metadata row — delete metadata when the track is removed.
+        // Metadata is shared, reference-style data: many Tracks in the same folder can
+        // point at the same Metadata row via MetadataId, so no single Track owns it (same
+        // shape as VideoFile.MetadataId above, left at the file's default Restrict). Block
+        // deleting a Metadata row while any Track still references it, rather than
+        // cascading and wiping every other Track that shares it.
         modelBuilder
             .Entity<Track>()
             .HasOne(t => t.Metadata)
             .WithMany()
             .HasForeignKey(t => t.MetadataId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder
             .Model.GetEntityTypes()
@@ -299,6 +306,124 @@ public class MediaContext : DbContext
         // EncodeTaskOutcome.ErrorMessage may hold detailed error text up to 4096 chars.
         modelBuilder.Entity<EncodeTaskOutcome>().Property(o => o.ErrorMessage).HasMaxLength(4096);
 
+        ConfigureColorPaletteIndexes(modelBuilder);
+
+        modelBuilder.Entity<InboxItem>().Property(i => i.CandidatesJson).HasMaxLength(int.MaxValue);
+        modelBuilder
+            .Entity<InboxItem>()
+            .Property(i => i.SelectedMatchJson)
+            .HasMaxLength(int.MaxValue);
+        modelBuilder.Entity<InboxItem>().Property(i => i.Error).HasMaxLength(4096);
+
+        base.OnModelCreating(modelBuilder);
+    }
+
+    public virtual DbSet<Driver> Drivers { get; init; }
+    public virtual DbSet<ActivityLog> ActivityLogs { get; init; }
+    public virtual DbSet<Cast> Casts { get; init; }
+    public virtual DbSet<CertificationMovie> CertificationMovie { get; init; }
+    public virtual DbSet<CertificationTv> CertificationTv { get; init; }
+    public virtual DbSet<Certification> Certifications { get; init; }
+    public virtual DbSet<CollectionLibrary> CollectionLibrary { get; init; }
+    public virtual DbSet<CollectionMovie> CollectionMovie { get; init; }
+    public virtual DbSet<Collection> Collections { get; init; }
+    public virtual DbSet<Country> Countries { get; init; }
+    public virtual DbSet<Creator> Creators { get; init; }
+    public virtual DbSet<Crew> Crews { get; init; }
+    public virtual DbSet<Device> Devices { get; init; }
+    public virtual DbSet<DeviceDropNotice> DeviceDropNotices { get; init; }
+    public virtual DbSet<EncoderProfileFolder> EncoderProfileFolder { get; init; }
+    public virtual DbSet<EncoderProfile> EncoderProfiles { get; init; }
+    public virtual DbSet<EncodingHistory> EncodingHistory { get; init; }
+    public virtual DbSet<EncodingPreset> EncodingPresets { get; init; }
+    public DbSet<EncodingPresetFolder> EncodingPresetFolders => Set<EncodingPresetFolder>();
+    public virtual DbSet<ContentSegment> ContentSegments { get; init; }
+    public virtual DbSet<Episode> Episodes { get; init; }
+    public virtual DbSet<FolderLibrary> FolderLibrary { get; init; }
+    public virtual DbSet<Folder> Folders { get; init; }
+    public virtual DbSet<GenreMovie> GenreMovie { get; init; }
+    public virtual DbSet<GenreTv> GenreTv { get; init; }
+    public virtual DbSet<Genre> Genres { get; init; }
+    public virtual DbSet<GuestStar> GuestStars { get; init; }
+    public virtual DbSet<Image> Images { get; init; }
+    public virtual DbSet<WatchProvider> WatchProviders { get; init; }
+    public virtual DbSet<WatchProviderMedia> WatchProviderMedia { get; init; }
+    public virtual DbSet<Network> Networks { get; init; }
+    public virtual DbSet<NetworkTv> NetworkTv { get; init; }
+
+    public virtual DbSet<Job> Jobs { get; init; }
+    public virtual DbSet<KeywordMovie> KeywordMovie { get; init; }
+    public virtual DbSet<KeywordTv> KeywordTv { get; init; }
+    public virtual DbSet<Keyword> Keywords { get; init; }
+    public virtual DbSet<LanguageLibrary> LanguageLibrary { get; init; }
+    public virtual DbSet<Language> Languages { get; init; }
+    public virtual DbSet<Library> Libraries { get; init; }
+    public virtual DbSet<ImportFailure> ImportFailures { get; init; }
+    public virtual DbSet<LibraryMovie> LibraryMovie { get; init; }
+    public virtual DbSet<LibraryTv> LibraryTv { get; init; }
+    public virtual DbSet<LibraryTrack> LibraryTrack { get; init; }
+    public virtual DbSet<LibraryUser> LibraryUser { get; init; }
+    public virtual DbSet<CollectionUser> CollectionUser { get; init; }
+    public virtual DbSet<MovieUser> MovieUser { get; init; }
+    public virtual DbSet<TvUser> TvUser { get; init; }
+    public virtual DbSet<SpecialUser> SpecialUser { get; init; }
+    public virtual DbSet<MediaAttachment> MediaAttachments { get; init; }
+    public virtual DbSet<Media> Medias { get; init; }
+    public virtual DbSet<MediaStream> MediaStreams { get; init; }
+    public virtual DbSet<Message> Messages { get; init; }
+    public virtual DbSet<Metadata> Metadata { get; init; }
+    public virtual DbSet<Movie> Movies { get; init; }
+    public virtual DbSet<MusicGenreTrack> MusicGenreTrack { get; init; }
+    public virtual DbSet<MusicGenre> MusicGenres { get; init; }
+    public virtual DbSet<NotificationUser> NotificationUser { get; init; }
+    public virtual DbSet<Notification> Notifications { get; init; }
+    public virtual DbSet<Person> People { get; init; }
+    public virtual DbSet<Playlist> Playlists { get; init; }
+    public virtual DbSet<Recommendation> Recommendations { get; init; }
+    public virtual DbSet<Role> Roles { get; init; }
+    public virtual DbSet<RunningTask> RunningTasks { get; init; }
+    public virtual DbSet<Season> Seasons { get; init; }
+    public virtual DbSet<Similar> Similar { get; init; }
+    public virtual DbSet<SpecialItem> SpecialItems { get; init; }
+    public virtual DbSet<Special> Specials { get; init; }
+    public virtual DbSet<Translation> Translations { get; init; }
+    public virtual DbSet<Tv> Tvs { get; init; }
+    public virtual DbSet<UserData> UserData { get; init; }
+    public virtual DbSet<User> Users { get; init; }
+    public virtual DbSet<VideoFile> VideoFiles { get; init; }
+    public virtual DbSet<Company> Companies { get; init; }
+    public virtual DbSet<CompanyMovie> CompanyMovie { get; init; }
+    public virtual DbSet<CompanyTv> CompanyTv { get; init; }
+
+    public virtual DbSet<AlbumArtist> AlbumArtist { get; init; }
+    public virtual DbSet<AlbumLibrary> AlbumLibrary { get; init; }
+    public virtual DbSet<AlbumMusicGenre> AlbumMusicGenre { get; init; }
+    public virtual DbSet<AlbumTrack> AlbumTrack { get; init; }
+    public virtual DbSet<AlbumUser> AlbumUser { get; init; }
+    public virtual DbSet<Album> Albums { get; init; }
+    public virtual DbSet<AlternativeTitle> AlternativeTitles { get; init; }
+    public virtual DbSet<ArtistLibrary> ArtistLibrary { get; init; }
+    public virtual DbSet<ArtistMusicGenre> ArtistMusicGenre { get; init; }
+    public virtual DbSet<ArtistTrack> ArtistTrack { get; init; }
+    public virtual DbSet<ArtistUser> ArtistUser { get; init; }
+    public virtual DbSet<Artist> Artists { get; init; }
+    public virtual DbSet<MusicPlay> MusicPlays { get; init; }
+    public virtual DbSet<PlaylistTrack> PlaylistTrack { get; init; }
+    public virtual DbSet<TrackUser> TrackUser { get; init; }
+    public virtual DbSet<Track> Tracks { get; init; }
+    public virtual DbSet<ReleaseGroup> ReleaseGroups { get; init; }
+    public virtual DbSet<AlbumReleaseGroup> AlbumReleaseGroup { get; init; }
+    public virtual DbSet<ArtistReleaseGroup> ArtistReleaseGroup { get; init; }
+    public virtual DbSet<MusicGenreReleaseGroup> MusicGenreReleaseGroup { get; init; }
+
+    public virtual DbSet<PlaybackPreference> PlaybackPreferences { get; init; }
+    public virtual DbSet<TrustedPublisherKey> TrustedPublisherKeys { get; init; }
+    public virtual DbSet<EncodeTaskOutcome> EncodeTaskOutcomes { get; init; }
+    public virtual DbSet<IncompleteEncode> IncompleteEncodes { get; init; }
+    public virtual DbSet<InboxItem> InboxItems { get; init; }
+
+    private static void ConfigureColorPaletteIndexes(ModelBuilder modelBuilder)
+    {
         // Filtered indexes for pending color-palette rows (NULL or empty value).
         // Allows the backfill cursor query to use an index scan instead of a full table scan.
         modelBuilder
@@ -384,117 +509,5 @@ public class MediaContext : DbContext
             .HasIndex(nameof(ColorPalettes._colorPalette))
             .HasDatabaseName("IX_ReleaseGroups_ColorPalette_pending")
             .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
-
-        modelBuilder.Entity<InboxItem>().Property(i => i.CandidatesJson).HasMaxLength(int.MaxValue);
-        modelBuilder
-            .Entity<InboxItem>()
-            .Property(i => i.SelectedMatchJson)
-            .HasMaxLength(int.MaxValue);
-        modelBuilder.Entity<InboxItem>().Property(i => i.Error).HasMaxLength(4096);
-
-        base.OnModelCreating(modelBuilder);
     }
-
-    public virtual DbSet<Driver> Drivers { get; init; }
-    public virtual DbSet<ActivityLog> ActivityLogs { get; init; }
-    public virtual DbSet<Cast> Casts { get; init; }
-    public virtual DbSet<CertificationMovie> CertificationMovie { get; init; }
-    public virtual DbSet<CertificationTv> CertificationTv { get; init; }
-    public virtual DbSet<Certification> Certifications { get; init; }
-    public virtual DbSet<CollectionLibrary> CollectionLibrary { get; init; }
-    public virtual DbSet<CollectionMovie> CollectionMovie { get; init; }
-    public virtual DbSet<Collection> Collections { get; init; }
-    public virtual DbSet<Country> Countries { get; init; }
-    public virtual DbSet<Creator> Creators { get; init; }
-    public virtual DbSet<Crew> Crews { get; init; }
-    public virtual DbSet<Device> Devices { get; init; }
-    public virtual DbSet<DeviceDropNotice> DeviceDropNotices { get; init; }
-    public virtual DbSet<EncoderProfileFolder> EncoderProfileFolder { get; init; }
-    public virtual DbSet<EncoderProfile> EncoderProfiles { get; init; }
-    public virtual DbSet<EncodingHistory> EncodingHistory { get; init; }
-    public virtual DbSet<EncodingPreset> EncodingPresets { get; init; }
-    public DbSet<EncodingPresetFolder> EncodingPresetFolders => Set<EncodingPresetFolder>();
-    public virtual DbSet<ContentSegment> ContentSegments { get; init; }
-    public virtual DbSet<Episode> Episodes { get; init; }
-    public virtual DbSet<FolderLibrary> FolderLibrary { get; init; }
-    public virtual DbSet<Folder> Folders { get; init; }
-    public virtual DbSet<GenreMovie> GenreMovie { get; init; }
-    public virtual DbSet<GenreTv> GenreTv { get; init; }
-    public virtual DbSet<Genre> Genres { get; init; }
-    public virtual DbSet<GuestStar> GuestStars { get; init; }
-    public virtual DbSet<Image> Images { get; init; }
-    public virtual DbSet<WatchProvider> WatchProviders { get; init; }
-    public virtual DbSet<WatchProviderMedia> WatchProviderMedia { get; init; }
-    public virtual DbSet<Network> Networks { get; init; }
-    public virtual DbSet<NetworkTv> NetworkTv { get; init; }
-
-    public virtual DbSet<Job> Jobs { get; init; }
-    public virtual DbSet<KeywordMovie> KeywordMovie { get; init; }
-    public virtual DbSet<KeywordTv> KeywordTv { get; init; }
-    public virtual DbSet<Keyword> Keywords { get; init; }
-    public virtual DbSet<LanguageLibrary> LanguageLibrary { get; init; }
-    public virtual DbSet<Language> Languages { get; init; }
-    public virtual DbSet<Library> Libraries { get; init; }
-    public virtual DbSet<LibraryMovie> LibraryMovie { get; init; }
-    public virtual DbSet<LibraryTv> LibraryTv { get; init; }
-    public virtual DbSet<LibraryTrack> LibraryTrack { get; init; }
-    public virtual DbSet<LibraryUser> LibraryUser { get; init; }
-    public virtual DbSet<CollectionUser> CollectionUser { get; init; }
-    public virtual DbSet<MovieUser> MovieUser { get; init; }
-    public virtual DbSet<TvUser> TvUser { get; init; }
-    public virtual DbSet<SpecialUser> SpecialUser { get; init; }
-    public virtual DbSet<MediaAttachment> MediaAttachments { get; init; }
-    public virtual DbSet<Media> Medias { get; init; }
-    public virtual DbSet<MediaStream> MediaStreams { get; init; }
-    public virtual DbSet<Message> Messages { get; init; }
-    public virtual DbSet<Metadata> Metadata { get; init; }
-    public virtual DbSet<Movie> Movies { get; init; }
-    public virtual DbSet<MusicGenreTrack> MusicGenreTrack { get; init; }
-    public virtual DbSet<MusicGenre> MusicGenres { get; init; }
-    public virtual DbSet<NotificationUser> NotificationUser { get; init; }
-    public virtual DbSet<Notification> Notifications { get; init; }
-    public virtual DbSet<Person> People { get; init; }
-    public virtual DbSet<Playlist> Playlists { get; init; }
-    public virtual DbSet<Recommendation> Recommendations { get; init; }
-    public virtual DbSet<Role> Roles { get; init; }
-    public virtual DbSet<RunningTask> RunningTasks { get; init; }
-    public virtual DbSet<Season> Seasons { get; init; }
-    public virtual DbSet<Similar> Similar { get; init; }
-    public virtual DbSet<SpecialItem> SpecialItems { get; init; }
-    public virtual DbSet<Special> Specials { get; init; }
-    public virtual DbSet<Translation> Translations { get; init; }
-    public virtual DbSet<Tv> Tvs { get; init; }
-    public virtual DbSet<UserData> UserData { get; init; }
-    public virtual DbSet<User> Users { get; init; }
-    public virtual DbSet<VideoFile> VideoFiles { get; init; }
-    public virtual DbSet<Company> Companies { get; init; }
-    public virtual DbSet<CompanyMovie> CompanyMovie { get; init; }
-    public virtual DbSet<CompanyTv> CompanyTv { get; init; }
-
-    public virtual DbSet<AlbumArtist> AlbumArtist { get; init; }
-    public virtual DbSet<AlbumLibrary> AlbumLibrary { get; init; }
-    public virtual DbSet<AlbumMusicGenre> AlbumMusicGenre { get; init; }
-    public virtual DbSet<AlbumTrack> AlbumTrack { get; init; }
-    public virtual DbSet<AlbumUser> AlbumUser { get; init; }
-    public virtual DbSet<Album> Albums { get; init; }
-    public virtual DbSet<AlternativeTitle> AlternativeTitles { get; init; }
-    public virtual DbSet<ArtistLibrary> ArtistLibrary { get; init; }
-    public virtual DbSet<ArtistMusicGenre> ArtistMusicGenre { get; init; }
-    public virtual DbSet<ArtistTrack> ArtistTrack { get; init; }
-    public virtual DbSet<ArtistUser> ArtistUser { get; init; }
-    public virtual DbSet<Artist> Artists { get; init; }
-    public virtual DbSet<MusicPlay> MusicPlays { get; init; }
-    public virtual DbSet<PlaylistTrack> PlaylistTrack { get; init; }
-    public virtual DbSet<TrackUser> TrackUser { get; init; }
-    public virtual DbSet<Track> Tracks { get; init; }
-    public virtual DbSet<ReleaseGroup> ReleaseGroups { get; init; }
-    public virtual DbSet<AlbumReleaseGroup> AlbumReleaseGroup { get; init; }
-    public virtual DbSet<ArtistReleaseGroup> ArtistReleaseGroup { get; init; }
-    public virtual DbSet<MusicGenreReleaseGroup> MusicGenreReleaseGroup { get; init; }
-
-    public virtual DbSet<PlaybackPreference> PlaybackPreferences { get; init; }
-    public virtual DbSet<TrustedPublisherKey> TrustedPublisherKeys { get; init; }
-    public virtual DbSet<EncodeTaskOutcome> EncodeTaskOutcomes { get; init; }
-    public virtual DbSet<IncompleteEncode> IncompleteEncodes { get; init; }
-    public virtual DbSet<InboxItem> InboxItems { get; init; }
 }

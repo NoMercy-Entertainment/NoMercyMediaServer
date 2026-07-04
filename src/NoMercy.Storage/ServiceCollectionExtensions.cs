@@ -51,11 +51,25 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<StoragePathGuard>()
         ));
 
-        services.TryAddSingleton<IStorageFactory>(sp => new StorageFactory(
-            sp.GetRequiredService<IStorageDriver>(),
-            sp.GetRequiredService<ILogger<StorageFactory>>(),
-            sp.GetService<IDriverConfigResolver>(),
+        services.AddSingleton<IStorageDriverBuilder>(sp => new LocalDriverBuilder(
+            sp.GetRequiredService<IStorageDriver>()
+        ));
+        services.AddSingleton<IStorageDriverBuilder>(sp => new NfsDriverBuilder(
+            sp.GetRequiredService<ILogger<NfsDriverBuilder>>()
+        ));
+        services.AddSingleton<IStorageDriverBuilder>(sp => new S3DriverBuilder(
+            sp.GetRequiredService<ILogger<S3DriverBuilder>>(),
             sp.GetService<ICredentialResolver>()
+        ));
+        services.AddSingleton<IStorageDriverBuilder>(sp => new WebDavDriverBuilder(
+            sp.GetRequiredService<ILogger<WebDavDriverBuilder>>(),
+            sp.GetService<ICredentialResolver>()
+        ));
+
+        services.TryAddSingleton<IStorageFactory>(sp => new StorageFactory(
+            sp.GetRequiredService<ILogger<StorageFactory>>(),
+            sp.GetServices<IStorageDriverBuilder>(),
+            sp.GetService<IDriverConfigResolver>()
         ));
 
         return services;

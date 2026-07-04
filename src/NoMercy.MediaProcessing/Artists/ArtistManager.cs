@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Music;
 using NoMercy.Events;
@@ -20,11 +21,9 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.MediaProcessing.MusicGenres;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.MusicBrainz.Models;
 using NoMercy.Storage;
-using Serilog.Events;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
@@ -34,7 +33,8 @@ public class ArtistManager(
     IArtistRepository artistRepository,
     IMusicGenreRepository musicGenreRepository,
     JobDispatcher jobDispatcher,
-    IStorageFactory storageFactory
+    IStorageFactory storageFactory,
+    ILogger<ArtistManager> logger
 ) : BaseManager, IArtistManager
 {
     /** this is the store for a Release artist */
@@ -46,10 +46,7 @@ public class ArtistManager(
         MusicBrainzReleaseAppends releaseAppends
     )
     {
-        Logger.MusicBrainz(
-            $"Storing Artist: {artistCredit.MusicBrainzArtist.Name}",
-            LogEventLevel.Verbose
-        );
+        logger.LogTrace("Storing Artist: {Name}", artistCredit.MusicBrainzArtist.Name);
         string artistFolder = MakeArtistFolder(artistCredit.MusicBrainzArtist.Name);
         string folder = mediaFolder.Path.Replace(ResolveLibraryRoot(libraryFolder), "");
 
@@ -92,12 +89,12 @@ public class ArtistManager(
         }
         catch (Exception e)
         {
-            Logger.MusicBrainz(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
         }
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent
+                new LibraryRefreshedEvent
                 {
                     QueryKey = ["music", "artist", artistCredit.MusicBrainzArtist.Id.ToString()],
                 }
@@ -112,9 +109,9 @@ public class ArtistManager(
         Folder libraryFolder
     )
     {
-        Logger.MusicBrainz($"Storing Artist: {artistCredit.Name}", LogEventLevel.Verbose);
+        logger.LogTrace("Storing Artist: {Name}", artistCredit.Name);
         string artistFolder = MakeArtistFolder(artistCredit.Name);
-        string folder = artistFolder.Replace("/", Str.DirectorySeparator);
+        string folder = artistFolder.Replace("/", StringExtensions.DirectorySeparator);
 
         CoverArtImageManagerManager.CoverPalette? coverPalette = await GetCoverArtForArtist(
             artistCredit
@@ -170,12 +167,12 @@ public class ArtistManager(
         }
         catch (Exception e)
         {
-            Logger.MusicBrainz(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
         }
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent
+                new LibraryRefreshedEvent
                 {
                     QueryKey = ["music", "artist", artistCredit.Id.ToString()],
                 }
@@ -191,7 +188,7 @@ public class ArtistManager(
         MusicBrainzTrack track
     )
     {
-        Logger.MusicBrainz($"Storing Artist: {artistCredit.Name}", LogEventLevel.Verbose);
+        logger.LogTrace("Storing Artist: {Name}", artistCredit.Name);
         string artistFolder = MakeArtistFolder(artistCredit.Name);
         string folder = mediaFolder.Path.Replace(ResolveLibraryRoot(libraryFolder), "");
 
@@ -248,12 +245,12 @@ public class ArtistManager(
         }
         catch (Exception e)
         {
-            Logger.MusicBrainz(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
         }
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent
+                new LibraryRefreshedEvent
                 {
                     QueryKey = ["music", "artist", artistCredit.Id.ToString()],
                 }
@@ -281,7 +278,7 @@ public class ArtistManager(
 
     private async Task LinkToTrack(MusicBrainzArtistDetails artistCredit, MusicBrainzTrack track)
     {
-        Logger.App($"Linking Artist to Track: {artistCredit.Name}", LogEventLevel.Verbose);
+        logger.LogTrace("Linking Artist to Track: {Name}", artistCredit.Name);
 
         ArtistTrack insert = new() { ArtistId = artistCredit.Id, TrackId = track.Id };
 
@@ -293,10 +290,7 @@ public class ArtistManager(
         MusicBrainzReleaseAppends releaseAppends
     )
     {
-        Logger.App(
-            $"Linking Artist to Release: {artistMusicBrainzArtist.Name}",
-            LogEventLevel.Verbose
-        );
+        logger.LogTrace("Linking Artist to Release: {Name}", artistMusicBrainzArtist.Name);
 
         AlbumArtist insert = new()
         {
@@ -312,10 +306,7 @@ public class ArtistManager(
         Library library
     )
     {
-        Logger.App(
-            $"Linking Artist to Library: {artistMusicBrainzArtist.Name}",
-            LogEventLevel.Verbose
-        );
+        logger.LogTrace("Linking Artist to Library: {Name}", artistMusicBrainzArtist.Name);
 
         ArtistLibrary insert = new()
         {
@@ -344,6 +335,6 @@ public class ArtistManager(
             libraryFolder.DriverId,
             string.Empty
         );
-        return folderStorage.GetFullPath(libraryFolder.Path);
+        return FolderRootPath(folderStorage, libraryFolder.Path);
     }
 }

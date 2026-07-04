@@ -30,9 +30,15 @@ using NoMercy.Storage.Drivers.Local;
 
 namespace NoMercy.Tests.Encoder.Composition;
 
-public class ServiceRegistrationTests
+public class ServiceRegistrationTests : IDisposable
 {
-    private static ServiceProvider BuildProvider()
+    // Every provider built by a test is disposed in teardown. The encoder
+    // registers timer-backed singletons (recalibration scheduler, NVML
+    // sampler) and hosted services; leaking an undisposed provider keeps
+    // those alive and can hold the test host open past the run.
+    private readonly List<ServiceProvider> _providers = [];
+
+    private ServiceProvider BuildProvider()
     {
         ServiceCollection services = new();
         services.AddLogging();
@@ -47,7 +53,16 @@ public class ServiceRegistrationTests
             opts.FfmpegPathOverride = "ffmpeg";
             opts.FfprobePathOverride = "ffprobe";
         });
-        return services.BuildServiceProvider();
+        ServiceProvider provider = services.BuildServiceProvider();
+        _providers.Add(provider);
+        return provider;
+    }
+
+    public void Dispose()
+    {
+        foreach (ServiceProvider provider in _providers)
+            provider.Dispose();
+        _providers.Clear();
     }
 
     private sealed class TestHostLifetime : IHostApplicationLifetime

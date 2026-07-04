@@ -9,7 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.Data.Logic;
+using NoMercy.Data.DTOs.Encoder;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 
@@ -26,7 +26,7 @@ public class EncoderProfileParamsDtoTests
             Name = "Test Profile",
             VideoProfiles =
             [
-                new IVideoProfile
+                new VideoProfile
                 {
                     Width = 1920,
                     Crf = 21,
@@ -35,7 +35,7 @@ public class EncoderProfileParamsDtoTests
                     Codec = "h264",
                 },
             ],
-            AudioProfiles = [new IAudioProfile { Codec = "aac" }],
+            AudioProfiles = [new AudioProfile { Codec = "aac" }],
         };
 
         EncoderProfileParamsDto dto = new(profile);

@@ -25,6 +25,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Xunit.SkippableFact" />
     <PackageReference Include="Microsoft.Extensions.Http" />
   </ItemGroup>
 
@@ -36,9 +37,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NoMercy.Providers\NoMercy.Providers.csproj" />
+    <ProjectReference Include="..\NoMercy.Tests.Common\NoMercy.Tests.Common.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Database\NoMercy.Database.csproj" />
-    <ProjectReference Include="..\..\src\NoMercy.Globals\NoMercy.Globals.csproj" />
-    <ProjectReference Include="..\..\src\NoMercy.Helpers\NoMercy.Helpers.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Storage\NoMercy.Storage.csproj" />
+    <ProjectReference Include="..\..\src\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
   </ItemGroup>
 </Project>

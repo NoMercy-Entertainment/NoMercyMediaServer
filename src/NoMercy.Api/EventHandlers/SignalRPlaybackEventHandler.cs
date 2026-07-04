@@ -9,10 +9,10 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Events;
 using NoMercy.Events.Playback;
 using NoMercy.Networking.Messaging;
-using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.EventHandlers;
 
@@ -21,11 +21,18 @@ public class SignalRPlaybackEventHandler : IDisposable
     private readonly IClientMessenger _clientMessenger;
     private readonly List<IDisposable> _subscriptions = [];
 
-    public SignalRPlaybackEventHandler(IEventBus eventBus, IClientMessenger clientMessenger)
+    private readonly ILogger<SignalRPlaybackEventHandler> _logger;
+
+    public SignalRPlaybackEventHandler(
+        ILogger<SignalRPlaybackEventHandler> logger,
+        IEventBus eventBus,
+        IClientMessenger clientMessenger
+    )
     {
+        _logger = logger;
         _clientMessenger = clientMessenger;
         _subscriptions.Add(eventBus.Subscribe<PlaybackStartedEvent>(OnPlaybackStarted));
-        _subscriptions.Add(eventBus.Subscribe<PlaybackProgressEvent>(OnPlaybackProgress));
+        _subscriptions.Add(eventBus.Subscribe<PlaybackProgressUpdatedEvent>(OnPlaybackProgress));
         _subscriptions.Add(eventBus.Subscribe<PlaybackCompletedEvent>(OnPlaybackCompleted));
     }
 
@@ -45,12 +52,18 @@ public class SignalRPlaybackEventHandler : IDisposable
             }
         );
 
-        Logger.Socket(
-            $"Playback started: User={@event.UserId}, Media={@event.MediaId}, Type={@event.MediaType}"
+        _logger.LogInformation(
+            "Playback started: User={UserId}, Media={MediaId}, Type={MediaType}",
+            @event.UserId,
+            @event.MediaId,
+            @event.MediaType
         );
     }
 
-    internal async Task OnPlaybackProgress(PlaybackProgressEvent @event, CancellationToken ct)
+    internal async Task OnPlaybackProgress(
+        PlaybackProgressUpdatedEvent @event,
+        CancellationToken ct
+    )
     {
         // Progress events are high-frequency; broadcast but don't log to avoid noise
         await _clientMessenger.SendToAll(
@@ -82,8 +95,11 @@ public class SignalRPlaybackEventHandler : IDisposable
             }
         );
 
-        Logger.Socket(
-            $"Playback completed: User={@event.UserId}, Media={@event.MediaId}, Type={@event.MediaType}"
+        _logger.LogInformation(
+            "Playback completed: User={UserId}, Media={MediaId}, Type={MediaType}",
+            @event.UserId,
+            @event.MediaId,
+            @event.MediaType
         );
     }
 

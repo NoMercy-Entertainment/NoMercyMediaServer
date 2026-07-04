@@ -12,21 +12,24 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using MimeMapping;
-using NoMercy.Helpers;
+using NoMercy.NmSystem.Images;
 using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Storage;
-using Serilog.Events;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace NoMercy.Api.Controllers.File;
 
 [Route("images/{type}/{path}")]
-public class ImageController(IStorage storage) : BaseController
+public class ImageController(
+    IStorage storage,
+    IImageService imageService,
+    ILogger<ImageController> logger
+) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Image(
@@ -74,7 +77,7 @@ public class ImageController(IStorage storage) : BaseController
                 || path.Contains(".svg")
                 || (
                     originalFileSize < request.Width
-                    && originalMimeType == request.Format.DefaultMimeType
+                    && originalMimeType == imageService.Parse(request.Type ?? "png").DefaultMimeType
                 )
             )
                 return PhysicalFile(filePath, originalMimeType);
@@ -84,31 +87,40 @@ public class ImageController(IStorage storage) : BaseController
             string hashedUrl =
                 CacheController.GenerateFileName(encodedUrl)
                 + "."
-                + request.Format.FileExtensions.First();
+                + imageService.Parse(request.Type ?? "png").FileExtensions.First();
 
             string cachedImagePath = Path.Join(AppFiles.TempImagesPath, hashedUrl);
             if (storage.Exists(cachedImagePath))
-                return PhysicalFile(cachedImagePath, request.Format.DefaultMimeType);
+                return PhysicalFile(
+                    cachedImagePath,
+                    imageService.Parse(request.Type ?? "png").DefaultMimeType
+                );
 
             try
             {
-                (byte[] magickImage, string mimeType) = Images.ResizeMagickNet(filePath, request);
+                (byte[] magickImage, string mimeType) = imageService.ResizeMagickNet(
+                    filePath,
+                    request.Width,
+                    request.AspectRatio,
+                    request.Type
+                );
                 await storage.WriteAsync(cachedImagePath, magickImage, CancellationToken.None);
 
                 return File(magickImage, mimeType);
             }
             catch (Exception e)
             {
-                Logger.App(
-                    $"Image conversion failed for {filePath}: {e.Message}",
-                    LogEventLevel.Warning
+                logger.LogWarning(
+                    "Image conversion failed for {FilePath}: {Message}",
+                    filePath,
+                    e.Message
                 );
                 return PhysicalFile(filePath, originalMimeType);
             }
         }
         catch (Exception e)
         {
-            Logger.App(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
             return NotFoundResponse("Image not found");
         }
     }
@@ -127,7 +139,7 @@ public class ImageController(IStorage storage) : BaseController
             string hashedUrl =
                 CacheController.GenerateFileName(encodedUrl)
                 + "."
-                + request.Format.FileExtensions.First();
+                + imageService.Parse(request.Type ?? "png").FileExtensions.First();
 
             string cachedImagePath = Path.Join(AppFiles.TempImagesPath, hashedUrl);
             if (storage.Exists(cachedImagePath))
@@ -140,7 +152,7 @@ public class ImageController(IStorage storage) : BaseController
         }
         catch (Exception e)
         {
-            Logger.App(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
             return InternalServerErrorResponse("Image cache operation failed");
         }
     }

@@ -13,12 +13,14 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Collections;
 using NoMercy.MediaProcessing.Movies;
 using NoMercy.Providers.TMDB.Models.Collections;
+using NoMercy.Storage;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -28,6 +30,15 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 [Serializable]
 public class CollectionExtrasJob : AbstractMediaExraDataJob<TmdbCollectionAppends>
 {
+    public CollectionExtrasJob() { }
+
+    public CollectionExtrasJob(
+        IStorageFactory storageFactory,
+        IStorageDriver storageDriver,
+        ILoggerFactory loggerFactory
+    )
+        : base(storageFactory, storageDriver, loggerFactory) { }
+
     public override string QueueName => "extras";
     public override int Priority => 1;
 
@@ -41,21 +52,22 @@ public class CollectionExtrasJob : AbstractMediaExraDataJob<TmdbCollectionAppend
             movieRepository,
             jobDispatcher,
             StorageFactory,
-            StorageDriver
+            LoggerFactory.CreateLogger<MovieManager>()
         );
 
         CollectionRepository collectionRepository = new(context);
         CollectionManager collectionManager = new(
             collectionRepository,
             movieManager,
-            jobDispatcher
+            jobDispatcher,
+            LoggerFactory.CreateLogger<CollectionManager>()
         );
 
         await collectionManager.StoreImages(Storage);
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent { QueryKey = ["collection", Storage.Id.ToString()] }
+                new LibraryRefreshedEvent { QueryKey = ["collection", Storage.Id.ToString()] }
             );
     }
 }

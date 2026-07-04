@@ -44,17 +44,11 @@ namespace NoMercy.Api.Middleware;
 public class HmacValidationMiddleware(
     RequestDelegate next,
     IOptions<EncoderOptions> encoderOptions,
+    IOptions<HmacValidationOptions> hmacOptions,
     ILicenseTokenClient? licenseTokenClient = null
 )
 {
     private static readonly TimeSpan ReplayWindow = TimeSpan.FromMinutes(5);
-
-    // Prefix segments that require HMAC.
-    private static readonly string[] ProtectedPrefixes =
-    [
-        "/api/v1/distribution/",
-        "/api/v1/worker/",
-    ];
 
     // Paths exempt from HMAC (anonymous per spec).
     private static readonly string[] ExemptSuffixes = ["/progress"];
@@ -179,9 +173,9 @@ public class HmacValidationMiddleware(
         await next(context);
     }
 
-    private static bool IsProtected(string path)
+    private bool IsProtected(string path)
     {
-        foreach (string prefix in ProtectedPrefixes)
+        foreach (string prefix in hmacOptions.Value.ProtectedPrefixes)
         {
             if (path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                 return true;

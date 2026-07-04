@@ -541,7 +541,6 @@ public class BuildStartupTasksTests
             "Binaries",
             "Networking",
             "ChromeCast",
-            "UpdateChecker",
             "DesktopIcon",
         ];
 
@@ -553,6 +552,10 @@ public class BuildStartupTasksTests
         // Auth and ApiInfo moved to BootOrchestrator — neither should be a startup task.
         Assert.DoesNotContain(tasks, t => t.Name == "Auth");
         Assert.DoesNotContain(tasks, t => t.Name == "ApiInfo");
+
+        // UpdateChecker moved to PeriodicUpdateCheckService (IHostedService) so it can
+        // inject IUpdateStatus — it is no longer a static startup task.
+        Assert.DoesNotContain(tasks, t => t.Name == "UpdateChecker");
     }
 
     [Fact]

@@ -166,11 +166,11 @@ public class ResourceBudget : IResourceBudget
     private static IEnumerable<string> EncoderNamesForVendor(string token) =>
         token switch
         {
-            "nvenc" => ["h264_nvenc", "hevc_nvenc", "av1_nvenc"],
-            "amf" => ["h264_amf", "hevc_amf", "av1_amf"],
-            "qsv" => ["h264_qsv", "hevc_qsv", "av1_qsv", "vp9_qsv"],
-            "vaapi" => ["h264_vaapi", "hevc_vaapi", "av1_vaapi", "vp9_vaapi"],
-            "videotoolbox" => ["h264_videotoolbox", "hevc_videotoolbox"],
+            "nvenc" => GpuEncoderTokens.NvencNames,
+            "amf" => GpuEncoderTokens.AmfNames,
+            "qsv" => GpuEncoderTokens.QsvNames,
+            "vaapi" => GpuEncoderTokens.VaapiNames,
+            "videotoolbox" => GpuEncoderTokens.VideotoolboxNames,
             _ => [],
         };
 
@@ -189,32 +189,80 @@ public class ResourceBudget : IResourceBudget
         return _cpuSemaphore.CurrentCount;
     }
 
-    public ResourceLease Acquire(ResourceRequirement requirement)
+    // Unlike AcquireAsync (cancellable) and TryAcquire (caller-supplied
+    // timeout), the interface's Acquire has no way to pass a timeout at all.
+    // Bounding the default blocking wait means a saturated budget can no
+    // longer hang a synchronous caller's thread forever, and gives the
+    // rollback-on-timeout path below something to trigger on.
+    private static readonly TimeSpan DefaultAcquireTimeout = TimeSpan.FromSeconds(30);
+
+    public ResourceLease Acquire(ResourceRequirement requirement) =>
+        Acquire(requirement, DefaultAcquireTimeout);
+
+    /// <summary>
+    /// Same contract as <see cref="Acquire(ResourceRequirement)"/> with an
+    /// explicit timeout. Rolls back any slots already granted (e.g. GPU slots
+    /// acquired, then the CPU wait times out) instead of leaking them — a
+    /// caller that never receives a <see cref="ResourceLease"/> has no way to
+    /// release what a partial acquisition already took.
+    /// </summary>
+    public ResourceLease Acquire(ResourceRequirement requirement, TimeSpan timeout)
     {
-        if (requirement.GpuDeviceKey is not null && requirement.GpuSlots > 0)
-        {
-            SemaphoreSlim gpuSemaphore = GetGpuSemaphore(requirement.GpuDeviceKey);
+        int acquiredGpuSlots = 0;
+        SemaphoreSlim? gpuSemaphore = null;
+        int acquiredCpuThreads = 0;
 
-            for (int slotIndex = 0; slotIndex < requirement.GpuSlots; slotIndex++)
+        try
+        {
+            if (requirement.GpuDeviceKey is not null && requirement.GpuSlots > 0)
             {
-                gpuSemaphore.Wait();
+                gpuSemaphore = GetGpuSemaphore(requirement.GpuDeviceKey);
+
+                for (int slotIndex = 0; slotIndex < requirement.GpuSlots; slotIndex++)
+                {
+                    if (!gpuSemaphore.Wait(timeout))
+                    {
+                        throw new TimeoutException(
+                            $"Timed out acquiring GPU slot {slotIndex + 1}/{requirement.GpuSlots} "
+                                + $"on {requirement.GpuDeviceKey} after {timeout}."
+                        );
+                    }
+
+                    acquiredGpuSlots++;
+                }
+
+                _logger?.LogDebug(
+                    "Acquired {GpuSlots} GPU slot(s) on {GpuKey}",
+                    requirement.GpuSlots,
+                    requirement.GpuDeviceKey
+                );
             }
 
-            _logger?.LogDebug(
-                "Acquired {GpuSlots} GPU slot(s) on {GpuKey}",
-                requirement.GpuSlots,
-                requirement.GpuDeviceKey
-            );
+            if (requirement.CpuThreads > 0)
+            {
+                for (int threadIndex = 0; threadIndex < requirement.CpuThreads; threadIndex++)
+                {
+                    if (!_cpuSemaphore.Wait(timeout))
+                    {
+                        throw new TimeoutException(
+                            $"Timed out acquiring CPU thread {threadIndex + 1}/{requirement.CpuThreads} "
+                                + $"after {timeout}."
+                        );
+                    }
+
+                    acquiredCpuThreads++;
+                }
+
+                _logger?.LogDebug("Acquired {CpuThreads} CPU thread(s)", requirement.CpuThreads);
+            }
         }
-
-        if (requirement.CpuThreads > 0)
+        catch
         {
-            for (int threadIndex = 0; threadIndex < requirement.CpuThreads; threadIndex++)
-            {
-                _cpuSemaphore.Wait();
-            }
-
-            _logger?.LogDebug("Acquired {CpuThreads} CPU thread(s)", requirement.CpuThreads);
+            if (gpuSemaphore is not null && acquiredGpuSlots > 0)
+                gpuSemaphore.Release(acquiredGpuSlots);
+            if (acquiredCpuThreads > 0)
+                _cpuSemaphore.Release(acquiredCpuThreads);
+            throw;
         }
 
         string leaseId = Ulid.NewUlid().ToString();
@@ -352,7 +400,7 @@ public class ResourceBudget : IResourceBudget
                         _cpuSemaphore.Release();
                     }
 
-                    if (requirement.GpuDeviceKey is not null && requirement.GpuSlots > 0)
+                    if (gpuSemaphore is not null && requirement.GpuSlots > 0)
                     {
                         for (int rollback = 0; rollback < requirement.GpuSlots; rollback++)
                         {

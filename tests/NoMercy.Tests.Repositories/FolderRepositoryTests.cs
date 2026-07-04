@@ -1,0 +1,405 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using FluentAssertions;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using NoMercy.Data.DTOs;
+using NoMercy.Data.Repositories;
+using NoMercy.Database;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Storage;
+using NoMercy.Tests.Repositories.Infrastructure;
+
+namespace NoMercy.Tests.Repositories;
+
+[Trait("Category", "Characterization")]
+public class FolderRepositoryTests : IDisposable
+{
+    private readonly MediaContext _context;
+    private readonly SqliteConnection _connection;
+    private readonly FolderRepository _repository;
+
+    public FolderRepositoryTests()
+    {
+        _context = TestMediaContextFactory.CreateSeededContext();
+        _repository = new(_context);
+        _connection = new SqliteConnection("Data Source=:memory:");
+    }
+
+    [Fact]
+    public async Task GetFolderByIdAsync_ReturnsFolderWithDriver()
+    {
+        Folder? result = await _repository.GetFolderByIdAsync(SeedConstants.MovieFolderId);
+
+        result.Should().NotBeNull();
+        result!.Path.Should().Be("/media/movies");
+        result.Driver.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetFolderByIdAsync_ReturnsFolderWithLibraries()
+    {
+        Folder? result = await _repository.GetFolderByIdAsync(SeedConstants.MovieFolderId);
+
+        result.Should().NotBeNull();
+        result!.FolderLibraries.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public async Task GetFolderByIdAsync_ReturnsNull_WhenIdDoesNotExist()
+    {
+        Folder? result = await _repository.GetFolderByIdAsync(Ulid.NewUlid());
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetFolderByPathAsync_ReturnsFolderByPath()
+    {
+        Folder? result = await _repository.GetFolderByPathAsync("/media/movies");
+
+        result.Should().NotBeNull();
+        result!.Path.Should().Be("/media/movies");
+    }
+
+    [Fact]
+    public async Task GetFolderByPathAsync_ReturnsNull_WhenPathDoesNotExist()
+    {
+        Folder? result = await _repository.GetFolderByPathAsync("/nonexistent/path");
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetFolderByDriverAndPathAsync_ReturnsFolderByComposite()
+    {
+        Folder? result = await _repository.GetFolderByDriverAndPathAsync(
+            Driver.SystemLocalDriverId,
+            "/media/movies"
+        );
+
+        result.Should().NotBeNull();
+        result!.Path.Should().Be("/media/movies");
+        result.DriverId.Should().Be(Driver.SystemLocalDriverId);
+    }
+
+    [Fact]
+    public async Task GetFolderByDriverAndPathAsync_ExcludesOtherDrivers()
+    {
+        Ulid otherDriverId = Ulid.NewUlid();
+        _context.Drivers.Add(
+            new Driver
+            {
+                Id = otherDriverId,
+                Name = "Other Driver",
+                Type = "network",
+                Config = "{}",
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow,
+            }
+        );
+        _context.Folders.Add(
+            new Folder
+            {
+                Id = Ulid.NewUlid(),
+                Path = "/media/movies",
+                DriverId = otherDriverId,
+            }
+        );
+        await _context.SaveChangesAsync();
+
+        Folder? result = await _repository.GetFolderByDriverAndPathAsync(
+            otherDriverId,
+            "/media/movies"
+        );
+
+        result.Should().NotBeNull();
+        result!.DriverId.Should().Be(otherDriverId);
+
+        Folder? wrongDriver = await _repository.GetFolderByDriverAndPathAsync(
+            Driver.SystemLocalDriverId,
+            "/media/movies"
+        );
+        wrongDriver!.DriverId.Should().Be(Driver.SystemLocalDriverId);
+    }
+
+    [Fact]
+    public async Task GetFoldersByLibraryIdAsync_WithDtos_ReturnsFolders()
+    {
+        FolderLibraryDto[] dtos = new[]
+        {
+            new FolderLibraryDto { FolderId = SeedConstants.MovieFolderId },
+        };
+
+        List<Folder> result = await _repository.GetFoldersByLibraryIdAsync(dtos);
+
+        result.Should().NotBeEmpty();
+        result.Should().Contain(f => f.Id == SeedConstants.MovieFolderId);
+    }
+
+    [Fact]
+    public async Task GetFoldersByLibraryIdAsync_WithUlid_ReturnsFoldersByLibrary()
+    {
+        List<Folder> result = await _repository.GetFoldersByLibraryIdAsync(
+            SeedConstants.MovieLibraryId
+        );
+
+        result.Should().NotBeEmpty();
+        result.Should().Contain(f => f.Id == SeedConstants.MovieFolderId);
+    }
+
+    [Fact]
+    public async Task GetFoldersByLibraryIdAsync_ReturnsMultipleFolders()
+    {
+        Ulid folder2Id = Ulid.NewUlid();
+        _context.Folders.Add(
+            new Folder
+            {
+                Id = folder2Id,
+                Path = "/media/tv",
+                DriverId = Driver.SystemLocalDriverId,
+            }
+        );
+        _context.FolderLibrary.Add(new FolderLibrary(folder2Id, SeedConstants.MovieLibraryId));
+        await _context.SaveChangesAsync();
+
+        List<Folder> result = await _repository.GetFoldersByLibraryIdAsync(
+            SeedConstants.MovieLibraryId
+        );
+
+        result.Should().HaveCountGreaterThanOrEqualTo(2);
+    }
+
+    [Fact]
+    public async Task GetFolderById_ReturnsFolderWithoutRelations()
+    {
+        Folder? result = await _repository.GetFolderById(SeedConstants.MovieFolderId);
+
+        result.Should().NotBeNull();
+        result!.Id.Should().Be(SeedConstants.MovieFolderId);
+    }
+
+    [Fact]
+    public async Task GetFolderByPath_ReturnsFolderWithoutRelations()
+    {
+        Folder? result = await _repository.GetFolderByPath("/media/movies");
+
+        result.Should().NotBeNull();
+        result!.Path.Should().Be("/media/movies");
+    }
+
+    [Fact]
+    public async Task AddFolderAsync_InsertsNewFolder()
+    {
+        Ulid newFolderId = Ulid.NewUlid();
+        Folder folder = new()
+        {
+            Id = newFolderId,
+            Path = "/new/folder",
+            DriverId = Driver.SystemLocalDriverId,
+        };
+
+        await _repository.AddFolderAsync(folder);
+
+        Folder? result = await _repository.GetFolderById(newFolderId);
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task AddFolderAsync_UpsertsByCompositeKey()
+    {
+        Ulid existingFolderId = SeedConstants.MovieFolderId;
+        Folder update = new()
+        {
+            Id = existingFolderId,
+            Path = "/media/movies",
+            DriverId = Driver.SystemLocalDriverId,
+        };
+
+        await _repository.AddFolderAsync(update);
+
+        List<Folder> allFolders = await _context.Folders.ToListAsync();
+        allFolders.Should().NotContain(f => f.Id != existingFolderId && f.Path == "/media/movies");
+    }
+
+    [Fact]
+    public async Task AddFolderLibraryAsync_Single_UpsertsFolderLibrary()
+    {
+        Ulid folderId = Ulid.NewUlid();
+        _context.Folders.Add(
+            new Folder
+            {
+                Id = folderId,
+                Path = "/test",
+                DriverId = Driver.SystemLocalDriverId,
+            }
+        );
+        await _context.SaveChangesAsync();
+
+        FolderLibrary fl = new(folderId, SeedConstants.MovieLibraryId);
+        await _repository.AddFolderLibraryAsync(fl);
+
+        FolderLibrary? result = await _context.FolderLibrary.FirstOrDefaultAsync(x =>
+            x.FolderId == folderId && x.LibraryId == SeedConstants.MovieLibraryId
+        );
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task AddFolderLibraryAsync_Multiple_UpsertsMultiple()
+    {
+        Ulid folder1Id = Ulid.NewUlid();
+        Ulid folder2Id = Ulid.NewUlid();
+        _context.Folders.AddRange(
+            new Folder
+            {
+                Id = folder1Id,
+                Path = "/test1",
+                DriverId = Driver.SystemLocalDriverId,
+            },
+            new Folder
+            {
+                Id = folder2Id,
+                Path = "/test2",
+                DriverId = Driver.SystemLocalDriverId,
+            }
+        );
+        await _context.SaveChangesAsync();
+
+        FolderLibrary[] fls = new[]
+        {
+            new FolderLibrary(folder1Id, SeedConstants.MovieLibraryId),
+            new FolderLibrary(folder2Id, SeedConstants.MovieLibraryId),
+        };
+        await _repository.AddFolderLibraryAsync(fls);
+
+        List<FolderLibrary> results = await _context
+            .FolderLibrary.Where(x =>
+                x.LibraryId == SeedConstants.MovieLibraryId
+                && (x.FolderId == folder1Id || x.FolderId == folder2Id)
+            )
+            .ToListAsync();
+        results.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task UpdateFolderAsync_PersistsChanges()
+    {
+        Folder folder = await _context.Folders.FirstAsync(f => f.Id == SeedConstants.MovieFolderId);
+        folder.Path = "/updated/path";
+
+        await _repository.UpdateFolderAsync(folder);
+
+        Folder? updated = await _context.Folders.FirstOrDefaultAsync(f =>
+            f.Id == SeedConstants.MovieFolderId
+        );
+        updated!.Path.Should().Be("/updated/path");
+    }
+
+    [Fact]
+    public async Task DeleteFolderAsync_RemovesFolder()
+    {
+        Ulid folderId = Ulid.NewUlid();
+        Folder folder = new()
+        {
+            Id = folderId,
+            Path = "/to/delete",
+            DriverId = Driver.SystemLocalDriverId,
+        };
+        _context.Folders.Add(folder);
+        await _context.SaveChangesAsync();
+
+        await _repository.DeleteFolderAsync(folder);
+
+        Folder? result = await _context.Folders.FirstOrDefaultAsync(f => f.Id == folderId);
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task DeleteFolderAsync_WithForeignKeyDependents_SucceedsWithoutThrowing()
+    {
+        // Real DB-level FK dependents (FolderLibrary, EncoderProfileFolder),
+        // fetched through a context that has never tracked those dependents —
+        // isolates the SQLite-connection-pinning bug from EF's client-side
+        // change-tracker fixup (a container concern, not the PRAGMA bug).
+        // PRAGMA foreign_keys=OFF must apply to the same physical connection
+        // as the DELETE, or SQLite's Restrict constraint throws here.
+        (IDbContextFactory<MediaContext> factory, SqliteConnection keepAlive) =
+            TestMediaContextFactory.CreateSeededFactory();
+        try
+        {
+            await using MediaContext deleteContext = factory.CreateDbContext();
+            FolderRepository isolatedRepository = new(deleteContext);
+
+            Folder folder = await deleteContext.Folders.FirstAsync(f =>
+                f.Id == SeedConstants.MovieFolderId
+            );
+
+            Func<Task> act = async () => await isolatedRepository.DeleteFolderAsync(folder);
+
+            await act.Should().NotThrowAsync();
+
+            await using MediaContext verifyContext = factory.CreateDbContext();
+            Folder? result = await verifyContext.Folders.FirstOrDefaultAsync(f =>
+                f.Id == SeedConstants.MovieFolderId
+            );
+            result.Should().BeNull();
+        }
+        finally
+        {
+            keepAlive.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task GetAllFoldersAsync_ReturnsAllFolders()
+    {
+        List<Folder> result = await _repository.GetAllFoldersAsync();
+
+        result.Should().NotBeEmpty();
+        result.Should().Contain(f => f.Path == "/media/movies");
+    }
+
+    [Fact]
+    public async Task SyncFolderLibraryAsync_DeletesOldAndInsertsNew()
+    {
+        Ulid folderId = Ulid.NewUlid();
+        Folder folder = new()
+        {
+            Id = folderId,
+            Path = "/sync/test",
+            DriverId = Driver.SystemLocalDriverId,
+        };
+        _context.Folders.Add(folder);
+        _context.FolderLibrary.Add(new FolderLibrary(folderId, SeedConstants.MovieLibraryId));
+        await _context.SaveChangesAsync();
+
+        FolderLibrary[] newFls = new[] { new FolderLibrary(folderId, SeedConstants.TvLibraryId) };
+        await _repository.SyncFolderLibraryAsync(newFls, new List<Folder> { folder });
+
+        FolderLibrary? oldMapping = await _context.FolderLibrary.FirstOrDefaultAsync(x =>
+            x.FolderId == folderId && x.LibraryId == SeedConstants.MovieLibraryId
+        );
+        FolderLibrary? newMapping = await _context.FolderLibrary.FirstOrDefaultAsync(x =>
+            x.FolderId == folderId && x.LibraryId == SeedConstants.TvLibraryId
+        );
+
+        oldMapping.Should().BeNull();
+        newMapping.Should().NotBeNull();
+    }
+
+    public void Dispose()
+    {
+        _context.Dispose();
+        _connection.Dispose();
+    }
+}

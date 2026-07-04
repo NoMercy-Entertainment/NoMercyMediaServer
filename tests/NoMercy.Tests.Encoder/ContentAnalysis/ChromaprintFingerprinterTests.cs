@@ -118,6 +118,45 @@ public class ChromaprintFingerprinterTests
     }
 
     [Fact]
+    public async Task FingerprintAsync_NegativeWindowStart_UsesSseofNotSs()
+    {
+        // A negative Start (e.g. the outro window, -4min) means "relative to
+        // the end of file" — -ss only accepts a non-negative offset from the
+        // start, so ffmpeg either ignores it or errors. The end-relative case
+        // must use -sseof, which accepts the same negative value.
+        string[]? captured = null;
+        Mock<IProcessRunner> runner = new();
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Callback<string, string[], string?, CancellationToken>(
+                (_, args, _, _) => captured = args
+            )
+            .ReturnsAsync(new ProcessResult(0, "1,2,3\n", "", TimeSpan.FromMilliseconds(500)));
+
+        ChromaprintFingerprinter fp = new(
+            _options,
+            runner.Object,
+            TestStorageFactory.CreateLocal(),
+            NullLogger<ChromaprintFingerprinter>.Instance
+        );
+
+        FingerprintWindow window = new(TimeSpan.FromMinutes(-4), TimeSpan.FromMinutes(4));
+        await fp.FingerprintAsync("/media/ep1.mkv", window, CancellationToken.None);
+
+        captured.Should().NotBeNull();
+        captured!.Should().NotContain("-ss");
+        captured.Should().ContainInConsecutiveOrder("-sseof", "-240.000");
+        captured.Should().ContainInConsecutiveOrder("-t", "240.000");
+    }
+
+    [Fact]
     public async Task FingerprintAsync_FailedExec_ReturnsEmptyPrint()
     {
         Mock<IProcessRunner> runner = new();

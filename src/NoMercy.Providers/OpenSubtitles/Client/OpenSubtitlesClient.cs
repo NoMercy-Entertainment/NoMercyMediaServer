@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.NmSystem.Configuration;
 using NoMercy.Providers.OpenSubtitles.Models;
 
 namespace NoMercy.Providers.OpenSubtitles.Client;
@@ -25,14 +26,7 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
                 new() { Value = new() { String = "" } },
                 new() { Value = new() { String = "" } },
                 new() { Value = new() { String = "dut" } },
-                new()
-                {
-                    Value = new()
-                    {
-                        // String = Config.UserAgent
-                        String = "VLSub",
-                    },
-                },
+                new() { Value = new() { String = ExternalServicesConfig.Current.UserAgent } },
             ],
         };
 
@@ -62,7 +56,17 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
                 {
                     Param =
                     [
-                        new() { Value = new() { String = AccessToken! } },
+                        new()
+                        {
+                            Value = new()
+                            {
+                                String =
+                                    AccessToken
+                                    ?? throw new InvalidOperationException(
+                                        "Login() must be called before accessing the API"
+                                    ),
+                            },
+                        },
                         new()
                         {
                             Value = new()
@@ -113,7 +117,17 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
                 {
                     Param =
                     [
-                        new() { Value = new() { String = AccessToken! } },
+                        new()
+                        {
+                            Value = new()
+                            {
+                                String =
+                                    AccessToken
+                                    ?? throw new InvalidOperationException(
+                                        "Login() must be called before accessing the API"
+                                    ),
+                            },
+                        },
                         new()
                         {
                             Value = new()

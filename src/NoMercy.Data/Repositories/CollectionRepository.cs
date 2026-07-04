@@ -15,7 +15,6 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.Users;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Data.Repositories;
 
@@ -29,7 +28,7 @@ public class CollectionListDto
     public string? Overview { get; set; }
     public string? Poster { get; set; }
     public string? Backdrop { get; set; }
-    public IColorPalettes ColorPalette { get; set; } = null!;
+    public ColorPalette ColorPalette { get; set; } = null!;
     public string? Logo { get; set; }
     public DateTime CreatedAt { get; set; }
     public int? FirstMovieYear { get; set; }
@@ -39,7 +38,8 @@ public class CollectionListDto
     public string? CertificationCountry { get; set; }
 }
 
-public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory) : ICollectionRepository
+public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory)
+    : ICollectionRepository
 {
     public async Task<List<Collection>> GetCollectionsAsync(
         Guid userId,
@@ -625,7 +625,10 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
         }
     }
 
-    public async Task<Collection?> GetCollectionForRescanAsync(int id, CancellationToken ct = default)
+    public async Task<Collection?> GetCollectionForRescanAsync(
+        int id,
+        CancellationToken ct = default
+    )
     {
         await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         return await context

@@ -33,7 +33,7 @@ public static class Archiving
         else if (
             filePath.EndsWith(".tar.xz")
             || filePath.EndsWith(".tar.gz")
-            || filePath.EndsWith("tgz")
+            || filePath.EndsWith(".tgz")
         )
         {
             extractedFiles = await ExtractTarFile(storage, filePath, destination);
@@ -57,13 +57,29 @@ public static class Archiving
     )
     {
         List<string> extractedFiles = [];
+        string destinationRoot = Path.GetFullPath(extractToDirectory);
 
         try
         {
             using ZipArchive archive = ZipFile.OpenRead(zipFilePath);
             foreach (ZipArchiveEntry entry in archive.Entries)
             {
-                string destinationPath = Path.Combine(extractToDirectory, entry.FullName);
+                string destinationPath = Path.Combine(
+                    extractToDirectory,
+                    NormalizeEntrySeparators(entry.FullName)
+                );
+
+                if (!IsPathContained(destinationRoot, destinationPath))
+                {
+                    Logger.System(
+                        $"Rejected zip-slip entry '{entry.FullName}' in {zipFilePath}: resolves outside {destinationRoot}",
+                        LogEventLevel.Error
+                    );
+                    throw new InvalidDataException(
+                        $"Archive entry '{entry.FullName}' escapes the extraction root."
+                    );
+                }
+
                 string destinationDir =
                     Path.GetDirectoryName(destinationPath) ?? extractToDirectory;
 
@@ -97,20 +113,64 @@ public static class Archiving
     )
     {
         List<string> extractedFiles = [];
+        string destinationRoot = Path.GetFullPath(extractToDirectory);
 
         try
         {
-            await Shell.ExecAsync("tar", $"xf \"{tarFilePath}\" -C \"{extractToDirectory}\"");
+            // List entries first so a traversal attempt can be rejected before
+            // any file is written — the tar CLI has no per-entry containment guard.
+            Shell.ExecResult listResult = await Shell.ExecAsync("tar", $"tf \"{tarFilePath}\"");
 
-            Shell.ExecResult result = await Shell.ExecAsync("tar", $"tf \"{tarFilePath}\"");
-            string output = result.StandardOutput;
-
-            foreach (string line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            if (listResult.ExitCode != 0)
             {
-                string destinationPath = Path.Combine(extractToDirectory, line.Trim());
+                throw new InvalidOperationException(
+                    $"Failed to list tar file {tarFilePath}: {listResult.StandardError}"
+                );
+            }
+
+            string[] entries = listResult.StandardOutput.Split(
+                '\n',
+                StringSplitOptions.RemoveEmptyEntries
+            );
+
+            List<string> destinationPaths = [];
+            foreach (string line in entries)
+            {
+                string entryName = line.Trim();
+                string destinationPath = Path.Combine(
+                    extractToDirectory,
+                    NormalizeEntrySeparators(entryName)
+                );
+
+                if (!IsPathContained(destinationRoot, destinationPath))
+                {
+                    Logger.System(
+                        $"Rejected zip-slip entry '{entryName}' in {tarFilePath}: resolves outside {destinationRoot}",
+                        LogEventLevel.Error
+                    );
+                    throw new InvalidDataException(
+                        $"Archive entry '{entryName}' escapes the extraction root."
+                    );
+                }
+
+                destinationPaths.Add(destinationPath);
+            }
+
+            Shell.ExecResult extractResult = await Shell.ExecAsync(
+                "tar",
+                $"xf \"{tarFilePath}\" -C \"{extractToDirectory}\""
+            );
+
+            if (extractResult.ExitCode != 0)
+            {
+                throw new InvalidOperationException(
+                    $"tar exited with code {extractResult.ExitCode} extracting {tarFilePath}: {extractResult.StandardError}"
+                );
+            }
+
+            foreach (string destinationPath in destinationPaths)
                 if (storage.Exists(destinationPath))
                     extractedFiles.Add(destinationPath);
-            }
         }
         catch (Exception ex)
         {
@@ -122,5 +182,41 @@ public static class Archiving
         }
 
         return extractedFiles;
+    }
+
+    /// <summary>
+    /// Normalizes an archive entry's separators to '/' before it is ever
+    /// combined with the extraction root. An archive is untrusted input that
+    /// may target any extractor, on any OS, so an entry name can carry
+    /// backslash-separated traversal (<c>..\evil.txt</c>) regardless of which
+    /// platform built or is running the archive. On Windows backslash is
+    /// already a separator, so this is a no-op there; on Linux/macOS
+    /// backslash is just another filename character, so without this
+    /// normalization <c>Path.Combine</c>/<c>Path.GetFullPath</c> would treat
+    /// the whole traversal string as one literal (harmless-looking) file
+    /// name instead of resolving the ".." segment it actually encodes.
+    /// </summary>
+    private static string NormalizeEntrySeparators(string entryName) =>
+        entryName.Replace('\\', '/');
+
+    /// <summary>
+    /// Resolves both paths to their canonical full form and rejects any
+    /// candidate that does not fall inside the destination root — the
+    /// zip-slip / tar-slip guard against archive entries such as
+    /// <c>../../evil</c> or an absolute path.
+    /// </summary>
+    private static bool IsPathContained(string destinationRoot, string candidatePath)
+    {
+        string normalizedRoot = destinationRoot.TrimEnd(
+            Path.DirectorySeparatorChar,
+            Path.AltDirectorySeparatorChar
+        );
+        string fullCandidatePath = Path.GetFullPath(candidatePath);
+
+        return fullCandidatePath == normalizedRoot
+            || fullCandidatePath.StartsWith(
+                normalizedRoot + Path.DirectorySeparatorChar,
+                StringComparison.Ordinal
+            );
     }
 }

@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Diagnostics;
+using System.Globalization;
 using System.Management;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -130,7 +131,17 @@ public static class Software
         else
         {
             string output = Shell.ExecCommand("uptime -s");
-            return DateTime.Parse(output.Trim());
+            // "uptime -s" can return sentinels (e.g. "Unknown") that
+            // culture-sensitive DateTime.Parse throws on — tolerate them the
+            // same way the macOS branch above does.
+            return DateTime.TryParse(
+                output.Trim(),
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out DateTime bootTime
+            )
+                ? bootTime
+                : DateTime.UtcNow;
         }
 
         return DateTime.MinValue;

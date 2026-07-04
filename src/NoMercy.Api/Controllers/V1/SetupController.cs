@@ -17,10 +17,10 @@ using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.Services;
+using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Music;
-using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 
@@ -42,7 +42,7 @@ public class SetupController(
     public async Task<IActionResult> Libraries()
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view libraries");
 
         List<LibrariesResponseItemDto> response = (await setupService.GetSetupLibraries(userId))
@@ -55,11 +55,9 @@ public class SetupController(
     [HttpGet]
     [Route("server-info")]
     [ResponseCache(NoStore = true, Duration = 0)]
+    [Authorize(Policy = "MediaAccess")]
     public IActionResult ServerInfo()
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view server information");
-
         bool setupComplete =
             context.Libraries.Any() && context.Folders.Any() && context.EncoderProfiles.Any();
 
@@ -89,17 +87,15 @@ public class SetupController(
 
     [HttpGet]
     [Route("permissions")]
+    [Authorize(Policy = "MediaAccess")]
     public IActionResult Permissions()
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have access to this server");
-
         return Ok(
             new
             {
-                owner = User.IsOwner(),
-                manager = User.IsModerator(),
-                allowed = User.IsAllowed(),
+                owner = AuthPolicy.IsOwner(User),
+                manager = AuthPolicy.IsModerator(User),
+                allowed = AuthPolicy.IsAllowed(User),
             }
         );
     }
@@ -108,7 +104,7 @@ public class SetupController(
     public async Task<IActionResult> Index()
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view playlists");
 
         List<Playlist> playlistItems = await setupService.GetSetupPlaylistsAsync(userId);
@@ -124,11 +120,9 @@ public class SetupController(
 
     [HttpGet]
     [Route("screensaver")]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> Screensaver()
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view screensaver");
-
         ScreensaverDto result = await homeService.GetSetupScreensaverContent(User.UserId());
 
         return Ok(result);

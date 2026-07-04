@@ -15,18 +15,21 @@
 
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Events.Media;
+using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Episodes;
 using NoMercy.MediaProcessing.Seasons;
 using NoMercy.MediaProcessing.Shows;
-using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem;
 using NoMercy.Providers.TMDB.Models.Season;
 using NoMercy.Providers.TMDB.Models.TV;
+using NoMercy.Storage;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -36,6 +39,15 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 [Serializable]
 public class ShowImportJob : AbstractMediaJob
 {
+    public ShowImportJob() { }
+
+    public ShowImportJob(
+        IStorageFactory storageFactory,
+        IStorageDriver storageDriver,
+        ILoggerFactory loggerFactory
+    )
+        : base(storageFactory, storageDriver, loggerFactory) { }
+
     public override string QueueName => "import";
     public override int Priority => 5;
 
@@ -47,13 +59,27 @@ public class ShowImportJob : AbstractMediaJob
         JobDispatcher jobDispatcher = new();
 
         ShowRepository showRepository = new(context);
-        ShowManager showManager = new(showRepository, jobDispatcher, StorageFactory, StorageDriver);
+        ShowManager showManager = new(
+            showRepository,
+            jobDispatcher,
+            StorageFactory,
+            new MediaTypeClassifier(),
+            LoggerFactory.CreateLogger<ShowManager>()
+        );
 
         SeasonRepository seasonRepository = new(context);
-        SeasonManager seasonManager = new(seasonRepository, jobDispatcher);
+        SeasonManager seasonManager = new(
+            seasonRepository,
+            jobDispatcher,
+            LoggerFactory.CreateLogger<SeasonManager>()
+        );
 
         EpisodeRepository episodeRepository = new(context);
-        EpisodeManager episodeManager = new(episodeRepository, jobDispatcher);
+        EpisodeManager episodeManager = new(
+            episodeRepository,
+            jobDispatcher,
+            LoggerFactory.CreateLogger<EpisodeManager>()
+        );
 
         Library tvLibrary = await context
             .Libraries.Where(f => f.Id == LibraryId)
@@ -65,7 +91,16 @@ public class ShowImportJob : AbstractMediaJob
 
         TmdbTvShowAppends? show = await showManager.AddShowAsync(Id, tvLibrary, HighPriority);
         if (show == null)
+        {
+            await ImportFailureRecorder.RecordAsync(
+                context,
+                "ShowImportJob",
+                Id.ToString(),
+                LibraryId,
+                "TMDB show metadata fetch returned no result after retries."
+            );
             return;
+        }
 
         if (EventBusProvider.IsConfigured)
         {
@@ -88,7 +123,7 @@ public class ShowImportJob : AbstractMediaJob
         ConcurrentBag<Episode> episodes = [];
         await Parallel.ForEachAsync(
             seasons,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (season, _) =>
             {
                 IEnumerable<Episode> eps = await episodeManager.Add(show, season, HighPriority);
@@ -106,12 +141,12 @@ public class ShowImportJob : AbstractMediaJob
         if (EventBusProvider.IsConfigured)
         {
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent { QueryKey = ["base", "info", Id.ToString()] }
+                new LibraryRefreshedEvent { QueryKey = ["base", "info", Id.ToString()] }
             );
 
             if (wasEmpty)
                 await EventBusProvider.Current.PublishAsync(
-                    new LibraryRefreshEvent { QueryKey = ["libraries"] }
+                    new LibraryRefreshedEvent { QueryKey = ["libraries"] }
                 );
         }
     }

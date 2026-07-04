@@ -18,6 +18,7 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// Tests image processing and metadata functionality
 /// </summary>
 [Trait("Category", "Unit")]
+[Collection("TmdbApi")]
 public class TmdbImageClientTests : TmdbTestBase
 {
     #region Constructor Tests

@@ -10,9 +10,9 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Networking.Cast;
+using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Lifecycle;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Maintenance;
 using NoMercy.Setup.Server;
 using NoMercy.Setup.Ui;
@@ -28,6 +28,8 @@ namespace NoMercy.Setup.Boot;
 public class Start
 {
     public static INetworkDiscovery? NetworkDiscovery { get; set; }
+    public static IChromeCastService? ChromeCast { get; set; }
+    public static ICertificateService? Certificate { get; set; }
 
     public static bool IsDegradedMode { get; internal set; }
 
@@ -95,14 +97,11 @@ public class Start
             ),
             new(
                 "ChromeCast",
-                ChromeCast.Init,
-                CanDefer: true,
-                Phase: 3,
-                DependsOn: ["NetworkProbe"]
-            ),
-            new(
-                "UpdateChecker",
-                UpdateChecker.StartPeriodicUpdateCheck,
+                async () =>
+                {
+                    if (ChromeCast is not null)
+                        await ChromeCast.Init();
+                },
                 CanDefer: true,
                 Phase: 3,
                 DependsOn: ["NetworkProbe"]
@@ -137,7 +136,10 @@ public class Start
         _phase1Completed = [.. runner.CompletedTasks];
     }
 
-    public static async Task InitRemaining(IDegradedModeRecovery? recovery = null)
+    public static async Task InitRemaining(
+        IDegradedModeRecovery? recovery = null,
+        string? accessToken = null
+    )
     {
         List<StartupTask> remainingTasks = _allTasks.Where(t => t.Phase > 1).ToList();
         StartupTaskRunner runner = new(remainingTasks, _phase1Completed);
@@ -170,7 +172,7 @@ public class Start
             {
                 ApiKeysLoaded = !string.IsNullOrEmpty(ApiKeyStore.Current.TmdbToken),
                 // Auth is handled by AuthManager/BootOrchestrator — check AccessToken directly.
-                Authenticated = !string.IsNullOrEmpty(Globals.Globals.AccessToken),
+                Authenticated = !string.IsNullOrEmpty(accessToken),
                 NetworkDiscovered = runner.CompletedTasks.Contains("Networking"),
                 SeedsRun = true,
                 Registered = runner.CompletedTasks.Contains("Register"),

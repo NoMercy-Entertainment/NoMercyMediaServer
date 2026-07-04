@@ -9,22 +9,17 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using AcoustID;
 using NoMercy.Providers.FanArt.Models;
-using NoMercy.Setup.Server;
 
 namespace NoMercy.Providers.FanArt.Client;
 
 public class FanArtMusicClient : FanArtBaseClient
 {
-    public FanArtMusicClient()
-    {
-        Configuration.ClientKey = ApiKeyStore.Current.AcousticIdKey;
-    }
+    public FanArtMusicClient() { }
 
     public Task<FanArtArtistDetails?> Artist(Guid id, bool priority = false)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             //
         };
@@ -34,7 +29,7 @@ public class FanArtMusicClient : FanArtBaseClient
 
     public Task<FanArtAlbum?> Album(Guid id, bool priority = false)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             //
         };
@@ -44,7 +39,7 @@ public class FanArtMusicClient : FanArtBaseClient
 
     public Task<FanArtLabel?> Label(Guid id, bool priority = false)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             //
         };
@@ -54,7 +49,7 @@ public class FanArtMusicClient : FanArtBaseClient
 
     public Task<FanArtLatest[]?> Latest(Guid id, bool priority = false)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             //
         };

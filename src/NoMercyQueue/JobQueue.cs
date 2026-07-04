@@ -22,7 +22,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
     private const int BaseRetryDelayMs = 2000;
     private const int MaxJitterMs = 500;
 
-    private static readonly object _writeLock = new();
+    private readonly object _writeLock = new();
 
     /// <summary>
     /// Signalled once per <see cref="Enqueue"/> call so idle workers wake
@@ -56,7 +56,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
     {
         lock (_writeLock)
         {
-            QueueJobModel? job = context.GetNextJob("", 255, null);
+            QueueJobModel? job = context.GetNextJob("", 255, null, DateTime.UtcNow);
             if (job == null)
                 return job;
 
@@ -72,7 +72,12 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
         {
             lock (_writeLock)
             {
-                QueueJobModel? job = context.GetNextJob(name, maxAttempts, currentJobId);
+                QueueJobModel? job = context.GetNextJob(
+                    name,
+                    maxAttempts,
+                    currentJobId,
+                    DateTime.UtcNow
+                );
 
                 if (job == null)
                     return job;
@@ -89,13 +94,12 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
                         Connection = "default",
                         Queue = job.Queue,
                         Payload = job.Payload,
+                        ParentJobId = job.Id,
                         Exception =
                             $"{{\"Message\":\"Skipped: parent job {job.ParentJobId} failed\"}}",
                         FailedAt = DateTime.UtcNow,
                     };
-                    context.AddFailedJob(skipped);
-                    context.RemoveJob(job);
-                    context.SaveChanges();
+                    context.AddFailedJobAndRemoveJob(skipped, job);
                     return null;
                 }
 
@@ -110,14 +114,17 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
         catch (Exception e)
         {
             if (e.Source == "Microsoft.EntityFrameworkCore.Relational")
+            {
+                logger?.LogDebug(e, "Queue DB contention reserving a job on {Queue}", name);
                 return null;
+            }
             if (attempt < MaxDbRetryAttempts)
             {
                 Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
                 return ReserveJob(name, currentJobId, attempt + 1);
             }
 
-            logger?.LogError("{Message}", e.Message);
+            logger?.LogError(e, "Failed to reserve a job on {Queue}", name);
         }
 
         return null;
@@ -139,14 +146,14 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
                         Connection = "default",
                         Queue = queueJob.Queue,
                         Payload = queueJob.Payload,
+                        ParentJobId = queueJob.Id,
                         Exception = JsonConvert.SerializeObject(
                             exception.InnerException ?? exception
                         ),
                         FailedAt = DateTime.UtcNow,
                     };
 
-                    context.AddFailedJob(failedJob);
-                    context.RemoveJob(queueJob);
+                    context.AddFailedJobAndRemoveJob(failedJob, queueJob);
                 }
                 else
                 {
@@ -159,7 +166,10 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
         catch (Exception e)
         {
             if (e.Source == "Microsoft.EntityFrameworkCore.Relational")
+            {
+                logger?.LogDebug(e, "Queue DB contention failing job {JobId}", queueJob.Id);
                 return;
+            }
             if (attempt < MaxDbRetryAttempts)
             {
                 Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
@@ -167,7 +177,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
             }
             else
             {
-                logger?.LogError("{Message}", e.Message);
+                logger?.LogError(e, "Failed to record job failure for {JobId}", queueJob.Id);
             }
         }
     }
@@ -224,7 +234,22 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
                 context.RemoveJob(queueJob);
             }
         }
-        catch (Exception) { }
+        catch (Exception e)
+        {
+            if (e.Source == "Microsoft.EntityFrameworkCore.Relational")
+            {
+                logger?.LogDebug(e, "Queue DB contention deleting job {JobId}", queueJob.Id);
+                return;
+            }
+            if (attempt < MaxDbRetryAttempts)
+            {
+                Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
+                DeleteJob(queueJob, attempt + 1);
+                return;
+            }
+
+            logger?.LogError(e, "Failed to delete queue job {JobId}", queueJob.Id);
+        }
     }
 
     public void RequeueFailedJob(int failedJobId, int attempt = 0)
@@ -254,7 +279,10 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
         catch (Exception e)
         {
             if (e.Source == "Microsoft.EntityFrameworkCore.Relational")
+            {
+                logger?.LogDebug(e, "Queue DB contention requeuing failed job {FailedJobId}", failedJobId);
                 return;
+            }
             if (attempt < MaxDbRetryAttempts)
             {
                 Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
@@ -262,7 +290,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
             }
             else
             {
-                logger?.LogError("{Message}", e.Message);
+                logger?.LogError(e, "Failed to requeue failed job {FailedJobId}", failedJobId);
             }
         }
     }

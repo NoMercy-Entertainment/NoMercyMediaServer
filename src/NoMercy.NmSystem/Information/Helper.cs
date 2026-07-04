@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Diagnostics;
+using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.NmSystem.Information;
 
@@ -38,7 +39,7 @@ public static class Helper
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error running command: {ex.Message}");
+            Logger.Error($"Error running command: {ex.Message}");
         }
 
         return "Unknown";

@@ -11,65 +11,73 @@
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.WebSockets;
 using NoMercy.Data.Activity;
 using NoMercy.Database;
-using NoMercy.Helpers.Extensions;
 using NoMercy.Networking;
 using NoMercy.Networking.Messaging;
-using NoMercy.NmSystem.SystemCalls;
-using Serilog.Events;
 
 namespace NoMercy.Api.Hubs;
 
 public class DashboardHub : ConnectionHub
 {
     private readonly IClientMessenger _clientMessenger;
+    private readonly ILogBroadcastService _logBroadcastService;
+    private readonly IResourceMonitorService _resourceMonitorService;
+
+    private readonly ILogger<DashboardHub> _logger;
 
     public DashboardHub(
+        ILogger<DashboardHub> logger,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<MediaContext> contextFactory,
         ConnectedClients connectedClients,
         IClientMessenger clientMessenger,
+        ILogBroadcastService logBroadcastService,
+        IResourceMonitorService resourceMonitorService,
         IActivityLogger activityLogger
     )
         : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
+        _logger = logger;
         _clientMessenger = clientMessenger;
+        _logBroadcastService = logBroadcastService;
+        _resourceMonitorService = resourceMonitorService;
     }
 
     public override async Task OnConnectedAsync()
     {
         await base.OnConnectedAsync();
-        if (Context.User.IsModerator())
+        if (AuthPolicy.IsModerator(Context.User))
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, "moderators");
         }
 
-        Logger.Socket("Dashboard client connected", LogEventLevel.Debug);
-        LogBroadcaster.StartBroadcasting(_clientMessenger);
+        _logger.LogDebug("Dashboard client connected");
+        _logBroadcastService.Start();
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         await base.OnDisconnectedAsync(exception);
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, "moderators");
-        Logger.Socket("Dashboard client disconnected", LogEventLevel.Debug);
+        _logger.LogDebug("Dashboard client disconnected");
 
         StopResources();
     }
 
     public void StartResources()
     {
-        ResourceMonitor.StartBroadcasting(_clientMessenger);
+        _resourceMonitorService.Start();
     }
 
     public void StopResources()
     {
         if (ConnectedClients.Clients.Values.All(x => x.Endpoint != "/dashboardHub"))
         {
-            ResourceMonitor.StopBroadcasting();
-            LogBroadcaster.StopBroadcasting();
+            _resourceMonitorService.Stop();
+            _logBroadcastService.Stop();
         }
     }
 }

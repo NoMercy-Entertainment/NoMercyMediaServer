@@ -22,7 +22,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
@@ -32,10 +34,13 @@ using NoMercy.Database.Models.Music;
 using NoMercy.Database.Models.Storage;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
-using NoMercy.Helpers.Extensions;
+using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Messaging;
+using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Security;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Providers.AcoustId;
 using NoMercy.Service;
 using NoMercy.Setup.Auth;
 using NoMercy.Setup.Boot;
@@ -59,6 +64,13 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
                 _dbInitialized = true;
             }
         }
+
+        // Re-seed the process-wide ClaimsPrincipalExtensions user cache from the
+        // database at the start of every test class. Worker/coordinator tests
+        // Reset() that static; with serialized collections a later class would
+        // otherwise inherit an owner-less cache and get spurious 403s.
+        using MediaContext userCacheContext = new();
+        UserCache.Current.InitializeAsync(userCacheContext).GetAwaiter().GetResult();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -77,6 +89,14 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             // shared instance so controllers and tests operate on the same dictionary.
             services.RemoveAll<ConnectedClients>();
             services.AddSingleton(SharedConnectedClients);
+
+            // ServerController depends on IAudioFingerprinter. The real
+            // ChromaprintFingerprinter needs the native fpcalc/chromaprint
+            // library, which the test host doesn't provide, so register a
+            // no-op stand-in — the dashboard endpoints under test only need
+            // the controller to construct, not to fingerprint audio.
+            services.RemoveAll<IAudioFingerprinter>();
+            services.AddTransient<IAudioFingerprinter>(_ => Mock.Of<IAudioFingerprinter>());
         });
     }
 
@@ -102,6 +122,13 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
                     DefaultApiVersionDescriptionProvider
                 >();
 
+                // CustomLogger<T> depends on NoMercyLoggerProvider (which needs
+                // NoMercyLoggerOptions); production wires all three in WebHostFactory.
+                // The test host registers the logger itself, so it must register the
+                // provider + options too, or activating any ILogger<T> throws.
+                // LogDirectory defaults to null here, so tests write no log files.
+                services.AddSingleton(new NoMercy.NmSystem.Logging.NoMercyLoggerOptions());
+                services.AddSingleton<NoMercy.NmSystem.Logging.NoMercyLoggerProvider>();
                 services.AddSingleton(typeof(ILogger<>), typeof(CustomLogger<>));
 
                 // Register the shared ConnectedClients instance early.  Because
@@ -193,7 +220,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
         SeedMediaData(mediaContext);
 
-        ClaimsPrincipleExtensions.InitializeAsync(mediaContext).GetAwaiter().GetResult();
+        UserCache.Current.InitializeAsync(mediaContext).GetAwaiter().GetResult();
 
         string queueDbPath = Path.Combine(AppFiles.DataPath, "queue.db");
         foreach (string suffix in new[] { "", "-wal", "-shm", "-journal" })
@@ -579,7 +606,11 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         AppDbContext testAppContext = new();
         testAppContext.Database.EnsureCreated();
 
-        AuthManager testAuthManager = new(testAppContext, new LocalStorageDriver());
+        AuthManager testAuthManager = new(
+            testAppContext,
+            new LocalStorageDriver(),
+            new AuthTokenStore()
+        );
         services.AddSingleton(testAuthManager);
         IServerRegistrationService registrationService = Mock.Of<IServerRegistrationService>();
         services.AddSingleton(
@@ -591,7 +622,9 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
                 testAuthManager,
                 Mock.Of<IApiKeyLoader>(),
                 Mock.Of<IDegradedModeRecovery>(),
-                registrationService
+                registrationService,
+                new AuthTokenStore(),
+                new CertificateService(NullLogger<CertificateService>.Instance, null!)
             )
         );
     }

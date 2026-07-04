@@ -19,7 +19,7 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs.Support;
 
 internal static class EventBusFireAndForget
 {
-    public static void Publish(EncoderProgressBroadcastEvent evt)
+    public static void Publish(EncodingProgressBroadcastedEvent evt)
     {
         if (!EventBusProvider.IsConfigured)
             return;
@@ -117,7 +117,7 @@ public class EventBusProgressObserver : IProgressObserver
         TimeSpan remaining = progress.EstimatedRemaining ?? TimeSpan.Zero;
 
         EventBusFireAndForget.Publish(
-            new EncoderProgressBroadcastEvent
+            new EncodingProgressBroadcastedEvent
             {
                 ProgressData = new
                 {
@@ -182,7 +182,7 @@ public class EventBusProgressObserver : IProgressObserver
     private void Publish(string status, string message)
     {
         EventBusFireAndForget.Publish(
-            new EncoderProgressBroadcastEvent
+            new EncodingProgressBroadcastedEvent
             {
                 ProgressData = new
                 {

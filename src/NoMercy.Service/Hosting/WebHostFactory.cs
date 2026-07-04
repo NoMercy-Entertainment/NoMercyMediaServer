@@ -9,38 +9,22 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.Diagnostics;
 using System.Net;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Runtime.Loader;
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
-using CommandLine;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using NoMercy.Networking.Certificate;
-using NoMercy.Networking.Discovery;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Plugins.Abstractions;
 using NoMercy.Service.Configuration;
-using NoMercy.Service.Hosting;
-using NoMercy.Service.Seeds;
-using NoMercy.Setup.Boot;
 using NoMercy.Setup.Server;
-using NoMercy.Setup.Ui;
-using NoMercy.Storage;
-using NoMercyQueue;
-
 
 namespace NoMercy.Service.Hosting;
 
 public static class WebHostFactory
 {
-    public static WebApplication Create(
-        StartupOptions options,
-        bool forceHttp = false
-    )
+    public static WebApplication Create(StartupOptions options, bool forceHttp = false)
     {
         List<IPAddress> localAddresses = [IPAddress.Any];
 
@@ -65,6 +49,43 @@ public static class WebHostFactory
             DefaultApiVersionDescriptionProvider
         >();
         builder.Services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
+        builder.Services.AddSingleton<NoMercy.NmSystem.Logging.NoMercyLoggerOptions>(
+            _ => new NoMercy.NmSystem.Logging.NoMercyLoggerOptions
+            {
+                MinimumLevel = Microsoft.Extensions.Logging.LogLevel.Information,
+                LogDirectory = NoMercy.NmSystem.Information.AppFiles.LogPath,
+                MaxRunFiles = 10,
+                BridgeLegacyLogger = true,
+                WidthProvider = static () =>
+                {
+                    try
+                    {
+                        if (!System.Console.IsOutputRedirected)
+                        {
+                            int w = System.Console.WindowWidth;
+                            if (w > 0)
+                                return w;
+                        }
+                    }
+                    catch
+                    {
+                        // No attached console (piped under the launcher or run
+                        // as a service): fall through to a sensible default.
+                    }
+
+                    // Redirected/headless: assume a standard width so long
+                    // lines still wrap and hang under the gutter instead of the
+                    // consumer terminal hard-wrapping them flush-left.
+                    return int.TryParse(
+                        System.Environment.GetEnvironmentVariable("COLUMNS"),
+                        out int cols
+                    ) && cols > 0
+                        ? cols
+                        : 120;
+                },
+            }
+        );
+        builder.Services.AddSingleton<NoMercy.NmSystem.Logging.NoMercyLoggerProvider>();
         builder.Services.AddSingleton(typeof(ILogger<>), typeof(CustomLogger<>));
 
         // Configure host options with reduced shutdown timeout
@@ -86,7 +107,9 @@ public static class WebHostFactory
 
         builder.WebHost.ConfigureKestrel(kestrelOptions =>
         {
-            Certificate.KestrelConfig(kestrelOptions);
+            ICertificateService certificateService =
+                kestrelOptions.ApplicationServices.GetRequiredService<ICertificateService>();
+            certificateService.KestrelConfig(kestrelOptions);
 
             // Main server endpoints.
             // forceHttp = true during setup/auth, so we never need HTTPS to handle the
@@ -95,7 +118,7 @@ public static class WebHostFactory
             {
                 kestrelOptions.Listen(
                     address,
-                    Config.InternalServerPort,
+                    RuntimeServerSettings.Current.InternalServerPort,
                     listenOptions =>
                     {
                         if (forceHttp)
@@ -105,7 +128,7 @@ public static class WebHostFactory
                         else
                         {
                             listenOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3;
-                            Certificate.ConfigureHttpsListener(listenOptions);
+                            certificateService.ConfigureHttpsListener(listenOptions);
                         }
                     }
                 );
@@ -114,7 +137,7 @@ public static class WebHostFactory
             // Health check endpoint — HTTP only, localhost only (for Docker HEALTHCHECK)
             kestrelOptions.Listen(
                 IPAddress.Loopback,
-                Config.InternalServerPort + 1,
+                RuntimeServerSettings.Current.InternalServerPort + 1,
                 listenOptions =>
                 {
                     listenOptions.Protocols = HttpProtocols.Http1;

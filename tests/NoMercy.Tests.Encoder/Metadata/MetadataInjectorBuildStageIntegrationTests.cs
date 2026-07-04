@@ -124,7 +124,7 @@ public class MetadataInjectorBuildStageIntegrationTests
         };
 
         ExecutionPlan plan = BuildMkvPlan();
-        BuildInput input = new(plan, "/movies/fight_club.mkv", "/output/fc", "Fight Club.NoMercy");
+        BuildInput input = new(plan, "/movies/fight_club.mkv", "/tmp/nmtest-output/fc", "Fight Club.NoMercy");
 
         StageResult result = await stage.ExecuteAsync(input, context, default);
 
@@ -161,7 +161,7 @@ public class MetadataInjectorBuildStageIntegrationTests
         };
 
         ExecutionPlan plan = BuildMkvPlan();
-        BuildInput input = new(plan, "/tv/breaking_bad_s01e01.mkv", "/output/bb", "Pilot.NoMercy");
+        BuildInput input = new(plan, "/tv/breaking_bad_s01e01.mkv", "/tmp/nmtest-output/bb", "Pilot.NoMercy");
 
         StageResult result = await stage.ExecuteAsync(input, context, default);
 
@@ -189,7 +189,7 @@ public class MetadataInjectorBuildStageIntegrationTests
         EncodingContext context = EncodingContext.Create();
 
         ExecutionPlan plan = BuildMkvPlan();
-        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test.NoMercy");
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
 
         StageResult result = await stage.ExecuteAsync(input, context, default);
 

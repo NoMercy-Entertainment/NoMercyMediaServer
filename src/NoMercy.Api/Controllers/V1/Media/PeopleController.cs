@@ -14,9 +14,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.DTOs.Media;
+using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.People;
-using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.People;
@@ -26,7 +26,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [ApiController]
 [Tags(tags: "Media People")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "MediaAccess")]
 public class PeopleController(
     IPeopleRepository peopleRepository,
     IPersonMetadataProvider personMetadataProvider,
@@ -39,8 +39,6 @@ public class PeopleController(
     public async Task<IActionResult> Index([FromQuery] PageRequestDto request)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view people");
 
         string language = Language();
 
@@ -58,8 +56,6 @@ public class PeopleController(
     [ResponseCache(Duration = 300)]
     public async Task<IActionResult> Show(int id)
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view a person");
 
         string country = Country();
 

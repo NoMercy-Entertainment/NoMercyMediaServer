@@ -37,7 +37,7 @@ public record TopResultCardData
     public string? Cover { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("artists")]
     public IEnumerable<TopResultArtist> Artists { get; set; } = [];
@@ -55,10 +55,10 @@ public record TopResultCardData
         Id = artist.Id.ToString();
         Title = artist.Name;
         Type = "artist";
-        Link = $"/music/artist/{artist.Id}";
+        Link = $"/music/artists/{artist.Id}";
         Cover = artist.Cover;
         ColorPalette = artist.ColorPalette;
-        Link = $"/music/album/{artist.Id}";
+        Link = $"/music/albums/{artist.Id}";
         Type = "album";
     }
 
@@ -67,14 +67,14 @@ public record TopResultCardData
         Id = album.Id.ToString();
         Title = album.Name;
         Type = "album";
-        Link = $"/music/album/{album.Id}";
+        Link = $"/music/albums/{album.Id}";
         Cover = album.Cover;
         ColorPalette = album.ColorPalette;
         Artists = album.AlbumArtist.Select(aa => new TopResultArtist
         {
             Id = aa.ArtistId.ToString(),
             Name = aa.Artist.Name,
-            Link = new($"/music/artist/{aa.ArtistId}", UriKind.Relative),
+            Link = new($"/music/artists/{aa.ArtistId}", UriKind.Relative),
             Type = "artist",
         });
     }
@@ -91,14 +91,14 @@ public record TopResultCardData
         {
             Id = at.ArtistId.ToString(),
             Name = at.Artist.Name,
-            Link = new($"/music/artist/{at.ArtistId}", UriKind.Relative),
+            Link = new($"/music/artists/{at.ArtistId}", UriKind.Relative),
             Type = "artist",
         });
         Albums = track.AlbumTrack.Select(at => new TopResultAlbum
         {
             Id = at.AlbumId.ToString(),
             Name = at.Album.Name,
-            Link = new($"/music/album/{at.AlbumId}", UriKind.Relative),
+            Link = new($"/music/albums/{at.AlbumId}", UriKind.Relative),
             Type = "album",
         });
         Track = new()
@@ -116,14 +116,14 @@ public record TopResultCardData
             {
                 Id = at.ArtistId.ToString(),
                 Name = at.Artist.Name,
-                Link = new($"/music/artist/{at.ArtistId}", UriKind.Relative),
+                Link = new($"/music/artists/{at.ArtistId}", UriKind.Relative),
                 Type = "artist",
             }),
             Albums = track.AlbumTrack.Select(at => new TopResultAlbum
             {
                 Id = at.AlbumId.ToString(),
                 Name = at.Album.Name,
-                Link = new($"/music/album/{at.AlbumId}", UriKind.Relative),
+                Link = new($"/music/albums/{at.AlbumId}", UriKind.Relative),
                 Type = "album",
             }),
         };
@@ -138,19 +138,19 @@ public record TopResultCardData
         string? cover = track.AlbumCover ?? track.ArtistCover;
         Cover = cover is not null ? $"/images/music{cover}" : null;
         string? colorPaletteStr = track.AlbumColorPalette ?? track.ArtistColorPalette;
-        ColorPalette = IColorPalettes.FromJsonOrNull(colorPaletteStr);
+        ColorPalette = ColorPalette.FromJsonOrNull(colorPaletteStr);
         Artists = track.Artists.Select(at => new TopResultArtist
         {
             Id = at.Id.ToString(),
             Name = at.Name,
-            Link = new($"/music/artist/{at.Id}", UriKind.Relative),
+            Link = new($"/music/artists/{at.Id}", UriKind.Relative),
             Type = "artist",
         });
         Albums = track.Albums.Select(at => new TopResultAlbum
         {
             Id = at.Id.ToString(),
             Name = at.Name,
-            Link = new($"/music/album/{at.Id}", UriKind.Relative),
+            Link = new($"/music/albums/{at.Id}", UriKind.Relative),
             Type = "album",
         });
         Track = new()
@@ -168,14 +168,14 @@ public record TopResultCardData
             {
                 Id = at.Id.ToString(),
                 Name = at.Name,
-                Link = new($"/music/artist/{at.Id}", UriKind.Relative),
+                Link = new($"/music/artists/{at.Id}", UriKind.Relative),
                 Type = "artist",
             }),
             Albums = track.Albums.Select(at => new TopResultAlbum
             {
                 Id = at.Id.ToString(),
                 Name = at.Name,
-                Link = new($"/music/album/{at.Id}", UriKind.Relative),
+                Link = new($"/music/albums/{at.Id}", UriKind.Relative),
                 Type = "album",
             }),
         };
@@ -186,9 +186,9 @@ public record TopResultCardData
         Id = artist.Id.ToString();
         Title = artist.Name;
         Type = "artist";
-        Link = $"/music/artist/{artist.Id}";
+        Link = $"/music/artists/{artist.Id}";
         Cover = artist.Cover is not null ? $"/images/music{artist.Cover}" : null;
-        ColorPalette = IColorPalettes.FromJsonOrNull(artist.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(artist.ColorPalette);
     }
 
     public TopResultCardData(AlbumCardDto album)
@@ -196,9 +196,9 @@ public record TopResultCardData
         Id = album.Id.ToString();
         Title = album.Name;
         Type = "album";
-        Link = $"/music/album/{album.Id}";
+        Link = $"/music/albums/{album.Id}";
         Cover = album.Cover is not null ? $"/images/music{album.Cover}" : null;
-        ColorPalette = IColorPalettes.FromJsonOrNull(album.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(album.ColorPalette);
     }
 }
 

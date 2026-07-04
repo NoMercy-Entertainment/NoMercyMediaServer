@@ -9,6 +9,8 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Text.RegularExpressions;
+
 namespace NoMercy.Storage.Validation;
 
 /// <summary>
@@ -21,7 +23,7 @@ namespace NoMercy.Storage.Validation;
 /// Empty allowlist = structural checks only — used during the encoder
 /// Phase 0 migration before consumers have populated their roots.
 /// </summary>
-public sealed class StoragePathGuard
+public sealed partial class StoragePathGuard
 {
     private readonly IStorageDriver _driver;
     private readonly string[] _normalizedRoots;
@@ -109,6 +111,38 @@ public sealed class StoragePathGuard
                 "absolute paths are not allowed as scope-relative keys"
             );
     }
+
+    /// <summary>
+    /// Cross-platform rooted-path check. True when <paramref name="path"/> is
+    /// absolute under the CURRENT OS's own rules (<see cref="Path.IsPathRooted"/>)
+    /// OR under Windows' rules (drive letter / UNC) regardless of which OS this
+    /// process happens to run on.
+    ///
+    /// <see cref="Path.IsPathRooted"/> is native-OS-only: on Linux it returns
+    /// false for <c>C:\Windows\System32</c> and <c>\\server\share\file</c>
+    /// because backslash isn't a separator there, so a caller relying on it
+    /// alone would treat those as scope-relative and let them bypass the
+    /// allowlist entirely. A path that reaches this guard may have been
+    /// authored on, or targets, a different OS than the one enforcing it
+    /// (disk-scan results replayed on Linux CI, a UNC path pasted into a
+    /// Linux-hosted config) so both notations must always be recognized,
+    /// on every platform, as absolute.
+    /// </summary>
+    public static bool IsRootedAnyStyle(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+            return false;
+
+        return Path.IsPathRooted(path)
+            || WindowsDriveLetterRoot().IsMatch(path)
+            || WindowsUncRoot().IsMatch(path);
+    }
+
+    [GeneratedRegex(@"^[A-Za-z]:[\\/]")]
+    private static partial Regex WindowsDriveLetterRoot();
+
+    [GeneratedRegex(@"^\\\\")]
+    private static partial Regex WindowsUncRoot();
 
     /// <summary>
     /// Validates <paramref name="requestedPath"/> and returns its

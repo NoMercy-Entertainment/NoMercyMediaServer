@@ -21,7 +21,6 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.Music;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Media;
@@ -29,7 +28,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [ApiController]
 [Tags("Media Search")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "MediaAccess")]
 [Route("api/v{version:apiVersion}/search")]
 public class SearchController : BaseController
 {
@@ -49,8 +48,6 @@ public class SearchController : BaseController
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to perform searches");
 
         string country = Country();
         string normalizedQuery = request.Query.NormalizeSearch();
@@ -154,8 +151,6 @@ public class SearchController : BaseController
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to perform searches");
 
         string normalizedQuery = request.Query.NormalizeSearch();
 
@@ -195,8 +190,6 @@ public class SearchController : BaseController
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to perform searches");
 
         string country = Country();
         string normalizedQuery = request.Query.NormalizeSearch();
@@ -212,8 +205,6 @@ public class SearchController : BaseController
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to perform searches");
 
         string country = Country();
         string normalizedQuery = request.Query.NormalizeSearch();

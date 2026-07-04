@@ -88,6 +88,9 @@ namespace NoMercy.Database.Migrations.Queue
                     b.Property<DateTime>("FailedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("ParentJobId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Payload")
                         .IsRequired()
                         .HasMaxLength(256)

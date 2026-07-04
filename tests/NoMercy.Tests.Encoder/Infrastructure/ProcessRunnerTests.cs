@@ -218,7 +218,7 @@ public class ProcessRunnerTests
         // will show the value.
         bool isWindows = OperatingSystem.IsWindows();
         string shell = isWindows ? "cmd" : "sh";
-        string[] args = isWindows ? ["/c", $"echo %{key}%"] : ["-c", $"echo $\"{key}\""];
+        string[] args = isWindows ? ["/c", $"echo %{key}%"] : ["-c", $"echo ${key}"];
 
         ProcessResult result = await runner.RunAsync(
             shell,

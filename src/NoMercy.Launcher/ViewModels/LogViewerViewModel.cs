@@ -183,7 +183,7 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
                 return;
             }
 
-            List<LogEntry> diskLogs = await LogReader.GetLogsAsync(storage, logPath);
+            List<LogEntry> diskLogs = await LogReader.GetLatestRunLogsAsync(storage, logPath);
             diskLogs = diskLogs
                 .OrderByDescending(e => e.Time)
                 .Take(_tailCount)

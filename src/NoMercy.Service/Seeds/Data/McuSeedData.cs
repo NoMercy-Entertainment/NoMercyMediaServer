@@ -11,7 +11,6 @@
 
 using NoMercy.Database.Models.TvShows;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
 using SpecialItem = NoMercy.Service.Seeds.Dto.SpecialItem;
 
 namespace NoMercy.Service.Seeds.Data;

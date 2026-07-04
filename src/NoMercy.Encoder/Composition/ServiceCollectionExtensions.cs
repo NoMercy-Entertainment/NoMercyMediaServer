@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -48,6 +49,7 @@ using NoMercy.Encoder.Strategies.Mp4;
 using NoMercy.Encoder.Subscribers;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Lifecycle;
 using NoMercy.Resources;
 using NoMercy.Storage;
 
@@ -154,6 +156,14 @@ public static class ServiceCollectionExtensions
         // because GetGpuSemaphore threw "device 'h264_nvenc' is not
         // registered" — see UnobservedTaskException entries in encoder logs
         // before this fix.
+        // Activate the live-headroom gate with the record's protective defaults
+        // (75% CPU / 80% GPU / 1 GB free). Without this registration the budget fell
+        // back to ResourceBudgetOptions.Disabled — the gate was built but dormant, so
+        // the encoder never backed off and could saturate a machine the user is
+        // actively using. TODO: surface CpuHeadroomPercent as a dashboard setting so a
+        // dedicated-encode-box operator can raise it toward 100 (max throughput).
+        services.TryAddSingleton(new ResourceBudgetOptions());
+
         services.AddSingleton<IResourceBudget>(sp =>
         {
             IHardwareCapabilities hw = sp.GetRequiredService<IHardwareCapabilities>();
@@ -207,6 +217,10 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ProgressParser>();
         // ProcessThrottle holds the set of suspended pids; must be Singleton so
         // suspend/resume operations across different callers see the same state.
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            services.AddSingleton<IProcessSuspender, WindowsProcessSuspender>();
+        else
+            services.AddSingleton<IProcessSuspender, UnixProcessSuspender>();
         services.AddSingleton<ProcessThrottle>();
         services.AddSingleton<IEncoderProcessRegistry, EncoderProcessRegistry>();
 
@@ -288,6 +302,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IPlanStage>(sp => sp.GetRequiredService<PlanStage>());
         services.AddTransient<BuildStage>();
         services.AddTransient<IBuildStage>(sp => sp.GetRequiredService<BuildStage>());
+        services.AddSingleton<IPlanResultProjector, PlanResultProjector>();
         services.AddTransient<ExecuteStage>();
         services.AddTransient<IExecutionStage>(sp => sp.GetRequiredService<ExecuteStage>());
         services.AddTransient<FinalizeStage>();
@@ -400,6 +415,11 @@ public static class ServiceCollectionExtensions
         // install uses shared storage and no fetching is needed.
         services.AddTransient<ISourceFetcher, HttpSourceFetcher>();
 
+        // Resolves signed worker payloads into dispatch-ready tasks
+        // (HMAC verification + local source fetch), lifted out of the
+        // transport controller for testability.
+        services.AddTransient<IWorkerInputResolver, WorkerInputResolver>();
+
         // Per-task progress: workers push to the coordinator via
         // HttpTaskProgressSink (only actually pushes when CoordinatorUrl
         // is set). Coordinator-side InMemoryTaskProgressStore holds the
@@ -415,6 +435,13 @@ public static class ServiceCollectionExtensions
         // validates required FFmpeg filters/muxers. Reuses FfmpegCapabilities
         // for filters/protocols to avoid duplicate shell calls.
         services.AddSingleton<IFfmpegCapabilityProbe, FfmpegCapabilityProbe>();
+        // The probe's hosted service gates on boot completion via
+        // IServerPhaseTracker. TryAdd a default so the encoder module is
+        // self-contained; the Service host registers the process-wide shared
+        // tracker (same instance) and wins last in production.
+        services.TryAddSingleton<IServerPhaseTracker>(sp =>
+            ServerPhaseTracker.Shared(sp.GetService<ILogger<ServerPhaseTracker>>())
+        );
         services.AddHostedService<FfmpegCapabilityProbeBackgroundService>();
 
         // BuiltinPresetSeeder retired — Service-side EncodingPresetsSeed

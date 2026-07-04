@@ -13,41 +13,59 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
-using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
+using NoMercy.Providers.AcoustId;
 using NoMercy.Storage;
-using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 
+using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Code
 // ---------------------------------------------------------------------------------------------------------------------
 [Serializable]
-public abstract class AbstractMusicFolderJob : IShouldQueue, IJobStorageInjector
+public abstract class AbstractMusicFolderJob : IShouldQueue
 {
+    protected AbstractMusicFolderJob() { }
+
+    protected AbstractMusicFolderJob(
+        IStorageFactory storageFactory,
+        IStorageDriver storageDriver,
+        IAudioFingerprinter audioFingerprinter,
+        ILoggerFactory loggerFactory
+    )
+    {
+        StorageFactory = storageFactory;
+        StorageDriver = storageDriver;
+        AudioFingerprinter = audioFingerprinter;
+        LoggerFactory = loggerFactory;
+    }
+
     public string InputFolder { get; set; } = string.Empty;
     public Ulid LibraryId { get; set; }
     public Ulid FolderId { get; set; }
     public Guid ReleaseId { get; set; }
 
     [JsonIgnore]
-    public IStorageFactory StorageFactory { get; set; } = null!;
+    public IStorageFactory StorageFactory { get; private set; } = null!;
 
     [JsonIgnore]
-    public IStorageDriver StorageDriver { get; set; } = null!;
+    public IStorageDriver StorageDriver { get; private set; } = null!;
+
+    [JsonIgnore]
+    public IAudioFingerprinter AudioFingerprinter { get; private set; } = null!;
+
+    [JsonIgnore]
+    public ILoggerFactory LoggerFactory { get; private set; } = null!;
+
+    [JsonIgnore]
+    protected ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
 
     public abstract string QueueName { get; }
     public abstract int Priority { get; }
 
     public abstract Task Handle();
-
-    public void InjectStorageServices(IServiceProvider serviceProvider)
-    {
-        StorageFactory = serviceProvider.GetRequiredService<IStorageFactory>();
-        StorageDriver = serviceProvider.GetRequiredService<IStorageDriver>();
-    }
 
     public void Dispose() { }
 }

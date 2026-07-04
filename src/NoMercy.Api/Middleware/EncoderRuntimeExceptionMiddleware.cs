@@ -11,11 +11,10 @@
 
 using System.Net.Mime;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using NoMercy.Encoder.Errors;
-using NoMercy.NmSystem.SystemCalls;
-using Serilog.Events;
 
 namespace NoMercy.Api.Middleware;
 
@@ -40,9 +39,15 @@ public class EncoderRuntimeExceptionMiddleware
         NullValueHandling = NullValueHandling.Ignore,
     };
 
-    public EncoderRuntimeExceptionMiddleware(RequestDelegate next)
+    private readonly ILogger<EncoderRuntimeExceptionMiddleware> _logger;
+
+    public EncoderRuntimeExceptionMiddleware(
+        RequestDelegate next,
+        ILogger<EncoderRuntimeExceptionMiddleware> logger
+    )
     {
         _next = next;
+        _logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -55,9 +60,11 @@ public class EncoderRuntimeExceptionMiddleware
         {
             string traceId = context.TraceIdentifier;
 
-            Logger.App(
-                $"[{traceId}] EncoderRuntimeException [{ex.Shape.Id}]: {ex.Message}",
-                LogEventLevel.Warning
+            _logger.LogWarning(
+                "[{TraceId}] EncoderRuntimeException [{Id}]: {Message}",
+                traceId,
+                ex.Shape.Id,
+                ex.Message
             );
 
             // Response already in flight — can't safely overwrite headers.

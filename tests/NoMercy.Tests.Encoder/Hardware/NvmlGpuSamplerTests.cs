@@ -46,7 +46,7 @@ public class NvmlGpuSamplerTests
 
         NvmlGpuSampler sampler = new(runner.Object, NullLogger<NvmlGpuSampler>.Instance);
 
-        IReadOnlyList<GpuProcessSample> samples = sampler.SampleGpu();
+        IReadOnlyList<GpuProcessSample> samples = await sampler.SampleGpuAsync();
 
         await Task.CompletedTask;
         samples.Should().BeEmpty();
@@ -69,7 +69,7 @@ public class NvmlGpuSamplerTests
 
         NvmlGpuSampler sampler = new(runner.Object, NullLogger<NvmlGpuSampler>.Instance);
 
-        IReadOnlyList<GpuProcessSample> samples = sampler.SampleGpu();
+        IReadOnlyList<GpuProcessSample> samples = await sampler.SampleGpuAsync();
 
         await Task.CompletedTask;
         samples.Should().BeEmpty();
@@ -92,7 +92,7 @@ public class NvmlGpuSamplerTests
 
         NvmlGpuSampler sampler = new(runner.Object, NullLogger<NvmlGpuSampler>.Instance);
 
-        IReadOnlyList<GpuProcessSample> samples = sampler.SampleGpu();
+        IReadOnlyList<GpuProcessSample> samples = await sampler.SampleGpuAsync();
 
         await Task.CompletedTask;
         samples.Should().BeEmpty();
@@ -174,7 +174,7 @@ public class NvmlGpuSamplerTests
     // ------------------------------------------------------------------
 
     [Fact]
-    public void SampleGpu_caches_result_within_minimum_interval()
+    public async Task SampleGpu_caches_result_within_minimum_interval()
     {
         Mock<IProcessRunner> runner = new();
         runner
@@ -190,8 +190,8 @@ public class NvmlGpuSamplerTests
 
         NvmlGpuSampler sampler = new(runner.Object, NullLogger<NvmlGpuSampler>.Instance);
 
-        IReadOnlyList<GpuProcessSample> first = sampler.SampleGpu();
-        IReadOnlyList<GpuProcessSample> second = sampler.SampleGpu();
+        IReadOnlyList<GpuProcessSample> first = await sampler.SampleGpuAsync();
+        IReadOnlyList<GpuProcessSample> second = await sampler.SampleGpuAsync();
 
         runner.Verify(
             r =>

@@ -22,9 +22,7 @@ using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
-using NoMercy.Storage.Drivers.Nfs;
-using NoMercy.Storage.Drivers.S3;
-using NoMercy.Storage.Drivers.WebDav;
+using NoMercy.Storage.Validation;
 
 namespace NoMercy.Encoder.Orchestration;
 
@@ -116,10 +114,18 @@ public class EncodingOrchestrator(
 
         try
         {
+            // Measure staging (remote source -> local temp) separately from the
+            // encode below. On a LocalStorage source this is a no-op path return;
+            // on a remote source it is a full download that today runs BEFORE the
+            // first frame is encoded. Logging staging-vs-encode tells us whether
+            // overlapping the two (streaming ffmpeg's input) is worth the work.
+            Stopwatch stagingWatch = Stopwatch.StartNew();
             await using LocalPathLease lease = await sourceStorage.AcquireLocalPathAsync(
                 request.InputPath,
                 ct
             );
+            stagingWatch.Stop();
+            LogStaging(request.InputPath, sourceStorage, lease.Path, stagingWatch.Elapsed);
 
             EncodingResult result;
 
@@ -130,15 +136,37 @@ public class EncodingOrchestrator(
             // instead of an opaque nomercy-enc-<ulid> dir. Easy to inspect, easy
             // to wipe per show. OutputDirectory is a relative path from the
             // destination storage root; treat / and \ as portable separators.
-            string relativeOutputPath = (request.OutputDirectory ?? string.Empty)
-                .Replace('\\', '/')
-                .Trim('/');
+            string rawOutputDirectory = request.OutputDirectory ?? string.Empty;
+            // Reject rootedness (in ANY OS style, not just the host's own)
+            // before the '/' trim below ever runs: Trim('/') on a genuinely
+            // Unix-rooted path ("/etc/passwd") strips the very leading slash
+            // that marks it absolute, turning it into a "relative" segment
+            // that then re-joins right back under TranscodeRoot below —
+            // silently defeating the containment check on Linux for a path
+            // that Windows' own Path.Combine would have already discarded
+            // the root for. Checking here, cross-platform, up front, closes
+            // that gap on every platform instead of relying on the host OS
+            // to recognize its own rootedness notation.
+            if (StoragePathGuard.IsRootedAnyStyle(rawOutputDirectory))
+                throw new InvalidOperationException(
+                    $"Encoder OutputDirectory '{rawOutputDirectory}' is a rooted path. "
+                        + "OutputDirectory must resolve to a path under the transcode root — "
+                        + "check for a rooted path or '..' traversal."
+                );
+            string relativeOutputPath = rawOutputDirectory.Replace('\\', '/').Trim('/');
             string tempDir = string.IsNullOrEmpty(relativeOutputPath)
                 ? Path.Combine(StoragePaths.TranscodeRoot, $"nomercy-enc-{Ulid.NewUlid()}")
                 : Path.Combine(
                     StoragePaths.TranscodeRoot,
                     relativeOutputPath.Replace('/', Path.DirectorySeparatorChar)
                 );
+            // request.OutputDirectory is documented as relative, but nothing
+            // structurally enforces that beyond the rootedness check above: a
+            // "../.." traversal escapes TranscodeRoot just as easily as a
+            // rooted path does. Reject anything that resolves outside
+            // TranscodeRoot before it's ever created or (on the cleanup path
+            // below) recursively deleted.
+            tempDir = EnsureWithinTranscodeRoot(tempDir);
             // CreateDirectory is idempotent — returns the existing DirectoryInfo
             // when the path already exists. FFmpeg's -y overwrites any stale
             // segments from a prior run, so wiping isn't necessary and a
@@ -182,6 +210,21 @@ public class EncodingOrchestrator(
                 result = await strategy.EncodeAsync(stagedRequest, progress, ct);
                 wall.Stop();
 
+                // Sits next to the staging line so the log shows the split
+                // directly: how much of the job was transfer vs actual encode.
+                // wall spans staging+encode (it feeds total-duration stats below),
+                // so subtract staging to report encode-only here.
+                double encodeOnlySeconds = Math.Max(
+                    0,
+                    wall.Elapsed.TotalSeconds - stagingWatch.Elapsed.TotalSeconds
+                );
+                logger.LogInformation(
+                    "Encode finished in {Seconds:F1}s (excludes {Staging:F1}s staging) [{Input}]",
+                    encodeOnlySeconds,
+                    stagingWatch.Elapsed.TotalSeconds,
+                    request.InputPath
+                );
+
                 // Per-task encodes (TaskFilter set on EncodingOptions) write
                 // to a SHARED tempDir derived from the relative OutputDirectory.
                 // All decomposed tasks for a single coordinator end up pointing
@@ -224,7 +267,11 @@ public class EncodingOrchestrator(
                 {
                     try
                     {
-                        Directory.Delete(tempDir, recursive: true);
+                        // Re-validated immediately before the recursive delete —
+                        // tempDir is already containment-checked above, but a
+                        // rooted-path or traversal escape here would otherwise
+                        // recursively delete whatever directory it resolved to.
+                        Directory.Delete(EnsureWithinTranscodeRoot(tempDir), recursive: true);
                     }
                     catch (Exception cleanEx)
                     {
@@ -364,6 +411,104 @@ public class EncodingOrchestrator(
                 Status = "failed",
                 EnrichedError = errorShape,
             };
+        }
+    }
+
+    // Logs how long staging the source to a local temp file took, and the
+    // effective throughput. A LocalStorage source returns its own path unchanged
+    // (no download) — detected by the lease path matching the input — so nothing
+    // is logged for the local case. For remote sources this is the transfer that
+    // currently blocks the encode from starting; the number here is what a
+    // streaming (overlapped) input would reclaim.
+    private void LogStaging(
+        string inputPath,
+        IStorage sourceStorage,
+        string leasePath,
+        TimeSpan elapsed
+    )
+    {
+        bool staged = !string.Equals(
+            Path.GetFullPath(leasePath),
+            SafeFullPath(inputPath),
+            StringComparison.OrdinalIgnoreCase
+        );
+        if (!staged)
+            return;
+
+        long bytes = 0;
+        try
+        {
+            bytes = new FileInfo(leasePath).Length;
+        }
+        catch
+        {
+            // size is best-effort — the timing is the point
+        }
+
+        double seconds = elapsed.TotalSeconds;
+        double mbps = seconds > 0 ? bytes / 1_000_000.0 / seconds : 0;
+        logger.LogInformation(
+            "Staged source for encode: {Backend} {MB:F0} MB in {Seconds:F1}s "
+                + "({MBps:F0} MB/s, {Mbps:F0} Mbps) before ffmpeg start [{Input}]",
+            sourceStorage.Driver.BackendLabel,
+            bytes / 1_000_000.0,
+            seconds,
+            mbps,
+            mbps * 8,
+            inputPath
+        );
+    }
+
+    /// <summary>
+    /// Resolves <paramref name="candidateTempDir"/> to its canonical full path
+    /// and throws unless it is <see cref="StoragePaths.TranscodeRoot"/> itself
+    /// or a descendant of it. The candidate is built from
+    /// <c>request.OutputDirectory</c>, which is documented as storage-relative
+    /// but not structurally enforced at this boundary — a rooted path or a
+    /// ".." traversal would otherwise let <see cref="Directory.CreateDirectory"/>
+    /// and the recursive <see cref="Directory.Delete"/> below operate on an
+    /// arbitrary filesystem location instead of the transcode cache.
+    /// </summary>
+    private static string EnsureWithinTranscodeRoot(string candidateTempDir)
+    {
+        string normalizedRoot = Path.GetFullPath(StoragePaths.TranscodeRoot);
+        string normalizedTempDir = Path.GetFullPath(candidateTempDir);
+
+        string rootWithSeparator = normalizedRoot.EndsWith(Path.DirectorySeparatorChar)
+            ? normalizedRoot
+            : normalizedRoot + Path.DirectorySeparatorChar;
+
+        bool isRootItself = string.Equals(
+            normalizedTempDir,
+            normalizedRoot,
+            StringComparison.OrdinalIgnoreCase
+        );
+        bool isUnderRoot = normalizedTempDir.StartsWith(
+            rootWithSeparator,
+            StringComparison.OrdinalIgnoreCase
+        );
+
+        if (!isRootItself && !isUnderRoot)
+        {
+            throw new InvalidOperationException(
+                $"Encoder temp dir '{normalizedTempDir}' escapes the transcode root "
+                    + $"'{normalizedRoot}'. OutputDirectory must resolve to a path under "
+                    + "the transcode root — check for a rooted path or '..' traversal."
+            );
+        }
+
+        return normalizedTempDir;
+    }
+
+    private static string SafeFullPath(string path)
+    {
+        try
+        {
+            return Path.GetFullPath(path);
+        }
+        catch
+        {
+            return path;
         }
     }
 
@@ -680,13 +825,7 @@ public class EncodingOrchestrator(
                 : "Publishing artifacts to local";
         }
 
-        string backendLabel = dest.Driver switch
-        {
-            NfsStorageDriver => "NFS",
-            S3StorageDriver => "S3",
-            WebDavStorageDriver => "WebDAV",
-            _ => dest.Driver.GetType().Name,
-        };
+        string backendLabel = dest.Driver.BackendLabel;
 
         return $"Publishing artifacts to {backendLabel}";
     }

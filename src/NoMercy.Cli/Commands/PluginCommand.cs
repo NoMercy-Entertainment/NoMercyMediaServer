@@ -16,7 +16,7 @@ namespace NoMercy.Cli.Commands;
 
 internal static class PluginCommand
 {
-    public static Command Create(Option<string?> pipeOption)
+    public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
         Command listCmd = new("list") { Description = "List installed plugins" };
 
@@ -24,22 +24,22 @@ internal static class PluginCommand
             async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
-                using CliClient client = new(pipe);
+                using ICliClient client = clientFactory.Create(pipe);
                 List<PluginResponse>? plugins = await client.GetAsync<List<PluginResponse>>(
-                    "/manage/plugins",
+                    ApiRoutes.Plugins,
                     ct
                 );
 
                 if (plugins is null)
                 {
                     await Console.Error.WriteLineAsync("Could not connect to server.");
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
 
                 if (plugins.Count == 0)
                 {
                     Console.WriteLine("No plugins installed.");
-                    return 0;
+                    return (int)ExitCode.Success;
                 }
 
                 Console.WriteLine($"{"Name", -25} {"Version", -12} {"Status", -10} {"Author"}");
@@ -49,7 +49,7 @@ internal static class PluginCommand
                     Console.WriteLine($"{p.Name, -25} {p.Version, -12} {p.Status, -10} {p.Author}");
                 }
 
-                return 0;
+                return (int)ExitCode.Success;
             }
         );
 

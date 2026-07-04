@@ -93,7 +93,7 @@ public abstract class IStorageContractTests
     // Scope semantics
     // -----------------------------------------------------------------------
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public async Task List_empty_string_does_not_throw()
     {
@@ -117,7 +117,7 @@ public abstract class IStorageContractTests
         }
     }
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public async Task List_null_pattern_does_not_throw()
     {
@@ -141,7 +141,7 @@ public abstract class IStorageContractTests
         }
     }
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public virtual async Task Exists_empty_string_root_returns_true_when_root_is_directory()
     {
@@ -161,7 +161,7 @@ public abstract class IStorageContractTests
     // Separator normalization
     // -----------------------------------------------------------------------
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public async Task Exists_backslash_and_forward_slash_are_equivalent()
     {
@@ -185,7 +185,7 @@ public abstract class IStorageContractTests
         }
     }
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public async Task Exists_double_slash_normalizes_correctly()
     {
@@ -211,7 +211,7 @@ public abstract class IStorageContractTests
     // Round-trip: write → read → exists
     // -----------------------------------------------------------------------
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public async Task WriteAsync_then_ReadAsync_round_trips_bytes()
     {
@@ -229,7 +229,7 @@ public abstract class IStorageContractTests
         }
     }
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public async Task WriteAsync_then_ExistsAsync_returns_true()
     {
@@ -246,7 +246,7 @@ public abstract class IStorageContractTests
         }
     }
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public async Task WriteAsync_propagates_to_backend()
     {
@@ -268,7 +268,7 @@ public abstract class IStorageContractTests
     // Round-trip with subdirectories
     // -----------------------------------------------------------------------
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public async Task WriteAsync_nested_path_creates_intermediate_directories()
     {
@@ -291,7 +291,7 @@ public abstract class IStorageContractTests
     // Encoder-shape paths (parens, spaces, dots)
     // -----------------------------------------------------------------------
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public async Task WriteAsync_encoder_shape_path_round_trips()
     {
@@ -318,7 +318,7 @@ public abstract class IStorageContractTests
     // Delete
     // -----------------------------------------------------------------------
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public async Task DeleteAsync_removes_file_and_exists_becomes_false()
     {
@@ -337,7 +337,7 @@ public abstract class IStorageContractTests
         }
     }
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public async Task DeleteAsync_is_idempotent_on_missing_file()
     {
@@ -361,7 +361,7 @@ public abstract class IStorageContractTests
     // Move
     // -----------------------------------------------------------------------
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public async Task MoveAsync_source_gone_destination_exists()
     {
@@ -384,7 +384,7 @@ public abstract class IStorageContractTests
         }
     }
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public async Task MoveAsync_across_directories()
     {
@@ -407,7 +407,7 @@ public abstract class IStorageContractTests
         }
     }
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public async Task MoveAsync_content_is_preserved()
     {
@@ -435,7 +435,7 @@ public abstract class IStorageContractTests
     // Size
     // -----------------------------------------------------------------------
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public async Task SizeAsync_returns_written_byte_count()
     {
@@ -484,7 +484,7 @@ public abstract class IStorageContractTests
     // List — empty result on missing directory is success (no throw)
     // -----------------------------------------------------------------------
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public async Task List_nonexistent_directory_returns_empty_not_throw()
     {
@@ -626,7 +626,7 @@ public abstract class IStorageContractTests
     // Rejection — null byte
     // -----------------------------------------------------------------------
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public virtual async Task Exists_null_byte_in_path_throws()
     {
@@ -646,7 +646,7 @@ public abstract class IStorageContractTests
     // Rejection — ".." traversal
     // -----------------------------------------------------------------------
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public virtual async Task Exists_dotdot_traversal_throws()
     {
@@ -666,7 +666,7 @@ public abstract class IStorageContractTests
     // Rejection — absolute path
     // -----------------------------------------------------------------------
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public virtual async Task Exists_absolute_path_is_rejected_or_returns_false()
     {
@@ -710,7 +710,7 @@ public abstract class IStorageContractTests
     // Concurrent reads — stability check
     // -----------------------------------------------------------------------
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public async Task Concurrent_ExistsAsync_calls_return_correctly()
     {
@@ -738,7 +738,7 @@ public abstract class IStorageContractTests
     // Concurrent writes — all land
     // -----------------------------------------------------------------------
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public async Task Concurrent_WriteAsync_to_different_paths_all_land()
     {

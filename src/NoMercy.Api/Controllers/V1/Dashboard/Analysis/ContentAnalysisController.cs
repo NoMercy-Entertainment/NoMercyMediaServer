@@ -20,7 +20,6 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.ContentAnalysis;
 using NoMercy.Encoder.ContentAnalysis.Fingerprinting;
 using NoMercy.Encoder.Subtitles;
-using NoMercy.Helpers.Extensions;
 using NoMercy.Storage;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Analysis;
@@ -33,7 +32,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Analysis;
 [ApiController]
 [Tags("Dashboard Content Analysis")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "Owner")]
 [Route("api/v{version:apiVersion}/dashboard/content-analysis")]
 public class ContentAnalysisController(
     ICropDetector cropDetector,
@@ -58,8 +57,6 @@ public class ContentAnalysisController(
     [HttpGet("crop/{videoFileId}")]
     public async Task<IActionResult> DetectCrop(string videoFileId, CancellationToken ct)
     {
-        if (!User.IsOwner())
-            return UnauthorizedResponse("Only the server owner can probe crop detection");
 
         if (!Ulid.TryParse(videoFileId, out Ulid fileId))
             return BadRequestResponse("Invalid video file id");
@@ -112,8 +109,6 @@ public class ContentAnalysisController(
         CancellationToken ct
     )
     {
-        if (!User.IsOwner())
-            return UnauthorizedResponse("Only the server owner can probe OCR");
 
         if (ocrEngine is null)
             return NotImplementedResponse("Subtitle OCR engine is not registered on this build");
@@ -173,8 +168,6 @@ public class ContentAnalysisController(
         CancellationToken ct = default
     )
     {
-        if (!User.IsOwner())
-            return UnauthorizedResponse("Only the server owner can probe transcription");
 
         if (whisperTranscriber is null)
             return NotImplementedResponse("Whisper transcriber is not registered on this build");
@@ -237,8 +230,6 @@ public class ContentAnalysisController(
     [HttpPost("intro/{seasonId:int}")]
     public async Task<IActionResult> DetectIntroForSeason(int seasonId, CancellationToken ct)
     {
-        if (!User.IsOwner())
-            return UnauthorizedResponse("Only the server owner can probe intro detection");
 
         List<Episode> encoded = await videoFileRepository.GetEncodedEpisodesForSeasonAsync(
             seasonId,

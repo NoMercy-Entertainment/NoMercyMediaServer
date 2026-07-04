@@ -12,10 +12,9 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using MovieFileLibrary;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.FFProbe;
-using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
@@ -144,7 +143,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
             await Parallel.ForEachAsync(
                 directories,
-                Config.ParallelOptions,
+                SystemParallelism.Options,
                 async (directory, cancellationToken) =>
                 {
                     string folderName = Path.GetFileName(directory);
@@ -169,7 +168,8 @@ public class MediaScan : IDisposable, IAsyncDisposable
                     ConcurrentBag<MediaFile> files2 =
                         depth - 1 > 0 ? await FilesAsync(directory) : [];
 
-                    string cleanedFolderName = Str.RemoveBracketedString()
+                    string cleanedFolderName = StringExtensions
+                        .RemoveBracketedString()
                         .Replace(folderName, string.Empty)
                         .Trim();
                     string cleanedDirectory = Path.Combine(
@@ -238,7 +238,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
             Parallel.ForEach(
                 directories,
-                Config.ParallelOptions,
+                SystemParallelism.Options,
                 (directory, _) =>
                 {
                     string dir = _driver.GetFullPath(directory.ToUtf8());
@@ -263,7 +263,8 @@ public class MediaScan : IDisposable, IAsyncDisposable
                         return;
                     }
 
-                    string cleanedFolderName = Str.RemoveBracketedString()
+                    string cleanedFolderName = StringExtensions
+                        .RemoveBracketedString()
                         .Replace(folderName, string.Empty)
                         .Trim();
                     string cleanedDirectory = Path.Combine(
@@ -323,7 +324,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
             await Parallel.ForEachAsync(
                 entries,
-                Config.ParallelOptions,
+                SystemParallelism.Options,
                 async (file, cancellationToken) =>
                 {
                     file = _driver.GetFullPath(file.ToUtf8());
@@ -353,13 +354,16 @@ public class MediaScan : IDisposable, IAsyncDisposable
                     if (movieFile is not null && (isVideoFile || isAudioFile))
                     {
                         string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
-                        string cleanedFileName = Str.RemoveBracketedString()
+                        string cleanedFileName = StringExtensions
+                            .RemoveBracketedString()
                             .Replace(fileNameWithoutExtension, string.Empty)
                             .Trim();
 
-                        Match epMatch = Str.MatchEpisodePrefix().Match(cleanedFileName);
+                        Match epMatch = StringExtensions
+                            .MatchEpisodePrefix()
+                            .Match(cleanedFileName);
                         if (!epMatch.Success)
-                            epMatch = Str.MatchSeasonEpisode().Match(cleanedFileName);
+                            epMatch = StringExtensions.MatchSeasonEpisode().Match(cleanedFileName);
 
                         if (epMatch.Success && epMatch.Groups.Count >= 3)
                         {
@@ -370,7 +374,9 @@ public class MediaScan : IDisposable, IAsyncDisposable
                         }
                         else
                         {
-                            Match wordMatch = Str.MatchEpisodeWord().Match(cleanedFileName);
+                            Match wordMatch = StringExtensions
+                                .MatchEpisodeWord()
+                                .Match(cleanedFileName);
                             if (wordMatch.Success)
                             {
                                 movieFile.Episode = int.Parse(wordMatch.Groups[1].Value);
@@ -418,7 +424,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
                         Name = Path.GetFileName(file),
                         Path = file,
                         Extension = extension,
-                        Size = (int)_driver.GetFileSize(file),
+                        Size = _driver.GetFileSize(file),
                         Created = _driver.GetCreationTimeUtc(file).ToLocalTime(),
                         Modified = _driver.GetLastWriteTimeUtc(file).ToLocalTime(),
                         Accessed = _driver.GetLastAccessTimeUtc(file).ToLocalTime(),

@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Data.Sqlite;
 using NoMercy.Service.Seeds;
 
 namespace NoMercy.Tests.Setup;
@@ -42,10 +43,18 @@ public sealed class DatabaseBackupServiceTests : IDisposable
             Directory.Delete(_tempDir, recursive: true);
     }
 
+    // A real SQLite database, not a text file: the service copies through
+    // SQLite's online-backup API, which rejects anything without a valid
+    // database header.
     private string CreateFakeDb(string name = "media.db")
     {
         string path = Path.Combine(_tempDir, name);
-        File.WriteAllText(path, "fake sqlite content");
+        using SqliteConnection connection = new($"Data Source={path}; Pooling=False;");
+        connection.Open();
+        using SqliteCommand seed = connection.CreateCommand();
+        seed.CommandText =
+            "CREATE TABLE marker (content TEXT); INSERT INTO marker (content) VALUES ('fake sqlite content');";
+        seed.ExecuteNonQuery();
         return path;
     }
 
@@ -92,13 +101,15 @@ public sealed class DatabaseBackupServiceTests : IDisposable
     public void BackupBeforeMigration_BackupContentMatchesSource()
     {
         string dbPath = CreateFakeDb("media.db");
-        string expectedContent = "fake sqlite content";
 
         DatabaseBackupService.BackupBeforeMigration(dbPath, pendingMigrationCount: 1);
 
         string[] backups = Directory.GetFiles(_backupDir, "media.*.db");
-        string actualContent = File.ReadAllText(backups[0]);
-        Assert.Equal(expectedContent, actualContent);
+        using SqliteConnection backup = new($"Data Source={backups[0]}; Pooling=False;");
+        backup.Open();
+        using SqliteCommand query = backup.CreateCommand();
+        query.CommandText = "SELECT content FROM marker;";
+        Assert.Equal("fake sqlite content", (string?)query.ExecuteScalar());
     }
 
     [Fact]
@@ -183,6 +194,60 @@ public sealed class DatabaseBackupServiceTests : IDisposable
 
         Assert.Equal(2, mediaBackups.Length);
         Assert.Equal(2, queueBackups.Length);
+    }
+
+    [Fact]
+    public void BackupBeforeMigration_WalResidentUncheckpointedRow_IsIncludedInBackup()
+    {
+        string dbPath = Path.Combine(_tempDir, "wal-media.db");
+        string[] backups;
+
+        using (SqliteConnection walConnection = new($"Data Source={dbPath}"))
+        {
+            walConnection.Open();
+            using (SqliteCommand walMode = walConnection.CreateCommand())
+            {
+                walMode.CommandText = "PRAGMA journal_mode=WAL;";
+                walMode.ExecuteNonQuery();
+            }
+            using (SqliteCommand createTable = walConnection.CreateCommand())
+            {
+                createTable.CommandText =
+                    "CREATE TABLE Probe (Id INTEGER PRIMARY KEY, Value TEXT NOT NULL);";
+                createTable.ExecuteNonQuery();
+            }
+            using (SqliteCommand insert = walConnection.CreateCommand())
+            {
+                insert.CommandText = "INSERT INTO Probe (Value) VALUES ('wal-resident-row');";
+                insert.ExecuteNonQuery();
+            }
+
+            Assert.True(File.Exists(dbPath + "-wal"));
+
+            bool backedUp = DatabaseBackupService.BackupBeforeMigration(
+                dbPath,
+                pendingMigrationCount: 1
+            );
+
+            Assert.True(backedUp);
+            backups = Directory.GetFiles(_backupDir, "wal-media.*.db");
+            Assert.Single(backups);
+        }
+
+        SqliteConnection.ClearAllPools();
+
+        object? value;
+        using (SqliteConnection verifyConnection = new($"Data Source={backups[0]}"))
+        {
+            verifyConnection.Open();
+            using SqliteCommand select = verifyConnection.CreateCommand();
+            select.CommandText = "SELECT Value FROM Probe;";
+            value = select.ExecuteScalar();
+        }
+
+        SqliteConnection.ClearAllPools();
+
+        Assert.Equal("wal-resident-row", value);
     }
 
     [Fact]

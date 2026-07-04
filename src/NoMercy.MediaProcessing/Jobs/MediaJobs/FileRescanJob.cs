@@ -19,9 +19,8 @@ using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
-
+using Microsoft.Extensions.Logging;
+using NoMercy.Storage;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -30,12 +29,21 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 [Serializable]
 public class FileRescanJob : AbstractMediaJob
 {
+    public FileRescanJob() { }
+
+    public FileRescanJob(
+        IStorageFactory storageFactory,
+        IStorageDriver storageDriver,
+        ILoggerFactory loggerFactory
+    )
+        : base(storageFactory, storageDriver, loggerFactory) { }
+
     public override string QueueName => "file";
     public override int Priority => 10;
 
     public override async Task Handle()
     {
-        Logger.App($"[FileRescanJob] Handle() entered for id={Id}, libraryId={LibraryId}");
+        Log.LogInformation("[FileRescanJob] Handle() entered for id={Id}, libraryId={LibraryId}", Id, LibraryId);
 
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
@@ -46,7 +54,7 @@ public class FileRescanJob : AbstractMediaJob
             jobDispatcher,
             context,
             StorageDriver,
-            StorageFactory
+            StorageFactory, LoggerFactory.CreateLogger<LibraryManager>()
         );
 
         Library? library = await libraryManager.RescanFiles(LibraryId, Id);
@@ -61,15 +69,15 @@ public class FileRescanJob : AbstractMediaJob
         if (EventBusProvider.IsConfigured)
         {
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent { QueryKey = [type, Id.ToString()] }
+                new LibraryRefreshedEvent { QueryKey = [type, Id.ToString()] }
             );
 
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent { QueryKey = ["libraries", LibraryId.ToString()] }
+                new LibraryRefreshedEvent { QueryKey = ["libraries", LibraryId.ToString()] }
             );
 
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent { QueryKey = ["home"] }
+                new LibraryRefreshedEvent { QueryKey = ["home"] }
             );
 
             await EventBusProvider.Current.PublishAsync(

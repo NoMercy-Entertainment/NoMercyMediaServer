@@ -17,7 +17,6 @@ using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.Services;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Libraries;
-using NoMercy.Helpers.Extensions;
 using NoMercy.Storage;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
@@ -25,7 +24,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 [ApiController]
 [Tags("Dashboard Folders")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "Moderator")]
 [Route("api/v{version:apiVersion}/dashboard/folders", Order = 10)]
 public class FolderDriverController(
     IFolderRepository folderRepository,
@@ -42,8 +41,6 @@ public class FolderDriverController(
     [Route("drivers")]
     public IActionResult GetDriverTypes()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view driver types");
 
         return Ok(DriverTypeMetadata.All);
     }
@@ -57,8 +54,6 @@ public class FolderDriverController(
     [Route("{id:ulid}/driver")]
     public async Task<IActionResult> GetDriver(Ulid id)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view folder driver");
 
         Folder? folder = await folderRepository.GetFolderByIdAsync(id);
         if (folder is null)
@@ -88,8 +83,6 @@ public class FolderDriverController(
     [Route("{id:ulid}/driver")]
     public async Task<IActionResult> AssignDriver(Ulid id, [FromBody] FolderDriverAssignDto request)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to update folder driver");
 
         if (string.IsNullOrWhiteSpace(request.DriverId))
             return BadRequestResponse("driver_id is required. Every folder must have a driver.");

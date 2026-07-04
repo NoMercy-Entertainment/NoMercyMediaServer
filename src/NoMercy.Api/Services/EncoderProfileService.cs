@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
@@ -17,8 +18,6 @@ using NoMercy.Database.Activity;
 using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Profiles;
-using NoMercy.NmSystem.SystemCalls;
-using Serilog.Events;
 
 namespace NoMercy.Api.Services;
 
@@ -31,7 +30,8 @@ public class EncoderProfileService(
     IEncodingPresetRepository presetRepository,
     IActivityLogger activityLogger,
     IHttpClientFactory httpClientFactory,
-    MediaContext mediaContext
+    MediaContext mediaContext,
+    ILogger<EncoderProfileService> logger
 )
 {
     // -------------------------------------------------------------------------
@@ -145,7 +145,7 @@ public class EncoderProfileService(
                 EarlyResponse = BuildPreviewErrorResponse(
                     id,
                     sourcePath,
-                    EncoderRuleId.ProfileNameMissing,
+                    EncoderRuleId.ImportSourceMissing,
                     "profile_json",
                     "profile_json is required.",
                     "Supply the full profile JSON in the profile_json field."
@@ -165,7 +165,7 @@ public class EncoderProfileService(
                 EarlyResponse = BuildPreviewErrorResponse(
                     id,
                     sourcePath,
-                    EncoderRuleId.ProfileNameMissing,
+                    EncoderRuleId.ImportJsonMalformed,
                     "profile_json",
                     $"Profile JSON is malformed: {ex.Message}",
                     "Fix the JSON syntax error and resubmit."
@@ -180,7 +180,7 @@ public class EncoderProfileService(
                 EarlyResponse = BuildPreviewErrorResponse(
                     id,
                     sourcePath,
-                    EncoderRuleId.ProfileNameMissing,
+                    EncoderRuleId.ImportJsonMalformed,
                     "profile_json",
                     "Profile JSON deserialized to null — check the outer object is present.",
                     "Ensure the JSON root is an object, not null or an array."
@@ -257,7 +257,7 @@ public class EncoderProfileService(
                 {
                     ValidationError = ValidationEnvelope.FromRules([
                         new EncoderRule(
-                            EncoderRuleId.ImportHttpNotHttps,
+                            EncoderRuleId.ImportFetchFailed,
                             EncoderRuleSeverity.Error,
                             "url",
                             $"Failed to fetch profile from URL: {ex.Message}",
@@ -275,7 +275,7 @@ public class EncoderProfileService(
             {
                 ValidationError = ValidationEnvelope.FromRules([
                     new EncoderRule(
-                        EncoderRuleId.ProfileNameMissing,
+                        EncoderRuleId.ImportSourceMissing,
                         EncoderRuleSeverity.Error,
                         "profile_json",
                         "Either profile_json or url must be provided.",
@@ -297,7 +297,7 @@ public class EncoderProfileService(
             {
                 ValidationError = ValidationEnvelope.FromRules([
                     new EncoderRule(
-                        EncoderRuleId.ProfileNameMissing,
+                        EncoderRuleId.ImportJsonMalformed,
                         EncoderRuleSeverity.Error,
                         "profile_json",
                         $"Profile JSON is malformed: {ex.Message}",
@@ -313,7 +313,7 @@ public class EncoderProfileService(
             {
                 ValidationError = ValidationEnvelope.FromRules([
                     new EncoderRule(
-                        EncoderRuleId.ProfileNameMissing,
+                        EncoderRuleId.ImportJsonMalformed,
                         EncoderRuleSeverity.Error,
                         "profile_json",
                         "Profile JSON deserialized to null — check the outer object is present.",
@@ -457,7 +457,7 @@ public class EncoderProfileService(
         }
         catch (Exception ex)
         {
-            Logger.App($"Failed to log failure.config_save: {ex.Message}", LogEventLevel.Warning);
+            logger.LogWarning("Failed to log failure.config_save: {Message}", ex.Message);
         }
     }
 
@@ -481,10 +481,7 @@ public class EncoderProfileService(
         }
         catch (Exception ex)
         {
-            Logger.App(
-                $"Failed to log encoder profile config: {ex.Message}",
-                LogEventLevel.Warning
-            );
+            logger.LogWarning("Failed to log encoder profile config: {Message}", ex.Message);
         }
     }
 }

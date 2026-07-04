@@ -163,29 +163,41 @@ public class StartupParallelizationTests
     [Fact]
     public async Task Phase3_TasksRunConcurrentlyAfterAuth()
     {
-        int perTaskDurationMs = 80;
-        int taskCount = 4;
-        DateTime startTime = DateTime.UtcNow;
+        const int perTaskDurationMs = 80;
+        const int taskCount = 4;
 
-        // Simulate Auth completing first
+        // Simulate Auth completing first.
         await Task.Delay(10);
 
-        // Phase 3: all tasks in parallel
+        long[] starts = new long[taskCount];
+        long[] ends = new long[taskCount];
+
+        // Phase 3: all tasks in parallel.
         List<Task> phase3Tasks = Enumerable
             .Range(0, taskCount)
-            .Select(_ => Task.Run(async () => await Task.Delay(perTaskDurationMs)))
+            .Select(i =>
+                Task.Run(async () =>
+                {
+                    starts[i] = Stopwatch.GetTimestamp();
+                    await Task.Delay(perTaskDurationMs);
+                    ends[i] = Stopwatch.GetTimestamp();
+                })
+            )
             .ToList();
 
         await Task.WhenAll(phase3Tasks);
 
-        TimeSpan elapsed = DateTime.UtcNow - startTime;
+        // Concurrent execution means every task started before the first one
+        // finished — their windows overlap. This is robust to thread-pool
+        // scheduling jitter on CI runners, unlike an absolute elapsed-time
+        // threshold (mirrors Phase2_AuthAndBinaries_RunConcurrently).
+        long lastStart = starts.Max();
+        long firstEnd = ends.Min();
 
-        // If parallel: ~10ms (auth) + ~80ms (concurrent tasks) = ~90ms
-        // If sequential: ~10ms + 4 * 80ms = ~330ms
         Assert.True(
-            elapsed.TotalMilliseconds < perTaskDurationMs * taskCount,
-            $"Phase 3 tasks appear to have run sequentially: elapsed {elapsed.TotalMilliseconds}ms "
-                + $"(expected < {perTaskDurationMs * taskCount}ms for concurrent execution)"
+            lastStart < firstEnd,
+            "Phase 3 tasks should have overlapping execution windows when running "
+                + "concurrently (no task started after another had already finished)."
         );
     }
 

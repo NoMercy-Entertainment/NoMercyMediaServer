@@ -17,8 +17,6 @@ using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.MediaProcessing.Common;
-using NoMercy.NmSystem.Extensions;
-using NoMercy.Providers.Other;
 using NoMercy.Providers.TMDB.Models.TV;
 
 namespace NoMercy.MediaProcessing.Shows;
@@ -81,6 +79,36 @@ public class ShowRepository(MediaContext context) : IShowRepository
         await context
             .Similar.Where(r => r.MediaId == tv.Id && r.TvToId == null)
             .ExecuteUpdateAsync(s => s.SetProperty(r => r.TvToId, tv.Id));
+    }
+
+    public async Task Remove(int id)
+    {
+        // SQLite schema uses DeleteBehavior.Restrict globally. Disable FK
+        // enforcement on this pinned connection so the show and all its
+        // dependents are removed atomically, mirroring
+        // Data.Repositories.TvShowRepository.DeleteAsync.
+        bool ownsConnection =
+            context.Database.GetDbConnection().State != System.Data.ConnectionState.Open;
+        if (ownsConnection)
+            await context.Database.OpenConnectionAsync();
+
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF");
+            try
+            {
+                await context.Tvs.Where(tv => tv.Id == id).ExecuteDeleteAsync();
+            }
+            finally
+            {
+                await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON");
+            }
+        }
+        finally
+        {
+            if (ownsConnection)
+                await context.Database.CloseConnectionAsync();
+        }
     }
 
     public Task LinkToLibrary(Library library, Tv tv)
@@ -339,24 +367,6 @@ public class ShowRepository(MediaContext context) : IShowRepository
             .On(v => new { v.CompanyId, v.TvId })
             .WhenMatched((ts, ti) => new() { CompanyId = ti.CompanyId, TvId = ti.TvId })
             .RunAsync();
-    }
-
-    public async Task<string> GetMediaTypeAsync(TmdbTvShowAppends show)
-    {
-        bool isAnime = await KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear());
-
-        // Kitsu alone isn't enough — require Japanese origin country from TMDB to avoid
-        // false positives on western shows that have Kitsu entries (e.g. co-productions).
-        if (isAnime)
-        {
-            bool hasJapaneseOrigin = show.OriginCountry.Any(c =>
-                string.Equals(c, "JP", StringComparison.OrdinalIgnoreCase)
-            );
-            if (!hasJapaneseOrigin)
-                isAnime = false;
-        }
-
-        return isAnime ? "anime" : "tv";
     }
 
     public Task StoreWatchProviders(List<WatchProvider> watchProviders)

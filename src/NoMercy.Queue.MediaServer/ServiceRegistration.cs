@@ -11,12 +11,14 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using NoMercy.NmSystem.Information;
+using Microsoft.Extensions.Options;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.Queue.MediaServer.Configuration;
 using NoMercy.Resources;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
+using NoMercyQueue.Core.Resources;
 
 namespace NoMercy.Queue.MediaServer;
 
@@ -26,11 +28,18 @@ public static class ServiceRegistration
     {
         services.AddSingleton<IQueueContext>(_ => new EfQueueContextAdapter());
         services.AddSingleton<IConfigurationStore, MediaConfigurationStore>();
-        services.AddSingleton(_ => new ResourceBudgetOptions(
-            CpuHeadroomPercent: Config.EncoderCpuHeadroomPercent,
-            GpuHeadroomPercent: Config.EncoderGpuHeadroomPercent,
-            MinFreeMemoryMb: Config.EncoderMinFreeMemoryMb
-        ));
+        services.AddSingleton(sp =>
+        {
+            EncoderResourceConfig resources = sp.GetRequiredService<
+                IOptions<EncoderResourceConfig>
+            >().Value;
+
+            return new ResourceBudgetOptions(
+                CpuHeadroomPercent: resources.EncoderCpuHeadroomPercent,
+                GpuHeadroomPercent: resources.EncoderGpuHeadroomPercent,
+                MinFreeMemoryMb: resources.EncoderMinFreeMemoryMb
+            );
+        });
         services.AddSingleton<QueueRunner>(sp =>
         {
             IQueueContext queueContext = sp.GetRequiredService<IQueueContext>();
@@ -40,23 +49,44 @@ public static class ServiceRegistration
             NmSystem.Lifecycle.IServerPhaseTracker? phaseTracker =
                 sp.GetService<NmSystem.Lifecycle.IServerPhaseTracker>();
             IResourceBudget? resourceBudget = sp.GetService<IResourceBudget>();
+            RuntimeServerSettings rs = sp.GetRequiredService<RuntimeServerSettings>();
             QueueConfiguration configuration = new()
             {
                 WorkerCounts = new()
                 {
-                    [Config.LibraryWorkers.Key] = Config.LibraryWorkers.Value,
-                    [Config.ImportWorkers.Key] = Config.ImportWorkers.Value,
-                    [Config.ExtrasWorkers.Key] = Config.ExtrasWorkers.Value,
-                    [Config.EncoderWorkers.Key] = Config.EncoderWorkers.Value,
-                    [Config.GpuEncoderWorkers.Key] = Config.GpuEncoderWorkers.Value,
-                    [Config.CpuEncoderWorkers.Key] = Config.CpuEncoderWorkers.Value,
-                    [Config.CronWorkers.Key] = Config.CronWorkers.Value,
-                    [Config.ImageWorkers.Key] = Config.ImageWorkers.Value,
-                    [Config.FileWorkers.Key] = Config.FileWorkers.Value,
-                    [Config.MusicWorkers.Key] = Config.MusicWorkers.Value,
-                    [Config.PaletteWorkers.Key] = Config.PaletteWorkers.Value,
+                    [rs.LibraryWorkers.Key] = rs.LibraryWorkers.Value,
+                    [rs.ImportWorkers.Key] = rs.ImportWorkers.Value,
+                    [rs.ExtrasWorkers.Key] = rs.ExtrasWorkers.Value,
+                    [rs.EncoderWorkers.Key] = rs.EncoderWorkers.Value,
+                    [rs.GpuEncoderWorkers.Key] = rs.GpuEncoderWorkers.Value,
+                    [rs.CpuEncoderWorkers.Key] = rs.CpuEncoderWorkers.Value,
+                    [rs.CronWorkers.Key] = rs.CronWorkers.Value,
+                    [rs.ImageWorkers.Key] = rs.ImageWorkers.Value,
+                    [rs.FileWorkers.Key] = rs.FileWorkers.Value,
+                    [rs.MusicWorkers.Key] = rs.MusicWorkers.Value,
+                    [rs.PaletteWorkers.Key] = rs.PaletteWorkers.Value,
                 },
             };
+            IReadOnlySet<string> resourceAwareQueues = new HashSet<string>
+            {
+                rs.GpuEncoderWorkers.Key,
+                rs.CpuEncoderWorkers.Key,
+            };
+
+            // Encoder queues must not run until GPU/encoder detection
+            // (BootStage.Hardware) completes. Detection is deferred to run after
+            // the server is ready (BootStage.All), so these queues wait on both and
+            // surface as paused in the dashboard until detection finishes.
+            NmSystem.Lifecycle.BootStage encoderReady =
+                NmSystem.Lifecycle.BootStage.All | NmSystem.Lifecycle.BootStage.Hardware;
+            IReadOnlyDictionary<string, NmSystem.Lifecycle.BootStage> queueReadyStages =
+                new Dictionary<string, NmSystem.Lifecycle.BootStage>
+                {
+                    [rs.EncoderWorkers.Key] = encoderReady,
+                    [rs.GpuEncoderWorkers.Key] = encoderReady,
+                    [rs.CpuEncoderWorkers.Key] = encoderReady,
+                };
+
             return new(
                 queueContext,
                 configuration,
@@ -64,15 +94,20 @@ public static class ServiceRegistration
                 configStore,
                 scopeFactory,
                 phaseTracker,
-                resourceBudget
+                resourceBudget,
+                resourceAwareQueues,
+                queueReadyStages
             );
         });
         services.AddSingleton<JobDispatcher>(sp => sp.GetRequiredService<QueueRunner>().Dispatcher);
 
-        // Phase 4.14 — orphan job recovery on boot. Runs before QueueRunner
-        // resets reserved jobs, so we can distinguish first-time orphans
-        // (which deserve one retry) from repeat offenders (which get
-        // moved to FailedJobs).
+        // Phase 4.14 — orphan job recovery on boot. This hosted service's
+        // StartAsync only runs once ASP.NET Core starts the host (RunHost /
+        // RunWithHttpsRestart), which happens AFTER ServerBootstrapper calls
+        // QueueRunner.Initialize() (and therefore after Initialize's
+        // ResetAllReservedJobs() has already cleared every ReservedAt). Do not
+        // assume this service sees reservations Initialize() hasn't touched
+        // yet — ordering here is host-startup order, not registration order.
         services.AddHostedService<OrphanJobRecoveryHostedService>();
 
         return services;

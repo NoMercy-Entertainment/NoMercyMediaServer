@@ -14,7 +14,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercy.Encoder.Subtitles;
-using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Encoder;
 
@@ -36,11 +35,9 @@ public class EncoderOcrLanguagesController(ITesseractModelManager modelManager) 
     /// disk (<c>downloaded</c>).
     /// </summary>
     [HttpGet("languages")]
+    [Authorize(Policy = "Moderator")]
     public IActionResult GetLanguages()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view OCR language models");
-
         return Ok(
             new
             {
@@ -56,13 +53,9 @@ public class EncoderOcrLanguagesController(ITesseractModelManager modelManager) 
     /// Owner-only — downloads can be large and slow.
     /// </summary>
     [HttpPost("languages/{code}/download")]
+    [Authorize(Policy = "Owner")]
     public async Task<IActionResult> DownloadLanguage(string code, CancellationToken ct)
     {
-        if (!User.IsOwner())
-            return UnauthorizedResponse(
-                "Only the server owner can download Tesseract language models"
-            );
-
         if (string.IsNullOrWhiteSpace(code))
             return BadRequestResponse("Language code is required");
 

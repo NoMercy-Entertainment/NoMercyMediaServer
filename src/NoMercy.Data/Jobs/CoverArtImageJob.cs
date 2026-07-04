@@ -13,22 +13,44 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Music;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.CoverArt.Client;
 using NoMercy.Providers.CoverArt.Models;
 using NoMercy.Providers.MusicBrainz.Models;
 using NoMercyQueue.Core.Interfaces;
-using Serilog.Events;
-
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using NoMercyQueue;
 namespace NoMercy.Data.Jobs;
 
 [Serializable]
-public class CoverArtImageJob : IShouldQueue
+public class CoverArtImageJob : IShouldQueue, IJobStorageInjector
 {
+    [JsonIgnore]
+    public ILoggerFactory LoggerFactory { get; set; } = null!;
+
+    [JsonIgnore]
+    private ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
+
+    public void InjectStorageServices(IServiceProvider serviceProvider)
+    {
+        LoggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+    }
+
     public string QueueName => "image";
     public int Priority => 3;
 
     public MusicBrainzReleaseAppends? MusicBrainzRelease { get; set; }
+
+    // Constructor injection: the queue worker builds the job via
+    // ActivatorUtilities, so the logger factory arrives without the
+    // post-construction InjectStorageServices hook. The parameterless
+    // ctor below is kept for deserialization and direct construction.
+    [ActivatorUtilitiesConstructor]
+    public CoverArtImageJob(ILoggerFactory loggerFactory)
+    {
+        LoggerFactory = loggerFactory;
+    }
 
     public CoverArtImageJob()
     {
@@ -76,7 +98,7 @@ public class CoverArtImageJob : IShouldQueue
         {
             if (e.Message.Contains("404"))
                 return;
-            Logger.CoverArt(e.Message, LogEventLevel.Verbose);
+            Log.LogTrace(e.Message);
         }
     }
 

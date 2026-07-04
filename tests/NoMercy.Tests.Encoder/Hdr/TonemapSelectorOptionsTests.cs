@@ -122,8 +122,9 @@ public class TonemapSelectorOptionsTests
 
         TonemapPlan plan = await _selector.BuildAsync(options, null, _decisions, storage.Object);
 
-        plan.LutFilterChain.Should().Be($"lut3d={lutPath}");
-        plan.FilterStringFragment.Should().Be($"lut3d={lutPath}");
+        // The colon in the LUT path is filtergraph-escaped and quoted in the emitted filter.
+        plan.LutFilterChain.Should().Be("lut3d='C\\:/luts/film.cube'");
+        plan.FilterStringFragment.Should().Be("lut3d='C\\:/luts/film.cube'");
         plan.FilterStringFragment.Should().NotContain("tonemap=");
 
         IReadOnlyList<DecisionLog> snapshot = _decisions.Snapshot();

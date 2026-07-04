@@ -11,6 +11,7 @@
 
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Music;
 using NoMercy.MediaProcessing.Artists;
@@ -24,10 +25,8 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.MusicBrainz.Models;
 using NoMercy.Storage;
-using Serilog.Events;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.MediaProcessing.Recordings;
 
@@ -36,7 +35,8 @@ public partial class RecordingManager(
     IMusicGenreRepository musicGenreRepository,
     IArtistRepository artistRepository,
     IStorageDriver storageDriver,
-    IStorageFactory storageFactory
+    IStorageFactory storageFactory,
+    ILogger<RecordingManager> logger
 ) : BaseManager, IRecordingManager
 {
     public async Task<bool> Store(
@@ -48,9 +48,12 @@ public partial class RecordingManager(
         CoverArtImageManagerManager.CoverPalette? releaseCoverPalette
     )
     {
-        Logger.MusicBrainz(
-            $"Storing Recording: {releaseAppends.Title} - {musicBrainzMedia.Position}-{musicBrainzTrack.Position} {musicBrainzTrack.Title}",
-            LogEventLevel.Verbose
+        logger.LogTrace(
+            "Storing Recording: {Title} - {Position}-{Position2} {Title2}",
+            releaseAppends.Title,
+            musicBrainzMedia.Position,
+            musicBrainzTrack.Position,
+            musicBrainzTrack.Title
         );
 
         MediaScan mediaScan = new(storageDriver);
@@ -77,14 +80,11 @@ public partial class RecordingManager(
                 TagFile? tagFile = file.TagFile;
                 if (tagFile == null || mediaFile.FFprobe == null)
                 {
-                    Logger.MusicBrainz($"File not found: {file.Name}", LogEventLevel.Error);
+                    logger.LogError("File not found: {Name}", file.Name);
                     continue;
                 }
 
-                Logger.MusicBrainz(
-                    $"Recording {musicBrainzTrack.Title} found",
-                    LogEventLevel.Verbose
-                );
+                logger.LogTrace("Recording {Title} found", musicBrainzTrack.Title);
 
                 string path =
                     mediaFile
@@ -152,10 +152,7 @@ public partial class RecordingManager(
 
                 new JobDispatcher().DispatchColorPaletteJob("track", insert.Id.ToString());
 
-                Logger.MusicBrainz(
-                    $"Recording {musicBrainzTrack.Title} stored",
-                    LogEventLevel.Verbose
-                );
+                logger.LogTrace("Recording {Title} stored", musicBrainzTrack.Title);
 
                 return true;
             }
@@ -169,9 +166,10 @@ public partial class RecordingManager(
         MusicBrainzReleaseAppends releaseAppends
     )
     {
-        Logger.MusicBrainz(
-            $"Linking Recording to Artist: {musicBrainzTrack.Title} - {releaseAppends.MusicBrainzReleaseGroup.Title}",
-            LogEventLevel.Verbose
+        logger.LogTrace(
+            "Linking Recording to Artist: {Title} - {Title2}",
+            musicBrainzTrack.Title,
+            releaseAppends.MusicBrainzReleaseGroup.Title
         );
 
         foreach (ReleaseArtistCredit credit in releaseAppends.ArtistCredit)
@@ -188,10 +186,7 @@ public partial class RecordingManager(
 
     private async Task LinkToRelease(Track track, MusicBrainzReleaseAppends releaseAppends)
     {
-        Logger.MusicBrainz(
-            $"Linking Recording to Release: {releaseAppends.Title}",
-            LogEventLevel.Verbose
-        );
+        logger.LogTrace("Linking Recording to Release: {Title}", releaseAppends.Title);
 
         AlbumTrack insert = new() { AlbumId = releaseAppends.Id, TrackId = track.Id };
 
@@ -200,7 +195,7 @@ public partial class RecordingManager(
 
     private async Task LinkToLibrary(MusicBrainzTrack track, Library library)
     {
-        Logger.MusicBrainz($"Linking Recording to Library: {track.Title}", LogEventLevel.Verbose);
+        logger.LogTrace("Linking Recording to Library: {Title}", track.Title);
 
         LibraryTrack insert = new() { LibraryId = library.Id, TrackId = track.Id };
 
@@ -209,7 +204,7 @@ public partial class RecordingManager(
 
     private async Task LinkToLibrary(Track track, Library library)
     {
-        Logger.MusicBrainz($"Linking Recording to Library: {library.Title}", LogEventLevel.Verbose);
+        logger.LogTrace("Linking Recording to Library: {Title}", library.Title);
 
         LibraryTrack insert = new() { LibraryId = library.Id, TrackId = track.Id };
 
@@ -352,7 +347,7 @@ public partial class RecordingManager(
             libraryFolder.DriverId,
             string.Empty
         );
-        return folderStorage.GetFullPath(libraryFolder.Path);
+        return FolderRootPath(folderStorage, libraryFolder.Path);
     }
 
     [GeneratedRegex("^00:")]
@@ -368,7 +363,7 @@ public partial class RecordingManager(
     )
     {
         JobDispatcher jobDispatcher = new();
-        Logger.MusicBrainz($"Recording {releaseAppends.Title} found", LogEventLevel.Verbose);
+        logger.LogTrace("Recording {Title} found", releaseAppends.Title);
 
         foreach (MusicBrainzArtistAppends artist in artistAppends)
         {
@@ -415,7 +410,7 @@ public partial class RecordingManager(
             }
             catch (Exception e)
             {
-                Logger.MusicBrainz(e, LogEventLevel.Error);
+                logger.LogError(e, "Failed to store recording artist metadata");
             }
         }
 
@@ -483,7 +478,7 @@ public partial class RecordingManager(
         if (genres.Count > 0)
             await musicGenreRepository.LinkToRecording(genres);
 
-        Logger.MusicBrainz($"Recording {trackAppends.Title} stored", LogEventLevel.Verbose);
+        logger.LogTrace("Recording {Title} stored", trackAppends.Title);
     }
 
     private async Task LinkToArtist(Track insert, MusicBrainzArtistAppends[] artistAppends)

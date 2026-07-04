@@ -33,7 +33,7 @@ public record AlbumTrackDto
     public Uri Link { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("date")]
     public DateTime? Date { get; set; }

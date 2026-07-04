@@ -158,6 +158,14 @@ public class JsonRemoteWorkerRegistry : IRemoteWorkerRegistry
                 if (!Uri.TryCreate(entry.BaseUrl, UriKind.Absolute, out Uri? baseUri))
                     continue;
 
+                // An HttpRemoteWorker must address an http(s) endpoint. .NET on
+                // Unix parses a rooted path like "/foo" into an absolute file:// URI,
+                // so guard the scheme explicitly to drop non-network entries
+                // consistently across platforms.
+                if (baseUri.Scheme != Uri.UriSchemeHttp
+                    && baseUri.Scheme != Uri.UriSchemeHttps)
+                    continue;
+
                 HttpClient http = _httpClientFactory.CreateClient("remote-worker");
                 http.BaseAddress = baseUri;
                 http.Timeout = TimeSpan.FromMinutes(10);

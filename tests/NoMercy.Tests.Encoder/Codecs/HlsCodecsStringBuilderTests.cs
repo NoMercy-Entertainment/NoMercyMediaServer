@@ -110,6 +110,14 @@ public class HlsCodecsStringBuilderTests
         HlsCodecsStringBuilder.AudioCodecString(encoder, heAac).Should().Be(expected);
     }
 
+    [Fact]
+    public void AudioCodecString_Copy_ReturnsNullInsteadOfLying()
+    {
+        // Same reasoning as VideoCodecString_Copy — the source audio codec
+        // could be anything; defaulting to mp4a.40.2 (AAC-LC) misdeclares it.
+        HlsCodecsStringBuilder.AudioCodecString("copy").Should().BeNull();
+    }
+
     // ── VideoCodecString dispatch via classifier ────────────────────────────
 
     [Theory]
@@ -142,6 +150,24 @@ public class HlsCodecsStringBuilderTests
             .VideoCodecString("totally_unknown_encoder", null, null, false)
             .Should()
             .Be("avc1.640028");
+    }
+
+    [Fact]
+    public void VideoCodecString_Copy_ReturnsNullInsteadOfLying()
+    {
+        // "copy" passes the source stream through untouched — the real codec
+        // could be HEVC, AV1, VP9, anything. Falling back to the H.264 default
+        // (the pre-fix behavior) makes the master playlist advertise the
+        // wrong codec, which some players (hls.js) hard-reject.
+        HlsCodecsStringBuilder.VideoCodecString("copy", null, null, false).Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("COPY")]
+    [InlineData("Copy")]
+    public void VideoCodecString_CopyCaseInsensitive_ReturnsNull(string encoder)
+    {
+        HlsCodecsStringBuilder.VideoCodecString(encoder, "high", "4.0", false).Should().BeNull();
     }
 
     // ── ParseH264Level numeric input ───────────────────────────────────────

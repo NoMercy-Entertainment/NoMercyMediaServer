@@ -14,11 +14,11 @@ using System.Text;
 using System.Web;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
-using NoMercy.Helpers.Extensions;
-using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Middleware;
 
@@ -26,9 +26,12 @@ public class AccessLogMiddleware
 {
     private readonly RequestDelegate _next;
 
-    public AccessLogMiddleware(RequestDelegate next)
+    private readonly ILogger<AccessLogMiddleware> _logger;
+
+    public AccessLogMiddleware(RequestDelegate next, ILogger<AccessLogMiddleware> logger)
     {
         _next = next;
+        _logger = logger;
     }
 
     private readonly string[] _ignoredStartsWithRoutes =
@@ -92,7 +95,7 @@ public class AccessLogMiddleware
         );
 
         // Skip logging for file access paths (folder ID prefix)
-        bool isFolderPath = ClaimsPrincipleExtensions.FolderIds.Any(x =>
+        bool isFolderPath = UserCache.Current.FolderIds.Any(x =>
             path.StartsWith("/" + x, StringComparison.OrdinalIgnoreCase)
         );
 
@@ -115,7 +118,11 @@ public class AccessLogMiddleware
                 return;
             }
 
-            Logger.Http($"Unknown: {context.Connection.RemoteIpAddress}: {path} (No GUID)");
+            _logger.LogInformation(
+                "Unknown: {RemoteIpAddress}: {Path} (No GUID)",
+                context.Connection.RemoteIpAddress,
+                path
+            );
             await WriteProblemAsync(
                 context,
                 statusCode: 401,
@@ -135,8 +142,10 @@ public class AccessLogMiddleware
                 return;
             }
 
-            Logger.Http(
-                $"Unknown: {context.Connection.RemoteIpAddress}: {path} (Malformed or empty GUID)"
+            _logger.LogInformation(
+                "Unknown: {RemoteIpAddress}: {Path} (Malformed or empty GUID)",
+                context.Connection.RemoteIpAddress,
+                path
             );
             await WriteProblemAsync(
                 context,
@@ -159,18 +168,22 @@ public class AccessLogMiddleware
             return;
         }
 
-        User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
+        User? user = UserCache.Current.Users.FirstOrDefault(x => x.Id.Equals(userId));
         if (user is null)
         {
             // User cache may not be populated yet during startup — try refreshing from DB
             MediaContext mediaContext = context.RequestServices.GetRequiredService<MediaContext>();
-            await ClaimsPrincipleExtensions.RefreshUsersAsync(mediaContext);
-            user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
+            await UserCache.Current.RefreshUsersAsync(mediaContext);
+            user = UserCache.Current.Users.FirstOrDefault(x => x.Id.Equals(userId));
         }
 
         if (user is null)
         {
-            Logger.Http($"Unknown: {context.Connection.RemoteIpAddress}: {path} (User not found)");
+            _logger.LogInformation(
+                "Unknown: {RemoteIpAddress}: {Path} (User not found)",
+                context.Connection.RemoteIpAddress,
+                path
+            );
             await WriteProblemAsync(
                 context,
                 statusCode: 401,
@@ -182,7 +195,7 @@ public class AccessLogMiddleware
             return;
         }
 
-        Logger.Http($"{user.Name}: {path}");
+        _logger.LogInformation("{Name}: {Path}", user.Name, path);
 
         await _next(context);
     }

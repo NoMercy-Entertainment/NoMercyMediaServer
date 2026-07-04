@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -10,94 +10,53 @@
 // -----------------------------------------------------------------------------
 
 using System.Net;
-using Microsoft.AspNetCore.WebUtilities;
-using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.Abstractions;
 using NoMercy.Providers.Helpers;
 using NoMercy.Setup.Server;
 using Serilog.Events;
 
 namespace NoMercy.Providers.MusixMatch.Client;
 
-public class MusixMatchBaseClient : IDisposable
+public class MusixMatchBaseClient : ExternalApiClient
 {
-    private readonly Uri _baseUrl = new("https://apic-desktop.musixmatch.com/ws/1.1/");
-
-    private readonly HttpClient _client;
-
-    protected MusixMatchBaseClient()
-    {
-        _client = HttpClientProvider.CreateClient(HttpClientNames.MusixMatch);
-        _client.BaseAddress ??= _baseUrl;
-    }
+    protected MusixMatchBaseClient() { }
 
     protected MusixMatchBaseClient(Guid id)
+        : base(id) { }
+
+    protected override string HttpClientName => HttpClientNames.MusixMatch;
+    protected override Uri BaseUrl => new("https://apic-desktop.musixmatch.com/ws/1.1/");
+    protected override int ConcurrentRequests => 2;
+
+    protected override void LogRequest(string url) => Logger.MusixMatch(url, LogEventLevel.Verbose);
+
+    // Fixed, non-secret parameters required on every call. Safe to log/cache.
+    protected override void AugmentQuery(Dictionary<string, string?> query)
     {
-        _client = HttpClientProvider.CreateClient(HttpClientNames.MusixMatch);
-        _client.BaseAddress ??= _baseUrl;
-        Id = id;
+        query["format"] = "json";
+        query["namespace"] = "lyrics_richsynched";
+        query["subtitle_format"] = "mxm";
+        query["app_id"] = "web-desktop-app-v1.0";
     }
 
-    private static Queue? _queue;
-
-    private static Queue GetQueue()
+    // The rolling user token is a secret: MusixMatch's API only accepts it as a
+    // query parameter (it is not honoured as a header), so it is injected at
+    // request time and deliberately kept out of cache filenames and the request
+    // log, which previously leaked it on every call.
+    protected override void AddSecretQuery(Dictionary<string, string?> query)
     {
-        return _queue ??= new(
-            new()
-            {
-                Concurrent = 2,
-                Interval = 1000,
-                Start = true,
-            }
-        );
+        query["usertoken"] = ApiKeyStore.Current.MusixmatchKey;
     }
 
-    protected Guid Id { get; private set; }
+    // MusixMatch returns 401 when its rolling user token rotates; soft-fail so
+    // callers can fall through to other lyric sources.
+    protected override bool ShouldSoftFail(HttpStatusCode? status) =>
+        status
+            is HttpStatusCode.NotFound
+                or HttpStatusCode.BadRequest
+                or HttpStatusCode.Unauthorized;
 
-    protected async Task<T?> Get<T>(
-        string url,
-        Dictionary<string, string?> query,
-        bool? priority = false
-    )
-        where T : class
-    {
-        query.Add("format", "json");
-        query.Add("namespace", "lyrics_richsynched");
-        query.Add("subtitle_format", "mxm");
-        query.Add("app_id", "web-desktop-app-v1.0");
-        query.Add("usertoken", ApiKeyStore.Current.MusixmatchKey);
-
-        string newUrl = QueryHelpers.AddQueryString(url, query);
-
-        if (CacheController.Read(newUrl, out T? result))
-            return result;
-
-        Logger.MusixMatch(_baseUrl + newUrl, LogEventLevel.Verbose);
-
-        try
-        {
-            string response = await GetQueue()
-                .Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
-
-            await CacheController.Write(newUrl, response);
-            return response.FromJson<T>();
-        }
-        catch (HttpRequestException ex)
-            when (ex.StatusCode
-                    is HttpStatusCode.NotFound
-                        or HttpStatusCode.BadRequest
-                        or HttpStatusCode.Unauthorized
-            )
-        {
-            // MusixMatch returns 401 when its rolling user-token rotates;
-            // soft-fail so callers can fall through to other lyric sources.
-            Logger.MusixMatch($"HTTP {ex.StatusCode} for {newUrl}", LogEventLevel.Debug);
-            return null;
-        }
-    }
-
-    public void Dispose()
-    {
-        GC.SuppressFinalize(this);
-    }
+    protected override void OnSoftFail(HttpStatusCode? status, string url) =>
+        Logger.MusixMatch($"HTTP {status} for {url}", LogEventLevel.Debug);
 }

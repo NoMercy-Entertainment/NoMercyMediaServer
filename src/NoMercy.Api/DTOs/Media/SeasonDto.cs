@@ -35,7 +35,7 @@ public record SeasonDto
     public string? Title { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("episodes")]
     public IEnumerable<EpisodeDto> Episodes { get; set; }

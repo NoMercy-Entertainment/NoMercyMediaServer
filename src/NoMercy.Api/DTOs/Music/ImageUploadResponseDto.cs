@@ -20,5 +20,5 @@ public class ImageUploadResponseDto
     public Uri Url { get; set; } = null!;
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 }

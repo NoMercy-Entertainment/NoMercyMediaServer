@@ -11,7 +11,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 using ConfigurationModel = NoMercy.Database.Models.Common.Configuration;
@@ -25,8 +25,16 @@ public static class ConfigSeed
         Logger.Setup("Adding Configurations", LogEventLevel.Verbose);
         ConfigurationModel[] configs =
         [
-            new() { Key = "internalPort", Value = Config.InternalServerPort.ToString() },
-            new() { Key = "externalPort", Value = Config.ExternalServerPort.ToString() },
+            new()
+            {
+                Key = "internalPort",
+                Value = RuntimeServerSettings.Current.InternalServerPort.ToString(),
+            },
+            new()
+            {
+                Key = "externalPort",
+                Value = RuntimeServerSettings.Current.ExternalServerPort.ToString(),
+            },
         ];
 
         try

@@ -1,0 +1,95 @@
+name: 'Test Only (churn)'
+
+# Full test suite WITHOUT the release/version-bump pipeline, for commits whose
+# message contains [test-only]. Unlike the fast `test` job in the main pipeline
+# (Unit|ErrorHandling|Characterization only), this runs the ENTIRE solution test
+# suite — including uncategorized tests (e.g. plugins) and the ffmpeg-backed
+# integration/encoder tests — so refactor churn gets a true stability picture on
+# dev without triggering create_release (version bump + force-push).
+on:
+  push:
+    branches:
+      - dev
+      - 'refactor/**'
+
+concurrency:
+  group: test-only-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  full-test:
+    if: ${{ contains(github.event.head_commit.message, '[test-only]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+
+      - name: Setup .NET Environment
+        uses: ./.github/actions/setup-dotnet
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Fetch nomercy-ffmpeg fork (real-encode integration tests)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$(gh release list --repo NoMercy-Entertainment/nomercy-ffmpeg --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName')"
+          dest="$HOME/.local/share/NoMercy_dev/binaries/ffmpeg"
+          mkdir -p "$dest"
+          gh release download "$tag" --repo NoMercy-Entertainment/nomercy-ffmpeg --pattern 'ffmpeg-*-linux-x86_64-*.tar.gz' --dir /tmp/nmff --clobber
+          tar -xzf /tmp/nmff/ffmpeg-*-linux-x86_64-*.tar.gz -C "$dest"
+          chmod +x "$dest/ffmpeg" "$dest/ffprobe"
+          echo "NOMERCY_FFMPEG_PATH=$dest/ffmpeg" >> "$GITHUB_ENV"
+
+      - name: Run FULL test suite (all categories, all projects)
+        id: fulltest
+        run: |
+          set +e
+          dotnet test NoMercy.Server.sln \
+            --settings tests/default.runsettings \
+            --configuration Debug \
+            --verbosity minimal \
+            --logger "trx" \
+            --results-directory ./testresults \
+            --blame-hang-timeout 10m
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Surface failed tests as annotations
+        if: always()
+        run: |
+          shopt -s globstar nullglob
+          found=0
+          for f in ./testresults/**/*.trx ./testresults/*.trx; do
+            [ -f "$f" ] || continue
+            grep -oE 'testName="[^"]+"[^>]*outcome="Failed"' "$f" \
+              | sed -E 's/.*testName="([^"]+)".*/\1/' | sort -u | while read -r t; do
+                echo "::error title=Test failed::$t"
+              done
+            grep -qE 'outcome="Failed"' "$f" && found=1
+          done
+          {
+            echo "## Failed tests"
+            for f in ./testresults/**/*.trx ./testresults/*.trx; do
+              [ -f "$f" ] || continue
+              grep -oE 'testName="[^"]+"[^>]*outcome="Failed"' "$f" \
+                | sed -E 's/.*testName="([^"]+)".*/- `\1`/' | sort -u
+            done
+            echo
+            echo "(found=$found)"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "Annotated failed tests (found=$found)"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: churn-test-results
+          path: ./testresults
+
+      - name: Fail job if any test failed
+        if: steps.fulltest.outputs.exit_code != '0'
+        run: |
+          echo "Test suite exit code: ${{ steps.fulltest.outputs.exit_code }}"
+          exit 1

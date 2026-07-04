@@ -18,7 +18,7 @@ public class MediaFile
     public string Name { get; set; } = string.Empty;
     public string Path { get; set; } = string.Empty;
     public string Extension { get; set; } = string.Empty;
-    public int Size { get; set; }
+    public long Size { get; set; }
     public DateTime Created { get; set; }
     public DateTime Modified { get; set; }
     public DateTime Accessed { get; set; }

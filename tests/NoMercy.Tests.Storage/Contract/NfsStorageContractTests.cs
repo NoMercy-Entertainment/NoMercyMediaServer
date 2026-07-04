@@ -112,7 +112,7 @@ public sealed class NfsStorageContractTests : IStorageContractTests
     // NFSC-4: ExistsAsync("") root check — NFS-specific behavior documented
     // -----------------------------------------------------------------------
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public override async Task Exists_empty_string_root_returns_true_when_root_is_directory()
     {

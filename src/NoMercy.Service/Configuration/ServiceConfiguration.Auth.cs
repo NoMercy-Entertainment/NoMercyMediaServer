@@ -12,13 +12,14 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.Extensions.Primitives;
-using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Tokens;
 using NoMercy.Database.Models.Users;
-using NoMercy.Helpers.Extensions;
-using NoMercy.NmSystem.Information;
+using NoMercy.Authorization;
+using NoMercy.Service.Authorization;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Auth;
 using Serilog.Events;
@@ -46,7 +47,7 @@ public static partial class ServiceConfiguration
                             if (!Guid.TryParse(sub, out Guid userId))
                                 return false;
 
-                            User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(u =>
+                            User? user = UserCache.Current.Users.FirstOrDefault(u =>
                                 u.Id == userId
                             );
                             Logger.App($"User: {user?.Name ?? "Unknown"}");
@@ -56,6 +57,41 @@ public static partial class ServiceConfiguration
                 }
             );
 
+        // Permission policies backed by IMediaAuthorizationPolicy so endpoints can
+        // declare [Authorize(Policy = ...)] instead of imperative permission checks.
+        services
+            .AddAuthorizationBuilder()
+            .AddPolicy(
+                "Owner",
+                policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.AddRequirements(new OwnerRequirement());
+                }
+            )
+            .AddPolicy(
+                "Moderator",
+                policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.AddRequirements(new ModeratorRequirement());
+                }
+            )
+            .AddPolicy(
+                "MediaAccess",
+                policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.AddRequirements(new MediaAccessRequirement());
+                }
+            );
+
+        services.AddScoped<IAuthorizationHandler, MediaAuthorizationHandler>();
+        services.AddSingleton<
+            IAuthorizationMiddlewareResultHandler,
+            ProblemDetailsAuthorizationResultHandler
+        >();
+
         // Eagerly load cached signing key so it's available before auth init completes
         OfflineJwksCache.LoadCachedPublicKey();
 
@@ -64,16 +100,16 @@ public static partial class ServiceConfiguration
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
-                options.Authority = Config.AuthBaseUrl;
-                options.RequireHttpsMetadata = Config.AuthBaseUrl.StartsWith(
+                options.Authority = ExternalServicesConfig.Current.AuthBaseUrl;
+                options.RequireHttpsMetadata = ExternalServicesConfig.Current.AuthBaseUrl.StartsWith(
                     "https://",
                     StringComparison.OrdinalIgnoreCase
                 );
-                options.Audience = Config.TokenClientId;
+                options.Audience = ExternalServicesConfig.Current.TokenClientId;
 
                 // Enable offline token validation via cached signing keys
                 options.TokenValidationParameters.ValidateIssuerSigningKey = true;
-                options.TokenValidationParameters.ValidIssuer = Config.AuthBaseUrl;
+                options.TokenValidationParameters.ValidIssuer = ExternalServicesConfig.Current.AuthBaseUrl;
 
                 // Explicitly enforce audience validation. options.Audience already sets
                 // ValidAudience; this line makes the intent unambiguous and guards against

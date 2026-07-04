@@ -14,6 +14,7 @@ using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
+using NoMercy.Encoder.Profiles;
 
 namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 
@@ -179,6 +180,68 @@ public class BuildStageSlicingTests
         OutputPlan sliced = BuildStageSlicing.SliceForTask(plan, task);
 
         sliced.VideoOutputs.Should().BeEmpty();
+    }
+
+    // ── Burn-in subtitles: owned by Video, never by Subtitle ───────────────
+
+    [Fact]
+    public void SliceForTask_VideoTask_PreservesBurnInSubtitleForFilterGraph()
+    {
+        SubtitleOutputPlan burnIn = new(
+            OutputCodec: SubtitleCodecType.Ass,
+            Action: StreamAction.Transcode,
+            Language: "eng",
+            SourceIndex: 0,
+            MapLabel: null,
+            Policy: SubtitlePolicy.BurnIn
+        );
+        OutputPlan plan = FullPlan() with { SubtitleOutputs = [burnIn] };
+        DecomposedTask task = Task(EncodeTaskKind.Video, outputIndex: 0);
+
+        OutputPlan sliced = BuildStageSlicing.SliceForTask(plan, task);
+
+        sliced.VideoOutputs.Should().HaveCount(1);
+        sliced.SubtitleOutputs.Should().ContainSingle();
+        sliced.SubtitleOutputs[0].Policy.Should().Be(SubtitlePolicy.BurnIn);
+    }
+
+    [Fact]
+    public void SliceForTask_SubtitleTask_NeverClaimsABurnInEntry()
+    {
+        SubtitleOutputPlan burnIn = new(
+            OutputCodec: SubtitleCodecType.Ass,
+            Action: StreamAction.Transcode,
+            Language: "eng",
+            SourceIndex: 0,
+            MapLabel: null,
+            Policy: SubtitlePolicy.BurnIn
+        );
+        OutputPlan plan = FullPlan() with { SubtitleOutputs = [burnIn] };
+        DecomposedTask task = Task(EncodeTaskKind.Subtitle, outputIndex: 0);
+
+        OutputPlan sliced = BuildStageSlicing.SliceForTask(plan, task);
+
+        sliced
+            .SubtitleOutputs.Should()
+            .BeEmpty(
+                "a burn-in subtitle is rendered by the Video task's filter graph, "
+                    + "never extracted standalone — claiming it here builds an ffmpeg "
+                    + "command with an input and no output"
+            );
+    }
+
+    [Fact]
+    public void SliceForTask_SubtitleTask_StillPicksNonBurnInEntries()
+    {
+        // Regression guard on the fix above: a Subtitle task must still get
+        // its normal (non-burn-in) entries — only burn-in is excluded.
+        OutputPlan plan = FullPlan();
+        DecomposedTask task = Task(EncodeTaskKind.Subtitle, outputIndex: 1);
+
+        OutputPlan sliced = BuildStageSlicing.SliceForTask(plan, task);
+
+        sliced.SubtitleOutputs.Should().HaveCount(1);
+        sliced.SubtitleOutputs[0].SourceIndex.Should().Be(1);
     }
 
     // ── SliceForBundle (Whole-kind tasks) ───────────────────────────────────

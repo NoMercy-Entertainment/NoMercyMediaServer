@@ -9,13 +9,14 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
-using NoMercy.Helpers.Monitoring;
+using NoMercy.Monitoring;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
 using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.Data.Jobs;
@@ -59,9 +60,17 @@ public class StorageJob : IShouldQueue
                     .ThenInclude(file => file.Metadata)
             .ToListAsync();
 
+        // Deltas are summed into a thread-safe map first (plain long addition —
+        // commutative regardless of Parallel.ForEachAsync's scheduling order),
+        // then applied to the shared Usage objects in a single sequential pass
+        // below. storage.Data.X += ... is NOT atomic, and two libraries can
+        // resolve to the same StorageDto when their folders share a path —
+        // mutating it directly from inside the parallel loop lost updates.
+        ConcurrentDictionary<string, StorageUsageDelta> deltas = new();
+
         await Parallel.ForEachAsync(
             libraries,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             (library, _) =>
             {
                 List<Metadata?> movieMetaData = library
@@ -87,60 +96,98 @@ public class StorageJob : IShouldQueue
 
                 foreach (FolderLibrary folderLibraries in library.FolderLibraries)
                 {
-                    StorageDto? storage = Storage.Find(s => s.Path == folderLibraries.Folder.Path);
+                    string path = folderLibraries.Folder.Path;
+                    StorageDto? storage = Storage.Find(s => s.Path == path);
 
                     if (storage?.Data is null)
                         return default;
 
-                    if (movieMetaData.Count > 0)
-                        foreach (
-                            Metadata? metadata in movieMetaData.Where(metadata =>
-                                metadata?.HostFolder.StartsWith(
-                                    folderLibraries.Folder.Path.Replace("\\", "/")
-                                )
-                                ?? false
-                            )
-                        )
-                        {
-                            storage.Data.Movies += metadata?.MovieSize ?? 0;
-                            storage.Data.Other += metadata?.OtherSize ?? 0;
-                            storage.Data.Used += metadata?.FolderSize ?? 0;
-                        }
+                    StorageUsageDelta delta = ComputeFolderUsageDelta(
+                        path,
+                        movieMetaData,
+                        tvMetaData,
+                        albumMetaData
+                    );
 
-                    if (tvMetaData.Count > 0)
-                        foreach (
-                            Metadata? metadata in tvMetaData.Where(metadata =>
-                                metadata?.HostFolder.StartsWith(
-                                    folderLibraries.Folder.Path.Replace("\\", "/")
-                                )
-                                ?? false
-                            )
-                        )
-                        {
-                            storage.Data.Shows += metadata?.TvSize ?? 0;
-                            storage.Data.Other += metadata?.OtherSize ?? 0;
-                            storage.Data.Used += metadata?.FolderSize ?? 0;
-                        }
-
-                    if (albumMetaData.Count > 0)
-                        foreach (
-                            Metadata? metadata in albumMetaData.Where(metadata =>
-                                metadata?.HostFolder.StartsWith(
-                                    folderLibraries.Folder.Path.Replace("\\", "/")
-                                )
-                                ?? false
-                            )
-                        )
-                        {
-                            storage.Data.Music += metadata?.MusicSize ?? 0;
-                            storage.Data.Other += metadata?.OtherSize ?? 0;
-                            storage.Data.Used += metadata?.FolderSize ?? 0;
-                        }
+                    deltas.AddOrUpdate(path, delta, (_, existing) => existing.Add(delta));
                 }
 
                 return default;
             }
         );
+
+        foreach ((string path, StorageUsageDelta delta) in deltas)
+        {
+            StorageDto? storage = Storage.Find(s => s.Path == path);
+
+            if (storage?.Data is null)
+                continue;
+
+            storage.Data.Movies += delta.Movies;
+            storage.Data.Shows += delta.Shows;
+            storage.Data.Music += delta.Music;
+            storage.Data.Other += delta.Other;
+            storage.Data.Used += delta.Used;
+        }
+    }
+
+    /// <summary>
+    /// Sums the movie/tv/album metadata matching <paramref name="folderPath"/>
+    /// into a single delta. Pure and allocation-light so it can run inside the
+    /// parallel per-library loop without touching shared state.
+    /// </summary>
+    internal static StorageUsageDelta ComputeFolderUsageDelta(
+        string folderPath,
+        List<Metadata?> movieMetaData,
+        List<Metadata?> tvMetaData,
+        List<Metadata?> albumMetaData
+    )
+    {
+        string normalizedPath = folderPath.Replace("\\", "/");
+
+        long moviesDelta = 0;
+        long showsDelta = 0;
+        long musicDelta = 0;
+        long otherDelta = 0;
+        long usedDelta = 0;
+
+        if (movieMetaData.Count > 0)
+            foreach (
+                Metadata? metadata in movieMetaData.Where(metadata =>
+                    metadata?.HostFolder.StartsWith(normalizedPath) ?? false
+                )
+            )
+            {
+                moviesDelta += metadata?.MovieSize ?? 0;
+                otherDelta += metadata?.OtherSize ?? 0;
+                usedDelta += metadata?.FolderSize ?? 0;
+            }
+
+        if (tvMetaData.Count > 0)
+            foreach (
+                Metadata? metadata in tvMetaData.Where(metadata =>
+                    metadata?.HostFolder.StartsWith(normalizedPath) ?? false
+                )
+            )
+            {
+                showsDelta += metadata?.TvSize ?? 0;
+                otherDelta += metadata?.OtherSize ?? 0;
+                usedDelta += metadata?.FolderSize ?? 0;
+            }
+
+        if (albumMetaData.Count > 0)
+            foreach (
+                Metadata? metadata in albumMetaData.Where(metadata =>
+                    metadata?.HostFolder.StartsWith(normalizedPath) ?? false
+                )
+            )
+            {
+                musicDelta += metadata?.MusicSize ?? 0;
+                otherDelta += metadata?.OtherSize ?? 0;
+                usedDelta += metadata?.FolderSize ?? 0;
+            }
+
+        return new(moviesDelta, showsDelta, musicDelta, otherDelta, usedDelta);
     }
 
     private static long GetDirectorySize(DirectoryInfo directoryInfo)
@@ -159,7 +206,7 @@ public class StorageJob : IShouldQueue
     {
         await Parallel.ForEachAsync(
             folders,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             (folder, _) =>
             {
                 long size = GetDirectorySize(new(folder));
@@ -182,4 +229,29 @@ public class StorageJob : IShouldQueue
             }
         );
     }
+}
+
+/// <summary>
+/// Accumulated Movies/Shows/Music/Other/Used contribution for one folder path.
+/// Summed with plain <see langword="long"/> addition — commutative and
+/// associative, so merging it across threads via
+/// <see cref="ConcurrentDictionary{TKey,TValue}.AddOrUpdate(TKey,TValue,System.Func{TKey,TValue,TValue})"/>
+/// never loses an update regardless of task scheduling order.
+/// </summary>
+internal readonly record struct StorageUsageDelta(
+    long Movies,
+    long Shows,
+    long Music,
+    long Other,
+    long Used
+)
+{
+    public StorageUsageDelta Add(StorageUsageDelta other) =>
+        new(
+            Movies + other.Movies,
+            Shows + other.Shows,
+            Music + other.Music,
+            Other + other.Other,
+            Used + other.Used
+        );
 }

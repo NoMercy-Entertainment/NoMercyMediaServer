@@ -13,26 +13,26 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using DnsClient;
-using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Configuration;
 
 namespace NoMercy.NmSystem.Extensions;
 
 public static class HttpClientExtensions
 {
+    private const string DefaultDnsServer = "1.1.1.1";
+
     private static readonly ConcurrentDictionary<string, LookupClient> DnsClients = new();
 
-    public static HttpClient WithNoMercyUserAgent(
-        this HttpClient client
-    )
+    public static HttpClient WithNoMercyUserAgent(this HttpClient client)
     {
-        client.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(ExternalServicesConfig.Current.UserAgent);
         return client;
     }
 
-    public static HttpClient WithDns(string? dnsServer = null)
+    public static SocketsHttpHandler CreateDnsHandler(string? dnsServer = null)
     {
-        string server = dnsServer ?? Config.DnsServer;
-        SocketsHttpHandler handler = new()
+        string server = dnsServer ?? DefaultDnsServer;
+        return new SocketsHttpHandler
         {
             ConnectCallback = async (context, token) =>
             {
@@ -51,7 +51,6 @@ public static class HttpClientExtensions
                     IPAddress? address = result.Answers.ARecords().FirstOrDefault()?.Address;
                     if (address == null)
                         throw new SocketException((int)SocketError.HostNotFound);
-
                     hostEntry = new() { AddressList = [address] };
                 }
                 else
@@ -61,7 +60,6 @@ public static class HttpClientExtensions
 
                 IPEndPoint endpoint = new(hostEntry.AddressList[0], context.DnsEndPoint.Port);
                 Socket socket = new(SocketType.Stream, ProtocolType.Tcp);
-
                 try
                 {
                     await socket.ConnectAsync(endpoint, token);
@@ -74,7 +72,7 @@ public static class HttpClientExtensions
                 }
             },
         };
-
-        return new(handler);
     }
+
+    public static HttpClient WithDns(string? dnsServer = null) => new(CreateDnsHandler(dnsServer));
 }

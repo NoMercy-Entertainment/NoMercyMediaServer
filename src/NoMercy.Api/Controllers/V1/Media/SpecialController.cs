@@ -16,11 +16,11 @@ using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
+using NoMercy.Authorization;
 using NoMercy.Data.DTOs.Specials;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Media;
@@ -28,7 +28,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [ApiController]
 [Tags("Media Specials")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "MediaAccess")]
 [Route("api/v{version:apiVersion}/specials")]
 public class SpecialController(ISpecialRepository specialRepository) : BaseController
 {
@@ -39,8 +39,6 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view specials");
 
         string language = Language();
         string country = Country();
@@ -93,8 +91,6 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
     public async Task<IActionResult> Show(Ulid id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view a special");
 
         string country = Country();
 
@@ -134,8 +130,6 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
     public async Task<IActionResult> Available(Ulid id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view a special");
 
         Special? special = await specialRepository.GetSpecialAvailableAsync(userId, id);
 
@@ -164,8 +158,6 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
     public async Task<IActionResult> Watch(Ulid id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view a special");
 
         string language = Language();
         string country = Country();
@@ -212,8 +204,6 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to like a special");
 
         Special? special = await specialRepository.LikeSpecialAsync(id, userId, request.Value, ct);
 
@@ -243,8 +233,6 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to manage watch list");
 
         bool success = await specialRepository.AddToWatchListAsync(id, userId, request.Add, ct);
 

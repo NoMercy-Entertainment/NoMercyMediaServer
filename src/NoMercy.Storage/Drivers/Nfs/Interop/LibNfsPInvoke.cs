@@ -36,6 +36,10 @@ internal sealed class LibNfsPInvoke : ILibNfs
 
     public int SetVersion(IntPtr nfs, int version) => LibNfs.SetVersion(nfs, version);
 
+    public void SetClientName(IntPtr nfs, string id) => LibNfs.SetClientName(nfs, id);
+
+    public void SetVerifier(IntPtr nfs, string verifier) => LibNfs.SetVerifier(nfs, verifier);
+
     public string GetError(IntPtr nfs) => LibNfs.GetError(nfs);
 
     public int Stat64(IntPtr nfs, string path, out LibNfs.NfsStat64 stat) =>

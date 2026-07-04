@@ -19,7 +19,7 @@ using NoMercy.Database.Models.Users;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.Providers.Other;
+using NoMercy.Providers.KitsuIo;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.TV;
 
@@ -191,7 +191,16 @@ public class TvShowRepository(IDbContextFactory<MediaContext> contextFactory) : 
             .Tvs.AsNoTracking()
             .ForUser(userId)
             .Where(tv => tv.Id == id)
-            .AnyAsync(tv => tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null)), ct);
+            .AnyAsync(tv => tv.Episodes.Any(e => (
+                e.VideoFiles.Any(v => v.Folder != null)
+                || e.Tv.Episodes.Any(o =>
+                    o.SeasonNumber == e.SeasonNumber
+                    && o.VideoFiles.Any(w =>
+                        w.Folder != null
+                        && w.LastEpisodeNumber != null
+                        && o.EpisodeNumber <= e.EpisodeNumber
+                        && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))
+            )), ct);
     }
 
     public async Task<Tv?> GetPlaylistAsync(
@@ -302,7 +311,7 @@ public class TvShowRepository(IDbContextFactory<MediaContext> contextFactory) : 
         if (show == null)
             return;
 
-        bool isAnime = await KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear());
+        bool isAnime = await KitsuIoClient.IsAnime(show.Name, show.FirstAirDate.ParseYear());
 
         // Require Japanese origin to avoid false positives on western co-productions
         if (

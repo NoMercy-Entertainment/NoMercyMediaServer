@@ -20,7 +20,8 @@ using NoMercy.Events.Playback;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.SystemCalls;
+using Serilog.Events;
 
 namespace NoMercy.Api.Services.Video;
 
@@ -60,32 +61,43 @@ public class VideoPlaybackService
         Timer timer = new(
             async _ =>
             {
-                if (!_stateManager.TryGetValue(user.Id, out VideoPlayerState? playerState))
-                    return;
-                if (!playerState.PlayState || playerState.CurrentItem is null)
-                    return;
-
-                playerState.Time += TimerInterval;
-
-                if (_lastTimes.TryGetValue(user.Id, out int lastTimer) && lastTimer >= 1000)
+                // A throw from this async-void timer callback is rethrown on the thread
+                // pool and terminates the whole server, so nothing may escape here.
+                try
                 {
-                    _lastTimes[user.Id] = 0;
-                    await StoreWatchProgression(playerState, user);
-                    await PublishProgressEventAsync(user.Id, playerState);
+                    if (!_stateManager.TryGetValue(user.Id, out VideoPlayerState? playerState))
+                        return;
+                    if (!playerState.PlayState || playerState.CurrentItem is null)
+                        return;
+
+                    playerState.Time += TimerInterval;
+
+                    if (_lastTimes.TryGetValue(user.Id, out int lastTimer) && lastTimer >= 1000)
+                    {
+                        _lastTimes[user.Id] = 0;
+                        await StoreWatchProgression(playerState, user);
+                        await PublishProgressEventAsync(user.Id, playerState);
+                    }
+                    else
+                    {
+                        _lastTimes.AddOrUpdate(user.Id, 0, (_, value) => value + TimerInterval);
+                    }
+
+                    int duration = playerState.CurrentItem.Duration.ToMilliSeconds();
+
+                    if (playerState.Time < duration - TimerInterval)
+                        return;
+
+                    RemoveTimer(user.Id);
+                    await HandleTrackCompletion(user, playerState);
                 }
-                else
+                catch (Exception ex)
                 {
-                    _lastTimes.AddOrUpdate(user.Id, 0, (_, value) => value + TimerInterval);
+                    Logger.App(
+                        $"Playback timer tick failed for user {user.Id}: {ex.Message}",
+                        LogEventLevel.Error
+                    );
                 }
-
-                int duration = playerState.CurrentItem.Duration.ToMilliSeconds();
-
-                // Logger.App($"{playerState.Time}-{duration}");
-                if (playerState.Time < duration - TimerInterval)
-                    return;
-
-                RemoveTimer(user.Id);
-                await HandleTrackCompletion(user, playerState);
             },
             null,
             100,
@@ -216,7 +228,7 @@ public class VideoPlaybackService
         int duration = state.CurrentItem.Duration.ToMilliSeconds();
 
         await bus.PublishAsync(
-            new PlaybackProgressEvent
+            new PlaybackProgressUpdatedEvent
             {
                 UserId = userId,
                 MediaId = state.CurrentItem.TmdbId,
@@ -248,6 +260,27 @@ public class VideoPlaybackService
         if (state.CurrentItem is null || state.Time <= 0)
             return;
 
+        // Only the playable video types persist watch progression. Skip (never throw)
+        // for anything else — a stray type reaching the switch below used to throw and,
+        // from the async-void playback timer, take the whole server down.
+        if (
+            state.CurrentItem.PlaylistType
+            is not (
+                MediaTypes.MovieMediaType
+                or MediaTypes.TvMediaType
+                or MediaTypes.AnimeMediaType
+                or MediaTypes.CollectionMediaType
+                or MediaTypes.SpecialMediaType
+            )
+        )
+        {
+            Logger.App(
+                $"StoreWatchProgression: unsupported playlist type '{state.CurrentItem.PlaylistType}', skipping",
+                LogEventLevel.Warning
+            );
+            return;
+        }
+
         UserData userdata = new()
         {
             UserId = user.Id,
@@ -259,7 +292,9 @@ public class VideoPlaybackService
                     ? state.CurrentItem.TmdbId
                     : null,
             TvId =
-                state.CurrentItem.PlaylistType == MediaTypes.TvMediaType
+                state.CurrentItem.PlaylistType
+                is MediaTypes.TvMediaType
+                    or MediaTypes.AnimeMediaType
                     ? state.CurrentItem.TmdbId
                     : null,
             CollectionId =
@@ -287,7 +322,7 @@ public class VideoPlaybackService
                 x.UserId,
                 x.MovieId,
             }),
-            MediaTypes.TvMediaType => query.On(x => new
+            MediaTypes.TvMediaType or MediaTypes.AnimeMediaType => query.On(x => new
             {
                 x.VideoFileId,
                 x.UserId,

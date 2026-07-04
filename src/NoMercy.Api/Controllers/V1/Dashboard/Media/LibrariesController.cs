@@ -9,15 +9,16 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.Middleware;
+using NoMercy.Authorization;
 using NoMercy.Data.DTOs;
 using NoMercy.Data.Repositories;
 using NoMercy.Data.Requests;
@@ -29,17 +30,12 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Events;
 using NoMercy.Events.Library;
-using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Files;
-using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
-using NoMercyQueue.Core.Interfaces;
-using Serilog.Events;
-using EncoderProfileDto = NoMercy.Data.Logic.EncoderProfileDto;
+using EncoderProfileDto = NoMercy.Data.DTOs.Encoder.EncoderProfileDto;
+using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 
@@ -57,7 +53,8 @@ public class LibrariesController(
     IDbContextFactory<MediaContext> mediaContextFactory,
     IActivityLogger activityLogger,
     IStorageDriver storageDriver,
-    IStorageFactory storageFactory
+    IStorageFactory storageFactory,
+    ILogger<LibrariesController> logger
 ) : BaseController
 {
     [HttpGet]
@@ -65,7 +62,7 @@ public class LibrariesController(
     {
         Guid userId = User.UserId();
 
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view libraries");
 
         IEnumerable<Library> libraries = await libraryRepository.GetLibraries(userId);
@@ -83,7 +80,7 @@ public class LibrariesController(
     {
         Guid userId = User.UserId();
 
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to create a new library");
 
         try
@@ -127,7 +124,7 @@ public class LibrariesController(
             }
             catch (Exception ex)
             {
-                Logger.App($"Failed to log library created: {ex.Message}", LogEventLevel.Warning);
+                logger.LogWarning("Failed to log library created: {Message}", ex.Message);
             }
 
             return Ok(
@@ -148,11 +145,9 @@ public class LibrariesController(
 
     [HttpPatch]
     [Route("{id:ulid}")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Update(Ulid id, [FromBody] LibraryUpdateRequest request)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to update the library");
-
         Library? library = await libraryRepository.GetLibraryByIdAsync(id);
         if (library is null)
             return NotFoundResponse("Library not found");
@@ -198,7 +193,7 @@ public class LibrariesController(
         }
         catch (Exception e)
         {
-            Logger.App(e);
+            logger.LogError(e, e.Message);
             return InternalServerErrorResponse(
                 $"Something went wrong updating the library: {e.GetType().Name}: {e.Message}"
             );
@@ -219,9 +214,9 @@ public class LibrariesController(
             }
             catch (Exception ex)
             {
-                Logger.App(
-                    $"Failed to log library scan schedule change: {ex.Message}",
-                    LogEventLevel.Warning
+                logger.LogWarning(
+                    "Failed to log library scan schedule change: {Message}",
+                    ex.Message
                 );
             }
         }
@@ -246,7 +241,7 @@ public class LibrariesController(
             }
             catch (Exception e)
             {
-                Logger.App(e);
+                logger.LogError(e, e.Message);
                 return InternalServerErrorResponse(
                     $"Something went wrong updating the library folders: {e.GetType().Name}: {e.Message}"
                 );
@@ -289,7 +284,7 @@ public class LibrariesController(
             }
             catch (Exception e)
             {
-                Logger.App(e);
+                logger.LogError(e, e.Message);
                 return InternalServerErrorResponse(
                     $"Something went wrong updating the library encoder profiles: {e.GetType().Name}: {e.Message}"
                 );
@@ -309,11 +304,9 @@ public class LibrariesController(
 
     [HttpDelete]
     [Route("{id:ulid}")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Delete(Ulid id)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to delete the library");
-
         Library? library = await libraryRepository.GetLibraryByIdAsync(id);
 
         if (library is null)
@@ -333,7 +326,7 @@ public class LibrariesController(
                 MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync()
             )
             {
-                await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(refreshContext);
+                await UserCacheService.RefreshFolderIdsAsync(refreshContext);
             }
 
             if (EventBusProvider.IsConfigured)
@@ -361,7 +354,7 @@ public class LibrariesController(
             }
             catch (Exception ex)
             {
-                Logger.App($"Failed to log library removed: {ex.Message}", LogEventLevel.Warning);
+                logger.LogWarning("Failed to log library removed: {Message}", ex.Message);
             }
 
             return Ok(
@@ -375,18 +368,16 @@ public class LibrariesController(
         }
         catch (Exception e)
         {
-            Logger.App(e);
+            logger.LogError(e, e.Message);
             return InternalServerErrorResponse("Something went wrong deleting the library");
         }
     }
 
     [HttpPatch]
     [Route("sort")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Sort(Ulid id, [FromBody] LibrarySortRequest request)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to sort the libraries");
-
         List<Library> libraries = await libraryRepository.GetAllLibrariesAsync();
 
         if (libraries.Count == 0)
@@ -420,11 +411,9 @@ public class LibrariesController(
 
     [HttpPost]
     [Route("rescan")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Rescan()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to rescan all libraries");
-
         List<Library> librariesList = await libraryRepository.GetAllLibrariesAsync();
 
         if (librariesList.Count == 0)
@@ -454,11 +443,9 @@ public class LibrariesController(
 
     [HttpPost]
     [Route("{id:ulid}/rescan")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Rescan(Ulid id)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to refresh the library");
-
         Library? library = await libraryRepository.GetLibraryByIdAsync(id);
 
         if (library is null)
@@ -486,11 +473,9 @@ public class LibrariesController(
 
     [HttpPost]
     [Route("refresh")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> RefreshAll()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to refresh all libraries");
-
         List<Library> librariesList = await libraryRepository.GetAllLibrariesAsync();
 
         if (librariesList.Count == 0)
@@ -515,11 +500,9 @@ public class LibrariesController(
 
     [HttpPost]
     [Route("{id:ulid}/refresh")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Refresh(Ulid id)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to refresh the library");
-
         Library? library = await libraryRepository.GetLibraryByIdAsync(id);
 
         if (library is null)
@@ -539,11 +522,9 @@ public class LibrariesController(
 
     [HttpPost]
     [Route("scan-new")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> ScanNewAll()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to scan all libraries");
-
         List<Library> librariesList = await libraryRepository.GetAllLibrariesAsync();
 
         if (librariesList.Count == 0)
@@ -565,11 +546,9 @@ public class LibrariesController(
 
     [HttpPost]
     [Route("{id:ulid}/scan-new")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> ScanNew(Ulid id)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to scan the library");
-
         Library? library = await libraryRepository.GetLibraryByIdAsync(id);
 
         if (library is null)
@@ -589,13 +568,9 @@ public class LibrariesController(
 
     [HttpPost]
     [Route("{id:ulid}/folders")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> AddFolder(Ulid id, [FromBody] FolderRequest request)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse(
-                "You do not have permission to add a new folder to the library"
-            );
-
         Library? library = await libraryRepository.GetLibraryByIdAsync(id);
 
         if (library is null)
@@ -617,9 +592,12 @@ public class LibrariesController(
         }
         catch (Exception ex)
         {
-            Logger.App(
-                $"[AddFolder] failed for library={id} driver={request.DriverId} path='{request.Path}': {ex}",
-                LogEventLevel.Error
+            logger.LogError(
+                "[AddFolder] failed for library={Id} driver={DriverId} path='{Path}': {Ex}",
+                id,
+                request.DriverId,
+                request.Path,
+                ex
             );
             return InternalServerErrorResponse("Something went wrong adding the folder");
         }
@@ -642,7 +620,7 @@ public class LibrariesController(
         // Register the folder with the middleware directly so it can serve files immediately
         DynamicStaticFilesMiddleware.AddFolder(pathAsync.Id, pathAsync.DriverId, pathAsync.Path);
         await using MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync();
-        await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(refreshContext);
+        await UserCacheService.RefreshFolderIdsAsync(refreshContext);
 
         if (EventBusProvider.IsConfigured)
         {
@@ -669,15 +647,13 @@ public class LibrariesController(
 
     [HttpPatch]
     [Route("{id:ulid}/folders/{folderId:ulid}")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> UpdateFolder(
         Ulid id,
         Ulid folderId,
         [FromBody] FolderRequest request
     )
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to update the library folder");
-
         Folder? folder = await folderRepository.GetFolderByIdAsync(folderId);
 
         if (folder is null)
@@ -695,7 +671,7 @@ public class LibrariesController(
                 MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync()
             )
             {
-                await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(refreshContext);
+                await UserCacheService.RefreshFolderIdsAsync(refreshContext);
             }
 
             if (EventBusProvider.IsConfigured)
@@ -730,11 +706,9 @@ public class LibrariesController(
 
     [HttpDelete]
     [Route("{id:ulid}/folders/{folderId:ulid}")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> DeleteFolder(Ulid id, Ulid folderId)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to delete the library folder");
-
         Folder? folder = await folderRepository.GetFolderByIdAsync(folderId);
 
         if (folder is null)
@@ -750,7 +724,7 @@ public class LibrariesController(
                 MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync()
             )
             {
-                await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(refreshContext);
+                await UserCacheService.RefreshFolderIdsAsync(refreshContext);
             }
 
             if (EventBusProvider.IsConfigured)
@@ -774,9 +748,11 @@ public class LibrariesController(
             // Surface the underlying failure (FK constraint, missing dep,
             // event-bus crash) so future delete-folder regressions don't
             // require Stoney to grep for a generic 500 in production logs.
-            Logger.App(
-                $"[DeleteFolder] folder={folderId} library={id} failed: {ex}",
-                LogEventLevel.Error
+            logger.LogError(
+                "[DeleteFolder] folder={FolderId} library={Id} failed: {Ex}",
+                folderId,
+                id,
+                ex
             );
             return InternalServerErrorResponse("Something went wrong deleting the library folder");
         }
@@ -784,17 +760,13 @@ public class LibrariesController(
 
     [HttpPost]
     [Route("{id:ulid}/folders/{folderId:ulid}/encoder_profiles")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> AddEncoderProfile(
         Ulid id,
         Ulid folderId,
         [FromBody] ProfilesRequest request
     )
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse(
-                "You do not have permission to add a new encoder profile to the folder"
-            );
-
         Folder? folder = await folderRepository.GetFolderByIdAsync(folderId);
 
         if (folder is null)
@@ -829,15 +801,13 @@ public class LibrariesController(
 
     [HttpDelete]
     [Route("{id:ulid}/folders/{folderId:ulid}/encoder_profiles/{encoderProfileId:ulid}")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> DeleteEncoderProfile(
         Ulid id,
         Ulid folderId,
         Ulid encoderProfileId
     )
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to delete the encoder profile");
-
         EncoderProfile? encoderProfile = await encoderRepository.GetEncoderProfileByIdAsync(
             encoderProfileId
         );
@@ -866,11 +836,9 @@ public class LibrariesController(
 
     [HttpPost]
     [Route("move")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Move([FromBody] MoveRequest request)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to move the library");
-
         Folder? folder = await folderRepository.GetFolderByIdAsync(request.FolderId);
 
         if (folder is null)

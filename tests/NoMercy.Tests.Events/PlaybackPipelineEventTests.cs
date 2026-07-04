@@ -31,7 +31,7 @@ public class PlaybackPipelineEventTests
                 return Task.CompletedTask;
             }
         );
-        bus.Subscribe<PlaybackProgressEvent>(
+        bus.Subscribe<PlaybackProgressUpdatedEvent>(
             (evt, _) =>
             {
                 received.Add(evt);
@@ -59,7 +59,7 @@ public class PlaybackPipelineEventTests
         );
 
         await bus.PublishAsync(
-            new PlaybackProgressEvent
+            new PlaybackProgressUpdatedEvent
             {
                 UserId = userId,
                 MediaId = 129,
@@ -69,7 +69,7 @@ public class PlaybackPipelineEventTests
         );
 
         await bus.PublishAsync(
-            new PlaybackProgressEvent
+            new PlaybackProgressUpdatedEvent
             {
                 UserId = userId,
                 MediaId = 129,
@@ -89,8 +89,8 @@ public class PlaybackPipelineEventTests
 
         received.Should().HaveCount(4);
         received[0].Should().BeOfType<PlaybackStartedEvent>();
-        received[1].Should().BeOfType<PlaybackProgressEvent>();
-        received[2].Should().BeOfType<PlaybackProgressEvent>();
+        received[1].Should().BeOfType<PlaybackProgressUpdatedEvent>();
+        received[2].Should().BeOfType<PlaybackProgressUpdatedEvent>();
         received[3].Should().BeOfType<PlaybackCompletedEvent>();
 
         PlaybackStartedEvent started = (PlaybackStartedEvent)received[0];
@@ -99,11 +99,11 @@ public class PlaybackPipelineEventTests
         started.MediaType.Should().Be("movie");
         started.DeviceId.Should().Be("device-1");
 
-        PlaybackProgressEvent progress1 = (PlaybackProgressEvent)received[1];
+        PlaybackProgressUpdatedEvent progress1 = (PlaybackProgressUpdatedEvent)received[1];
         progress1.Position.Should().Be(TimeSpan.FromMinutes(30));
         progress1.Duration.Should().Be(TimeSpan.FromMinutes(120));
 
-        PlaybackProgressEvent progress2 = (PlaybackProgressEvent)received[2];
+        PlaybackProgressUpdatedEvent progress2 = (PlaybackProgressUpdatedEvent)received[2];
         progress2.Position.Should().Be(TimeSpan.FromMinutes(90));
 
         PlaybackCompletedEvent completed = (PlaybackCompletedEvent)received[3];
@@ -124,7 +124,7 @@ public class PlaybackPipelineEventTests
                 return Task.CompletedTask;
             }
         );
-        bus.Subscribe<PlaybackProgressEvent>(
+        bus.Subscribe<PlaybackProgressUpdatedEvent>(
             (evt, _) =>
             {
                 received.Add(evt);
@@ -154,7 +154,7 @@ public class PlaybackPipelineEventTests
         );
 
         await bus.PublishAsync(
-            new PlaybackProgressEvent
+            new PlaybackProgressUpdatedEvent
             {
                 UserId = userId,
                 MediaId = 0,
@@ -181,7 +181,7 @@ public class PlaybackPipelineEventTests
         started.MediaIdentifier.Should().Be(trackId.ToString());
         started.MediaType.Should().Be("music");
 
-        PlaybackProgressEvent progress = (PlaybackProgressEvent)received[1];
+        PlaybackProgressUpdatedEvent progress = (PlaybackProgressUpdatedEvent)received[1];
         progress.MediaIdentifier.Should().Be(trackId.ToString());
 
         PlaybackCompletedEvent completed = (PlaybackCompletedEvent)received[2];
@@ -200,7 +200,7 @@ public class PlaybackPipelineEventTests
             MediaType = "movie",
         };
 
-        PlaybackProgressEvent progress = new()
+        PlaybackProgressUpdatedEvent progress = new()
         {
             UserId = userId,
             MediaId = 1,
@@ -233,7 +233,7 @@ public class PlaybackPipelineEventTests
                 MediaId = 1,
                 MediaType = "movie",
             },
-            new PlaybackProgressEvent
+            new PlaybackProgressUpdatedEvent
             {
                 UserId = userId,
                 MediaId = 1,

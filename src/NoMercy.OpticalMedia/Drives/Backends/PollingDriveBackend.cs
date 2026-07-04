@@ -11,6 +11,7 @@
 
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
+using Microsoft.Extensions.Logging;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.SystemCalls;
 
@@ -20,7 +21,7 @@ namespace NoMercy.OpticalMedia.Drives.Backends;
 /// Cross-platform polling fallback. Diffs drive state every <see cref="PollInterval"/>
 /// against the previous snapshot and emits insert/eject events.
 /// </summary>
-public sealed class PollingDriveBackend : IDriveBackend
+public sealed class PollingDriveBackend(ILogger<PollingDriveBackend> logger) : IDriveBackend
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(5);
 
@@ -105,7 +106,7 @@ public sealed class PollingDriveBackend : IDriveBackend
             }
             catch (Exception ex)
             {
-                Logger.Ripper($"[PollingDriveBackend] {ex.Message}");
+                logger.LogInformation("[PollingDriveBackend] {Error}", ex.Message);
             }
 
             try

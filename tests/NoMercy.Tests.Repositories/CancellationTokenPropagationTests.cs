@@ -16,6 +16,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Tests.Repositories.Infrastructure;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace NoMercy.Tests.Repositories;
 
 [Trait("Category", "Unit")]
@@ -34,7 +35,7 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task MovieRepository_GetMovieAsync_ThrowsWhenCancelled()
     {
-        MovieRepository repository = new(_factory);
+        MovieRepository repository = new(_factory, NullLogger<MovieRepository>.Instance);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
@@ -46,7 +47,7 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task MovieRepository_GetMovieAvailableAsync_ThrowsWhenCancelled()
     {
-        MovieRepository repository = new(_factory);
+        MovieRepository repository = new(_factory, NullLogger<MovieRepository>.Instance);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
@@ -58,7 +59,7 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task MovieRepository_GetMoviePlaylistAsync_ThrowsWhenCancelled()
     {
-        MovieRepository repository = new(_factory);
+        MovieRepository repository = new(_factory, NullLogger<MovieRepository>.Instance);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
@@ -70,7 +71,7 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task MovieRepository_DeleteMovieAsync_ThrowsWhenCancelled()
     {
-        MovieRepository repository = new(_factory);
+        MovieRepository repository = new(_factory, NullLogger<MovieRepository>.Instance);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
@@ -192,7 +193,7 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task MovieRepository_GetMovieAsync_WorksWithDefaultToken()
     {
-        MovieRepository repository = new(_factory);
+        MovieRepository repository = new(_factory, NullLogger<MovieRepository>.Instance);
 
         Movie? movie = await repository.GetMovieAsync(SeedConstants.UserId, 129, "en", "US");
 

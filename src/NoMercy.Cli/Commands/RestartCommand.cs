@@ -15,7 +15,7 @@ namespace NoMercy.Cli.Commands;
 
 internal static class RestartCommand
 {
-    public static Command Create(Option<string?> pipeOption)
+    public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
         Command command = new("restart") { Description = "Restart the server" };
 
@@ -23,16 +23,16 @@ internal static class RestartCommand
             async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
-                using CliClient client = new(pipe);
-                bool ok = await client.PostAsync("/manage/restart", null, ct);
+                using ICliClient client = clientFactory.Create(pipe);
+                bool ok = await client.PostAsync(ApiRoutes.Restart, null, ct);
 
                 if (ok)
                 {
                     Console.WriteLine("Server restart requested.");
-                    return 0;
+                    return (int)ExitCode.Success;
                 }
 
-                return 1;
+                return (int)ExitCode.ServerError;
             }
         );
 

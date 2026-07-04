@@ -16,10 +16,9 @@ using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Api.Services;
+using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
-using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 
@@ -34,14 +33,12 @@ public class RecommendationsController(
 ) : BaseController
 {
     [HttpGet("movies")]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> GetMovieRecommendations(
         [FromQuery] int take = 200,
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view recommendations");
-
         Guid userId = User.UserId();
 
         List<RecommendationDto> recommendations =
@@ -62,14 +59,12 @@ public class RecommendationsController(
     }
 
     [HttpGet("tv")]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> GetTvRecommendations(
         [FromQuery] int take = 200,
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view recommendations");
-
         Guid userId = User.UserId();
 
         List<RecommendationDto> recommendations =
@@ -90,14 +85,12 @@ public class RecommendationsController(
     }
 
     [HttpGet("anime")]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> GetAnimeRecommendations(
         [FromQuery] int take = 200,
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view recommendations");
-
         Guid userId = User.UserId();
 
         List<RecommendationDto> recommendations =
@@ -118,11 +111,9 @@ public class RecommendationsController(
     }
 
     [HttpGet("diagnostics")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> GetDiagnostics(CancellationToken ct = default)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view diagnostics");
-
         RecommendationDiagnosticsDto diagnostics =
             await recommendationRepository.GetDiagnosticsAsync(ct);
 
@@ -143,15 +134,13 @@ public class RecommendationsController(
     }
 
     [HttpGet("{type}/{id:int}")]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> GetRecommendationDetail(
         string type,
         int id,
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view recommendations");
-
         if (type is not ("movie" or "tv" or "anime"))
             return BadRequestResponse("Type must be 'movie', 'tv', or 'anime'");
 

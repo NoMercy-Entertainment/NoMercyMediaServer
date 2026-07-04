@@ -11,12 +11,8 @@
 
 using System.Diagnostics;
 using System.Net.Sockets;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Hosting;
-using NoMercy.Networking.Certificate;
-using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Service.Seeds;
+using NoMercy.NmSystem.Configuration;
+using NoMercy.NmSystem.Status;
 using NoMercy.Setup.Auth;
 using NoMercy.Setup.Boot;
 using NoMercy.Setup.Server;
@@ -33,7 +29,8 @@ public class ServerRunner : IServerRunner
     public ServerRunner(
         ILogger<ServerRunner> logger,
         IPortManager portManager,
-        IShutdownCoordinator shutdownCoordinator)
+        IShutdownCoordinator shutdownCoordinator
+    )
     {
         _logger = logger;
         _portManager = portManager;
@@ -61,13 +58,20 @@ public class ServerRunner : IServerRunner
                 || ex.Message.Contains("address already in use", StringComparison.OrdinalIgnoreCase)
             )
         {
-            bool shouldRetry = await _portManager.HandlePortInUse(Config.InternalServerPort, ex);
+            bool shouldRetry = await _portManager.HandlePortInUse(
+                RuntimeServerSettings.Current.InternalServerPort,
+                ex
+            );
             await httpHost.DisposeAsync();
             return shouldRetry;
         }
 
-        string setupUrl = $"http://localhost:{Config.InternalServerPort}/setup";
-        _logger.LogInformation("Server is in setup mode. Please complete setup at: {SetupUrl}", setupUrl);
+        string setupUrl =
+            $"http://localhost:{RuntimeServerSettings.Current.InternalServerPort}/setup";
+        _logger.LogInformation(
+            "Server is in setup mode. Please complete setup at: {SetupUrl}",
+            setupUrl
+        );
 
         // Try to open the browser automatically if running interactively.
         if (!options.RunAsService && AuthManager.IsDesktopEnvironment())
@@ -78,8 +82,14 @@ public class ServerRunner : IServerRunner
             }
             catch (Exception ex)
             {
-                _logger.LogInformation("Could not open browser automatically: {Message}", ex.Message);
-                _logger.LogInformation("Please open your browser and navigate to: {SetupUrl}", setupUrl);
+                _logger.LogInformation(
+                    "Could not open browser automatically: {Message}",
+                    ex.Message
+                );
+                _logger.LogInformation(
+                    "Please open your browser and navigate to: {SetupUrl}",
+                    setupUrl
+                );
             }
         }
 
@@ -92,11 +102,17 @@ public class ServerRunner : IServerRunner
                 {
                     try
                     {
-                        await orchestrator.StartHeadlessDeviceCodeFlowAsync(shutdownCoordinator.Token);
+                        await orchestrator.StartHeadlessDeviceCodeFlowAsync(
+                            shutdownCoordinator.Token
+                        );
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Headless device code flow error: {Message}", ex.Message);
+                        _logger.LogError(
+                            ex,
+                            "Headless device code flow error: {Message}",
+                            ex.Message
+                        );
                     }
                 },
                 shutdownCoordinator.Token
@@ -146,9 +162,11 @@ public class ServerRunner : IServerRunner
         }
 
         // Setup completed — certificate should now be available
-        if (!Certificate.HasValidCertificate())
+        if (!Start.Certificate!.HasValidCertificate())
         {
-            _logger.LogInformation("Setup completed but certificate not found — continuing on HTTP");
+            _logger.LogInformation(
+                "Setup completed but certificate not found — continuing on HTTP"
+            );
             await httpHost.WaitForShutdownAsync(shutdownCoordinator.Token);
             await httpHost.DisposeAsync();
             return false;
@@ -159,8 +177,13 @@ public class ServerRunner : IServerRunner
         // Give the SSO callback page time to deliver its response to the browser
         await Task.Delay(3000);
 
-        // Gracefully stop the HTTP host
-        Config.Started = false;
+        // Gracefully stop the HTTP host. Cancel the old coordinator while its token
+        // source is still alive so background work bound to it winds down before the
+        // container — and the CancellationTokenSource behind _shutdownCoordinator — is
+        // disposed. Calling RequestShutdown() after DisposeAsync threw
+        // ObjectDisposedException on every cert-acquired setup restart.
+        httpHost.Services.GetRequiredService<IBootStatus>().MarkStopped();
+        _shutdownCoordinator.RequestShutdown();
         await httpHost.StopAsync(TimeSpan.FromSeconds(10));
         await httpHost.DisposeAsync();
 
@@ -170,9 +193,8 @@ public class ServerRunner : IServerRunner
 
         WebApplication httpsHost = WebHostFactory.Create(options);
 
-        _shutdownCoordinator.RequestShutdown(); // Reset existing (if any)
-        
-        IShutdownCoordinator httpsShutdownCoordinator = httpsHost.Services.GetRequiredService<IShutdownCoordinator>();
+        IShutdownCoordinator httpsShutdownCoordinator =
+            httpsHost.Services.GetRequiredService<IShutdownCoordinator>();
         IPortManager httpsPortManager = httpsHost.Services.GetRequiredService<IPortManager>();
 
         // The new DI container has a fresh AuthManager and SetupState — load tokens
@@ -211,7 +233,10 @@ public class ServerRunner : IServerRunner
                 || ex.Message.Contains("address already in use", StringComparison.OrdinalIgnoreCase)
             )
         {
-            bool shouldRetry = await _portManager.HandlePortInUse(Config.InternalServerPort, ex);
+            bool shouldRetry = await _portManager.HandlePortInUse(
+                RuntimeServerSettings.Current.InternalServerPort,
+                ex
+            );
             await host.DisposeAsync();
             return shouldRetry;
         }

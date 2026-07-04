@@ -16,7 +16,7 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.Providers.TMDB.Client;
-using NoMercyQueue;
+using NoMercyQueue.Core;
 using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.MediaProcessing.Jobs.ChangesJobs;

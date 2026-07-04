@@ -114,7 +114,7 @@ public class DomainEventTests
     [Fact]
     public void EncodingProgressEvent_SetsAllProperties()
     {
-        EncodingProgressEvent evt = new()
+        EncodingProgressUpdatedEvent evt = new()
         {
             JobId = 42,
             Percentage = 55.5,
@@ -132,7 +132,7 @@ public class DomainEventTests
     [Fact]
     public void EncodingProgressEvent_EstimatedIsOptional()
     {
-        EncodingProgressEvent evt = new()
+        EncodingProgressUpdatedEvent evt = new()
         {
             JobId = 1,
             Percentage = 0.0,
@@ -253,7 +253,7 @@ public class DomainEventTests
     public void PlaybackProgressEvent_SetsAllProperties()
     {
         Guid userId = Guid.NewGuid();
-        PlaybackProgressEvent evt = new()
+        PlaybackProgressUpdatedEvent evt = new()
         {
             UserId = userId,
             MediaId = 500,
@@ -334,7 +334,7 @@ public class DomainEventTests
     [Fact]
     public void PluginErrorEvent_SetsAllProperties()
     {
-        PluginErrorEvent evt = new()
+        PluginErrorOccurredEvent evt = new()
         {
             PluginId = "bad-plugin",
             PluginName = "Bad Plugin",
@@ -352,7 +352,7 @@ public class DomainEventTests
     [Fact]
     public void PluginErrorEvent_ExceptionTypeIsOptional()
     {
-        PluginErrorEvent evt = new()
+        PluginErrorOccurredEvent evt = new()
         {
             PluginId = "x",
             PluginName = "X",
@@ -414,7 +414,7 @@ public class DomainEventTests
                 OutputPath = "/o",
                 ProfileName = "p",
             },
-            new EncodingProgressEvent
+            new EncodingProgressUpdatedEvent
             {
                 JobId = 1,
                 Percentage = 0,
@@ -445,7 +445,7 @@ public class DomainEventTests
                 MediaId = 1,
                 MediaType = "movie",
             },
-            new PlaybackProgressEvent
+            new PlaybackProgressUpdatedEvent
             {
                 UserId = Guid.NewGuid(),
                 MediaId = 1,
@@ -472,7 +472,7 @@ public class DomainEventTests
                 PluginName = "P",
                 Version = "1.0",
             },
-            new PluginErrorEvent
+            new PluginErrorOccurredEvent
             {
                 PluginId = "p",
                 PluginName = "P",

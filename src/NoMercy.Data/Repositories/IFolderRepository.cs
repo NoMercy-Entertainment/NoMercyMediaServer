@@ -24,8 +24,6 @@ public interface IFolderRepository
 
     Task<List<Folder>> GetFoldersByLibraryIdAsync(FolderLibraryDto[] folderLibraries);
 
-    Task<int> GetFolderLibraryByIdAsync(int id, FolderLibrary folderLibrary);
-
     Task<List<Folder>> GetFoldersByLibraryIdAsync(Ulid libraryId);
 
     Task<Folder?> GetFolderById(Ulid folderId);

@@ -9,14 +9,13 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using Microsoft.EntityFrameworkCore.Query;
 using NoMercy.Database.Models.Users;
 
 namespace NoMercy.Data.Repositories;
 
 public interface IDeviceRepository
 {
-    IIncludableQueryable<Device, ICollection<ActivityLog>> GetDevices();
+    Task<List<Device>> GetDevices();
 
     Task AddDeviceAsync(Device device);
 

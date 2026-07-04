@@ -35,7 +35,7 @@ public record AlbumResponseItemDto
     public Uri Link { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("country")]
     public string? Country { get; set; }
@@ -79,7 +79,7 @@ public record AlbumResponseItemDto
         Id = album.Id;
         LibraryId = album.LibraryId;
         Name = album.Name;
-        Link = new($"/music/album/{Id}", UriKind.Relative);
+        Link = new($"/music/albums/{Id}", UriKind.Relative);
         Type = "album";
 
         Artists = album

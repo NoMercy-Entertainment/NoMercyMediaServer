@@ -11,6 +11,7 @@
 
 using CommandLine;
 using NoMercy.Database;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -136,11 +137,11 @@ public class StartupOptions
         {
             Config.IsDev = true;
 
-            Config.AppBaseUrl = "https://app-dev.nomercy.tv/";
-            Config.ApiBaseUrl = "https://api-dev.nomercy.tv/";
-            Config.ApiServerBaseUrl = $"{Config.ApiBaseUrl}v1/server/";
+            ExternalServicesConfig.Current.AppBaseUrl = "https://app-dev.nomercy.tv/";
+            ExternalServicesConfig.Current.ApiBaseUrl = "https://api-dev.nomercy.tv/";
+            ExternalServicesConfig.Current.ApiServerBaseUrl = $"{ExternalServicesConfig.Current.ApiBaseUrl}v1/server/";
 
-            Config.AuthBaseUrl = "https://auth-dev.nomercy.tv/realms/NoMercyTV/";
+            ExternalServicesConfig.Current.AuthBaseUrl = "https://auth-dev.nomercy.tv/realms/NoMercyTV/";
 
             Logger.App("Running in development mode.");
         }
@@ -159,14 +160,14 @@ public class StartupOptions
             InternalPort,
             "internalPort",
             "internal",
-            port => Config.InternalServerPort = port,
+            port => RuntimeServerSettings.Current.InternalServerPort = port,
             options
         );
         ExternalPort = ResolvePort(
             ExternalPort,
             "externalPort",
             "external",
-            port => Config.ExternalServerPort = port,
+            port => RuntimeServerSettings.Current.ExternalServerPort = port,
             options
         );
 

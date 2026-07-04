@@ -58,7 +58,7 @@ public record GenreCardData
     public string? Logo { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("content_ratings")]
     public IEnumerable<ContentRating> ContentRatings { get; set; } = [];
@@ -82,7 +82,16 @@ public record GenreCardData
         HaveItems =
             genre.GenreMovies.Count(gm => gm.Movie.VideoFiles.Any(v => v.Folder != null))
             + genre.GenreTvShows.Count(gt =>
-                gt.Tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null))
+                gt.Tv.Episodes.Any(e => (
+                    e.VideoFiles.Any(v => v.Folder != null)
+                    || e.Tv.Episodes.Any(o =>
+                        o.SeasonNumber == e.SeasonNumber
+                        && o.VideoFiles.Any(w =>
+                            w.Folder != null
+                            && w.LastEpisodeNumber != null
+                            && o.EpisodeNumber <= e.EpisodeNumber
+                            && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))
+                ))
             );
     }
 

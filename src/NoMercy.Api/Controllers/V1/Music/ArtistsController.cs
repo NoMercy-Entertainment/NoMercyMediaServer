@@ -14,21 +14,21 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Api.DTOs.Music;
+using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Music;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Events.Music;
-using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 using NoMercyQueue;
 
@@ -38,30 +38,34 @@ namespace NoMercy.Api.Controllers.V1.Music;
 [ApiVersion(1.0)]
 [Tags("Music Artists")]
 [Authorize]
-[Route("api/v{version:apiVersion}/music/artist")]
+[Route("api/v{version:apiVersion}/music/artists")]
 public class ArtistsController : BaseController
 {
     private readonly IMusicRepository _musicRepository;
     private readonly IEventBus _eventBus;
     private readonly IStorageFactory _storageFactory;
 
+    private readonly ILogger<ArtistsController> _logger;
+
     public ArtistsController(
+        ILogger<ArtistsController> logger,
         IMusicRepository musicService,
         IEventBus eventBus,
         IStorageFactory storageFactory
     )
     {
+        _logger = logger;
         _musicRepository = musicService;
         _eventBus = eventBus;
         _storageFactory = storageFactory;
     }
 
     [HttpGet]
-    [Route("/api/v{version:apiVersion}/music/artists/{letter}")]
+    [Route("/api/v{version:apiVersion}/music/artists/letter/{letter}")]
     public async Task<IActionResult> Index(string letter, [FromQuery] PageRequestDto request)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view artists");
 
         // Lolomo with the "all" marker (`_`) returns one carousel per first-letter
@@ -134,7 +138,7 @@ public class ArtistsController : BaseController
     public async Task<IActionResult> Show(Guid id)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view artists");
 
         Artist? artist = await _musicRepository.GetArtistAsync(userId, id);
@@ -159,7 +163,7 @@ public class ArtistsController : BaseController
     public async Task<IActionResult> Like(Guid id, [FromBody] LikeRequestDto request)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to like artists");
 
         Artist? artist = await _musicRepository.GetArtistByIdAsync(id);
@@ -170,7 +174,7 @@ public class ArtistsController : BaseController
         await _musicRepository.LikeArtistAsync(userId, artist, request.Value);
 
         await _eventBus.PublishAsync(
-            new LibraryRefreshEvent { QueryKey = ["music", "artist", artist.Id] }
+            new LibraryRefreshedEvent { QueryKey = ["music", "artist", artist.Id] }
         );
 
         await _eventBus.PublishAsync(
@@ -195,11 +199,9 @@ public class ArtistsController : BaseController
 
     [HttpPost]
     [Route("{id:guid}/rescan")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Like(Guid id)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to rescan artists");
-
         return Ok(
             new StatusResponseDto<string>
             {
@@ -212,14 +214,12 @@ public class ArtistsController : BaseController
 
     [HttpDelete]
     [Route("{id:guid}")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Destroy(Guid id)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to delete an artist");
-
         bool deleted = await _musicRepository.DeleteArtistAsync(id);
 
-        await _eventBus.PublishAsync(new LibraryRefreshEvent { QueryKey = ["music", "artist"] });
+        await _eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["music", "artist"] });
 
         return Ok(
             new StatusResponseDto<string>
@@ -232,11 +232,9 @@ public class ArtistsController : BaseController
 
     [HttpPatch]
     [Route("{id:guid}")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Edit(Guid id, [FromBody] UpdateMusicMetadataRequestDto request)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to edit an artist");
-
         Artist? artist = await _musicRepository.GetArtistForEditAsync(id);
 
         if (artist is null)
@@ -280,7 +278,7 @@ public class ArtistsController : BaseController
         );
 
         await _eventBus.PublishAsync(
-            new LibraryRefreshEvent { QueryKey = ["music", "artist", id] }
+            new LibraryRefreshedEvent { QueryKey = ["music", "artist", id] }
         );
 
         return Ok(
@@ -295,11 +293,9 @@ public class ArtistsController : BaseController
     [HttpPost]
     [Route("{id:guid}/cover")]
     [Consumes("multipart/form-data")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Cover(Guid id, IFormFile image)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to upload artist covers");
-
         Artist? artist = await _musicRepository.GetArtistWithLibraryFolderAsync(id);
 
         if (artist is null)
@@ -322,7 +318,7 @@ public class ArtistsController : BaseController
             artist.HostFolder.TrimStart('\\'),
             slug + ".jpg"
         );
-        Logger.App(filePath);
+        _logger.LogInformation(filePath);
         await using (FileStream stream = new(filePath, FileMode.Create))
         {
             await image.CopyToAsync(stream);
@@ -330,7 +326,7 @@ public class ArtistsController : BaseController
 
         // save to app images folder
         string filePath2 = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
-        Logger.App(filePath2);
+        _logger.LogInformation(filePath2);
         await using (FileStream stream = new(filePath2, FileMode.Create))
         {
             await image.CopyToAsync(stream);
@@ -345,7 +341,7 @@ public class ArtistsController : BaseController
         await _musicRepository.UpdateArtistCoverAsync(id, cover, colorPalette);
 
         await _eventBus.PublishAsync(
-            new LibraryRefreshEvent { QueryKey = ["music", "artist", artist.Id] }
+            new LibraryRefreshedEvent { QueryKey = ["music", "artist", artist.Id] }
         );
 
         artist._colorPalette = colorPalette;

@@ -249,8 +249,12 @@ public class TmdbPerformanceTests : TmdbTestBase
 
         // Assert
         // Bulk operations should not be more than 3x slower than single operations
-        // (allowing for some overhead and concurrency benefits)
-        bulkCallTime.Should().BeLessThan(singleCallTime * 3);
+        // (allowing for some overhead and concurrency benefits). The mocked call
+        // is sub-millisecond, so Stopwatch.ElapsedMilliseconds rounds the single
+        // baseline to 0 and the relative bound collapses — floor the baseline at
+        // 1 ms and add fixed slack so the ratio stays meaningful at mock speed.
+        long scalingCeiling = (Math.Max(singleCallTime, 1) * 3) + 50;
+        bulkCallTime.Should().BeLessThan(scalingCeiling);
     }
 
     private async Task<long> MeasureSingleCall()

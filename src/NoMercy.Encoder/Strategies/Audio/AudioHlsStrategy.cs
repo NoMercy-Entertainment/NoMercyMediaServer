@@ -9,9 +9,10 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Progress;
+using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Strategies.Audio;
 
@@ -20,14 +21,8 @@ namespace NoMercy.Encoder.Strategies.Audio;
 /// <c>audio.m3u8</c> VOD playlist. No video, no subtitles, no master
 /// playlist — the music player (hls.js) loads the variant playlist directly.
 /// </summary>
-public class AudioHlsStrategy(IEncoder encoder) : IEncodingStrategy
+public class AudioHlsStrategy(IEncoder encoder, ILogger<AudioHlsStrategy> logger, IStorage storage)
+    : SinglePassStrategyBase(encoder, logger, storage)
 {
-    public OutputFormat Format => OutputFormat.AudioHls;
-    public EncodeMode EncodeMode => EncodeMode.SinglePass;
-
-    public Task<EncodingResult> EncodeAsync(
-        EncodingRequest request,
-        IProgressObserver? progress,
-        CancellationToken ct
-    ) => encoder.EncodeAsync(request, progress, ct);
+    public override OutputFormat Format => OutputFormat.AudioHls;
 }

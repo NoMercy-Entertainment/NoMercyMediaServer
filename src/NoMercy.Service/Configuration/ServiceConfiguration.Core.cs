@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Hubs;
 using NoMercy.Api.Services;
 using NoMercy.Api.WebSockets;
+using NoMercy.Authorization;
 using NoMercy.Data.Activity;
 using NoMercy.Data.Repositories;
 using NoMercy.Data.Resolvers;
@@ -23,9 +24,6 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Startup;
 using NoMercy.Events;
 using NoMercy.Events.Audit;
-using NoMercy.Helpers;
-using NoMercy.Helpers.Monitoring;
-using NoMercy.Helpers.Wallpaper;
 using NoMercy.MediaProcessing.Collections;
 using NoMercy.MediaProcessing.Episodes;
 using NoMercy.MediaProcessing.EventHandlers;
@@ -39,7 +37,9 @@ using NoMercy.MediaProcessing.People;
 using NoMercy.MediaProcessing.Seasons;
 using NoMercy.MediaProcessing.Shows;
 using NoMercy.MediaProcessing.Subtitles;
+using NoMercy.Monitoring;
 using NoMercy.Networking.Cast;
+using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Connectivity;
 using NoMercy.Networking.Connectivity.Strategies;
 using NoMercy.Networking.Devices;
@@ -47,11 +47,16 @@ using NoMercy.Networking.Discovery;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Configuration;
+using NoMercy.NmSystem.FFProbe;
+using NoMercy.NmSystem.Images;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Status;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.NmSystem.Wallpaper;
 using NoMercy.OpticalMedia.Composition;
 using NoMercy.Plugins;
+using NoMercy.Providers.AniDb.Client;
+using NoMercy.Providers.Lyrics;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Queue.MediaServer;
 using NoMercy.Service.Extensions;
@@ -61,12 +66,10 @@ using NoMercy.Setup.Boot;
 using NoMercy.Setup.Cast;
 using NoMercy.Setup.Server;
 using NoMercy.Storage;
-using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Extensions;
 using Serilog.Events;
 using CollectionRepository = NoMercy.Data.Repositories.CollectionRepository;
 using DatabaseActivity = NoMercy.Database.Activity;
-using DataIMovieRepository = NoMercy.Data.Repositories.IMovieRepository;
 using LibraryRepository = NoMercy.Data.Repositories.LibraryRepository;
 using MediaProcessingCollectionRepository = NoMercy.MediaProcessing.Collections.CollectionRepository;
 using MediaProcessingEpisodeRepository = NoMercy.MediaProcessing.Episodes.EpisodeRepository;
@@ -78,13 +81,14 @@ using MediaProcessingSeasonRepository = NoMercy.MediaProcessing.Seasons.SeasonRe
 using MediaProcessingShowRepository = NoMercy.MediaProcessing.Shows.ShowRepository;
 using MovieRepository = NoMercy.Data.Repositories.MovieRepository;
 
-using Microsoft.Extensions.Configuration;
-
 namespace NoMercy.Service.Configuration;
 
 public static partial class ServiceConfiguration
 {
-    private static void ConfigureCoreServices(IServiceCollection services, IConfiguration configuration)
+    private static void ConfigureCoreServices(
+        IServiceCollection services,
+        IConfiguration configuration
+    )
     {
         services
             .AddDataProtection()
@@ -103,7 +107,7 @@ public static partial class ServiceConfiguration
             AppDbContext authDbContext =
                 authScope.ServiceProvider.GetRequiredService<AppDbContext>();
             IStorageDriver storageDriver = sp.GetRequiredService<IStorageDriver>();
-            return new(authDbContext, storageDriver);
+            return new(authDbContext, storageDriver, sp.GetRequiredService<IAuthTokenStore>());
         });
         services.AddSingleton<SetupEndpoints>();
         services.AddSingleton<BootOrchestrator>();
@@ -137,9 +141,9 @@ public static partial class ServiceConfiguration
             // log every ~500ms during an encode without adding signal.
             excludedEventTypes:
             [
-                "EncoderProgressBroadcastEvent",
-                "EncodingProgressEvent",
-                "PlaybackProgressEvent",
+                "EncodingProgressBroadcastedEvent",
+                "EncodingProgressUpdatedEvent",
+                "PlaybackProgressUpdatedEvent",
             ]
         );
         EventAuditLog auditLog = new(
@@ -148,7 +152,11 @@ public static partial class ServiceConfiguration
                 Enabled = true,
                 MaxEntries = 10_000,
                 CompactionPercentage = 0.25,
-                ExcludedEventTypes = ["EncodingProgressEvent", "PlaybackProgressEvent"],
+                ExcludedEventTypes =
+                [
+                    "EncodingProgressUpdatedEvent",
+                    "PlaybackProgressUpdatedEvent",
+                ],
             }
         );
         AuditingEventBusDecorator eventBus = new(loggingBus, auditLog);
@@ -157,60 +165,118 @@ public static partial class ServiceConfiguration
         EventBusProvider.Configure(eventBus);
 
         services.AddSingleton<IApiKeyStore, ApiKeyStore>();
+        services.AddSingleton<IAniDbService, AniDbService>();
+        services.AddSingleton<ILyricsAggregator, LyricsAggregator>();
         services.AddSingleton<IApiKeyLoader, ApiKeyLoader>();
         services.AddSingleton<IServerRegistrationService, ServerRegistrationService>();
         services.AddSingleton<IUserProvisioningService, UserProvisioningService>();
         services.AddSingleton<IDegradedModeRecovery, DegradedModeRecovery>();
         services.AddSingleton<AppProcessManager>();
-        services.AddSingleton<Helpers.Monitoring.ResourceMonitor>();
+        services.AddSingleton<Monitoring.ResourceMonitor>();
 
         // Network discovery (replaces static Networking.Networking IP/address members)
+        NetworkProbeConfig networkProbeConfig =
+            configuration.GetSection("NetworkProbe").Get<NetworkProbeConfig>() ?? new();
+        NetworkProbe.ProbeTargets = networkProbeConfig.ProbeTargets;
+
         services.AddSingleton<INetworkDiscovery>(sp =>
         {
             IStorageDriver storageDriver = sp.GetRequiredService<IStorageDriver>();
-            NetworkDiscovery discovery = new(storageDriver);
+            NetworkDiscovery discovery = new(
+                sp.GetRequiredService<ILogger<NetworkDiscovery>>(),
+                storageDriver,
+                sp.GetRequiredService<IAuthTokenStore>(),
+                sp.GetRequiredService<IConnectivityStatus>(),
+                networkProbeConfig
+            );
             if (!string.IsNullOrEmpty(StartupOptions.OverrideInternalIp))
                 discovery.InternalIp = StartupOptions.OverrideInternalIp;
             if (!string.IsNullOrEmpty(StartupOptions.OverrideExternalIp))
                 discovery.ExternalIp = StartupOptions.OverrideExternalIp;
             Start.NetworkDiscovery = discovery;
             // Register.Discovery = discovery;
-            ChromeCast.NetworkDiscovery = discovery;
             return discovery;
+        });
+
+        // Cast pipeline (instance service sharing the injected INetworkDiscovery)
+        services.AddSingleton<ChromeCastService>(sp =>
+        {
+            ChromeCastService chromeCast = new(
+                sp.GetRequiredService<ILogger<ChromeCastService>>(),
+                sp.GetRequiredService<INetworkDiscovery>()
+            );
+            Start.ChromeCast = chromeCast;
+            return chromeCast;
+        });
+        services.AddSingleton<IChromeCastService>(sp => sp.GetRequiredService<ChromeCastService>());
+
+        // Certificate service (instance singleton). Renewal uses the cert-renewal named
+        // client whose primary handler resolves DNS via DnsClient.
+        services
+            .AddHttpClient("cert-renewal")
+            .ConfigurePrimaryHttpMessageHandler(() =>
+                NoMercy.NmSystem.Extensions.HttpClientExtensions.CreateDnsHandler()
+            );
+        services.AddSingleton<ICertificateService>(sp =>
+        {
+            CertificateService certificateService = new(
+                sp.GetRequiredService<ILogger<CertificateService>>(),
+                sp.GetRequiredService<IHttpClientFactory>()
+            );
+            Start.Certificate = certificateService;
+            return certificateService;
         });
 
         // Client messaging (replaces static Networking.Networking.SendTo/SendToAll)
         services.AddSingleton<ConnectedClients>();
         services.AddSingleton<IClientMessenger, ClientMessenger>();
+        services.AddSingleton<ILogBroadcastService, LogBroadcastService>();
+        services.AddSingleton<IResourceMonitorService, ResourceMonitorService>();
 
         // Connectivity strategies (ordered by priority)
         services.AddSingleton<IConnectivityStrategy>(sp => new PortForwardStrategy(
-            (NetworkDiscovery)sp.GetRequiredService<INetworkDiscovery>()
+            (NetworkDiscovery)sp.GetRequiredService<INetworkDiscovery>(),
+            sp.GetRequiredService<IConnectivityStatus>(),
+            sp.GetRequiredService<ILogger<PortForwardStrategy>>()
         ));
         services.AddSingleton<IConnectivityStrategy, StunHolePunchStrategy>();
-        services.AddSingleton<IConnectivityStrategy>(sp => new CloudflareTunnelStrategy(() =>
-            Task.FromResult(string.Empty) // Register.GetTunnelAvailability
+        services.AddSingleton<IConnectivityStrategy>(sp => new CloudflareTunnelStrategy(
+            sp.GetRequiredService<ILogger<CloudflareTunnelStrategy>>(),
+            sp.GetRequiredService<IConnectivityStatus>(),
+            () => Task.FromResult(string.Empty) // Register.GetTunnelAvailability
         ));
 
         // Add Auth services
         services.AddSingleton<IAuthTokenStore, AuthTokenStore>();
 
         // Add Configuration POCOs
-        services.Configure<ExternalServicesConfig>(
-            configuration.GetSection("ExternalServices")
-        );
+        services.Configure<ExternalServicesConfig>(configuration.GetSection("ExternalServices"));
         services.Configure<ServerConfig>(configuration.GetSection("Server"));
         services.Configure<ConnectivityConfig>(configuration.GetSection("Connectivity"));
+        services.Configure<NetworkProbeConfig>(configuration.GetSection("NetworkProbe"));
         services.Configure<WorkerConfig>(configuration.GetSection("Workers"));
-        services.Configure<EncoderResourceConfig>(
-            configuration.GetSection("EncoderResources")
-        );
+        services.Configure<EncoderResourceConfig>(configuration.GetSection("EncoderResources"));
         services.Configure<ContentPolicy>(configuration.GetSection("ContentPolicy"));
 
         // Add runtime status singletons
         services.AddSingleton<IBootStatus, BootStatus>();
         services.AddSingleton<IConnectivityStatus, ConnectivityStatus>();
         services.AddSingleton<IUpdateStatus, UpdateStatus>();
+
+        // Runtime server settings (DB-hydrated, dashboard-mutable). DI hands out
+        // the same static Current instance the Config facade and boot path use.
+        services.AddSingleton(_ => RuntimeServerSettings.Current);
+
+        services.AddSingleton<IImageService, ImageService>();
+
+        services.AddSingleton<IUserCache>(UserCache.Current);
+        services.AddSingleton<IFfProbeService>(FfProbeService.Current);
+        services.AddSingleton<IStartupManager>(StartupManager.Current);
+        services.AddSingleton<IMediaAuthorizationPolicy, MediaAuthorizationPolicy>();
+
+        // Update checker + periodic background check
+        services.AddSingleton<IUpdateChecker, UpdateChecker>();
+        services.AddHostedService<PeriodicUpdateCheckService>();
 
         // Connectivity manager (replaces ServerRegistrationService + CloudflareTunnelService)
         services.AddSingleton<IConnectivityManager, ConnectivityManager>();
@@ -231,7 +297,6 @@ public static partial class ServiceConfiguration
         );
 
         services.AddSingleton<StorageMonitor>();
-        services.AddSingleton<ChromeCast>();
 
         // Optical-disc detection + scanning + ripping (NoMercy.OpticalMedia)
         services.AddNoMercyOpticalMedia();
@@ -305,7 +370,6 @@ public static partial class ServiceConfiguration
         services.AddScoped<HomeRepository>();
         services.AddScoped<EncoderRepository>();
         services.AddScoped<EncodingHistoryRepository>();
-        services.AddScoped<EncodingPresetRepository>();
         services.AddScoped<ContentSegmentRepository>();
         services.AddScoped<LibraryRepository>();
         services.AddScoped<MediaProcessingLibraryRepository>();
@@ -314,6 +378,55 @@ public static partial class ServiceConfiguration
         services.AddScoped<DriverRepository>();
         services.AddScoped<MediaProcessingFileRepository>();
         services.AddScoped<IFileRepository, MediaProcessingFileRepository>();
+        services.AddScoped<
+            NoMercy.MediaProcessing.Files.IMediaIdentificationService,
+            NoMercy.MediaProcessing.Files.MediaIdentificationService
+        >();
+        services.AddScoped<
+            NoMercy.MediaProcessing.Files.IFileListService,
+            NoMercy.MediaProcessing.Files.FileListService
+        >();
+
+        // Filename parse-adapter pipeline. Adapters are resolved as a set, so
+        // plugins can contribute their own; FilenameParsingOptions can reorder or
+        // disable them at runtime without recompiling.
+        services.AddSingleton<NoMercy.MediaProcessing.Files.Parsing.FilenameParsingOptions>();
+        services.AddSingleton<
+            NoMercy.MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            NoMercy.MediaProcessing.Files.Parsing.Adapters.EpisodePrefixAdapter
+        >();
+        services.AddSingleton<
+            NoMercy.MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            NoMercy.MediaProcessing.Files.Parsing.Adapters.EpisodeWordAdapter
+        >();
+        services.AddSingleton<
+            NoMercy.MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            NoMercy.MediaProcessing.Files.Parsing.Adapters.SeasonEpisodeAdapter
+        >();
+        services.AddSingleton<
+            NoMercy.MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            NoMercy.MediaProcessing.Files.Parsing.Adapters.CrossFormatAdapter
+        >();
+        services.AddSingleton<
+            NoMercy.MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            NoMercy.MediaProcessing.Files.Parsing.Adapters.AnimeAbsoluteAdapter
+        >();
+        services.AddSingleton<
+            NoMercy.MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            NoMercy.MediaProcessing.Files.Parsing.Adapters.EpisodeShortFormAdapter
+        >();
+        services.AddSingleton<
+            NoMercy.MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            NoMercy.MediaProcessing.Files.Parsing.Adapters.SpecialsAdapter
+        >();
+        services.AddSingleton<
+            NoMercy.MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            NoMercy.MediaProcessing.Files.Parsing.Adapters.MovieDetectorAdapter
+        >();
+        services.AddSingleton<
+            NoMercy.MediaProcessing.Files.Parsing.IFilenameParserPipeline,
+            NoMercy.MediaProcessing.Files.Parsing.FilenameParserPipeline
+        >();
         services.AddScoped<FilesystemRepository>();
         services.AddScoped<LanguageRepository>();
         services.AddScoped<CollectionRepository>();
@@ -375,12 +488,14 @@ public static partial class ServiceConfiguration
         services.AddScoped<MovieManager>();
         services.AddScoped<CollectionManager>();
         services.AddScoped<ShowManager>();
+        services.AddScoped<IMediaTypeClassifier, MediaTypeClassifier>();
         services.AddScoped<SeasonManager>();
         services.AddScoped<EpisodeManager>();
         services.AddScoped<PersonManager>();
         services.AddScoped<EncoderProfileService>();
         services.AddScoped<HomeService>();
         services.AddScoped<RecommendationService>();
+        services.AddScoped<ILiveTranscodeService, LiveTranscodeService>();
         services.AddScoped<SetupService>();
 
         // Palette pipeline — contract-based DI, dispatched by EntityType
@@ -402,7 +517,8 @@ public static partial class ServiceConfiguration
         services.AddMediaServerQueue();
         services.AddSingleton<JobDispatcher>();
         services.AddSingleton<NoMercy.MediaProcessing.Jobs.IJobDispatcher>(sp =>
-            sp.GetRequiredService<JobDispatcher>());
+            sp.GetRequiredService<JobDispatcher>()
+        );
 
         // Storage driver resolvers — registered before AddNoMercyEncoder so
         // the TryAdd inside AddNoMercyStorage picks them up via GetService<>.
@@ -424,6 +540,13 @@ public static partial class ServiceConfiguration
             // NeedsRecalibration() can honour its 30-day grace window.
             opts.SpeedIndexCachePath = AppFiles.SpeedIndexCachePath;
         });
+
+        // Registered here, not in Providers or Encoder: it bridges both and neither
+        // may reference the other.
+        services.AddTransient<
+            Providers.AcoustId.IAudioFingerprinter,
+            MediaProcessing.Fingerprinting.FfmpegChromaprintFingerprinter
+        >();
 
         // Transcode-scoped IStorage — paths are relative to AppFiles.TranscodePath.
         // HomeController uses this so it can pass scope-relative paths (Rule 1 of

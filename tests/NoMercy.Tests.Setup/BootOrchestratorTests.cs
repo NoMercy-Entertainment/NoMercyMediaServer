@@ -12,7 +12,11 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Database;
+using NoMercy.Networking.Certificate;
+using NoMercy.NmSystem.Auth;
+using NoMercy.NmSystem.Security;
 using NoMercy.Setup.Auth;
 using NoMercy.Setup.Boot;
 using NoMercy.Setup.Server;
@@ -42,14 +46,16 @@ public class BootOrchestratorTests : IDisposable
         _appContext.Database.OpenConnection();
         _appContext.Database.EnsureCreated();
 
-        _authManager = new(_appContext, new LocalStorageDriver());
+        _authManager = new(_appContext, new LocalStorageDriver(), new AuthTokenStore());
         _setupState = new();
         _orchestrator = new(
             _setupState,
             _authManager,
             new FakeApiKeyLoader(),
             new FakeDegradedModeRecovery(),
-            new FakeServerRegistrationService()
+            new FakeServerRegistrationService(),
+            new AuthTokenStore(),
+            new CertificateService(NullLogger<CertificateService>.Instance, null!)
         );
     }
 

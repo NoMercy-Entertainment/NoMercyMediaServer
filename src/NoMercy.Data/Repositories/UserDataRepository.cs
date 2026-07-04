@@ -13,7 +13,6 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Data.Repositories;
 

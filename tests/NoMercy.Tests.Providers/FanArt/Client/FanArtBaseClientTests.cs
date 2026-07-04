@@ -10,8 +10,8 @@
 // -----------------------------------------------------------------------------
 
 using System.Reflection;
+using NoMercy.Providers.Abstractions;
 using NoMercy.Providers.FanArt.Client;
-using NoMercy.Setup.Server;
 
 namespace NoMercy.Tests.Providers.FanArt.Client;
 
@@ -39,8 +39,8 @@ public class FanArtBaseClientTests : IDisposable
 
     private static HttpClient GetHttpClient(FanArtBaseClient client)
     {
-        FieldInfo? field = typeof(FanArtBaseClient).GetField(
-            "_client",
+        FieldInfo? field = typeof(ExternalApiClient).GetField(
+            "Client",
             BindingFlags.NonPublic | BindingFlags.Instance
         );
 

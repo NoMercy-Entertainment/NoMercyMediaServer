@@ -35,7 +35,10 @@ public static class HttpClientProvider
             }
             catch (ObjectDisposedException)
             {
-                _factory = null;
+                // Factory was disposed (app shutdown). Fall back to an untracked
+                // client for this single call only; do NOT null the factory — that
+                // would permanently disable pooling for the rest of the process and
+                // leak sockets on every subsequent request.
             }
         }
 

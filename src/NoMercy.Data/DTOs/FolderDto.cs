@@ -9,8 +9,8 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.Data.DTOs.Encoder;
 using Newtonsoft.Json;
-using NoMercy.Data.Logic;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.NmSystem.Extensions;
 

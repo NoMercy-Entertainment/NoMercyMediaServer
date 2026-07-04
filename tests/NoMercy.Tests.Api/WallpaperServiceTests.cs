@@ -12,8 +12,7 @@
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using Microsoft.Extensions.DependencyInjection;
-using NoMercy.Helpers;
-using NoMercy.Helpers.Wallpaper;
+using NoMercy.NmSystem.Wallpaper;
 using Xunit;
 
 namespace NoMercy.Tests.Api;

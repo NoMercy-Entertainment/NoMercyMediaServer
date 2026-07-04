@@ -11,20 +11,18 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.TV;
-using Serilog.Events;
 
 namespace NoMercy.Api.Services;
 
@@ -36,7 +34,10 @@ public class RecommendationService
     private readonly IMovieMetadataProvider _movieMetadataProvider;
     private readonly ITvShowMetadataProvider _tvShowMetadataProvider;
 
+    private readonly ILogger<RecommendationService> _logger;
+
     public RecommendationService(
+        ILogger<RecommendationService> logger,
         IRecommendationRepository recommendationRepository,
         IDbContextFactory<MediaContext> contextFactory,
         IMemoryCache cache,
@@ -44,6 +45,7 @@ public class RecommendationService
         ITvShowMetadataProvider tvShowMetadataProvider
     )
     {
+        _logger = logger;
         _recommendationRepository = recommendationRepository;
         _contextFactory = contextFactory;
         _cache = cache;
@@ -67,11 +69,7 @@ public class RecommendationService
             ? Task.Run(
                 async () =>
                 {
-                    await using MediaContext context = await _contextFactory.CreateDbContextAsync(
-                        ct
-                    );
                     return await _recommendationRepository.GetUnownedMovieRecommendationsAsync(
-                        context,
                         userId,
                         ct
                     );
@@ -83,11 +81,7 @@ public class RecommendationService
             ? Task.Run(
                 async () =>
                 {
-                    await using MediaContext context = await _contextFactory.CreateDbContextAsync(
-                        ct
-                    );
                     return await _recommendationRepository.GetUnownedTvRecommendationsAsync(
-                        context,
                         userId,
                         ct
                     );
@@ -99,11 +93,7 @@ public class RecommendationService
             ? Task.Run(
                 async () =>
                 {
-                    await using MediaContext context = await _contextFactory.CreateDbContextAsync(
-                        ct
-                    );
                     return await _recommendationRepository.GetUnownedAnimeRecommendationsAsync(
-                        context,
                         userId,
                         ct
                     );
@@ -115,14 +105,7 @@ public class RecommendationService
             ? Task.Run(
                 async () =>
                 {
-                    await using MediaContext context = await _contextFactory.CreateDbContextAsync(
-                        ct
-                    );
-                    return await _recommendationRepository.GetUnownedMovieSimilarAsync(
-                        context,
-                        userId,
-                        ct
-                    );
+                    return await _recommendationRepository.GetUnownedMovieSimilarAsync(userId, ct);
                 },
                 ct
             )
@@ -131,14 +114,7 @@ public class RecommendationService
             ? Task.Run(
                 async () =>
                 {
-                    await using MediaContext context = await _contextFactory.CreateDbContextAsync(
-                        ct
-                    );
-                    return await _recommendationRepository.GetUnownedTvSimilarAsync(
-                        context,
-                        userId,
-                        ct
-                    );
+                    return await _recommendationRepository.GetUnownedTvSimilarAsync(userId, ct);
                 },
                 ct
             )
@@ -147,14 +123,7 @@ public class RecommendationService
             ? Task.Run(
                 async () =>
                 {
-                    await using MediaContext context = await _contextFactory.CreateDbContextAsync(
-                        ct
-                    );
-                    return await _recommendationRepository.GetUnownedAnimeSimilarAsync(
-                        context,
-                        userId,
-                        ct
-                    );
+                    return await _recommendationRepository.GetUnownedAnimeSimilarAsync(userId, ct);
                 },
                 ct
             )
@@ -171,11 +140,12 @@ public class RecommendationService
             affinityTask
         );
 
-        Logger.App(
-            $"Recommendations [{mediaTypeFilter}]: recs={animeRecsTask.Result.Count + movieRecsTask.Result.Count + tvRecsTask.Result.Count}, "
-                + $"similar={animeSimTask.Result.Count + movieSimTask.Result.Count + tvSimTask.Result.Count}, "
-                + $"affinity sources={affinityTask.Result.SourceItems.Count}",
-            LogEventLevel.Debug
+        _logger.LogDebug(
+            "Recommendations [{MediaTypeFilter}]: recs={Count}, similar={Count2}, affinity sources={Count3}",
+            mediaTypeFilter,
+            animeRecsTask.Result.Count + movieRecsTask.Result.Count + tvRecsTask.Result.Count,
+            animeSimTask.Result.Count + movieSimTask.Result.Count + tvSimTask.Result.Count,
+            affinityTask.Result.SourceItems.Count
         );
 
         UserAffinityProfile profile = affinityTask.Result;
@@ -221,11 +191,7 @@ public class RecommendationService
                 ? Task.Run(
                     async () =>
                     {
-                        await using MediaContext ctx = await _contextFactory.CreateDbContextAsync(
-                            ct
-                        );
                         return await _recommendationRepository.GetKeywordCrossTypeTvCandidatesAsync(
-                            ctx,
                             userId,
                             movieKeywordMap,
                             minSharedKeywords: 3,
@@ -242,11 +208,7 @@ public class RecommendationService
                 ? Task.Run(
                     async () =>
                     {
-                        await using MediaContext ctx = await _contextFactory.CreateDbContextAsync(
-                            ct
-                        );
                         return await _recommendationRepository.GetKeywordCrossTypeMovieCandidatesAsync(
-                            ctx,
                             userId,
                             nonMovieKeywordMap,
                             minSharedKeywords: 3,
@@ -263,11 +225,7 @@ public class RecommendationService
                 ? Task.Run(
                     async () =>
                     {
-                        await using MediaContext ctx = await _contextFactory.CreateDbContextAsync(
-                            ct
-                        );
                         return await _recommendationRepository.GetKeywordCrossTypeAnimeCandidatesAsync(
-                            ctx,
                             userId,
                             movieKeywordMap,
                             minSharedKeywords: 3,
@@ -312,9 +270,7 @@ public class RecommendationService
         Task<Dictionary<int, List<int>>> movieGenreMapTask = Task.Run(
             async () =>
             {
-                await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
                 return await _recommendationRepository.GetGenresForMovieIdsAsync(
-                    context,
                     allSourceMovieIds,
                     ct
                 );
@@ -324,12 +280,7 @@ public class RecommendationService
         Task<Dictionary<int, List<int>>> tvGenreMapTask = Task.Run(
             async () =>
             {
-                await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
-                return await _recommendationRepository.GetGenresForTvIdsAsync(
-                    context,
-                    allSourceTvIds,
-                    ct
-                );
+                return await _recommendationRepository.GetGenresForTvIdsAsync(allSourceTvIds, ct);
             },
             ct
         );
@@ -350,7 +301,7 @@ public class RecommendationService
                 Overview = c.Overview,
                 Poster = c.Poster,
                 Backdrop = c.Backdrop,
-                ColorPalette = IColorPalettes.FromJsonOrNull(c.ColorPalette),
+                ColorPalette = ColorPalette.FromJsonOrNull(c.ColorPalette),
                 Type = c.MediaType,
                 Score = ScoreCandidate(c, profile, combinedGenreMap),
                 SourceCount = c.SourceCount,
@@ -365,9 +316,12 @@ public class RecommendationService
             .Select(g => g.OrderByDescending(s => s.Score).First())
             .ToList();
 
-        Logger.App(
-            $"Recommendations [{mediaTypeFilter}]: merged={allCandidates.Count}, scored={scored.Count}, deduped={deduped.Count}",
-            LogEventLevel.Debug
+        _logger.LogDebug(
+            "Recommendations [{MediaTypeFilter}]: merged={Count}, scored={Count2}, deduped={Count3}",
+            mediaTypeFilter,
+            allCandidates.Count,
+            scored.Count,
+            deduped.Count
         );
 
         // Phase 5: Diversity selection — guarantee floor representation per media type
@@ -404,13 +358,11 @@ public class RecommendationService
             ? _tvShowMetadataProvider.GetTvShowAsync(mediaId, tmdbLanguage, ct)
             : Task.FromResult<TmdbTvShowAppends?>(null);
 
-        await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
-
         Task<(List<Movie> Movies, string? ColorPalette)> sourceMoviesTask = isMovie
-            ? _recommendationRepository.GetSourceMoviesForMediaAsync(context, userId, mediaId, ct)
+            ? _recommendationRepository.GetSourceMoviesForMediaAsync(userId, mediaId, ct)
             : Task.FromResult<(List<Movie>, string?)>(([], null));
         Task<(List<Tv> TvShows, string? ColorPalette)> sourceTvsTask = !isMovie
-            ? _recommendationRepository.GetSourceTvShowsForMediaAsync(context, userId, mediaId, ct)
+            ? _recommendationRepository.GetSourceTvShowsForMediaAsync(userId, mediaId, ct)
             : Task.FromResult<(List<Tv>, string?)>(([], null));
 
         await Task.WhenAll(movieAppendsTask, tvAppendsTask, sourceMoviesTask, sourceTvsTask);
@@ -425,28 +377,24 @@ public class RecommendationService
 
         List<Movie> keywordMovieSources = isMovie
             ? await _recommendationRepository.GetKeywordMovieSourcesForMovieAsync(
-                context,
                 userId,
                 mediaId,
                 existingMovieSourceIds,
                 ct
             )
             : await _recommendationRepository.GetCrossTypeMovieSourcesForTvAsync(
-                context,
                 userId,
                 mediaId,
                 ct
             );
         List<Tv> keywordTvSources = !isMovie
             ? await _recommendationRepository.GetKeywordTvSourcesForTvAsync(
-                context,
                 userId,
                 mediaId,
                 existingTvSourceIds,
                 ct
             )
             : await _recommendationRepository.GetCrossTypeTvSourcesForMovieAsync(
-                context,
                 userId,
                 mediaId,
                 ct
@@ -455,7 +403,7 @@ public class RecommendationService
         string? rawPalette = isMovie
             ? sourceMoviesTask.Result.ColorPalette
             : sourceTvsTask.Result.ColorPalette;
-        IColorPalettes? colorPalette = IColorPalettes.FromJsonOrNull(rawPalette);
+        ColorPalette? colorPalette = ColorPalette.FromJsonOrNull(rawPalette);
 
         if (isMovie)
         {
@@ -864,36 +812,21 @@ public class RecommendationService
         Task<List<UserAffinitySourceDto>> movieAffinityTask = Task.Run(
             async () =>
             {
-                await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
-                return await _recommendationRepository.GetUserMovieAffinityDataAsync(
-                    context,
-                    userId,
-                    ct
-                );
+                return await _recommendationRepository.GetUserMovieAffinityDataAsync(userId, ct);
             },
             ct
         );
         Task<List<UserAffinitySourceDto>> tvAffinityTask = Task.Run(
             async () =>
             {
-                await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
-                return await _recommendationRepository.GetUserTvAffinityDataAsync(
-                    context,
-                    userId,
-                    ct
-                );
+                return await _recommendationRepository.GetUserTvAffinityDataAsync(userId, ct);
             },
             ct
         );
         Task<List<UserAffinitySourceDto>> animeAffinityTask = Task.Run(
             async () =>
             {
-                await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
-                return await _recommendationRepository.GetUserAnimeAffinityDataAsync(
-                    context,
-                    userId,
-                    ct
-                );
+                return await _recommendationRepository.GetUserAnimeAffinityDataAsync(userId, ct);
             },
             ct
         );

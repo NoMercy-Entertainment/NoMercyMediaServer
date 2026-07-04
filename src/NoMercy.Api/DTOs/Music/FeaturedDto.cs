@@ -33,7 +33,7 @@ public class FeaturedDto
     public Uri Link { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("description")]
     public string? Description { get; set; }
@@ -62,7 +62,7 @@ public class FeaturedDto
             ? new Uri($"/images/music{albumArtist.Album.Cover}", UriKind.Relative).ToString()
             : null;
         Disambiguation = albumArtist.Album.Disambiguation;
-        Link = new($"/music/album/{Id}", UriKind.Relative);
+        Link = new($"/music/albums/{Id}", UriKind.Relative);
         Description = !string.IsNullOrEmpty(description)
             ? description
             : albumArtist.Album.Description;
@@ -86,7 +86,7 @@ public class FeaturedDto
         Cover = album.Cover is not null
             ? new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString()
             : null;
-        Link = new($"/music/artist/{Id}", UriKind.Relative);
+        Link = new($"/music/artists/{Id}", UriKind.Relative);
         Type = "artist";
         Description = !string.IsNullOrEmpty(description) ? description : album.Description;
 

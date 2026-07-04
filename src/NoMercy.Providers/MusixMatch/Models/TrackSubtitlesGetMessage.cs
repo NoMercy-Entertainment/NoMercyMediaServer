@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Newtonsoft.Json;
+using NoMercy.Providers.MusixMatch.Converters;
 
 namespace NoMercy.Providers.MusixMatch.Models;
 
@@ -19,5 +20,6 @@ public class TrackSubtitlesGetMessage
     public TrackSubtitlesGetMessageHeader Header { get; set; } = new();
 
     [JsonProperty("body")]
+    [JsonConverter(typeof(ObjectOrEmptyArrayConverter<TrackSubtitlesGetMessageBody>))]
     public TrackSubtitlesGetMessageBody? Body { get; set; }
 }

@@ -9,9 +9,10 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Progress;
+using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Strategies.Audio;
 
@@ -19,14 +20,8 @@ namespace NoMercy.Encoder.Strategies.Audio;
 /// MP3 single-file output. Audio codecs don't meaningfully benefit from
 /// 2-pass — there's no MP3 two-pass strategy, just this single-pass one.
 /// </summary>
-public class Mp3Strategy(IEncoder encoder) : IEncodingStrategy
+public class Mp3Strategy(IEncoder encoder, ILogger<Mp3Strategy> logger, IStorage storage)
+    : SinglePassStrategyBase(encoder, logger, storage)
 {
-    public OutputFormat Format => OutputFormat.Mp3;
-    public EncodeMode EncodeMode => EncodeMode.SinglePass;
-
-    public Task<EncodingResult> EncodeAsync(
-        EncodingRequest request,
-        IProgressObserver? progress,
-        CancellationToken ct
-    ) => encoder.EncodeAsync(request, progress, ct);
+    public override OutputFormat Format => OutputFormat.Mp3;
 }

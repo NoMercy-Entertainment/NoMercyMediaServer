@@ -321,6 +321,60 @@ public class LibraryRepositoryTests : IDisposable
         Assert.Equal("en", movieLibrary.LanguageLibraries.First().Language.Iso6391);
     }
 
+    [Fact]
+    public async Task SyncEncoderProfileFolderAsync_ReplacesOldMappingWithNew()
+    {
+        EncoderProfile newProfile = new() { Id = Ulid.NewUlid(), Name = "New Profile", Container = "hls" };
+        _context.EncoderProfiles.Add(newProfile);
+        await _context.SaveChangesAsync();
+
+        Folder folder = await _context.Folders.FirstAsync(f => f.Id == SeedConstants.MovieFolderId);
+
+        List<EncoderProfileFolder> newMappings =
+        [
+            new(newProfile.Id, SeedConstants.MovieFolderId),
+        ];
+
+        await _repository.SyncEncoderProfileFolderAsync(newMappings, [folder]);
+
+        List<EncoderProfileFolder> stored = await _context
+            .EncoderProfileFolder.Where(epf => epf.FolderId == SeedConstants.MovieFolderId)
+            .ToListAsync();
+
+        Assert.Single(stored);
+        Assert.Equal(newProfile.Id, stored[0].EncoderProfileId);
+        Assert.DoesNotContain(
+            stored,
+            epf => epf.EncoderProfileId == SeedConstants.EncoderProfileId
+        );
+    }
+
+    [Fact]
+    public async Task SyncEncoderProfileFolderAsync_RollsBackDeleteWhenInsertFails()
+    {
+        Folder folder = await _context.Folders.FirstAsync(f => f.Id == SeedConstants.MovieFolderId);
+
+        // Non-existent EncoderProfileId violates the FK on upsert, so the
+        // whole sync (delete + insert) must roll back as one unit — the
+        // original mapping seeded in SeedData must survive.
+        List<EncoderProfileFolder> invalidMappings =
+        [
+            new(Ulid.NewUlid(), SeedConstants.MovieFolderId),
+        ];
+
+        await Assert.ThrowsAnyAsync<Exception>(
+            () => _repository.SyncEncoderProfileFolderAsync(invalidMappings, [folder])
+        );
+
+        EncoderProfileFolder? original = await _context.EncoderProfileFolder.FirstOrDefaultAsync(
+            epf =>
+                epf.FolderId == SeedConstants.MovieFolderId
+                && epf.EncoderProfileId == SeedConstants.EncoderProfileId
+        );
+
+        Assert.NotNull(original);
+    }
+
     public void Dispose()
     {
         _context.Database.EnsureDeleted();

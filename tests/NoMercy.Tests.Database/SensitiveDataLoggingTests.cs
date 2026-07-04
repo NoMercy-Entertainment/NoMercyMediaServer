@@ -62,22 +62,32 @@ public class SensitiveDataLoggingTests
     {
         // Verify the source code contains the Config.IsDev guard around EnableSensitiveDataLogging.
         // This catches regressions where someone removes the conditional.
-        string sourceFile = Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "..",
-            "..",
-            "src",
-            "NoMercy.Database",
-            "Contexts",
-            "MediaContext.cs"
+        string sourceFile = FindRepoFile(
+            Path.Combine("src", "NoMercy.Database", "Contexts", "MediaContext.cs")
         );
 
         string source = File.ReadAllText(sourceFile);
 
         Assert.Contains("if (Config.IsDev)", source);
         Assert.Contains("EnableSensitiveDataLogging", source);
+    }
+
+    // Walk up from the test assembly instead of a fixed ".." chain — the output
+    // directory depth changes under a redirected BaseOutputPath.
+    private static string FindRepoFile(string relativePath)
+    {
+        string dir = AppContext.BaseDirectory;
+        while (dir != null!)
+        {
+            string candidate = Path.Combine(dir, relativePath);
+            if (File.Exists(candidate))
+                return candidate;
+
+            dir = Path.GetDirectoryName(dir)!;
+        }
+
+        throw new FileNotFoundException(
+            $"Could not locate {relativePath} above {AppContext.BaseDirectory}"
+        );
     }
 }

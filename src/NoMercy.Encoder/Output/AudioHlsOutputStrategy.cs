@@ -56,8 +56,14 @@ public class AudioHlsOutputStrategy : IOutputStrategy
             ["-hls_segment_filename"] = segmentPattern,
         };
 
-        // Force AAC LC profile for broadest HLS compatibility when transcoding.
-        if (audioCodec != "copy")
+        // Force AAC LC profile for broadest HLS compatibility when transcoding to
+        // AAC. -profile:a aac_low is an AAC-only AVOption; libmp3lame / eac3 / etc.
+        // reject "aac_low" and refuse to start, so it must only be set for an AAC
+        // encoder — a valid MP3/E-AC-3 HLS profile would otherwise fail to encode.
+        bool isAac =
+            audioCodec.Contains("aac", StringComparison.OrdinalIgnoreCase)
+            || audioCodec.Equals("libfdk_aac", StringComparison.OrdinalIgnoreCase);
+        if (audioCodec != "copy" && isAac)
             extraFlags["-profile:a"] = DefaultAacProfile;
 
         if (audio is { Action: StreamAction.Transcode } && !string.IsNullOrEmpty(audio.AudioFilter))

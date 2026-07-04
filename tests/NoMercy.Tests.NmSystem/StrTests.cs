@@ -26,13 +26,13 @@ public class StrTests
     [InlineData("anything", "", 0.0)]
     public void MatchPercentage_ScoresSimilarity(string a, string b, double expected)
     {
-        Str.MatchPercentage(a, b).Should().BeApproximately(expected, 0.001);
+        FuzzyMatcher.MatchPercentage(a, b).Should().BeApproximately(expected, 0.001);
     }
 
     [Fact]
     public void MatchPercentage_IsCaseInsensitive()
     {
-        Str.MatchPercentage("Hello", "hello").Should().Be(100.0);
+        FuzzyMatcher.MatchPercentage("Hello", "hello").Should().Be(100.0);
     }
 
     [Theory]
@@ -177,6 +177,23 @@ public class StrTests
     {
         "Café Royale".ContainsSanitized("cafe").Should().BeTrue();
         "abc".ContainsSanitized(null).Should().BeFalse();
+    }
+
+    [Fact]
+    public void ContainsSanitized_NonAsciiNeedle_DoesNotFalseMatchUnrelatedText()
+    {
+        // CJK/Cyrillic/Greek sanitize down to an empty string under the
+        // ASCII-only regex; Contains("") must not make this trivially true.
+        "The Matrix".ContainsSanitized("こんにちは").Should().BeFalse();
+        "Some Album".ContainsSanitized("Привет").Should().BeFalse();
+        "こんにちは".ContainsSanitized("hello").Should().BeFalse();
+    }
+
+    [Fact]
+    public void ContainsSanitized_NonAsciiNeedle_StillMatchesRealContainment()
+    {
+        "こんにちは世界".ContainsSanitized("こんにちは").Should().BeTrue();
+        "Привет мир".ContainsSanitized("Привет").Should().BeTrue();
     }
 
     [Fact]

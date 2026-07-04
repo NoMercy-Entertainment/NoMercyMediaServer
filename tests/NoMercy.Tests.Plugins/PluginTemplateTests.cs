@@ -18,18 +18,28 @@ namespace NoMercy.Tests.Plugins;
 [Trait("Category", "Unit")]
 public class PluginTemplateTests
 {
-    private static readonly string TemplateRoot = Path.GetFullPath(
-        Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "..",
-            "..",
-            "templates",
-            "NoMercy.Plugin.Template"
-        )
+    private static readonly string TemplateRoot = FindRepoPath(
+        Path.Combine("templates", "NoMercy.Plugin.Template")
     );
+
+    // Walk up from the test assembly instead of a fixed ".." chain — the output
+    // directory depth changes under a redirected BaseOutputPath.
+    private static string FindRepoPath(string relativePath)
+    {
+        string dir = AppContext.BaseDirectory;
+        while (dir != null!)
+        {
+            string candidate = Path.Combine(dir, relativePath);
+            if (Path.Exists(candidate))
+                return candidate;
+
+            dir = Path.GetDirectoryName(dir)!;
+        }
+
+        throw new FileNotFoundException(
+            $"Could not locate {relativePath} above {AppContext.BaseDirectory}"
+        );
+    }
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -199,17 +209,8 @@ public class PluginTemplateTests
     [Fact]
     public void TemplatePackageCsproj_Exists()
     {
-        string packageCsprojPath = Path.GetFullPath(
-            Path.Combine(
-                AppContext.BaseDirectory,
-                "..",
-                "..",
-                "..",
-                "..",
-                "..",
-                "templates",
-                "NoMercy.Plugin.Templates.csproj"
-            )
+        string packageCsprojPath = FindRepoPath(
+            Path.Combine("templates", "NoMercy.Plugin.Templates.csproj")
         );
         File.Exists(packageCsprojPath).Should().BeTrue("Template package csproj must exist");
 

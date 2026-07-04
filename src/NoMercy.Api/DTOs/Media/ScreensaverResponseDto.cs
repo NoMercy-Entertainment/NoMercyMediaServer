@@ -23,7 +23,7 @@ public record ScreensaverResponseDto
     public string Src { get; set; } = string.Empty;
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPaletteDto { get; set; }
+    public ColorPalette? ColorPaletteDto { get; set; }
 
     [JsonProperty("meta")]
     public MetaDto MetaDto { get; set; } = new();

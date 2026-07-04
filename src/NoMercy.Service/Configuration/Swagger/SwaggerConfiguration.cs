@@ -12,7 +12,7 @@
 using Asp.Versioning.ApiExplorer;
 using AspNetCore.Swagger.Themes;
 using Microsoft.Extensions.Options;
-using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Configuration;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace NoMercy.Service.Configuration.Swagger;
@@ -43,7 +43,7 @@ public static class SwaggerConfiguration
                 {
                     options.RoutePrefix = string.Empty;
                     options.DocumentTitle = "NoMercy MediaServer API";
-                    options.OAuthClientId(Config.TokenClientId);
+                    options.OAuthClientId(ExternalServicesConfig.Current.TokenClientId);
                     options.OAuthScopes("openid");
                     options.EnablePersistAuthorization();
                     options.EnableTryItOutByDefault();

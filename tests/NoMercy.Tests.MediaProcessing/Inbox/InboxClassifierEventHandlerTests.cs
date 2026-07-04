@@ -22,7 +22,6 @@ using NoMercy.MediaProcessing.EventHandlers;
 using NoMercy.MediaProcessing.Inbox;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Factory;
@@ -123,6 +122,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
         );
 
         return new InboxClassifierEventHandler(
+            NullLogger<InboxClassifierEventHandler>.Instance,
             _eventBusMock.Object,
             classifier,
             routing,
@@ -421,6 +421,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
             }
 
             InboxClassifierEventHandler handler = new(
+                NullLogger<InboxClassifierEventHandler>.Instance,
                 eventBusMock.Object,
                 classifier,
                 routing,

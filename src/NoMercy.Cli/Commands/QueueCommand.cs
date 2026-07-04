@@ -16,7 +16,7 @@ namespace NoMercy.Cli.Commands;
 
 internal static class QueueCommand
 {
-    public static Command Create(Option<string?> pipeOption)
+    public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
         Command statusCmd = new("status") { Description = "Show queue statistics" };
 
@@ -24,16 +24,16 @@ internal static class QueueCommand
             async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
-                using CliClient client = new(pipe);
+                using ICliClient client = clientFactory.Create(pipe);
                 QueueStatusResponse? queue = await client.GetAsync<QueueStatusResponse>(
-                    "/manage/queue",
+                    ApiRoutes.Queue,
                     ct
                 );
 
                 if (queue is null)
                 {
                     await Console.Error.WriteLineAsync("Could not connect to server.");
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
 
                 Console.WriteLine($"Pending Jobs:  {queue.PendingJobs}");
@@ -50,7 +50,7 @@ internal static class QueueCommand
                     }
                 }
 
-                return 0;
+                return (int)ExitCode.Success;
             }
         );
 

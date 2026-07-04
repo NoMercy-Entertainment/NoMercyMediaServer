@@ -13,9 +13,8 @@ using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.DTOs.Media;
 
@@ -52,7 +51,7 @@ public record CollectionsResponseItemDto
     public Uri Link { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("poster")]
     public string? Poster { get; set; }

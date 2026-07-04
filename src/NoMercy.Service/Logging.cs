@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -9,17 +9,19 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.NmSystem.SystemCalls;
-using Serilog.Events;
+using NoMercy.NmSystem.Logging;
 
 namespace NoMercy.Service;
 
+/// <summary>
+/// The application's <see cref="ILogger{T}"/>. Forwards to the NoMercy console
+/// logger (aligned, themed, structured) while filtering out noisy ASP.NET Core
+/// framework messages. The category is derived from the source type so each
+/// subsystem is coloured correctly.
+/// </summary>
 public class CustomLogger<T> : ILogger<T>
 {
-    private readonly string _categoryName;
-
-    // Add a list of message fragments to filter out
-    private static readonly string[] _filteredPhrases =
+    private static readonly string[] FilteredPhrases =
     [
         "Middleware configuration started",
         "Wildcard detected",
@@ -40,10 +42,17 @@ public class CustomLogger<T> : ILogger<T>
         "Microsoft",
     ];
 
-    public CustomLogger()
+    private readonly ILogger _inner;
+
+    public CustomLogger(NoMercyLoggerProvider provider)
     {
-        _categoryName = typeof(T).Name;
+        _inner = provider.CreateLogger(typeof(T).FullName ?? typeof(T).Name);
     }
+
+    public IDisposable? BeginScope<TState>(TState state)
+        where TState : notnull => _inner.BeginScope(state);
+
+    public bool IsEnabled(LogLevel logLevel) => _inner.IsEnabled(logLevel);
 
     public void Log<TState>(
         LogLevel logLevel,
@@ -53,53 +62,18 @@ public class CustomLogger<T> : ILogger<T>
         Func<TState, Exception?, string> formatter
     )
     {
-        string message = formatter(state, exception);
+        if (!IsEnabled(logLevel))
+            return;
 
-        // Filter out specific ASP.NET Core middleware messages
-        if (ShouldFilterMessage(message))
-            return; // Skip logging this message
-
-        LogEventLevel level = ConvertLogLevel(logLevel);
-
-        // Route logs to appropriate category based on the class name
-        if (
-            _categoryName.Contains("Queue")
-            || _categoryName.Contains("Cron")
-            || _categoryName.Contains("Job")
-        )
-            Logger.Queue($"{message}", level);
-        else
-            Logger.System($"{message}", level);
-    }
-
-    private bool ShouldFilterMessage(string message)
-    {
-        // Check if the message contains any of the filtered phrases
-        return _filteredPhrases.Any(message.Contains);
-    }
-
-    public bool IsEnabled(LogLevel logLevel)
-    {
-        return true;
-    }
-
-    public IDisposable? BeginScope<TState>(TState state)
-        where TState : notnull
-    {
-        return null;
-    }
-
-    private LogEventLevel ConvertLogLevel(LogLevel logLevel)
-    {
-        return logLevel switch
+        // Errors bypass phrase filtering: "Microsoft" matches framework frames in
+        // an exception's rendered stack, which was silently dropping 500 stacks.
+        if (logLevel < LogLevel.Error)
         {
-            LogLevel.Trace => LogEventLevel.Verbose,
-            LogLevel.Debug => LogEventLevel.Debug,
-            LogLevel.Information => LogEventLevel.Information,
-            LogLevel.Warning => LogEventLevel.Warning,
-            LogLevel.Error => LogEventLevel.Error,
-            LogLevel.Critical => LogEventLevel.Fatal,
-            _ => LogEventLevel.Information,
-        };
+            string message = formatter(state, exception);
+            if (FilteredPhrases.Any(message.Contains))
+                return;
+        }
+
+        _inner.Log(logLevel, eventId, state, exception, formatter);
     }
 }

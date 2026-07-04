@@ -32,7 +32,6 @@ using NoMercy.Database.Models.TvShows;
 using NoMercy.Encoder.Execution;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
-using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.NewtonSoftConverters;
@@ -45,7 +44,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 [ApiController]
 [Tags("Dashboard Tasks")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "Moderator")]
 [Route("api/v{version:apiVersion}/dashboard/tasks", Order = 10)]
 public class TasksController(
     MediaContext mediaContext,
@@ -56,31 +55,50 @@ public class TasksController(
 ) : BaseController
 {
     [HttpGet]
-    public IActionResult Index()
+    public async Task<IActionResult> Index()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view tasks");
 
-        List<TaskDto> list =
-        [
-            new()
+        await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
+
+        List<QueueJob> jobs = await queueContext
+            .QueueJobs.OrderByDescending(j => j.Priority)
+            .ThenBy(j => j.CreatedAt)
+            .ToListAsync();
+
+        List<TaskDto> list = jobs.Select(job => new TaskDto
             {
-                Id = "pqiilkpnf8lmwrcxn0l8tngf",
-                Title = "Scan media library",
+                Id = job.Id.ToString(),
+                Title = ResolveJobTitle(job),
                 Value = 0,
-                Type = "library",
-                CreatedAt = DateTime.Parse("2024-01-25 09:26:56"),
-            },
-        ];
+                Type = job.Queue,
+                CreatedAt = job.CreatedAt,
+                UpdatedAt = job.ReservedAt ?? job.CreatedAt,
+            })
+            .ToList();
 
         return Ok(list);
+    }
+
+    /// <summary>
+    /// Best-effort human-readable job type for the dashboard task list. Falls
+    /// back to the raw queue name if the payload can't be deserialized to its
+    /// concrete job type (e.g. a stale payload from a removed job class).
+    /// </summary>
+    private static string ResolveJobTitle(QueueJob job)
+    {
+        try
+        {
+            return SerializationHelper.Deserialize<object>(job.Payload).GetType().Name;
+        }
+        catch (Exception)
+        {
+            return job.Queue;
+        }
     }
 
     [HttpPost]
     public IActionResult Store()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to create tasks");
 
         return Ok(new PlaceholderResponse { Data = [] });
     }
@@ -88,8 +106,6 @@ public class TasksController(
     [HttpPatch]
     public IActionResult Update()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to update tasks");
 
         return Ok(new PlaceholderResponse { Data = [] });
     }
@@ -97,8 +113,6 @@ public class TasksController(
     [HttpDelete]
     public IActionResult Destroy()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to delete tasks");
 
         return Ok(new PlaceholderResponse { Data = [] });
     }
@@ -107,8 +121,6 @@ public class TasksController(
     [Route("pause/{id:int}")]
     public IActionResult PauseTask(int id)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to pause tasks");
 
         IReadOnlyCollection<int> pids = processRegistry.GetProcessIds(id);
         if (pids.Count == 0)
@@ -124,8 +136,6 @@ public class TasksController(
     [Route("resume/{id:int}")]
     public IActionResult ResumeTask(int id)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to resume tasks");
 
         IReadOnlyCollection<int> pids = processRegistry.GetProcessIds(id);
         if (pids.Count == 0)
@@ -141,8 +151,6 @@ public class TasksController(
     [Route("runners")]
     public IActionResult RunningTaskWorkers()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view task workers");
 
         return Ok(new PlaceholderResponse { Data = [] });
     }
@@ -151,8 +159,6 @@ public class TasksController(
     [Route("queue")]
     public async Task<IActionResult> EncoderQueue()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view encoder queue");
 
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
 
@@ -265,7 +271,7 @@ public class TasksController(
             foreach (QueueJobDto dto in queueJobs.Where(dto => dto.Status == "running"))
             {
                 _ = EventBusProvider.Current.PublishAsync(
-                    new EncoderProgressBroadcastEvent
+                    new EncodingProgressBroadcastedEvent
                     {
                         ProgressData = new
                         {
@@ -310,8 +316,6 @@ public class TasksController(
     [Route("queue/{id:int}")]
     public async Task<IActionResult> DeleteTask(int id)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to clear encoder queue");
 
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
         QueueJob? job = queueContext.QueueJobs.FirstOrDefault(job => job.Id == id);
@@ -353,8 +357,6 @@ public class TasksController(
     [Route("queue/{id:int}")]
     public async Task<IActionResult> UpdateTask(int id, [FromBody] PatchQueueItemDto request)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to clear encoder queue");
 
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
 
@@ -380,8 +382,6 @@ public class TasksController(
     [Route("pause-queue")]
     public async Task<IActionResult> PauseEncoderQueue()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to pause the encoder queue");
 
         if (QueueRunner.Current is null)
             return Ok(
@@ -403,8 +403,6 @@ public class TasksController(
     [Route("resume-queue")]
     public async Task<IActionResult> ResumeEncoderQueue()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to resume the encoder queue");
 
         if (QueueRunner.Current is null)
             return Ok(
@@ -430,8 +428,6 @@ public class TasksController(
     [Route("queue/status")]
     public IActionResult EncoderQueueStatus()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view encoder queue status");
 
         bool paused = QueueRunner.Current?.IsPaused("encoder") ?? false;
         return Ok(new { paused });
@@ -447,8 +443,6 @@ public class TasksController(
     [Route("queue/eta")]
     public async Task<IActionResult> EncoderQueueEta()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view encoder queue ETA");
 
         List<EncodingHistory> recent = await historyRepository.GetRecentAsync(
             pageSize: 50,
@@ -495,8 +489,6 @@ public class TasksController(
     [Route("reorder")]
     public async Task<IActionResult> ReorderQueue([FromBody] ReorderQueueDto request)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to reorder the queue");
 
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
 
@@ -557,8 +549,6 @@ public class TasksController(
     [Route("failed/retry/{id:long?}")]
     public async Task<IActionResult> RetryFailedJobs(long? id = null)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to retry failed jobs");
 
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
         using EfQueueContextAdapter adapter = new(queueContext);
@@ -584,8 +574,6 @@ public class TasksController(
     [Route("failed")]
     public async Task<IActionResult> GetFailedJobs()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view failed jobs");
 
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
 
@@ -600,8 +588,6 @@ public class TasksController(
     [Route("queue/incomplete")]
     public async Task<IActionResult> IncompleteEncodes()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view incomplete encodes");
 
         List<IncompleteEncodeDto> rows = await mediaContext
             .IncompleteEncodes.AsNoTracking()
@@ -628,8 +614,6 @@ public class TasksController(
     [Route("queue/incomplete/{id:int}/retry")]
     public async Task<IActionResult> RetryIncompleteEncode(int id)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to retry incomplete encodes");
 
         IncompleteEncode? row = await mediaContext.IncompleteEncodes.FindAsync(id);
         if (row is null)

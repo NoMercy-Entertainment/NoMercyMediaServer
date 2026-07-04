@@ -18,7 +18,6 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Profiles;
-using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 
@@ -36,15 +35,13 @@ public class EncodingPresetsController(
 {
     [Obsolete("Use GET /api/v1/encoder/profiles")]
     [HttpGet]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> List(
         [FromQuery] int pageSize = 100,
         [FromQuery] int pageIndex = 0,
         [FromQuery] string? tag = null
     )
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view presets");
-
         pageSize = Math.Clamp(pageSize, 1, 500);
         if (pageIndex < 0)
             pageIndex = 0;
@@ -69,11 +66,9 @@ public class EncodingPresetsController(
 
     [Obsolete("Use GET /api/v1/encoder/profiles/{id}")]
     [HttpGet("{id}")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Get(string id)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view presets");
-
         if (!Ulid.TryParse(id, out Ulid presetId))
             return BadRequestResponse("Invalid preset id");
 
@@ -86,11 +81,9 @@ public class EncodingPresetsController(
 
     [Obsolete("Use POST /api/v1/encoder/profiles")]
     [HttpPost]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Create([FromBody] CreatePresetRequest request)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to create presets");
-
         if (string.IsNullOrWhiteSpace(request.Name))
             return BadRequestResponse("name is required");
         if (string.IsNullOrWhiteSpace(request.ProfileJson))
@@ -117,11 +110,9 @@ public class EncodingPresetsController(
 
     [Obsolete("Use PUT /api/v1/encoder/profiles/{id}")]
     [HttpPut("{id}")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Update(string id, [FromBody] UpdatePresetRequest request)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to update presets");
-
         if (!Ulid.TryParse(id, out Ulid presetId))
             return BadRequestResponse("Invalid preset id");
 
@@ -180,22 +171,18 @@ public class EncodingPresetsController(
 
     [Obsolete("Use GET /api/v1/encoder/profiles/tags")]
     [HttpGet("tags")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> ListAllTags()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view presets");
-
         IReadOnlyList<string> tags = await presetRepository.GetAllTagsAsync();
         return Ok(new { data = tags });
     }
 
     [Obsolete("Use POST /api/v1/encoder/profiles/{id}/clone")]
     [HttpPost("{id}/clone")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Clone(string id, [FromBody] ClonePresetRequest request)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to clone presets");
-
         if (!Ulid.TryParse(id, out Ulid presetId))
             return BadRequestResponse("Invalid preset id");
 
@@ -242,11 +229,9 @@ public class EncodingPresetsController(
 
     [Obsolete("Use GET /api/v1/encoder/profiles/{id}/resolve")]
     [HttpGet("{id}/resolve")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Resolve(string id)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view presets");
-
         if (!Ulid.TryParse(id, out Ulid presetId))
             return BadRequestResponse("Invalid preset id");
 
@@ -273,11 +258,9 @@ public class EncodingPresetsController(
 
     [Obsolete("Use GET /api/v1/encoder/profiles/{id}/export")]
     [HttpGet("{id}/export")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Export(string id)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to export presets");
-
         if (!Ulid.TryParse(id, out Ulid presetId))
             return BadRequestResponse("Invalid preset id");
 
@@ -298,11 +281,9 @@ public class EncodingPresetsController(
 
     [Obsolete("Use POST /api/v1/encoder/profiles/import")]
     [HttpPost("import")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Import([FromBody] PresetExport import)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to import presets");
-
         if (string.IsNullOrWhiteSpace(import.Name))
             return BadRequestResponse("name is required");
         if (string.IsNullOrWhiteSpace(import.ProfileJson))
@@ -334,14 +315,12 @@ public class EncodingPresetsController(
 
     [Obsolete("Use POST /api/v1/encoder/profiles/import")]
     [HttpPost("import-url")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> ImportFromUrl(
         [FromBody] ImportFromUrlRequest request,
         CancellationToken ct
     )
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to import presets");
-
         if (string.IsNullOrWhiteSpace(request.Url))
             return BadRequestResponse("url is required");
 
@@ -413,11 +392,9 @@ public class EncodingPresetsController(
     /// </remarks>
     [Obsolete("Use POST /api/v1/encoder/profiles/validate")]
     [HttpPost("validate")]
+    [Authorize(Policy = "Moderator")]
     public IActionResult Validate([FromBody] ValidatePresetRequest request)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to validate presets");
-
         if (string.IsNullOrWhiteSpace(request.ProfileJson))
             return BadRequestResponse("profile_json is required");
 
@@ -514,11 +491,9 @@ public class EncodingPresetsController(
 
     [Obsolete("Use DELETE /api/v1/encoder/profiles/{id}")]
     [HttpDelete("{id}")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Delete(string id)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to delete presets");
-
         if (!Ulid.TryParse(id, out Ulid presetId))
             return BadRequestResponse("Invalid preset id");
 

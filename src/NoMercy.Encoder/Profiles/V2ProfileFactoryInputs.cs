@@ -12,8 +12,8 @@
 namespace NoMercy.Encoder.Profiles;
 
 /// <summary>
-/// Adapter records that mirror the V1 DB profile shape (IVideoProfile,
-/// IAudioProfile, ISubtitleProfile, IThumbnailProfile) without depending on
+/// Adapter records that mirror the V1 DB profile shape (VideoProfile,
+/// AudioProfile, SubtitleProfile, ThumbnailProfile) without depending on
 /// NoMercy.Database. <see cref="V2ProfileFactory"/> consumes these to build a
 /// V2 <see cref="EncodingProfile"/>. The job (e.g. VideoEncodeJob) maps from
 /// the DB row to these records before calling the factory.

@@ -49,5 +49,7 @@ public interface IResourceMonitor
     /// vendor runtime can observe. Returns an empty list on platforms or
     /// configurations where GPU telemetry is unavailable.
     /// </summary>
-    IReadOnlyList<GpuProcessSample> SampleGpu();
+    Task<IReadOnlyList<GpuProcessSample>> SampleGpuAsync(
+        CancellationToken cancellationToken = default
+    );
 }

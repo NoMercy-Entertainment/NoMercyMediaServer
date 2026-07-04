@@ -13,17 +13,15 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.Services;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Storage;
-using NoMercy.Helpers;
-using NoMercy.Helpers.Extensions;
-using NoMercy.NmSystem.SystemCalls;
+using NoMercy.NmSystem.Auth;
 using NoMercy.Storage;
-using Serilog.Events;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
@@ -32,8 +30,11 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/drivers", Order = 11)]
-public class DriversController(IDriverRepository driverRepository, IStorageFactory storageFactory)
-    : BaseController
+public class DriversController(
+    IDriverRepository driverRepository,
+    IStorageFactory storageFactory,
+    ILogger<DriversController> logger
+) : BaseController
 {
     // -----------------------------------------------------------------------
     // GET /api/v1/dashboard/drivers
@@ -41,11 +42,9 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
     // -----------------------------------------------------------------------
 
     [HttpGet]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Index()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view drivers");
-
         List<Driver> drivers = await driverRepository.GetAllDriversAsync();
         List<DriverDto> result = drivers.Select(MapToDto).ToList();
 
@@ -59,11 +58,9 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
 
     [HttpGet]
     [Route("types")]
+    [Authorize(Policy = "Moderator")]
     public IActionResult GetTypes()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view driver types");
-
         return Ok(DriverTypeMetadata.All);
     }
 
@@ -73,11 +70,9 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
 
     [HttpGet]
     [Route("{id:ulid}")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Show(Ulid id)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view drivers");
-
         Driver? driver = await driverRepository.GetDriverByIdAsync(id);
         if (driver is null)
             return NotFoundResponse("Driver not found");
@@ -92,11 +87,9 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
 
     [HttpGet]
     [Route("system-local")]
+    [Authorize(Policy = "Moderator")]
     public IActionResult GetSystemLocalId()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view driver info");
-
         return Ok(new { id = Driver.SystemLocalDriverId.ToString() });
     }
 
@@ -106,11 +99,9 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
     // -----------------------------------------------------------------------
 
     [HttpPost]
+    [Authorize(Policy = "Owner")]
     public async Task<IActionResult> Create([FromBody] CreateDriverRequestDto request)
     {
-        if (!User.IsOwner())
-            return UnauthorizedResponse("You do not have permission to create drivers");
-
         string normalizedType = (request.Type ?? string.Empty).Trim().ToLowerInvariant();
 
         if (!DriverTypeMetadata.AllUserCreatable.Contains(normalizedType))
@@ -142,11 +133,12 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
                 password: request.Credentials.SecretKey,
                 apiKey: string.Empty
             );
-            Logger.App(
-                $"[DriversController] Stored credentials for new {normalizedType} driver "
-                    + $"(id={newId}, accessKey len={request.Credentials.AccessKey.Length}, "
-                    + $"secret len={request.Credentials.SecretKey.Length})",
-                LogEventLevel.Information
+            logger.LogInformation(
+                "[DriversController] Stored credentials for new {NormalizedType} driver (id={NewId}, accessKey len={Length}, secret len={Length2})",
+                normalizedType,
+                newId,
+                request.Credentials.AccessKey.Length,
+                request.Credentials.SecretKey.Length
             );
 
             // Inject credentialsRef into Config so the StorageFactory can resolve it.
@@ -155,10 +147,10 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
         }
         else if (request.Credentials is not null)
         {
-            Logger.App(
-                $"[DriversController] Ignoring blank credentials block on create for {normalizedType} "
-                    + $"(id={newId}); driver will be created without stored credentials.",
-                LogEventLevel.Warning
+            logger.LogWarning(
+                "[DriversController] Ignoring blank credentials block on create for {NormalizedType} (id={NewId}); driver will be created without stored credentials.",
+                normalizedType,
+                newId
             );
         }
 
@@ -184,11 +176,9 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
 
     [HttpPut]
     [Route("{id:ulid}")]
+    [Authorize(Policy = "Owner")]
     public async Task<IActionResult> Update(Ulid id, [FromBody] UpdateDriverRequestDto request)
     {
-        if (!User.IsOwner())
-            return UnauthorizedResponse("You do not have permission to update drivers");
-
         Driver? driver = await driverRepository.GetDriverByIdAsync(id);
         if (driver is null)
             return NotFoundResponse("Driver not found");
@@ -233,15 +223,16 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
         // a UI that submits {credentials: null} vs {credentials: {access_key:"",
         // secret_key:""}} vs flat top-level fields all looked identical from
         // the operator's seat.
-        Logger.App(
-            $"[DriversController] Update {id} ({driver.Type}) — credentials block: "
-                + (
-                    request.Credentials is null
-                        ? "absent"
-                        : $"present (access_key len={request.Credentials.AccessKey.Length}, "
-                            + $"secret_key len={request.Credentials.SecretKey.Length})"
-                ),
-            LogEventLevel.Information
+        logger.LogInformation(
+            "[DriversController] Update {Id} ({Type}) — credentials block: {Length}",
+            id,
+            driver.Type,
+            (
+                request.Credentials is null
+                    ? "absent"
+                    : $"present (access_key len={request.Credentials.AccessKey.Length}, "
+                        + $"secret_key len={request.Credentials.SecretKey.Length})"
+            )
         );
 
         if (request.Credentials is not null && HasMeaningfulCredentials(request.Credentials))
@@ -253,11 +244,12 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
                 password: request.Credentials.SecretKey,
                 apiKey: string.Empty
             );
-            Logger.App(
-                $"[DriversController] Updated credentials for driver {id} ({driver.Type}) "
-                    + $"(accessKey len={request.Credentials.AccessKey.Length}, "
-                    + $"secret len={request.Credentials.SecretKey.Length})",
-                LogEventLevel.Information
+            logger.LogInformation(
+                "[DriversController] Updated credentials for driver {Id} ({Type}) (accessKey len={Length}, secret len={Length2})",
+                id,
+                driver.Type,
+                request.Credentials.AccessKey.Length,
+                request.Credentials.SecretKey.Length
             );
 
             // Ensure credentialsRef is present in Config.
@@ -272,10 +264,10 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
             // unrelated edit (renaming the driver, toggling a config flag)
             // wiped out the previously-stored access key + secret. Preserve
             // existing credentials when the incoming block is blank.
-            Logger.App(
-                $"[DriversController] Ignoring blank credentials block on update for driver {id} "
-                    + $"({driver.Type}); preserving previously-stored credentials.",
-                LogEventLevel.Information
+            logger.LogInformation(
+                "[DriversController] Ignoring blank credentials block on update for driver {Id} ({Type}); preserving previously-stored credentials.",
+                id,
+                driver.Type
             );
         }
 
@@ -309,14 +301,12 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
 
     [HttpPut]
     [Route("{id:ulid}/credentials")]
+    [Authorize(Policy = "Owner")]
     public async Task<IActionResult> UpdateCredentials(
         Ulid id,
         [FromBody] DriverCredentialsDto request
     )
     {
-        if (!User.IsOwner())
-            return UnauthorizedResponse("You do not have permission to update driver credentials");
-
         Driver? driver = await driverRepository.GetDriverByIdAsync(id);
         if (driver is null)
             return NotFoundResponse("Driver not found");
@@ -346,11 +336,13 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
         foreach (Ulid folderId in folderIds)
             storageFactory.Invalidate(folderId);
 
-        Logger.App(
-            $"[DriversController] Direct credential write for driver {id} ({driver.Type}) "
-                + $"(accessKey len={request.AccessKey.Length}, secret len={request.SecretKey.Length}); "
-                + $"invalidated {folderIds.Count} cached folder(s).",
-            LogEventLevel.Information
+        logger.LogInformation(
+            "[DriversController] Direct credential write for driver {Id} ({Type}) (accessKey len={Length}, secret len={Length2}); invalidated {Count} cached folder(s).",
+            id,
+            driver.Type,
+            request.AccessKey.Length,
+            request.SecretKey.Length,
+            folderIds.Count
         );
 
         return Ok(MapToDto(driver));
@@ -363,11 +355,9 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
 
     [HttpDelete]
     [Route("{id:ulid}")]
+    [Authorize(Policy = "Owner")]
     public async Task<IActionResult> Delete(Ulid id)
     {
-        if (!User.IsOwner())
-            return UnauthorizedResponse("You do not have permission to delete drivers");
-
         if (id == Driver.SystemLocalDriverId)
             return ConflictResponse("Cannot delete system driver");
 

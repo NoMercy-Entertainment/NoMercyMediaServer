@@ -12,8 +12,8 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
@@ -32,23 +32,41 @@ public static class UserSettings
 
             foreach (Configuration config in configuration)
             {
-                switch (config.Key)
+                if (config.Key is "internalPort" or "externalPort")
                 {
-                    case "internalPort" when Config.InternalServerPort != int.Parse(config.Value):
-                        config.Value = Config.InternalServerPort.ToString();
+                    if (!int.TryParse(config.Value, out int parsedPort))
+                    {
+                        Logger.App(
+                            $"UserSettings: skipping malformed '{config.Key}' value '{config.Value}' — keeping other settings",
+                            LogEventLevel.Warning
+                        );
+                        continue;
+                    }
+
+                    if (
+                        config.Key == "internalPort"
+                        && RuntimeServerSettings.Current.InternalServerPort != parsedPort
+                    )
+                    {
+                        config.Value = RuntimeServerSettings.Current.InternalServerPort.ToString();
                         appContext
                             .Configuration.Upsert(new() { Key = config.Key, Value = config.Value })
                             .On(c => c.Key)
                             .Run();
-                        break;
-                    case "externalPort" when Config.ExternalServerPort != int.Parse(config.Value):
-                        config.Value = Config.ExternalServerPort.ToString();
+                    }
+                    else if (
+                        config.Key == "externalPort"
+                        && RuntimeServerSettings.Current.ExternalServerPort != parsedPort
+                    )
+                    {
+                        config.Value = RuntimeServerSettings.Current.ExternalServerPort.ToString();
                         appContext
                             .Configuration.Upsert(new() { Key = config.Key, Value = config.Value })
                             .On(c => c.Key)
                             .Run();
-                        break;
+                    }
                 }
+
                 settings[config.Key] = config.Value;
             }
 
@@ -73,80 +91,189 @@ public static class UserSettings
         }
     }
 
+    private static bool _configDumpLogged;
+
     public static void ApplySettings(Dictionary<string, string> settings, bool silent = false)
     {
+        // Dump the resolved config once per process at Verbose, with secret
+        // values redacted. ApplySettings runs more than once during boot, so
+        // without the guard the whole Configuration table is logged every pass.
+        bool dumpConfig = !silent && !_configDumpLogged;
+        if (dumpConfig)
+            _configDumpLogged = true;
+
+        // Emit the resolved config as a compact 4-column table (one log entry,
+        // rendered under the gutter). Secret values are skipped entirely since
+        // they must not be written to logs. Logged once per process at Verbose.
+        if (dumpConfig)
+        {
+            List<string> cells = new();
+            foreach (KeyValuePair<string, string> entry in settings)
+            {
+                bool isSecret =
+                    entry.Key.Contains("token", StringComparison.OrdinalIgnoreCase)
+                    || entry.Key.Contains("ssl_", StringComparison.OrdinalIgnoreCase)
+                    || entry.Key.Contains("fingerprint", StringComparison.OrdinalIgnoreCase)
+                    || entry.Key.Contains("secret", StringComparison.OrdinalIgnoreCase);
+                if (isSecret)
+                    continue;
+                cells.Add($"{entry.Key} = {entry.Value}");
+            }
+
+            if (cells.Count > 0)
+            {
+                const int columns = 3;
+                int rows = (cells.Count + columns - 1) / columns;
+
+                // Per-column width keeps each column as narrow as its content.
+                int[] columnWidth = new int[columns];
+                for (int i = 0; i < cells.Count; i++)
+                {
+                    int col = i % columns;
+                    if (cells[i].Length > columnWidth[col])
+                        columnWidth[col] = cells[i].Length;
+                }
+
+                System.Text.StringBuilder builder = new();
+                builder.Append($"Configuration ({cells.Count} key(s)):");
+                for (int row = 0; row < rows; row++)
+                {
+                    builder.Append('\n').Append("  ");
+                    for (int col = 0; col < columns; col++)
+                    {
+                        int index = (row * columns) + col;
+                        if (index >= cells.Count)
+                            break;
+
+                        bool last = col == columns - 1 || index == cells.Count - 1;
+                        builder.Append(
+                            last ? cells[index] : cells[index].PadRight(columnWidth[col] + 2)
+                        );
+                    }
+                }
+
+                Logger.App(builder.ToString(), LogEventLevel.Verbose);
+            }
+        }
+
         using AppDbContext appContext = new();
         foreach (KeyValuePair<string, string> setting in settings)
         {
-            if (!silent)
-                Logger.App($"Configuration: {setting.Key} = {setting.Value}");
-
             switch (setting.Key)
             {
-                case "internalPort" when Config.InternalServerPort == int.Parse(setting.Value):
-                    Config.InternalServerPort = int.Parse(setting.Value);
+                case "internalPort":
+                    if (!int.TryParse(setting.Value, out int internalPort))
+                    {
+                        Logger.App(
+                            $"UserSettings: skipping malformed 'internalPort' value '{setting.Value}' — keeping current runtime setting",
+                            LogEventLevel.Warning
+                        );
+                        break;
+                    }
+
+                    bool internalPortChanged =
+                        RuntimeServerSettings.Current.InternalServerPort != internalPort;
+                    RuntimeServerSettings.Current.InternalServerPort = internalPort;
+                    if (internalPortChanged)
+                        appContext
+                            .Configuration.Upsert(
+                                new()
+                                {
+                                    Key = setting.Key,
+                                    Value = RuntimeServerSettings
+                                        .Current
+                                        .InternalServerPort.ToString(),
+                                }
+                            )
+                            .On(c => c.Key)
+                            .Run();
                     break;
-                case "internalPort" when Config.InternalServerPort != int.Parse(setting.Value):
-                    Config.InternalServerPort = int.Parse(setting.Value);
-                    appContext
-                        .Configuration.Upsert(
-                            new()
-                            {
-                                Key = setting.Key,
-                                Value = Config.InternalServerPort.ToString(),
-                            }
-                        )
-                        .On(c => c.Key)
-                        .Run();
-                    break;
-                case "externalPort" when Config.ExternalServerPort == int.Parse(setting.Value):
-                    Config.ExternalServerPort = int.Parse(setting.Value);
-                    break;
-                case "externalPort" when Config.ExternalServerPort != int.Parse(setting.Value):
-                    Config.ExternalServerPort = int.Parse(setting.Value);
-                    appContext
-                        .Configuration.Upsert(
-                            new()
-                            {
-                                Key = setting.Key,
-                                Value = Config.ExternalServerPort.ToString(),
-                            }
-                        )
-                        .On(c => c.Key)
-                        .Run();
+                case "externalPort":
+                    if (!int.TryParse(setting.Value, out int externalPort))
+                    {
+                        Logger.App(
+                            $"UserSettings: skipping malformed 'externalPort' value '{setting.Value}' — keeping current runtime setting",
+                            LogEventLevel.Warning
+                        );
+                        break;
+                    }
+
+                    bool externalPortChanged =
+                        RuntimeServerSettings.Current.ExternalServerPort != externalPort;
+                    RuntimeServerSettings.Current.ExternalServerPort = externalPort;
+                    if (externalPortChanged)
+                        appContext
+                            .Configuration.Upsert(
+                                new()
+                                {
+                                    Key = setting.Key,
+                                    Value = RuntimeServerSettings
+                                        .Current
+                                        .ExternalServerPort.ToString(),
+                                }
+                            )
+                            .On(c => c.Key)
+                            .Run();
                     break;
                 case "libraryRunners":
-                    Config.LibraryWorkers = new(Config.LibraryWorkers.Key, setting.Value.ToInt());
+                    RuntimeServerSettings.Current.LibraryWorkers = new(
+                        RuntimeServerSettings.Current.LibraryWorkers.Key,
+                        setting.Value.ToInt()
+                    );
                     break;
                 case "importRunners" or "queueRunners":
-                    Config.ImportWorkers = new(Config.ImportWorkers.Key, setting.Value.ToInt());
+                    RuntimeServerSettings.Current.ImportWorkers = new(
+                        RuntimeServerSettings.Current.ImportWorkers.Key,
+                        setting.Value.ToInt()
+                    );
                     break;
                 case "extrasRunners" or "dataRunners":
-                    Config.ExtrasWorkers = new(Config.ExtrasWorkers.Key, setting.Value.ToInt());
+                    RuntimeServerSettings.Current.ExtrasWorkers = new(
+                        RuntimeServerSettings.Current.ExtrasWorkers.Key,
+                        setting.Value.ToInt()
+                    );
                     break;
                 case "encoderRunners":
-                    Config.EncoderWorkers = new(Config.EncoderWorkers.Key, setting.Value.ToInt());
+                    RuntimeServerSettings.Current.EncoderWorkers = new(
+                        RuntimeServerSettings.Current.EncoderWorkers.Key,
+                        setting.Value.ToInt()
+                    );
                     Logger.App(
-                        $"UserSettings: Config.EncoderWorkers loaded as {Config.EncoderWorkers.Value} (DB value '{setting.Value}')"
+                        $"UserSettings: RuntimeServerSettings.Current.EncoderWorkers loaded as {RuntimeServerSettings.Current.EncoderWorkers.Value} (DB value '{setting.Value}')"
                     );
                     break;
                 case "cronRunners":
-                    Config.CronWorkers = new(Config.CronWorkers.Key, setting.Value.ToInt());
+                    RuntimeServerSettings.Current.CronWorkers = new(
+                        RuntimeServerSettings.Current.CronWorkers.Key,
+                        setting.Value.ToInt()
+                    );
                     break;
                 case "imageRunners":
-                    Config.ImageWorkers = new(Config.ImageWorkers.Key, setting.Value.ToInt());
+                    RuntimeServerSettings.Current.ImageWorkers = new(
+                        RuntimeServerSettings.Current.ImageWorkers.Key,
+                        setting.Value.ToInt()
+                    );
                     break;
                 case "fileRunners":
-                    Config.FileWorkers = new(Config.FileWorkers.Key, setting.Value.ToInt());
+                    RuntimeServerSettings.Current.FileWorkers = new(
+                        RuntimeServerSettings.Current.FileWorkers.Key,
+                        setting.Value.ToInt()
+                    );
                     break;
                 case "musicRunners":
-                    Config.MusicWorkers = new(Config.MusicWorkers.Key, setting.Value.ToInt());
+                    RuntimeServerSettings.Current.MusicWorkers = new(
+                        RuntimeServerSettings.Current.MusicWorkers.Key,
+                        setting.Value.ToInt()
+                    );
                     break;
                 case "swagger":
-                    Config.Swagger = setting.Value.ToBoolean();
+                    RuntimeServerSettings.Current.Swagger = setting.Value.ToBoolean();
+                    break;
+                case "UseSynthesizedDns":
+                    RuntimeServerSettings.Current.UseSynthesizedDns = setting.Value.ToBoolean();
                     break;
                 case "allowAdultContent":
-                    Config.AllowAdultContent = setting.Value.ToBoolean();
+                    RuntimeServerSettings.Current.AllowAdultContent = setting.Value.ToBoolean();
                     break;
             }
         }

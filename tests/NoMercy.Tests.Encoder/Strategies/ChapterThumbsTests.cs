@@ -22,7 +22,6 @@ using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Strategies.Hls;
-using NoMercy.Resources;
 using NoMercy.Tests.Encoder.Pipeline.Stages;
 using NoMercy.Tests.Encoder.Storage;
 

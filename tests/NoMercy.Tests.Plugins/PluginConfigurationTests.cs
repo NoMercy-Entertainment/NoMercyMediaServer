@@ -244,4 +244,72 @@ public class PluginConfigurationTests : IDisposable
         config.Should().NotBeNull();
         config.HasConfiguration().Should().BeFalse();
     }
+
+    // ── Sync/async mutual exclusion ──────────────────────────────────────────
+    //
+    // GetConfigurationAsync/SaveConfigurationAsync used to run with NO lock at
+    // all while their sync counterparts held one — two concurrent writers
+    // (one sync, one async) could both have the config file open for write at
+    // once. LocalStorage opens for write without shared access, so a genuine
+    // race throws IOException; these reproduce that concurrency shape.
+
+    [Fact]
+    public async Task SaveConfigurationAsync_ConcurrentCalls_DoNotThrow()
+    {
+        const int concurrentWrites = 30;
+
+        Func<Task> act = () =>
+            Task.WhenAll(
+                Enumerable
+                    .Range(0, concurrentWrites)
+                    .Select(i =>
+                        _config.SaveConfigurationAsync(new TestConfig { ApiKey = $"key-{i}" })
+                    )
+            );
+
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task SaveConfiguration_And_SaveConfigurationAsync_Concurrently_DoNotThrow()
+    {
+        const int iterations = 30;
+
+        Task syncTask = Task.Run(() =>
+        {
+            for (int i = 0; i < iterations; i++)
+                _config.SaveConfiguration(new TestConfig { ApiKey = $"sync-{i}" });
+        });
+        Task asyncTask = Task.Run(async () =>
+        {
+            for (int i = 0; i < iterations; i++)
+                await _config.SaveConfigurationAsync(new TestConfig { ApiKey = $"async-{i}" });
+        });
+
+        Func<Task> act = () => Task.WhenAll(syncTask, asyncTask);
+
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task GetConfigurationAsync_ConcurrentWithSaveConfiguration_DoesNotThrow()
+    {
+        _config.SaveConfiguration(new TestConfig { ApiKey = "seed" });
+        const int iterations = 30;
+
+        Task writer = Task.Run(() =>
+        {
+            for (int i = 0; i < iterations; i++)
+                _config.SaveConfiguration(new TestConfig { ApiKey = $"writer-{i}" });
+        });
+        Task reader = Task.Run(async () =>
+        {
+            for (int i = 0; i < iterations; i++)
+                await _config.GetConfigurationAsync<TestConfig>();
+        });
+
+        Func<Task> act = () => Task.WhenAll(writer, reader);
+
+        await act.Should().NotThrowAsync();
+    }
 }

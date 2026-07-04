@@ -19,7 +19,6 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Distribution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Jobs;
-using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
@@ -52,11 +51,9 @@ public class WorkersController(
 ) : BaseController
 {
     [HttpGet]
+    [Authorize(Policy = "Owner")]
     public IActionResult List()
     {
-        if (!User.IsOwner())
-            return UnauthorizedResponse("Only the server owner can list workers");
-
         // Full health snapshot (includes cooled-down workers) so operators
         // can see which workers are benched and why. The dispatcher uses a
         // narrower GetActiveWorkers() that hides cooldowns, but the dashboard
@@ -97,16 +94,12 @@ public class WorkersController(
     public IActionResult Register([FromBody] RegisterWorkerRequest request)
     {
         if (!encoderOptions.IsDistributedEncodingEnabled)
-            return StatusCode(
-                StatusCodes.Status503ServiceUnavailable,
-                new
-                {
-                    error = "Distributed encoding is not enabled on this server. "
-                        + "Set DistributedEncodingSigningKey in EncoderOptions and restart.",
-                }
+            return ServiceUnavailableResponse(
+                "Distributed encoding is not enabled on this server. "
+                    + "Set DistributedEncodingSigningKey in EncoderOptions and restart."
             );
 
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("Only the server owner can register workers");
 
         if (string.IsNullOrWhiteSpace(request.WorkerId))
@@ -161,9 +154,11 @@ public class WorkersController(
     public IActionResult Heartbeat(string workerId, [FromBody] HeartbeatRequest? request)
     {
         if (!encoderOptions.IsDistributedEncodingEnabled)
-            return StatusCode(StatusCodes.Status503ServiceUnavailable);
+            return ServiceUnavailableResponse(
+                "Distributed encoding is not enabled on this server."
+            );
 
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("Only the server owner can send heartbeats");
 
         bool accepted = registry.Heartbeat(workerId);
@@ -216,7 +211,9 @@ public class WorkersController(
     )
     {
         if (!encoderOptions.IsDistributedEncodingEnabled)
-            return StatusCode(StatusCodes.Status503ServiceUnavailable);
+            return ServiceUnavailableResponse(
+                "Distributed encoding is not enabled on this server."
+            );
 
         progressStore.Update(
             taskId,
@@ -243,11 +240,9 @@ public class WorkersController(
     /// latest progress snapshot. Empty when no remote tasks are running.
     /// </summary>
     [HttpGet("tasks/progress")]
+    [Authorize(Policy = "Owner")]
     public IActionResult ListActiveTaskProgress()
     {
-        if (!User.IsOwner())
-            return UnauthorizedResponse("Only the server owner can view task progress");
-
         IReadOnlyList<TaskProgressSnapshot> snapshots = progressStore.GetAll();
 
         return Ok(
@@ -275,11 +270,9 @@ public class WorkersController(
     }
 
     [HttpDelete("{workerId}")]
+    [Authorize(Policy = "Owner")]
     public IActionResult Unregister(string workerId)
     {
-        if (!User.IsOwner())
-            return UnauthorizedResponse("Only the server owner can unregister workers");
-
         bool removed = registry.Unregister(workerId);
         if (!removed)
             return NotFoundResponse($"Worker '{workerId}' is not registered");

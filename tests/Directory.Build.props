@@ -9,6 +9,13 @@
     <Compile
       Include="$(MSBuildThisFileDirectory)TestEnvironmentSetup.cs"
       Link="TestEnvironmentSetup.cs"
+      Condition="'$(MSBuildProjectName)' != 'NoMercy.Tests.Common'"
+    />
+    <!-- Serialize xUnit collections in every test assembly (not the plugin sample). -->
+    <Compile
+      Include="$(MSBuildThisFileDirectory)SharedTestParallelization.cs"
+      Link="SharedTestParallelization.cs"
+      Condition="'$(MSBuildProjectName)' != 'NoMercy.Plugin.Samples.Echo' AND '$(MSBuildProjectName)' != 'NoMercy.Tests.Common'"
     />
   </ItemGroup>
   <ItemGroup>

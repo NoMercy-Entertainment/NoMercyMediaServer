@@ -434,7 +434,7 @@ public class QueueCoreTests
 
         Assert.True(context.JobExists("lifecycle-test"));
 
-        QueueJobModel? found = context.GetNextJob("test", 3, null);
+        QueueJobModel? found = context.GetNextJob("test", 3, null, DateTime.UtcNow);
         Assert.NotNull(found);
         Assert.Equal("lifecycle-test", found.Payload);
 
@@ -569,7 +569,12 @@ public class QueueCoreTests
 
         public void RemoveJob(QueueJobModel job) => _jobs.Remove(job);
 
-        public QueueJobModel? GetNextJob(string queueName, byte maxAttempts, long? currentJobId) =>
+        public QueueJobModel? GetNextJob(
+            string queueName,
+            byte maxAttempts,
+            long? currentJobId,
+            DateTime now
+        ) =>
             _jobs.FirstOrDefault(j =>
                 j.Queue == queueName
                 && j.ReservedAt == null
@@ -609,6 +614,12 @@ public class QueueCoreTests
         }
 
         public void RemoveFailedJob(FailedJobModel failedJob) => _failedJobs.Remove(failedJob);
+
+        public void AddFailedJobAndRemoveJob(FailedJobModel failedJob, QueueJobModel job)
+        {
+            AddFailedJob(failedJob);
+            RemoveJob(job);
+        }
 
         public FailedJobModel? FindFailedJob(int id) => _failedJobs.FirstOrDefault(j => j.Id == id);
 

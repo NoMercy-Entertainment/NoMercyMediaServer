@@ -14,7 +14,7 @@ namespace NoMercy.Tests.NmSystem;
 /// <summary>
 /// Pins <see cref="NumberConverter"/>: aspect-ratio normalization (GCD + common
 /// ratio snapping) used for video metadata, and the integer-to-words conversion
-/// reached through <see cref="Str.ToName"/>.
+/// reached through <see cref="StringExtensions.ToName"/>.
 /// </summary>
 [Trait("Category", "Unit")]
 public class NumberConverterTests

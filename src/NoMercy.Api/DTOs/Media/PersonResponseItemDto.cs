@@ -12,7 +12,7 @@
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.People;
-using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.Providers.TMDB.Models.People;
 using TmdbGender = NoMercy.Providers.TMDB.Models.People.TmdbGender;
@@ -68,7 +68,7 @@ public record PersonResponseItemDto
     public string TitleSort { get; set; } = string.Empty;
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("created_at")]
     public DateTime CreatedAt { get; set; }
@@ -183,26 +183,30 @@ public record PersonResponseItemDto
         {
             Cast = tmdbPersonAppends
                 .CombinedCredits.Cast.Select(cast => new KnownForDto(cast, person))
-                .Where(knownFor => Config.ShowAdultContent || !knownFor.Adult)
+                .Where(knownFor =>
+                    RuntimeServerSettings.Current.ShowAdultContent || !knownFor.Adult
+                )
                 .OrderByDescending(knownFor => knownFor.Year)
                 .ToArray(),
 
             Crew = tmdbPersonAppends
                 .CombinedCredits.Crew.Select(crew => new KnownForDto(crew, person))
-                .Where(knownFor => Config.ShowAdultContent || !knownFor.Adult)
+                .Where(knownFor =>
+                    RuntimeServerSettings.Current.ShowAdultContent || !knownFor.Adult
+                )
                 .OrderByDescending(knownFor => knownFor.Year)
                 .ToArray(),
         };
 
         KnownForDto[] cast = tmdbPersonAppends
             .CombinedCredits.Cast.Select(cast => new KnownForDto(cast, person))
-            .Where(knownFor => Config.ShowAdultContent || !knownFor.Adult)
+            .Where(knownFor => RuntimeServerSettings.Current.ShowAdultContent || !knownFor.Adult)
             .DistinctBy(knownFor => knownFor.Id)
             .ToArray();
 
         KnownForDto[] crew = tmdbPersonAppends
             .CombinedCredits.Crew.Select(crew => new KnownForDto(crew, person))
-            .Where(knownFor => Config.ShowAdultContent || !knownFor.Adult)
+            .Where(knownFor => RuntimeServerSettings.Current.ShowAdultContent || !knownFor.Adult)
             .DistinctBy(knownFor => knownFor.Id)
             .ToArray();
 

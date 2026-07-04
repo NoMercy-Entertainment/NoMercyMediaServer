@@ -13,12 +13,11 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.MediaProcessing.Episodes;
 using NoMercy.MediaProcessing.People;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Models.Episode;
-using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -28,6 +27,13 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 [Serializable]
 public class EpisodeExtrasJob : AbstractShowExtraDataJob<TmdbEpisodeAppends, string>
 {
+    public EpisodeExtrasJob() { }
+
+    public EpisodeExtrasJob(
+        ILoggerFactory loggerFactory
+    )
+        : base(loggerFactory) { }
+
     public override string QueueName => "extras";
     public override int Priority => 1;
 
@@ -37,10 +43,18 @@ public class EpisodeExtrasJob : AbstractShowExtraDataJob<TmdbEpisodeAppends, str
         JobDispatcher jobDispatcher = new();
 
         EpisodeRepository episodeRepository = new(context);
-        EpisodeManager episodeManager = new(episodeRepository, jobDispatcher);
+        EpisodeManager episodeManager = new(
+            episodeRepository,
+            jobDispatcher,
+            LoggerFactory.CreateLogger<EpisodeManager>()
+        );
 
-        PersonRepository personRepository = new(context);
-        PersonManager personManager = new(personRepository, jobDispatcher);
+        PersonRepository personRepository = new(context, LoggerFactory.CreateLogger<PersonRepository>());
+        PersonManager personManager = new(
+            personRepository,
+            jobDispatcher,
+            LoggerFactory.CreateLogger<PersonManager>()
+        );
 
         foreach (TmdbEpisodeAppends episode in Storage)
         {
@@ -49,9 +63,6 @@ public class EpisodeExtrasJob : AbstractShowExtraDataJob<TmdbEpisodeAppends, str
             await episodeManager.StoreImages(Name, episode);
         }
 
-        Logger.MovieDb(
-            $"Show {Name}: Season {Storage.FirstOrDefault()?.SeasonNumber} Episodes: Images and Translations stored",
-            LogEventLevel.Debug
-        );
+        Log.LogDebug("Show {Name}: Season {SeasonNumber} Episodes: Images and Translations stored", Name, Storage.FirstOrDefault()?.SeasonNumber);
     }
 }

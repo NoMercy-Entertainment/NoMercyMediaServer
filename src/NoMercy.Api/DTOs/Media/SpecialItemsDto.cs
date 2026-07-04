@@ -16,9 +16,8 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.DTOs.Media;
 
@@ -49,7 +48,7 @@ public record SpecialItemsDto
     public string? Overview { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("poster")]
     public string? Poster { get; set; }
@@ -238,7 +237,7 @@ public record SpecialItemsDto
             Iso6391 = i.Iso6391,
             VoteAverage = i.VoteAverage,
             VoteCount = i.VoteCount,
-            ColorPalette = IColorPalettes.FromJsonOrNull(i.ColorPalette),
+            ColorPalette = ColorPalette.FromJsonOrNull(i.ColorPalette),
         });
 
         Posters = movie.Posters.Select(i => new ImageDto
@@ -254,11 +253,11 @@ public record SpecialItemsDto
             Iso6391 = i.Iso6391,
             VoteAverage = i.VoteAverage,
             VoteCount = i.VoteCount,
-            ColorPalette = IColorPalettes.FromJsonOrNull(i.ColorPalette),
+            ColorPalette = ColorPalette.FromJsonOrNull(i.ColorPalette),
         });
 
         MediaType = MediaTypes.MovieMediaType;
-        ColorPalette = IColorPalettes.FromJsonOrNull(movie.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(movie.ColorPalette);
         Poster = movie.Poster;
         Type = MediaTypes.MovieMediaType;
         Link = new($"/movie/{movie.Id}", UriKind.Relative);
@@ -290,7 +289,7 @@ public record SpecialItemsDto
             Name = c.PersonName,
             ProfilePath = c.PersonProfile,
             KnownForDepartment = c.PersonKnownForDepartment,
-            ColorPalette = IColorPalettes.FromJsonOrNull(c.PersonColorPalette),
+            ColorPalette = ColorPalette.FromJsonOrNull(c.PersonColorPalette),
             DeathDay = c.PersonDeathDay,
             Gender = c.PersonGender,
             Character = c.Character,
@@ -305,7 +304,7 @@ public record SpecialItemsDto
             Name = c.PersonName,
             ProfilePath = c.PersonProfile,
             KnownForDepartment = c.PersonKnownForDepartment,
-            ColorPalette = IColorPalettes.FromJsonOrNull(c.PersonColorPalette),
+            ColorPalette = ColorPalette.FromJsonOrNull(c.PersonColorPalette),
             DeathDay = c.PersonDeathDay,
             Gender = c.PersonGender,
             Job = c.Task,
@@ -337,7 +336,7 @@ public record SpecialItemsDto
             Iso6391 = i.Iso6391,
             VoteAverage = i.VoteAverage,
             VoteCount = i.VoteCount,
-            ColorPalette = IColorPalettes.FromJsonOrNull(i.ColorPalette),
+            ColorPalette = ColorPalette.FromJsonOrNull(i.ColorPalette),
         });
 
         Posters = tv.Posters.Select(i => new ImageDto
@@ -353,11 +352,11 @@ public record SpecialItemsDto
             Iso6391 = i.Iso6391,
             VoteAverage = i.VoteAverage,
             VoteCount = i.VoteCount,
-            ColorPalette = IColorPalettes.FromJsonOrNull(i.ColorPalette),
+            ColorPalette = ColorPalette.FromJsonOrNull(i.ColorPalette),
         });
 
         MediaType = "tv";
-        ColorPalette = IColorPalettes.FromJsonOrNull(tv.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(tv.ColorPalette);
         Poster = tv.Poster;
         Type = "tv";
         Link = new($"/tv/{tv.Id}", UriKind.Relative);
@@ -389,7 +388,7 @@ public record SpecialItemsDto
             Name = c.PersonName,
             ProfilePath = c.PersonProfile,
             KnownForDepartment = c.PersonKnownForDepartment,
-            ColorPalette = IColorPalettes.FromJsonOrNull(c.PersonColorPalette),
+            ColorPalette = ColorPalette.FromJsonOrNull(c.PersonColorPalette),
             DeathDay = c.PersonDeathDay,
             Gender = c.PersonGender,
             Character = c.Character,
@@ -404,7 +403,7 @@ public record SpecialItemsDto
             Name = c.PersonName,
             ProfilePath = c.PersonProfile,
             KnownForDepartment = c.PersonKnownForDepartment,
-            ColorPalette = IColorPalettes.FromJsonOrNull(c.PersonColorPalette),
+            ColorPalette = ColorPalette.FromJsonOrNull(c.PersonColorPalette),
             DeathDay = c.PersonDeathDay,
             Gender = c.PersonGender,
             Job = c.Task,

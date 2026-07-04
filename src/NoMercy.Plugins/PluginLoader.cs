@@ -1,0 +1,509 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+using System.Reflection;
+using Microsoft.Extensions.Logging;
+using NoMercy.Events;
+using NoMercy.Events.Plugins;
+using NoMercy.Plugins.Abstractions;
+using NoMercy.Storage;
+
+namespace NoMercy.Plugins;
+
+/// <summary>
+/// Loads plugin assemblies into their own <see cref="PluginLoadContext"/>, creates
+/// the plugin instances through DI, and records the result in the
+/// <see cref="IPluginRegistry"/>. Isolating this from <see cref="PluginManager"/>
+/// keeps assembly-loading and AssemblyLoadContext lifecycle in one place.
+/// </summary>
+internal sealed class PluginLoader(
+    IEventBus eventBus,
+    IServiceProvider serviceProvider,
+    ILogger logger,
+    string pluginsPath,
+    IStorage storage,
+    IPluginRegistry registry
+)
+{
+    private readonly IEventBus _eventBus = eventBus;
+    private readonly IServiceProvider _serviceProvider = serviceProvider;
+    private readonly ILogger _logger = logger;
+    private readonly string _pluginsPath = pluginsPath;
+    private readonly IStorage _storage = storage;
+    private readonly IPluginRegistry _registry = registry;
+
+    internal async Task LoadPluginFromManifestAsync(
+        string manifestPath,
+        CancellationToken ct = default
+    )
+    {
+        string pluginDir = Path.GetDirectoryName(manifestPath)!;
+
+        try
+        {
+            PluginManifest manifest = await PluginManifestParser.ParseFileAsync(
+                manifestPath,
+                _storage,
+                ct
+            );
+            string assemblyPath = Path.Combine(pluginDir, manifest.Assembly);
+
+            if (!_storage.Exists(assemblyPath))
+            {
+                _logger.LogWarning(
+                    "Plugin manifest {ManifestPath} references assembly '{Assembly}' which was not found.",
+                    manifestPath,
+                    manifest.Assembly
+                );
+
+                await _eventBus.PublishAsync(
+                    new PluginErrorOccurredEvent
+                    {
+                        PluginId = manifest.Id.ToString(),
+                        PluginName = manifest.Name,
+                        ErrorMessage =
+                            $"Assembly '{manifest.Assembly}' not found in plugin directory.",
+                        ExceptionType = nameof(FileNotFoundException),
+                    },
+                    ct
+                );
+
+                return;
+            }
+
+            string absoluteAssemblyPath = ToLocalAssemblyPath(assemblyPath);
+            PluginLoadContext loadContext = new(absoluteAssemblyPath);
+
+            try
+            {
+                Assembly assembly = loadContext.LoadFromAssemblyPath(absoluteAssemblyPath);
+                List<Type> pluginTypes = assembly
+                    .GetTypes()
+                    .Where(t =>
+                        typeof(IPlugin).IsAssignableFrom(t)
+                        && t is { IsAbstract: false, IsInterface: false }
+                    )
+                    .ToList();
+
+                bool foundPlugin = false;
+
+                foreach (Type pluginType in pluginTypes)
+                {
+                    IPlugin? instance = PluginInstanceFactory.Create(_serviceProvider, pluginType);
+                    if (instance is null)
+                    {
+                        continue;
+                    }
+
+                    PluginStatus initialStatus = manifest.AutoEnabled
+                        ? PluginStatus.Active
+                        : PluginStatus.Disabled;
+
+                    if (manifest.AutoEnabled)
+                    {
+                        string dataFolder = Path.Combine(
+                            _pluginsPath,
+                            "data",
+                            instance.Id.ToString("N")
+                        );
+                        if (!_storage.Exists(dataFolder))
+                        {
+                            _storage.CreateDirectory(dataFolder);
+                        }
+
+                        PluginContext context = new(
+                            _eventBus,
+                            _serviceProvider,
+                            _logger,
+                            dataFolder,
+                            _storage
+                        );
+
+                        try
+                        {
+                            instance.Initialize(context);
+                        }
+                        catch (Exception ex)
+                        {
+                            initialStatus = PluginStatus.Malfunctioned;
+                            instance.Dispose();
+
+                            PluginInfo errorInfo = PluginManifestParser.ToPluginInfo(
+                                manifest,
+                                assemblyPath,
+                                initialStatus,
+                                manifestPath
+                            );
+
+                            LoadedPlugin errorLoaded = new(errorInfo, null, loadContext);
+                            _registry[manifest.Id] = errorLoaded;
+                            foundPlugin = true;
+
+                            await _eventBus.PublishAsync(
+                                new PluginErrorOccurredEvent
+                                {
+                                    PluginId = manifest.Id.ToString(),
+                                    PluginName = manifest.Name,
+                                    ErrorMessage = ex.Message,
+                                    ExceptionType = ex.GetType().Name,
+                                },
+                                ct
+                            );
+
+                            continue;
+                        }
+                    }
+
+                    PluginInfo info = PluginManifestParser.ToPluginInfo(
+                        manifest,
+                        assemblyPath,
+                        initialStatus,
+                        manifestPath
+                    );
+
+                    IPlugin? storedInstance =
+                        initialStatus == PluginStatus.Active ? instance : null;
+
+                    // Reaching here with no stored instance means the plugin
+                    // was never auto-enabled — Initialize() was never called
+                    // and `instance` is about to be discarded unreferenced.
+                    // Dispose it now instead of leaking whatever its
+                    // constructor allocated (the Malfunctioned/auto-enabled
+                    // failure path above already disposes its own instance).
+                    if (storedInstance is null)
+                    {
+                        instance.Dispose();
+                    }
+
+                    LoadedPlugin loaded = new(info, storedInstance, loadContext);
+                    _registry[manifest.Id] = loaded;
+                    foundPlugin = true;
+
+                    if (initialStatus == PluginStatus.Active)
+                    {
+                        await _eventBus.PublishAsync(
+                            new PluginLoadedEvent
+                            {
+                                PluginId = manifest.Id.ToString(),
+                                PluginName = manifest.Name,
+                                Version = manifest.Version,
+                            },
+                            ct
+                        );
+                    }
+                }
+
+                if (!foundPlugin)
+                {
+                    loadContext.Unload();
+                }
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                string errorMessage = string.Join(
+                    "; ",
+                    ex.LoaderExceptions.Where(e => e is not null).Select(e => e!.Message)
+                );
+
+                _logger.LogWarning(
+                    "Failed to load plugin assembly {AssemblyPath}: {Error}",
+                    assemblyPath,
+                    errorMessage
+                );
+
+                await _eventBus.PublishAsync(
+                    new PluginErrorOccurredEvent
+                    {
+                        PluginId = manifest.Id.ToString(),
+                        PluginName = manifest.Name,
+                        ErrorMessage = errorMessage,
+                        ExceptionType = nameof(ReflectionTypeLoadException),
+                    },
+                    ct
+                );
+
+                loadContext.Unload();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    "Failed to load plugin assembly {AssemblyPath}: {Error}",
+                    assemblyPath,
+                    ex.Message
+                );
+
+                await _eventBus.PublishAsync(
+                    new PluginErrorOccurredEvent
+                    {
+                        PluginId = manifest.Id.ToString(),
+                        PluginName = manifest.Name,
+                        ErrorMessage = ex.Message,
+                        ExceptionType = ex.GetType().Name,
+                    },
+                    ct
+                );
+
+                loadContext.Unload();
+            }
+        }
+        catch (Exception ex)
+        {
+            string pluginName = Path.GetFileName(pluginDir);
+
+            _logger.LogWarning(
+                "Failed to parse plugin manifest {ManifestPath}: {Error}",
+                manifestPath,
+                ex.Message
+            );
+
+            await _eventBus.PublishAsync(
+                new PluginErrorOccurredEvent
+                {
+                    PluginId = Guid.Empty.ToString(),
+                    PluginName = pluginName,
+                    ErrorMessage = $"Invalid plugin manifest: {ex.Message}",
+                    ExceptionType = ex.GetType().Name,
+                },
+                ct
+            );
+        }
+    }
+
+    internal async Task LoadPluginAssemblyAsync(string assemblyPath, CancellationToken ct = default)
+    {
+        string absoluteAssemblyPath = ToLocalAssemblyPath(assemblyPath);
+        PluginLoadContext loadContext;
+        try
+        {
+            // AssemblyDependencyResolver reads the assembly's .deps.json via the
+            // native host. On Linux it throws for a DLL with no/invalid deps
+            // manifest (a stray file, a plugin shipped without its deps);
+            // Windows tolerates it. Constructing outside the try let that escape
+            // and abort discovery of every other plugin — guard it so a bad
+            // assembly is skipped and reported, not fatal.
+            loadContext = new(absoluteAssemblyPath);
+        }
+        catch (Exception loadContextEx)
+        {
+            _logger.LogWarning(
+                "Failed to initialize plugin load context for {AssemblyPath}: {Error}",
+                assemblyPath,
+                loadContextEx.Message
+            );
+
+            await _eventBus.PublishAsync(
+                new PluginErrorOccurredEvent
+                {
+                    PluginId = Guid.Empty.ToString(),
+                    PluginName = Path.GetFileNameWithoutExtension(assemblyPath),
+                    ErrorMessage =
+                        $"Failed to initialize plugin load context: {loadContextEx.Message}",
+                    ExceptionType = loadContextEx.GetType().Name,
+                },
+                ct
+            );
+            return;
+        }
+
+        try
+        {
+            Assembly assembly = loadContext.LoadFromAssemblyPath(absoluteAssemblyPath);
+            List<Type> pluginTypes = assembly
+                .GetTypes()
+                .Where(t =>
+                    typeof(IPlugin).IsAssignableFrom(t)
+                    && t is { IsAbstract: false, IsInterface: false }
+                )
+                .ToList();
+
+            foreach (Type pluginType in pluginTypes)
+            {
+                // Isolate each plugin type: a single malfunctioning plugin —
+                // including one whose constructor or Id/Name/etc. getters throw —
+                // must never abort loading of the other plugin types discovered
+                // in this assembly.
+                IPlugin? instance = null;
+                try
+                {
+                    instance = PluginInstanceFactory.Create(_serviceProvider, pluginType);
+                    if (instance is null)
+                    {
+                        continue;
+                    }
+
+                    string dataFolder = Path.Combine(
+                        _pluginsPath,
+                        "data",
+                        instance.Id.ToString("N")
+                    );
+                    if (!_storage.Exists(dataFolder))
+                    {
+                        _storage.CreateDirectory(dataFolder);
+                    }
+
+                    PluginContext context = new(
+                        _eventBus,
+                        _serviceProvider,
+                        _logger,
+                        dataFolder,
+                        _storage
+                    );
+
+                    instance.Initialize(context);
+
+                    PluginInfo info = new()
+                    {
+                        Id = instance.Id,
+                        Name = instance.Name,
+                        Description = instance.Description,
+                        Version = instance.Version,
+                        Status = PluginStatus.Active,
+                        AssemblyPath = assemblyPath,
+                    };
+
+                    LoadedPlugin loaded = new(info, instance, loadContext);
+                    _registry[instance.Id] = loaded;
+
+                    await _eventBus.PublishAsync(
+                        new PluginLoadedEvent
+                        {
+                            PluginId = instance.Id.ToString(),
+                            PluginName = instance.Name,
+                            Version = instance.Version.ToString(),
+                        },
+                        ct
+                    );
+                }
+                catch (Exception ex)
+                {
+                    // The failure may itself be a throwing property getter, so
+                    // read the plugin's identity defensively — building the error
+                    // record must never re-enter a faulty getter and throw again.
+                    SafePluginIdentity identity = SafePluginIdentity.Read(instance, pluginType);
+
+                    _logger.LogError(
+                        ex,
+                        "Plugin {PluginName} in assembly {AssemblyPath} failed to load and was marked malfunctioned: {Error}",
+                        identity.Name,
+                        assemblyPath,
+                        ex.Message
+                    );
+
+                    if (instance is not null)
+                    {
+                        try
+                        {
+                            instance.Dispose();
+                        }
+                        catch (Exception disposeEx)
+                        {
+                            _logger.LogWarning(
+                                disposeEx,
+                                "Plugin {PluginName} threw while being disposed after a load failure.",
+                                identity.Name
+                            );
+                        }
+                    }
+
+                    PluginInfo info = new()
+                    {
+                        Id = identity.Id,
+                        Name = identity.Name,
+                        Description = identity.Description,
+                        Version = identity.Version,
+                        Status = PluginStatus.Malfunctioned,
+                        AssemblyPath = assemblyPath,
+                    };
+
+                    LoadedPlugin loaded = new(info, null, loadContext);
+                    if (identity.Id != Guid.Empty)
+                    {
+                        _registry[identity.Id] = loaded;
+                    }
+
+                    await _eventBus.PublishAsync(
+                        new PluginErrorOccurredEvent
+                        {
+                            PluginId = identity.Id.ToString(),
+                            PluginName = identity.Name,
+                            ErrorMessage = ex.Message,
+                            ExceptionType = ex.GetType().Name,
+                        },
+                        ct
+                    );
+                }
+            }
+
+            if (pluginTypes.Count == 0)
+            {
+                loadContext.Unload();
+            }
+        }
+        catch (ReflectionTypeLoadException ex)
+        {
+            string assemblyName = Path.GetFileNameWithoutExtension(assemblyPath);
+            string errorMessage = string.Join(
+                "; ",
+                ex.LoaderExceptions.Where(e => e is not null).Select(e => e!.Message)
+            );
+
+            _logger.LogWarning(
+                "Failed to load plugin assembly {AssemblyPath}: {Error}",
+                assemblyPath,
+                errorMessage
+            );
+
+            await _eventBus.PublishAsync(
+                new PluginErrorOccurredEvent
+                {
+                    PluginId = Guid.Empty.ToString(),
+                    PluginName = assemblyName,
+                    ErrorMessage = errorMessage,
+                    ExceptionType = nameof(ReflectionTypeLoadException),
+                },
+                ct
+            );
+
+            loadContext.Unload();
+        }
+        catch (Exception ex)
+        {
+            string assemblyName = Path.GetFileNameWithoutExtension(assemblyPath);
+
+            _logger.LogWarning(
+                "Failed to load plugin assembly {AssemblyPath}: {Error}",
+                assemblyPath,
+                ex.Message
+            );
+
+            await _eventBus.PublishAsync(
+                new PluginErrorOccurredEvent
+                {
+                    PluginId = Guid.Empty.ToString(),
+                    PluginName = assemblyName,
+                    ErrorMessage = ex.Message,
+                    ExceptionType = ex.GetType().Name,
+                },
+                ct
+            );
+
+            loadContext.Unload();
+        }
+    }
+
+    // AssemblyLoadContext and AssemblyDependencyResolver are raw filesystem APIs and need a
+    // real absolute path. IStorage hands back paths relative to the plugins root, so resolve
+    // them against the absolute local root before loading. An already-absolute path is returned
+    // unchanged. Plugin assemblies are always local — they cannot be loaded from a remote driver.
+    private string ToLocalAssemblyPath(string storagePath)
+    {
+        return Path.GetFullPath(Path.Combine(_pluginsPath, storagePath));
+    }
+}

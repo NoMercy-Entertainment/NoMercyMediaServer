@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.NmSystem.Dto;
 using NoMercy.OpticalMedia.Drives;
 using NoMercy.OpticalMedia.Drives.Backends;
@@ -107,7 +108,9 @@ public class DriveMonitorEventsTests
     [Fact]
     public void GetDrives_AllReturnedDrivesHaveNonEmptyPath()
     {
-        DriveMonitor monitor = new(new PollingDriveBackend());
+        DriveMonitor monitor = new(
+            new PollingDriveBackend(NullLogger<PollingDriveBackend>.Instance)
+        );
 
         IReadOnlyList<DiscDrive> drives = monitor.GetDrives();
 
@@ -120,7 +123,9 @@ public class DriveMonitorEventsTests
     [Fact]
     public void GetDrives_DiscTypeIsNoneWhenNoDisc()
     {
-        DriveMonitor monitor = new(new PollingDriveBackend());
+        DriveMonitor monitor = new(
+            new PollingDriveBackend(NullLogger<PollingDriveBackend>.Instance)
+        );
 
         IReadOnlyList<DiscDrive> drives = monitor.GetDrives();
 

@@ -45,6 +45,12 @@ namespace NoMercy.OpticalMedia.Rip;
 [Serializable]
 public class DiscRipJob : IShouldQueue, IJobStorageInjector
 {
+    [JsonIgnore]
+    public ILoggerFactory LoggerFactory { get; set; } = null!;
+
+    [JsonIgnore]
+    private ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
+
     public string QueueName => "import";
     public int Priority => 5;
 
@@ -74,9 +80,6 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
 
     [JsonIgnore]
     public DriveLockRegistry DriveLockRegistry { get; set; } = null!;
-
-    [JsonIgnore]
-    public ILogger<DiscRipJob> Logger { get; set; } = null!;
 
     [JsonIgnore]
     public IAudioMetadataWriter AudioMetadataWriter { get; set; } = null!;
@@ -115,14 +118,18 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
 
     public void InjectStorageServices(IServiceProvider serviceProvider)
     {
+        LoggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
         DiscRipper = serviceProvider.GetRequiredService<IDiscRipper>();
         IdentificationService = serviceProvider.GetRequiredService<DiscIdentificationService>();
         StorageFactory = serviceProvider.GetRequiredService<IStorageFactory>();
         StorageDriver = serviceProvider.GetRequiredService<IStorageDriver>();
         DriveLockRegistry = serviceProvider.GetRequiredService<DriveLockRegistry>();
-        Logger = serviceProvider.GetRequiredService<ILogger<DiscRipJob>>();
         AudioMetadataWriter = serviceProvider.GetRequiredService<IAudioMetadataWriter>();
-        MusicBrainzReleaseClient = serviceProvider.GetRequiredService<MusicBrainzReleaseClient>();
+        // MusicBrainzReleaseClient is not a registered DI service; it is
+        // constructed on demand everywhere else (ReleaseManager,
+        // FileRepository, AudioImportJob). Resolving it from the provider
+        // threw at activation, so construct it directly like the rest.
+        MusicBrainzReleaseClient = new();
         JobDispatcher = QueueRunner.Current?.Dispatcher;
     }
 
@@ -140,7 +147,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
         catch (DiscDriveBusyException)
         {
             PublishProgress("error", "Drive is already in use by another rip job");
-            Logger.LogWarning(
+            Log.LogWarning(
                 "[DiscRipJob] Drive {Drive} is busy — job {JobId} rejected",
                 Request.DrivePath,
                 JobId
@@ -150,7 +157,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
         catch (Exception ex)
         {
             PublishProgress("error", $"Rip failed: {ex.Message}");
-            Logger.LogError(ex, "[DiscRipJob] Rip failed for drive {Drive}", Request.DrivePath);
+            Log.LogError(ex, "[DiscRipJob] Rip failed for drive {Drive}", Request.DrivePath);
             return;
         }
 
@@ -188,7 +195,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
                 "error",
                 "Destination folder or library no longer exists — rip output left in output directory"
             );
-            Logger.LogWarning(
+            Log.LogWarning(
                 "[DiscRipJob] Target folder {FolderId} or library {LibraryId} not found after rip",
                 TargetFolderId,
                 TargetLibraryId
@@ -217,6 +224,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
 
         DiscRipResult[] successes = results.Where(r => r.Success).ToArray();
         HashSet<string> notifiedFolders = new(StringComparer.OrdinalIgnoreCase);
+        HashSet<int> dispatchedTitleIndexes = [];
         int batchIndex = 0;
 
         foreach (DiscRipResult res in successes)
@@ -293,13 +301,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
             if (!string.IsNullOrEmpty(parentRelative))
                 await folderStorage.CreateDirectoryAsync(parentRelative, CancellationToken.None);
 
-            await using (
-                FileStream src = new(
-                    res.OutputPath,
-                    FileMode.Open,
-                    FileAccess.Read
-                )
-            )
+            await using (FileStream src = new(res.OutputPath, FileMode.Open, FileAccess.Read))
             await using (
                 Stream dst = await folderStorage.OpenWriteAsync(
                     folderRelative,
@@ -318,14 +320,19 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
                 Request.DiscType == OpticalDiscType.Dvd
                 || Request.DiscType == OpticalDiscType.BluRay;
 
-            if (isVideoDisc && notifiedFolders.Add(watcherFolderHost))
+            // Per-title dispatch: each ripped title is its own episode/file and
+            // needs its own VideoEncodeJob. Gating this on the shared season
+            // folder (like the audio branch below) meant only the first title
+            // per folder ever dispatched — every other episode landed on disk
+            // with no encode job and no fallback event.
+            if (isVideoDisc && dispatchedTitleIndexes.Add(res.TitleIndex))
             {
                 Ulid? resolvedPresetId = ResolvePresetId(
                     Request.EncodingProfileId,
                     targetFolder.EncodingPresetFolders
                 );
 
-                Logger.LogInformation(
+                Log.LogInformation(
                     "[DiscRipJob] Dispatching VideoEncodeJob for {File} — preset {PresetId}",
                     destinationHostPath,
                     resolvedPresetId.HasValue ? resolvedPresetId.Value.ToString() : "folder-default"
@@ -345,7 +352,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
                 }
                 else
                 {
-                    Logger.LogWarning(
+                    Log.LogWarning(
                         "[DiscRipJob] JobDispatcher is null — falling back to FileCreatedEvent for {File}",
                         destinationHostPath
                     );
@@ -386,7 +393,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
                 // best effort
             }
 
-            Logger.LogInformation(
+            Log.LogInformation(
                 "[DiscRipJob] Title {Index} moved to {Dest}",
                 res.TitleIndex,
                 folderRelative
@@ -428,7 +435,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(
+            Log.LogWarning(
                 ex,
                 "[DiscRipJob] MusicBrainz release fetch failed for {Mbid}: {Message}",
                 releaseMbid,
@@ -438,7 +445,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
 
         if (release is null)
         {
-            Logger.LogWarning(
+            Log.LogWarning(
                 "[DiscRipJob] Release {Mbid} not found — FLAC files will be untagged",
                 releaseMbid
             );
@@ -504,7 +511,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
             try
             {
                 await AudioMetadataWriter.WriteTagsAsync(res.OutputPath, metadata, ct);
-                Logger.LogInformation(
+                Log.LogInformation(
                     "[DiscRipJob] Tagged {Path} — {Artist} / {Title}",
                     res.OutputPath,
                     trackArtist,
@@ -513,7 +520,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
             }
             catch (Exception ex)
             {
-                Logger.LogWarning(
+                Log.LogWarning(
                     ex,
                     "[DiscRipJob] Tag write failed for {Path}: {Message}",
                     res.OutputPath,

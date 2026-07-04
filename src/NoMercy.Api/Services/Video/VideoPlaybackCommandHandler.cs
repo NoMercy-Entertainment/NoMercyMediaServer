@@ -12,22 +12,23 @@
 using FlexLabs.EntityFrameworkCore.Upsert;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Users;
 using NoMercy.Networking.Http;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.NewtonSoftConverters;
 
 namespace NoMercy.Api.Services.Video;
 
 public class VideoPlaybackCommandHandler(
     VideoPlaybackService videoPlaybackService,
-    IServiceScopeFactory scopeFactory
+    IServiceScopeFactory scopeFactory,
+    ILogger<VideoPlaybackCommandHandler> logger
 )
 {
     public async Task HandleCommand(
@@ -41,84 +42,65 @@ public class VideoPlaybackCommandHandler(
         switch (command)
         {
             case "play":
-                // if(state.Actions.Disallows.Resuming) break;
                 HandlePlay(user, state);
                 break;
             case "pause":
-                // if(state.Actions.Disallows.Pausing) break;
                 HandlePause(user, state);
                 break;
             case "seek":
-                // if(state.Actions.Disallows.Seeking) break;
                 await HandleSeek(user, state, data);
                 break;
             case "item":
-                // if(state.Actions.Disallows.Item) break;
                 await HandleItem(state, data);
                 break;
             case "episode":
-                // if(state.Actions.Disallows.Item) break;
                 await HandleEpisode(state, data);
                 break;
             case "forward":
-                // if(state.Actions.Disallows.Seeking) break;
                 await HandleForward(user, state, data);
                 break;
             case "backward":
-                // if(state.Actions.Disallows.Seeking) break;
                 await HandleBackward(user, state, data);
                 break;
             case "next":
-                // if(state.Actions.Disallows.Next) break;
                 HandleNext(state);
                 break;
             case "previous":
-                // if(state.Actions.Disallows.Previous) break;
                 HandlePrevious(state);
                 break;
             case "nextChapter":
-                // if(state.Actions.Disallows.Next) break;
                 HandleNextChapter(state);
                 break;
             case "previousChapter":
-                // if(state.Actions.Disallows.Previous) break;
                 HandlePreviousChapter(state);
                 break;
             case "stop":
-                // if(state.Actions.Disallows.Stopping) break;
                 HandleStop(state);
                 break;
             case "mute":
-                // if(state.Actions.Disallows.Muting) break;
                 state.Muted = !state.Muted;
                 break;
             case "volume":
-                // if(state.Actions.Disallows.Volume) break;
                 await HandleVolume(data, state, device);
                 break;
             case "audio":
-                // if(state.Actions.Disallows.Audio) break;
                 await HandleAudio(user, state, data);
                 break;
             case "cycleAudio":
-                // if(state.Actions.Disallows.Audio) break;
                 await HandleCycleAudio(user, state);
                 break;
             case "caption":
-                // if(state.Actions.Disallows.Caption) break;
                 await HandleCaption(user, state, data);
                 break;
             case "cycleCaption":
-                // if(state.Actions.Disallows.Caption) break;
                 await HandleCycleCaption(user, state);
                 break;
             case "quality":
-                // if(state.Actions.Disallows.Quality) break;
                 await HandleQuality(user, state, data);
                 break;
             default:
                 // Handle unknown command or log it
-                Console.WriteLine($"Unknown command: {command}");
+                logger.LogWarning("Unknown command: {Command}", command);
                 break;
         }
     }

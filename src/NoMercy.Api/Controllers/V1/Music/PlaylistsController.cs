@@ -14,20 +14,20 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Api.DTOs.Music;
+using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Music;
 using NoMercy.Events;
 using NoMercy.Events.Library;
-using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercyQueue;
 
 namespace NoMercy.Api.Controllers.V1.Music;
@@ -42,8 +42,15 @@ public class PlaylistsController : BaseController
     private readonly IMusicRepository _musicRepository;
     private readonly IEventBus _eventBus;
 
-    public PlaylistsController(IMusicRepository musicService, IEventBus eventBus)
+    private readonly ILogger<PlaylistsController> _logger;
+
+    public PlaylistsController(
+        ILogger<PlaylistsController> logger,
+        IMusicRepository musicService,
+        IEventBus eventBus
+    )
     {
+        _logger = logger;
         _musicRepository = musicService;
         _eventBus = eventBus;
     }
@@ -52,7 +59,7 @@ public class PlaylistsController : BaseController
     public async Task<IActionResult> Index()
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view playlists");
 
         List<PlaylistCardDto> playlistCards = await _musicRepository.GetPlaylistCardsAsync(userId);
@@ -69,7 +76,7 @@ public class PlaylistsController : BaseController
     public async Task<IActionResult> Show(Guid id)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view playlists");
 
         Playlist? playlist = await _musicRepository.GetPlaylistAsync(userId, id);
@@ -90,11 +97,9 @@ public class PlaylistsController : BaseController
     }
 
     [HttpPost]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> Create([FromBody] CreatePlaylistRequestDto request)
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to create a playlist");
-
         Guid userId = User.UserId();
 
         if (await _musicRepository.PlaylistNameExistsAsync(request.Name, userId))
@@ -111,7 +116,7 @@ public class PlaylistsController : BaseController
 
         // save to app images folder
         string filePath = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
-        Logger.App(filePath);
+        _logger.LogInformation(filePath);
 
         if (request.Cover is not null)
         {
@@ -139,25 +144,24 @@ public class PlaylistsController : BaseController
             );
         }
 
-        Logger.App(newPlaylist);
+        _logger.LogInformation("{Playlist}", newPlaylist);
 
         await _musicRepository.CreatePlaylistAsync(newPlaylist, request.Tracks);
 
         Playlist? playlist = await _musicRepository.GetPlaylistByNameAsync(request.Name, userId);
 
-        await _eventBus.PublishAsync(new LibraryRefreshEvent { QueryKey = ["music-playlists"] });
+        await _eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["music-playlists"] });
 
         return Ok(new StatusResponseDto<Playlist?> { Data = playlist, Status = "ok" });
     }
 
     [HttpPatch]
     [Route("{id:guid}")]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> Edit(Guid id, [FromBody] CreatePlaylistRequestDto request)
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to edit a playlist");
-
-        Playlist? playlist = await _musicRepository.GetPlaylistForEditAsync(id);
+        Guid userId = User.UserId();
+        Playlist? playlist = await _musicRepository.GetPlaylistForEditAsync(id, userId);
 
         if (playlist is null)
             return NotFoundResponse("Playlist not found");
@@ -193,6 +197,7 @@ public class PlaylistsController : BaseController
 
         int result = await _musicRepository.UpdatePlaylistMetadataAsync(
             id,
+            userId,
             request.Name,
             request.Description,
             cover,
@@ -200,7 +205,7 @@ public class PlaylistsController : BaseController
         );
 
         await _eventBus.PublishAsync(
-            new LibraryRefreshEvent { QueryKey = ["music", "playlists", id] }
+            new LibraryRefreshedEvent { QueryKey = ["music", "playlists", id] }
         );
 
         return Ok(
@@ -216,14 +221,12 @@ public class PlaylistsController : BaseController
 
     [HttpDelete]
     [Route("{id:guid}")]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> Destroy(Guid id)
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to delete a playlist");
-
         int result = await _musicRepository.DeletePlaylistAsync(id, User.UserId());
 
-        await _eventBus.PublishAsync(new LibraryRefreshEvent { QueryKey = ["music-playlists"] });
+        await _eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["music-playlists"] });
 
         return Ok(
             new StatusResponseDto<string>
@@ -239,11 +242,9 @@ public class PlaylistsController : BaseController
     [HttpPost]
     [Route("{id:guid}/cover")]
     [Consumes("multipart/form-data")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Cover(Guid id, IFormFile image)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to upload playlist covers");
-
         Playlist? playlist = await _musicRepository.GetPlaylistForCoverAsync(id, User.UserId());
 
         if (playlist is null)
@@ -253,7 +254,7 @@ public class PlaylistsController : BaseController
 
         // save to app images folder
         string filePath2 = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
-        Logger.App(filePath2);
+        _logger.LogInformation(filePath2);
         await using (FileStream stream = new(filePath2, FileMode.Create))
         {
             await image.CopyToAsync(stream);
@@ -268,7 +269,7 @@ public class PlaylistsController : BaseController
         await _musicRepository.UpdatePlaylistCoverAsync(id, User.UserId(), cover, colorPalette);
 
         await _eventBus.PublishAsync(
-            new LibraryRefreshEvent { QueryKey = ["music", "playlists", playlist.Id] }
+            new LibraryRefreshedEvent { QueryKey = ["music", "playlists", playlist.Id] }
         );
 
         playlist._colorPalette = colorPalette;
@@ -289,18 +290,19 @@ public class PlaylistsController : BaseController
 
     [HttpPost]
     [Route("{id:guid}/tracks")]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> AddTrack(
         Guid id,
         [FromBody] CreatePlaylistTrackRequestDto request
     )
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to edit a playlist");
+        int result = await _musicRepository.AddPlaylistTrackAsync(id, request.Id, User.UserId());
 
-        int result = await _musicRepository.AddPlaylistTrackAsync(id, request.Id);
+        if (result < 0)
+            return NotFoundResponse("Playlist not found");
 
         await _eventBus.PublishAsync(
-            new LibraryRefreshEvent { QueryKey = ["music", "playlists", id] }
+            new LibraryRefreshedEvent { QueryKey = ["music", "playlists", id] }
         );
 
         return Ok(
@@ -316,18 +318,16 @@ public class PlaylistsController : BaseController
 
     [HttpDelete]
     [Route("{id:guid}/tracks/{trackId:guid}")]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> AddTrack(Guid id, Guid trackId)
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to edit a playlist");
-
         int result = await _musicRepository.RemovePlaylistTrackAsync(id, trackId, User.UserId());
 
         if (result < 0)
             return NotFoundResponse("Track not found in playlist");
 
         await _eventBus.PublishAsync(
-            new LibraryRefreshEvent { QueryKey = ["music", "playlists", id] }
+            new LibraryRefreshedEvent { QueryKey = ["music", "playlists", id] }
         );
 
         return Ok(

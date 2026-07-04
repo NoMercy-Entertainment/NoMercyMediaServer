@@ -89,7 +89,11 @@ public class FfmpegCommandBuilder
             foreach (KeyValuePair<string, string> flag in _globalExtraFlags)
             {
                 args.Add(flag.Key);
-                args.Add(flag.Value);
+                // An empty value marks a bare boolean flag (e.g. "-an") — emitting
+                // it anyway adds a stray empty argv token ffmpeg treats as an
+                // unmapped output URL.
+                if (flag.Value.Length > 0)
+                    args.Add(flag.Value);
             }
         }
 
@@ -209,7 +213,11 @@ public class FfmpegCommandBuilder
                 foreach (KeyValuePair<string, string> flag in output.ExtraFlags)
                 {
                     args.Add(flag.Key);
-                    args.Add(flag.Value);
+                    // An empty value marks a bare boolean flag (e.g. "-an") — emitting
+                    // it anyway adds a stray empty argv token ffmpeg treats as an
+                    // unmapped output URL.
+                    if (flag.Value.Length > 0)
+                        args.Add(flag.Value);
                 }
             }
             args.Add(output.FilePath);

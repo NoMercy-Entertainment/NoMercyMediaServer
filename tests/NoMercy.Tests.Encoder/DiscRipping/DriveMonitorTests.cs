@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.OpticalMedia.Drives;
 using NoMercy.OpticalMedia.Drives.Backends;
 
@@ -26,7 +27,9 @@ public class DriveMonitorTests
     [Fact]
     public void GetDrives_ReturnsOpticalDrivesOnly()
     {
-        DriveMonitor monitor = new(new PollingDriveBackend());
+        DriveMonitor monitor = new(
+            new PollingDriveBackend(NullLogger<PollingDriveBackend>.Instance)
+        );
 
         IReadOnlyList<DiscDrive> drives = monitor.GetDrives();
 
@@ -42,7 +45,9 @@ public class DriveMonitorTests
     [Fact]
     public async Task MonitorAsync_CancellationEndsEnumeration()
     {
-        DriveMonitor monitor = new(new PollingDriveBackend());
+        DriveMonitor monitor = new(
+            new PollingDriveBackend(NullLogger<PollingDriveBackend>.Instance)
+        );
 
         using CancellationTokenSource cts = new(TimeSpan.FromMilliseconds(100));
         List<DriveEvent> events = [];
@@ -60,7 +65,9 @@ public class DriveMonitorTests
     [Fact]
     public async Task MonitorAsync_AlreadyCancelledToken_ExitsImmediately()
     {
-        DriveMonitor monitor = new(new PollingDriveBackend());
+        DriveMonitor monitor = new(
+            new PollingDriveBackend(NullLogger<PollingDriveBackend>.Instance)
+        );
 
         using CancellationTokenSource cts = new();
         await cts.CancelAsync();

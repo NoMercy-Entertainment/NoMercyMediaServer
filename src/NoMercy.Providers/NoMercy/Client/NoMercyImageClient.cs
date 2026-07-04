@@ -12,7 +12,6 @@
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
-using NoMercy.Providers.TMDB.Client;
 using NoMercy.Storage;
 using Serilog.Events;
 using SixLabors.ImageSharp;
@@ -22,8 +21,18 @@ using Image = SixLabors.ImageSharp.Image;
 
 namespace NoMercy.Providers.NoMercy.Client;
 
-public abstract class NoMercyImageClient : TmdbBaseClient
+public abstract class NoMercyImageClient
 {
+    // Image downloads use their own queue rather than the shared TMDB API queue.
+    private static readonly Queue ImageQueue = new(
+        new()
+        {
+            Concurrent = 50,
+            Interval = 1000,
+            Start = true,
+        }
+    );
+
     private static IStorage? _storage;
 
     public static void Initialize(IStorage storage)
@@ -43,7 +52,7 @@ public abstract class NoMercyImageClient : TmdbBaseClient
         Size? maxDecodeSize = null
     )
     {
-        return GetQueue().Enqueue(Task, $"original{path}", true);
+        return ImageQueue.Enqueue(Task, $"original{path}", true);
 
         async Task<Image<Rgba32>?> Task()
         {

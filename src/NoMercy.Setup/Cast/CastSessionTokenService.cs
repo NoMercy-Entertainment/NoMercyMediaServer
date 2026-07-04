@@ -10,9 +10,10 @@
 // -----------------------------------------------------------------------------
 
 using System.IdentityModel.Tokens.Jwt;
+using NoMercy.NmSystem.Auth;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Auth;
 using NoMercy.Setup.Dto;
@@ -25,7 +26,7 @@ namespace NoMercy.Setup.Cast;
 /// token-exchange grant against the nomercy-cast-receiver client to issue
 /// audience-scoped access + refresh tokens.
 ///
-/// The server's own access token (Globals.Globals.AccessToken) is the subject;
+/// The server's own access token (authTokenStore.AccessToken) is the subject;
 /// requested_subject names the target user. This requires the Keycloak realm
 /// to grant the server's auth client token-exchange permission to
 /// nomercy-cast-receiver — configured once via the admin console after
@@ -38,7 +39,7 @@ namespace NoMercy.Setup.Cast;
 /// session metadata in customData fields and uses the JWT for audience +
 /// subject only.
 /// </summary>
-public class CastSessionTokenService(AuthManager authManager)
+public class CastSessionTokenService(AuthManager authManager, IAuthTokenStore authTokenStore)
 {
     private const string CastReceiverClientId = "nomercy-cast-receiver";
     private const string TokenExchangeGrantType = "urn:ietf:params:oauth:grant-type:token-exchange";
@@ -54,7 +55,7 @@ public class CastSessionTokenService(AuthManager authManager)
         string clientLocale = "en-US"
     )
     {
-        if (string.IsNullOrEmpty(Globals.Globals.AccessToken))
+        if (string.IsNullOrEmpty(authTokenStore.AccessToken))
         {
             Logger.Auth(
                 "CastSessionTokenService: server access token not available — cannot mint cast bundle",
@@ -65,7 +66,7 @@ public class CastSessionTokenService(AuthManager authManager)
 
         await authManager.RefreshAsync();
 
-        if (string.IsNullOrEmpty(Globals.Globals.AccessToken))
+        if (string.IsNullOrEmpty(authTokenStore.AccessToken))
         {
             Logger.Auth(
                 "CastSessionTokenService: refresh dropped the access token — cannot mint cast bundle",
@@ -103,13 +104,13 @@ public class CastSessionTokenService(AuthManager authManager)
 
     private async Task<AuthResponse?> RequestTokenExchangeAsync(Guid userId)
     {
-        string tokenEndpoint = $"{Config.AuthBaseUrl}protocol/openid-connect/token";
-        string requestingClientId = ResolveRequestingClientId(Globals.Globals.AccessToken!);
+        string tokenEndpoint = $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
+        string requestingClientId = ResolveRequestingClientId(authTokenStore.AccessToken!);
 
-        if (!IssuerMatchesConfiguredRealm(Globals.Globals.AccessToken!))
+        if (!IssuerMatchesConfiguredRealm(authTokenStore.AccessToken!))
         {
             Logger.Auth(
-                $"CastSessionTokenService: subject token issuer doesn't match configured realm {Config.AuthBaseUrl} — re-auth required against the active realm before cast tokens can be minted",
+                $"CastSessionTokenService: subject token issuer doesn't match configured realm {ExternalServicesConfig.Current.AuthBaseUrl} — re-auth required against the active realm before cast tokens can be minted",
                 LogEventLevel.Warning
             );
             return null;
@@ -119,7 +120,7 @@ public class CastSessionTokenService(AuthManager authManager)
         [
             new("grant_type", TokenExchangeGrantType),
             new("client_id", requestingClientId),
-            new("subject_token", Globals.Globals.AccessToken!),
+            new("subject_token", authTokenStore.AccessToken!),
             new("subject_token_type", AccessTokenType),
             new("audience", CastReceiverClientId),
             new("requested_token_type", RefreshTokenType),
@@ -140,7 +141,7 @@ public class CastSessionTokenService(AuthManager authManager)
 
             if (!response.IsSuccessStatusCode)
             {
-                string subjectInfo = DescribeSubjectToken(Globals.Globals.AccessToken!);
+                string subjectInfo = DescribeSubjectToken(authTokenStore.AccessToken!);
                 Logger.Auth(
                     $"Cast token-exchange failed ({(int)response.StatusCode}): {content} | endpoint: {tokenEndpoint} | subject: {subjectInfo} | requesting_client: {requestingClientId} target_audience: {CastReceiverClientId}",
                     LogEventLevel.Warning
@@ -184,7 +185,7 @@ public class CastSessionTokenService(AuthManager authManager)
             JwtSecurityTokenHandler handler = new();
             JwtSecurityToken jwt = handler.ReadJwtToken(accessToken);
             string issuer = jwt.Issuer ?? string.Empty;
-            string configured = Config.AuthBaseUrl.TrimEnd('/');
+            string configured = ExternalServicesConfig.Current.AuthBaseUrl.TrimEnd('/');
             return issuer.TrimEnd('/').Equals(configured, StringComparison.OrdinalIgnoreCase);
         }
         catch

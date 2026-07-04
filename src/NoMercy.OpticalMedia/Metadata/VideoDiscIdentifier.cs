@@ -482,14 +482,14 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
     {
         if (string.IsNullOrEmpty(posterPath))
             return null;
-        return $"https://image.tmdb.org/t/p/w500{posterPath}";
+        return $"{TmdbImageClient.ImageBaseUrl}w500{posterPath}";
     }
 
     private static string? BackdropUrl(string? backdropPath)
     {
         if (string.IsNullOrEmpty(backdropPath))
             return null;
-        return $"https://image.tmdb.org/t/p/w1280{backdropPath}";
+        return $"{TmdbImageClient.ImageBaseUrl}w1280{backdropPath}";
     }
 
     private static DiscIdentification NeedsManual() =>

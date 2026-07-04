@@ -11,25 +11,26 @@
 
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.MediaProcessing.Common;
-using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
+using NoMercy.NmSystem;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Episode;
 using NoMercy.Providers.TMDB.Models.Season;
 using NoMercy.Providers.TMDB.Models.TV;
-using Serilog.Events;
+using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 
 namespace NoMercy.MediaProcessing.Episodes;
 
-public class EpisodeManager(IEpisodeRepository episodeRepository, JobDispatcher jobDispatcher)
-    : BaseManager,
-        IEpisodeManager
+public class EpisodeManager(
+    IEpisodeRepository episodeRepository,
+    IJobDispatcher jobDispatcher,
+    ILogger<EpisodeManager> logger
+) : BaseManager, IEpisodeManager
 {
     public async Task<IEnumerable<Episode>> Add(
         TmdbTvShow show,
@@ -58,9 +59,10 @@ public class EpisodeManager(IEpisodeRepository episodeRepository, JobDispatcher 
             VoteCount = episode.VoteCount,
         });
 
-        Logger.MovieDb(
-            $"Show {show.Name}: Season {season.SeasonNumber} Episodes stored",
-            LogEventLevel.Debug
+        logger.LogDebug(
+            "Show {Name}: Season {SeasonNumber} Episodes stored",
+            show.Name,
+            season.SeasonNumber
         );
 
         foreach (Episode episode in episodes)
@@ -71,7 +73,7 @@ public class EpisodeManager(IEpisodeRepository episodeRepository, JobDispatcher 
         return episodes;
     }
 
-    private static async Task<List<TmdbEpisodeAppends>> Collect(
+    private async Task<List<TmdbEpisodeAppends>> Collect(
         TmdbTvShow show,
         TmdbSeasonAppends season,
         bool? priority = false
@@ -81,7 +83,7 @@ public class EpisodeManager(IEpisodeRepository episodeRepository, JobDispatcher 
 
         await Parallel.ForEachAsync(
             season.Episodes,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (episode, _) =>
             {
                 try
@@ -101,7 +103,7 @@ public class EpisodeManager(IEpisodeRepository episodeRepository, JobDispatcher 
                 }
                 catch (Exception e)
                 {
-                    Logger.MovieDb(e.Message, LogEventLevel.Error);
+                    logger.LogError(e.Message);
                 }
             }
         );
@@ -130,8 +132,11 @@ public class EpisodeManager(IEpisodeRepository episodeRepository, JobDispatcher 
 
         await episodeRepository.StoreEpisodeTranslations(translations);
 
-        Logger.MovieDb(
-            $"Show {showName}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: Translations stored"
+        logger.LogInformation(
+            "Show {ShowName}: Season {SeasonNumber} Episode {EpisodeNumber}: Translations stored",
+            showName,
+            episode.SeasonNumber,
+            episode.EpisodeNumber
         );
     }
 
@@ -157,9 +162,11 @@ public class EpisodeManager(IEpisodeRepository episodeRepository, JobDispatcher 
 
             await episodeRepository.StoreEpisodeImages(stills);
 
-            Logger.MovieDb(
-                $"Show {showName}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: Images stored",
-                LogEventLevel.Debug
+            logger.LogDebug(
+                "Show {ShowName}: Season {SeasonNumber} Episode {EpisodeNumber}: Images stored",
+                showName,
+                episode.SeasonNumber,
+                episode.EpisodeNumber
             );
 
             await using MediaContext db = new();
@@ -176,9 +183,12 @@ public class EpisodeManager(IEpisodeRepository episodeRepository, JobDispatcher 
         }
         catch (Exception e)
         {
-            Logger.MovieDb(
-                $"Show {showName}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: Error storing images: {e.Message}",
-                LogEventLevel.Error
+            logger.LogError(
+                "Show {ShowName}: Season {SeasonNumber} Episode {EpisodeNumber}: Error storing images: {Message}",
+                showName,
+                episode.SeasonNumber,
+                episode.EpisodeNumber,
+                e.Message
             );
         }
     }

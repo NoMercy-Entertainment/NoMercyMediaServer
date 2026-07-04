@@ -170,7 +170,7 @@ public class DiscRipJobEncodeDispatchTests
             StorageFactory = factoryMock.Object,
             StorageDriver = Mock.Of<IStorageDriver>(),
             DriveLockRegistry = new DriveLockRegistry(),
-            Logger = NullLogger<DiscRipJob>.Instance,
+            LoggerFactory = NullLoggerFactory.Instance,
             JobDispatcher = jobDispatcher,
         };
 

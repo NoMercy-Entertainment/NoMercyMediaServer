@@ -9,7 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.Providers.MusixMatch.Models;
+using NoMercy.Providers.Abstractions;
 
 namespace NoMercy.Providers.NoMercy.Models;
 
@@ -22,5 +22,5 @@ public sealed record LyricCandidate(
     string Artist,
     int? DurationSeconds,
     bool HasSyncedLyrics,
-    MusixMatchFormattedLyric[] Lines
+    LyricLine[] Lines
 );

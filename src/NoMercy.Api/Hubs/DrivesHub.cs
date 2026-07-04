@@ -11,11 +11,11 @@
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Data.Activity;
 using NoMercy.Database;
 using NoMercy.Networking;
 using NoMercy.Networking.Messaging;
-using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Hubs;
 
@@ -27,23 +27,29 @@ namespace NoMercy.Api.Hubs;
 /// </summary>
 public class DrivesHub : ConnectionHub
 {
+    private readonly ILogger<DrivesHub> _logger;
+
     public DrivesHub(
+        ILogger<DrivesHub> logger,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<MediaContext> contextFactory,
         ConnectedClients connectedClients,
         IActivityLogger activityLogger
     )
-        : base(httpContextAccessor, contextFactory, connectedClients, activityLogger) { }
+        : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
+    {
+        _logger = logger;
+    }
 
     public override async Task OnConnectedAsync()
     {
         await base.OnConnectedAsync();
-        Logger.Socket("Drives client connected");
+        _logger.LogInformation("Drives client connected");
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         await base.OnDisconnectedAsync(exception);
-        Logger.Socket("Drives client disconnected");
+        _logger.LogInformation("Drives client disconnected");
     }
 }

@@ -29,9 +29,17 @@ public record SegmentReadyMessage(
     long SizeBytes
 );
 
-public record SeekCompletedMessage(double NewPositionSeconds, int FirstSegmentIndex);
+public record SeekCompletedMessage(
+    double NewPositionSeconds,
+    int FirstSegmentIndex,
+    string SeekEpoch = ""
+);
 
-public record QualityChangedMessage(LiveQuality NewQuality, QualityChangeReason Reason);
+public record QualityChangedMessage(
+    LiveQuality NewQuality,
+    QualityChangeReason Reason,
+    string SeekEpoch = ""
+);
 
 public enum QualityChangeReason
 {

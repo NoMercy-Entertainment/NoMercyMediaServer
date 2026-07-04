@@ -29,7 +29,11 @@ public class Vp9Definition : ICodecDefinition
                 FfmpegName: "libvpx-vp9",
                 RequiredVendor: null,
                 Presets: [],
-                Profiles: ["profile0", "profile1", "profile2", "profile3"],
+                // ffmpeg's -profile option for VP9 takes the numeric profile id
+                // (0/1/2/3), NOT the "profileN" spelling — libvpx-vp9 rejects the
+                // string form ("Unable to parse option value profile0"). The
+                // 8/10-bit meaning is documented in the block comment above.
+                Profiles: ["0", "1", "2", "3"],
                 Levels: [],
                 QualityRange: new(Min: 0, Max: 63, Default: 33),
                 SupportedRateControl:
@@ -69,13 +73,13 @@ public class Vp9Definition : ICodecDefinition
                 VendorSpecificFlags: new()
             ),
             // Intel VAAPI — vp9_vaapi
-            // No presets. 4 profiles: profile0-3 (mirrors libvpx-vp9 profile numbering).
+            // No presets. 4 profiles: numeric 0-3 (mirrors libvpx-vp9 profile numbering).
             // QP 0-255 (VA-API full range). Linux VA-API path. Unlimited sessions.
             new(
                 FfmpegName: "vp9_vaapi",
                 RequiredVendor: GpuVendor.Intel,
                 Presets: [],
-                Profiles: ["profile0", "profile1", "profile2", "profile3"],
+                Profiles: ["0", "1", "2", "3"],
                 Levels: [],
                 QualityRange: new(Min: 0, Max: 255, Default: 100),
                 SupportedRateControl:

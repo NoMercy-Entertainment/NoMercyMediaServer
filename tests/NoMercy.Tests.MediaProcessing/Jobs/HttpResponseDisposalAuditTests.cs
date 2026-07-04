@@ -47,6 +47,22 @@ public partial class HttpResponseDisposalAuditTests
                 if (trimmed.Contains("using "))
                     continue;
 
+                // Allow: the declaration is the first argument of a multi-line
+                // `using (\n    HttpResponseMessage x = ...\n)` statement — the
+                // formatter puts the `using (` opener on its own line above,
+                // so this line alone doesn't contain the keyword.
+                bool multiLineUsingOpener = false;
+                for (int look = i - 1; look >= Math.Max(0, i - 3); look--)
+                {
+                    if (lines[look].Trim() == "using (")
+                    {
+                        multiLineUsingOpener = true;
+                        break;
+                    }
+                }
+                if (multiLineUsingOpener)
+                    continue;
+
                 string relative = Path.GetRelativePath(srcDir, file);
 
                 // Allow: ownership explicitly transferred to HttpResponseStream within a few lines

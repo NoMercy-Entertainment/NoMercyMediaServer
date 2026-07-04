@@ -15,7 +15,6 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
 using NoMercy.Storage;
 
 namespace NoMercy.MediaProcessing.Libraries;

@@ -44,7 +44,7 @@ public class EpisodeDto
     public string? Still { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("progress")]
     public object? Progress { get; set; }

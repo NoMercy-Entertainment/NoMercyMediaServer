@@ -14,12 +14,11 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Music;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.MusicBrainz.Models;
 using NoMercy.Providers.Tadb.Client;
 using NoMercy.Providers.Tadb.Models;
-using Serilog.Events;
-
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 [Serializable]
@@ -35,6 +34,10 @@ public class MusicMetadataJob : AbstractMusicDescriptionJob
     {
         //
     }
+
+    [ActivatorUtilitiesConstructor]
+    public MusicMetadataJob(ILoggerFactory loggerFactory)
+        : base(loggerFactory) { }
 
     public MusicMetadataJob(MusicBrainzArtist musicBrainzArtist)
     {
@@ -62,7 +65,7 @@ public class MusicMetadataJob : AbstractMusicDescriptionJob
         try
         {
             TadbArtistClient artistClient = new();
-            TadbArtist? result = artistClient.ByMusicBrainzId(MusicBrainzArtist.Id);
+            TadbArtist? result = await artistClient.ByMusicBrainzId(MusicBrainzArtist.Id);
             if (result?.Descriptions is null)
                 return;
 
@@ -103,7 +106,7 @@ public class MusicMetadataJob : AbstractMusicDescriptionJob
         {
             if (e.Message.Contains("404"))
                 return;
-            Logger.AudioDb(e.Message, LogEventLevel.Verbose);
+            Log.LogTrace(e.Message);
         }
     }
 
@@ -115,7 +118,7 @@ public class MusicMetadataJob : AbstractMusicDescriptionJob
         try
         {
             TadbReleaseGroupClient releaseClient = new();
-            TadbAlbum? result = releaseClient.ByMusicBrainzId(MusicBrainzReleaseGroup.Id);
+            TadbAlbum? result = await releaseClient.ByMusicBrainzId(MusicBrainzReleaseGroup.Id);
             if (result?.Descriptions is null)
                 return;
 
@@ -163,7 +166,7 @@ public class MusicMetadataJob : AbstractMusicDescriptionJob
         {
             if (e.Message.Contains("404"))
                 return;
-            Logger.AudioDb(e.Message, LogEventLevel.Verbose);
+            Log.LogTrace(e.Message);
         }
     }
 }

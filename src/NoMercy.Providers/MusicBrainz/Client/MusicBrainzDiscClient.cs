@@ -47,7 +47,7 @@ public sealed class MusicBrainzDiscClient : MusicBrainzBaseClient
         CancellationToken ct = default
     )
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             ["inc"] = string.Join("+", DefaultIncludes),
             ["fmt"] = "json",
@@ -69,7 +69,7 @@ public sealed class MusicBrainzDiscClient : MusicBrainzBaseClient
         CancellationToken ct = default
     )
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             ["toc"] = tocString,
             ["inc"] = string.Join("+", DefaultIncludes),

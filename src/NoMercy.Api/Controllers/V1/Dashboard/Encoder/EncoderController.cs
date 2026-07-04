@@ -19,7 +19,6 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Codecs.Definitions;
-using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 
@@ -32,11 +31,9 @@ public class EncoderController(IEncoderRepository encoderRepository, CodecRegist
     : BaseController
 {
     [HttpGet]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Index()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view encoder profiles");
-
         List<EncoderProfile> encoderProfiles = await encoderRepository.GetEncoderProfilesAsync();
 
         return Ok(new { data = encoderProfiles });
@@ -69,11 +66,9 @@ public class EncoderController(IEncoderRepository encoderRepository, CodecRegist
 
     [HttpDelete]
     [Route("{id:ulid}")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Destroy(Ulid id)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to remove encoder profiles");
-
         EncoderProfile? profile = await encoderRepository.GetEncoderProfileByIdAsync(id);
 
         if (profile == null)
@@ -86,11 +81,9 @@ public class EncoderController(IEncoderRepository encoderRepository, CodecRegist
 
     [HttpGet]
     [Route("containers")]
+    [Authorize(Policy = "Moderator")]
     public IActionResult Containers()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view encoder profiles");
-
         ContainerDto[] containers =
         [
             BuildContainer("HLS (Streaming)", "m3u8", "hls", true, codecRegistry),
@@ -103,11 +96,9 @@ public class EncoderController(IEncoderRepository encoderRepository, CodecRegist
 
     [HttpGet]
     [Route("framesizes")]
+    [Authorize(Policy = "Moderator")]
     public IActionResult FrameSizes()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view encoder profiles");
-
         VideoQualityDto[] frameSizes =
         [
             new()

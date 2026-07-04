@@ -49,8 +49,9 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
                 HandlePrevious(user, state);
                 break;
             case "stop":
-                if (state.Actions.Disallows.Stopping)
-                    break;
+                // stop() is unconditional per the NoMercy Connect protocol — the
+                // Disallows.Stopping flag is a client UI hint, not server-side
+                // enforcement (matches VideoPlaybackCommandHandler).
                 HandleStop(state);
                 break;
             case "mute":

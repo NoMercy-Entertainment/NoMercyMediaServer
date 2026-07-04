@@ -18,10 +18,8 @@ using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Users;
-using NoMercy.Helpers.Extensions;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Services;
 
@@ -99,7 +97,8 @@ public class HomeService(
             MediaTypes.TvMediaType => tvData.FirstOrDefault(t => t.Id == source.Id) is { } tv
                 ? new GenreRowItemDto(tv, country)
                 : null,
-            MediaTypes.MovieMediaType => movieData.FirstOrDefault(m => m.Id == source.Id) is { } movie
+            MediaTypes.MovieMediaType => movieData.FirstOrDefault(m => m.Id == source.Id)
+                is { } movie
                 ? new GenreRowItemDto(movie, country)
                 : null,
             _ => null,
@@ -208,7 +207,9 @@ public class HomeService(
                 .Take(UiLimits.MaximumCardsInCarousel)
                 .ToList();
 
-            tvIds.AddRange(source.Where(s => s.MediaType == MediaTypes.TvMediaType).Select(s => s.Id));
+            tvIds.AddRange(
+                source.Where(s => s.MediaType == MediaTypes.TvMediaType).Select(s => s.Id)
+            );
             movieIds.AddRange(
                 source.Where(s => s.MediaType == MediaTypes.MovieMediaType).Select(s => s.Id)
             );
@@ -295,10 +296,16 @@ public class HomeService(
         )
         {
             bool shouldPaginate =
-                (library.Type == MediaTypes.MovieMediaType && movieCount > UiLimits.MaximumItemsPerPage)
-                || (library.Type == MediaTypes.TvMediaType && tvCount > UiLimits.MaximumItemsPerPage)
+                (
+                    library.Type == MediaTypes.MovieMediaType
+                    && movieCount > UiLimits.MaximumItemsPerPage
+                )
                 || (
-                    library.Type == MediaTypes.AnimeMediaType && animeCount > UiLimits.MaximumItemsPerPage
+                    library.Type == MediaTypes.TvMediaType && tvCount > UiLimits.MaximumItemsPerPage
+                )
+                || (
+                    library.Type == MediaTypes.AnimeMediaType
+                    && animeCount > UiLimits.MaximumItemsPerPage
                 );
 
             List<CardData> items = libraryMovies
@@ -439,7 +446,8 @@ public class HomeService(
             MediaTypes.TvMediaType => tvData.FirstOrDefault(t => t.Id == source.Id) is { } tv
                 ? new CardData(tv, country, watch)
                 : null,
-            MediaTypes.MovieMediaType => movieData.FirstOrDefault(m => m.Id == source.Id) is { } movie
+            MediaTypes.MovieMediaType => movieData.FirstOrDefault(m => m.Id == source.Id)
+                is { } movie
                 ? new CardData(movie, country, watch)
                 : null,
             _ => null,
@@ -600,7 +608,9 @@ public class HomeService(
                 .Take(UiLimits.MaximumCardsInCarousel)
                 .ToList();
 
-            tvIds.AddRange(source.Where(s => s.MediaType == MediaTypes.TvMediaType).Select(s => s.Id));
+            tvIds.AddRange(
+                source.Where(s => s.MediaType == MediaTypes.TvMediaType).Select(s => s.Id)
+            );
             movieIds.AddRange(
                 source.Where(s => s.MediaType == MediaTypes.MovieMediaType).Select(s => s.Id)
             );

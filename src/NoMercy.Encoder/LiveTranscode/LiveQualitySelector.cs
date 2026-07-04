@@ -52,37 +52,69 @@ public class LiveQualitySelector(ICodecResolver codecResolver, IHardwareCapabili
             if (tierWidth > sourceWidth || tierHeight > sourceHeight)
                 continue;
 
-            int bitrateKbps = EstimateBitrateKbps(tierWidth, tierHeight);
-
-            double speedMultiplier = speeds.GetSpeedMultiplier(
-                targetCodec,
-                resolved.FfmpegEncoderName,
-                tierWidth,
-                deviceName
+            qualities.Add(
+                BuildQuality(tierWidth, tierHeight, targetCodec, resolved, speeds, deviceName, isHardwareAccelerated)
             );
+        }
 
-            bool canRealtime = speedMultiplier >= 1.2;
-
-            string qualityId = $"{tierHeight}p";
-            string label = $"{tierHeight}p";
-
-            LiveQuality quality = new(
-                Id: qualityId,
-                Label: label,
-                Width: tierWidth,
-                Height: tierHeight,
-                Codec: targetCodec,
-                BitrateKbps: bitrateKbps,
-                Encoder: resolved.FfmpegEncoderName,
-                IsHardwareAccelerated: isHardwareAccelerated,
-                ExpectedSpeed: speedMultiplier,
-                CanRealtime: canRealtime
+        // Sources smaller than every tier (e.g. sub-480p) would otherwise
+        // leave the candidate set empty — keep the smallest tier so callers
+        // never select from an empty sequence.
+        if (qualities.Count == 0)
+        {
+            (int fallbackWidth, int fallbackHeight) = ResolutionTiers[^1];
+            qualities.Add(
+                BuildQuality(
+                    fallbackWidth,
+                    fallbackHeight,
+                    targetCodec,
+                    resolved,
+                    speeds,
+                    deviceName,
+                    isHardwareAccelerated
+                )
             );
-
-            qualities.Add(quality);
         }
 
         return [.. qualities];
+    }
+
+    private static LiveQuality BuildQuality(
+        int tierWidth,
+        int tierHeight,
+        VideoCodecType targetCodec,
+        ResolvedCodec resolved,
+        SpeedIndex speeds,
+        string? deviceName,
+        bool isHardwareAccelerated
+    )
+    {
+        int bitrateKbps = EstimateBitrateKbps(tierWidth, tierHeight);
+
+        double speedMultiplier = speeds.GetSpeedMultiplier(
+            targetCodec,
+            resolved.FfmpegEncoderName,
+            tierWidth,
+            deviceName
+        );
+
+        bool canRealtime = speedMultiplier >= 1.2;
+
+        string qualityId = $"{tierHeight}p";
+        string label = $"{tierHeight}p";
+
+        return new(
+            Id: qualityId,
+            Label: label,
+            Width: tierWidth,
+            Height: tierHeight,
+            Codec: targetCodec,
+            BitrateKbps: bitrateKbps,
+            Encoder: resolved.FfmpegEncoderName,
+            IsHardwareAccelerated: isHardwareAccelerated,
+            ExpectedSpeed: speedMultiplier,
+            CanRealtime: canRealtime
+        );
     }
 
     public LiveQuality SelectOptimal(
@@ -96,7 +128,12 @@ public class LiveQualitySelector(ICodecResolver codecResolver, IHardwareCapabili
 
         // Filter by client capabilities
         IEnumerable<LiveQuality> allowed = candidates.Where(q =>
-            q.Width <= client.MaxWidth && q.Height <= client.MaxHeight
+            q.Width <= client.MaxWidth
+            && q.Height <= client.MaxHeight
+            && (
+                client.SupportedVideoCodecs.Length == 0
+                || client.SupportedVideoCodecs.Contains(q.Codec)
+            )
         );
 
         // Pick highest CanRealtime quality
@@ -129,13 +166,18 @@ public class LiveQualitySelector(ICodecResolver codecResolver, IHardwareCapabili
             VideoCodecType.Av1,
         ];
 
-        foreach (VideoCodecType codec in preferred)
+        // Only consider codecs the client explicitly listed as supported.
+        if (client.SupportedVideoCodecs.Length > 0)
         {
-            if (client.SupportedVideoCodecs.Contains(codec))
-                return codec;
+            foreach (VideoCodecType codec in preferred)
+            {
+                if (client.SupportedVideoCodecs.Contains(codec))
+                    return codec;
+            }
         }
 
-        // Fallback to H264 — almost universally supported
+        // Explicit fallback — empty list or no intersection. H264 is almost
+        // universally supported.
         return VideoCodecType.H264;
     }
 

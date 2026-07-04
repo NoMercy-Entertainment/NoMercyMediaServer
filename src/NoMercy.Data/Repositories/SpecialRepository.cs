@@ -19,7 +19,6 @@ using NoMercy.Database.Models.Users;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Data.Repositories;
 

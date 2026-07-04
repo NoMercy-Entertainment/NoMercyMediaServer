@@ -13,13 +13,14 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Discovery;
+using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Status;
 using NoMercy.Setup.Auth;
 using NoMercy.Setup.Boot;
-using NoMercy.Setup.Dto;
-using NoMercy.Setup.Server;
 using NoMercy.Storage.Drivers.Local;
 
 namespace NoMercy.Tests.Setup;
@@ -115,7 +116,7 @@ public class DegradedModeStartupTests
         // Should return immediately without looping
         DateTime start = DateTime.UtcNow;
         // Mock dependencies or use real ones if they don't hit network
-        DegradedModeRecovery recovery = new(null!, null!, null!);
+        DegradedModeRecovery recovery = new(new AuthTokenStore(), null!, null!, null!);
         await recovery.StartRecoveryLoop(deferred);
         TimeSpan elapsed = DateTime.UtcNow - start;
 
@@ -130,7 +131,13 @@ public class DegradedModeStartupTests
     {
         // GetInternalIp now uses NetworkInterface enumeration first,
         // which works without network connectivity
-        NetworkDiscovery discovery = new(new LocalStorageDriver());
+        NetworkDiscovery discovery = new(
+            NullLogger<NetworkDiscovery>.Instance,
+            new LocalStorageDriver(),
+            new AuthTokenStore(),
+            new ConnectivityStatus(),
+            new NetworkProbeConfig()
+        );
         string ip = discovery.InternalIp;
 
         Assert.False(
@@ -142,7 +149,13 @@ public class DegradedModeStartupTests
     [Fact]
     public void GetInternalIp_ReturnsValidIpFormat()
     {
-        NetworkDiscovery discovery = new(new LocalStorageDriver());
+        NetworkDiscovery discovery = new(
+            NullLogger<NetworkDiscovery>.Instance,
+            new LocalStorageDriver(),
+            new AuthTokenStore(),
+            new ConnectivityStatus(),
+            new NetworkProbeConfig()
+        );
         string ip = discovery.InternalIp;
 
         // Should be a valid IPv4 address
@@ -156,7 +169,13 @@ public class DegradedModeStartupTests
     {
         // The API rejects registration with required|string|ip — an empty internal_ip
         // returns 422 and the server never comes online.
-        NetworkDiscovery discovery = new(new LocalStorageDriver());
+        NetworkDiscovery discovery = new(
+            NullLogger<NetworkDiscovery>.Instance,
+            new LocalStorageDriver(),
+            new AuthTokenStore(),
+            new ConnectivityStatus(),
+            new NetworkProbeConfig()
+        );
 
         Assert.True(
             IPAddress.TryParse(discovery.RegistrationInternalIp, out IPAddress? parsed),
@@ -170,7 +189,16 @@ public class DegradedModeStartupTests
     [InlineData("")]
     public void RegistrationInternalIp_FallsBackToSentinel_WhenNonRoutable(string discovered)
     {
-        NetworkDiscovery discovery = new(new LocalStorageDriver()) { InternalIp = discovered };
+        NetworkDiscovery discovery = new(
+            NullLogger<NetworkDiscovery>.Instance,
+            new LocalStorageDriver(),
+            new AuthTokenStore(),
+            new ConnectivityStatus(),
+            new NetworkProbeConfig()
+        )
+        {
+            InternalIp = discovered,
+        };
 
         Assert.Equal("0.0.0.0", discovery.RegistrationInternalIp);
     }
@@ -178,7 +206,16 @@ public class DegradedModeStartupTests
     [Fact]
     public void RegistrationInternalIp_PassesThroughRoutableIp()
     {
-        NetworkDiscovery discovery = new(new LocalStorageDriver()) { InternalIp = "192.168.1.50" };
+        NetworkDiscovery discovery = new(
+            NullLogger<NetworkDiscovery>.Instance,
+            new LocalStorageDriver(),
+            new AuthTokenStore(),
+            new ConnectivityStatus(),
+            new NetworkProbeConfig()
+        )
+        {
+            InternalIp = "192.168.1.50",
+        };
 
         Assert.Equal("192.168.1.50", discovery.RegistrationInternalIp);
     }
@@ -319,7 +356,13 @@ public class CloudflareFallbackTests
     {
         // ExternalIp property should return "0.0.0.0" when no IP has been discovered,
         // not throw an exception
-        NetworkDiscovery discovery = new(new LocalStorageDriver());
+        NetworkDiscovery discovery = new(
+            NullLogger<NetworkDiscovery>.Instance,
+            new LocalStorageDriver(),
+            new AuthTokenStore(),
+            new ConnectivityStatus(),
+            new NetworkProbeConfig()
+        );
         string ip = discovery.ExternalIp;
         Assert.NotNull(ip);
     }
@@ -333,7 +376,10 @@ public class CloudflareFallbackTests
         // Both outcomes correctly indicate no valid certificate is present.
         try
         {
-            bool result = Certificate.HasValidCertificate();
+            bool result = new CertificateService(
+                NullLogger<CertificateService>.Instance,
+                null!
+            ).HasValidCertificate();
             Assert.False(result, "No certificate should be present in the test environment");
         }
         catch (SqliteException)
@@ -353,7 +399,10 @@ public class CloudflareFallbackTests
         // All are acceptable in an isolated test environment.
         try
         {
-            await Certificate.RenewSslCertificate(maxRetries: 1);
+            await new CertificateService(
+                NullLogger<CertificateService>.Instance,
+                null!
+            ).RenewSslCertificate(null, maxRetries: 1);
         }
         catch (SqliteException)
         {
@@ -366,7 +415,10 @@ public class CloudflareFallbackTests
             bool hasCert = false;
             try
             {
-                hasCert = Certificate.HasValidCertificate();
+                hasCert = new CertificateService(
+                    NullLogger<CertificateService>.Instance,
+                    null!
+                ).HasValidCertificate();
             }
             catch (SqliteException)
             {
@@ -387,7 +439,13 @@ public class CloudflareFallbackTests
         // api.nomercy.tv (Cloudflare) is down, it should not throw
         try
         {
-            NetworkDiscovery discovery = new(new LocalStorageDriver());
+            NetworkDiscovery discovery = new(
+                NullLogger<NetworkDiscovery>.Instance,
+                new LocalStorageDriver(),
+                new AuthTokenStore(),
+                new ConnectivityStatus(),
+                new NetworkProbeConfig()
+            );
             await discovery.DiscoverExternalIpAsync();
         }
         catch (Exception ex)
@@ -440,5 +498,4 @@ public class CloudflareFallbackTests
         // The cache should gracefully handle missing files
         Assert.False(File.Exists(cacheFile));
     }
-
 }

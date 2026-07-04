@@ -9,11 +9,13 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Audio;
+using NoMercy.Tests.Encoder.Storage;
 using Container = NoMercy.Encoder.Profiles.Container;
 
 namespace NoMercy.Tests.Encoder.Strategies.Audio;
@@ -23,7 +25,11 @@ public class AudioHlsStrategyTests
     [Fact]
     public void Format_IsAudioHls()
     {
-        AudioHlsStrategy strategy = new(Mock.Of<IEncoder>());
+        AudioHlsStrategy strategy = new(
+            Mock.Of<IEncoder>(),
+            NullLogger<AudioHlsStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
 
         Assert.Equal(OutputFormat.AudioHls, strategy.Format);
     }
@@ -31,7 +37,11 @@ public class AudioHlsStrategyTests
     [Fact]
     public void EncodeMode_IsSinglePass()
     {
-        AudioHlsStrategy strategy = new(Mock.Of<IEncoder>());
+        AudioHlsStrategy strategy = new(
+            Mock.Of<IEncoder>(),
+            NullLogger<AudioHlsStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
 
         Assert.Equal(EncodeMode.SinglePass, strategy.EncodeMode);
     }
@@ -58,7 +68,11 @@ public class AudioHlsStrategyTests
                 )
             );
 
-        AudioHlsStrategy strategy = new(encoder.Object);
+        AudioHlsStrategy strategy = new(
+            encoder.Object,
+            NullLogger<AudioHlsStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
 
         EncodingRequest request = new(
             InputPath: "/media/track.aac",
@@ -116,7 +130,11 @@ public class AudioHlsStrategyTests
                 )
             );
 
-        AudioHlsStrategy strategy = new(encoder.Object);
+        AudioHlsStrategy strategy = new(
+            encoder.Object,
+            NullLogger<AudioHlsStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
 
         EncodingRequest request = new(
             InputPath: "/media/track.flac",

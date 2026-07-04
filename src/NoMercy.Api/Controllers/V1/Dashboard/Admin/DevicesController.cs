@@ -13,14 +13,12 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Controllers.V1.Music;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.WebSockets;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Users;
-using NoMercy.Helpers.Extensions;
 using NoMercy.Networking.Http;
 using NoMercy.Networking.Messaging;
 
@@ -29,7 +27,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 [ApiController]
 [Tags("Dashboard Server Devices")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "Moderator")]
 [Route("api/v{version:apiVersion}/dashboard/devices", Order = 10)]
 public class DevicesController(
     IDeviceRepository deviceRepository,
@@ -40,10 +38,8 @@ public class DevicesController(
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view devices");
 
-        List<Device> devices = await deviceRepository.GetDevices().ToListAsync();
+        List<Device> devices = await deviceRepository.GetDevices();
 
         DevicesDto[] devicesDtos = devices
             .Select(x => new DevicesDto
@@ -80,8 +76,6 @@ public class DevicesController(
     [HttpPost]
     public IActionResult Create()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to create devices");
 
         return Ok(new PlaceholderResponse { Data = [] });
     }
@@ -89,8 +83,6 @@ public class DevicesController(
     [HttpDelete]
     public async Task<IActionResult> Destroy()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to clear activity logs");
 
         await deviceRepository.DeleteAllActivityLogsAsync();
 
@@ -100,8 +92,6 @@ public class DevicesController(
     [HttpDelete("offline")]
     public async Task<IActionResult> DestroyOffline()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to delete devices");
 
         List<Device> all = await deviceRepository.GetAllAsync();
 
@@ -140,8 +130,6 @@ public class DevicesController(
     [HttpDelete("{id}")]
     public async Task<IActionResult> DestroyOne(string id)
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to delete devices");
 
         if (!Ulid.TryParse(id, out Ulid deviceId))
             return BadRequestResponse("Invalid device id");

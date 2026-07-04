@@ -13,20 +13,20 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 using NoMercy.Networking.Certificate;
-using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
+using NoMercy.NmSystem.Configuration;
 
 namespace NoMercy.Service.Hosting;
 
 public class PortManager : IPortManager
 {
     private readonly ILogger<PortManager> _logger;
+    private readonly ICertificateService _certificateService;
 
-    public PortManager(ILogger<PortManager> logger)
+    public PortManager(ILogger<PortManager> logger, ICertificateService certificateService)
     {
         _logger = logger;
+        _certificateService = certificateService;
     }
 
     public async Task EnsurePortAvailable(int port)
@@ -38,18 +38,20 @@ public class PortManager : IPortManager
         string processInfo = await FindProcessOnPortAsync(port);
 
         if (!string.IsNullOrEmpty(processInfo))
-            _logger.LogInformation("Process holding port {Port}:\n{ProcessInfo}", port, processInfo);
+            _logger.LogInformation(
+                "Process holding port {Port}:\n{ProcessInfo}",
+                port,
+                processInfo
+            );
 
         int blockingPid = ParsePidFromPortInfo(processInfo);
 
         if (blockingPid <= 0)
         {
-            if (Certificate.HasValidCertificate())
+            if (_certificateService.HasValidCertificate())
             {
                 _logger.LogError(
-                    "Port {Port} is in use by an unknown process. "
-                        + "NoMercy is registered on this port and cannot use a different one. "
-                        + "Free the port and restart.",
+                    "Port {Port} is in use by an unknown process. NoMercy is registered on this port and cannot use a different one. Free the port and restart.",
                     port
                 );
             }
@@ -61,9 +63,9 @@ public class PortManager : IPortManager
                 );
             }
 
-            Environment.ExitCode = 1;
-            Environment.Exit(1);
-            return;
+            throw new StartupAbortException(
+                $"Port {port} is in use and the blocking process could not be identified."
+            );
         }
 
         bool isStaleInstance = false;
@@ -88,33 +90,30 @@ public class PortManager : IPortManager
         }
         else
         {
-            bool isRegistered = Certificate.HasValidCertificate();
+            bool isRegistered = _certificateService.HasValidCertificate();
 
             if (isRegistered)
             {
                 _logger.LogError(
-                    "Port {Port} is in use by {BlockingProcessName} (PID {BlockingPid}). "
-                        + "NoMercy is registered on this port and cannot use a different one. "
-                        + "Free the port and restart.",
+                    "Port {Port} is in use by {BlockingProcessName} (PID {BlockingPid}). NoMercy is registered on this port and cannot use a different one. Free the port and restart.",
                     port,
                     blockingProcessName,
                     blockingPid
                 );
-                Environment.ExitCode = 1;
-                Environment.Exit(1);
-                return;
+                throw new StartupAbortException(
+                    $"Port {port} is in use by {blockingProcessName} (PID {blockingPid}) and NoMercy is registered on this port."
+                );
             }
 
             int alternativePort = FindNextAvailablePort(port + 1);
             _logger.LogInformation(
-                "Port {Port} is in use by {BlockingProcessName} (PID {BlockingPid}). "
-                    + "Server is not yet registered — using port {AlternativePort} instead.",
+                "Port {Port} is in use by {BlockingProcessName} (PID {BlockingPid}). Server is not yet registered — using port {AlternativePort} instead.",
                 port,
                 blockingProcessName,
                 blockingPid,
                 alternativePort
             );
-            Config.InternalServerPort = alternativePort;
+            RuntimeServerSettings.Current.InternalServerPort = alternativePort;
             return;
         }
 
@@ -122,9 +121,9 @@ public class PortManager : IPortManager
 
         if (!portFreed)
         {
-            Environment.ExitCode = 1;
-            Environment.Exit(1);
-            return;
+            throw new StartupAbortException(
+                $"Port {port} could not be freed after killing the stale process (PID {blockingPid})."
+            );
         }
 
         _logger.LogInformation("Port freed — continuing startup...");
@@ -140,10 +139,14 @@ public class PortManager : IPortManager
                 return candidate;
         }
 
-        _logger.LogError("No available port found in range {StartPort}–{MaxPort}.", startPort, MaxPort);
-        Environment.ExitCode = 1;
-        Environment.Exit(1);
-        return -1;
+        _logger.LogError(
+            "No available port found in range {StartPort}–{MaxPort}.",
+            startPort,
+            MaxPort
+        );
+        throw new StartupAbortException(
+            $"No available port found in range {startPort}-{MaxPort}."
+        );
     }
 
     public bool IsPortAvailable(int port)
@@ -176,11 +179,14 @@ public class PortManager : IPortManager
             return false;
         }
 
-        _logger.LogWarning("Host failed to bind to port {Port} (Address already in use). Attempting recovery...", port);
+        _logger.LogWarning(
+            "Host failed to bind to port {Port} (Address already in use). Attempting recovery...",
+            port
+        );
         await EnsurePortAvailable(port);
 
         // If EnsurePortAvailable didn't exit the process, we can retry on the same port
-        // (if it was freed) or we already switched Config.InternalServerPort.
+        // (if it was freed) or we already switched RuntimeServerSettings.Current.InternalServerPort.
         return true;
     }
 
@@ -191,7 +197,11 @@ public class PortManager : IPortManager
             Process process = Process.GetProcessById(pid);
             process.Kill();
 
-            _logger.LogInformation("Sent kill signal to PID {Pid}. Waiting for port {Port} to be freed...", pid, port);
+            _logger.LogInformation(
+                "Sent kill signal to PID {Pid}. Waiting for port {Port} to be freed...",
+                pid,
+                port
+            );
 
             // Wait up to 5 seconds for the port to be freed
             for (int i = 0; i < 50; i++)
@@ -201,12 +211,21 @@ public class PortManager : IPortManager
                     return true;
             }
 
-            _logger.LogError("Timed out waiting for port {Port} to be freed by PID {Pid}.", port, pid);
+            _logger.LogError(
+                "Timed out waiting for port {Port} to be freed by PID {Pid}.",
+                port,
+                pid
+            );
             return false;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to kill process {Pid} or wait for port {Port}.", pid, port);
+            _logger.LogError(
+                ex,
+                "Failed to kill process {Pid} or wait for port {Port}.",
+                pid,
+                port
+            );
             return false;
         }
     }
@@ -220,7 +239,8 @@ public class PortManager : IPortManager
             {
                 using Process process = new();
                 process.StartInfo.FileName = "cmd.exe";
-                process.StartInfo.Arguments = $"/c \"netstat -ano | findstr LISTENING | findstr :{port}\"";
+                process.StartInfo.Arguments =
+                    $"/c \"netstat -ano | findstr LISTENING | findstr :{port}\"";
                 process.StartInfo.RedirectStandardOutput = true;
                 process.StartInfo.UseShellExecute = false;
                 process.StartInfo.CreateNoWindow = true;
@@ -235,7 +255,10 @@ public class PortManager : IPortManager
             }
         }
 
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        if (
+            RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+            || RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+        )
         {
             // Linux/macOS: lsof -i :<port>
             try
@@ -271,7 +294,10 @@ public class PortManager : IPortManager
         {
             // netstat output: last column is PID
             // Example: TCP    0.0.0.0:7625           0.0.0.0:0              LISTENING       1234
-            string[] lines = processInfo.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] lines = processInfo.Split(
+                new[] { '\r', '\n' },
+                StringSplitOptions.RemoveEmptyEntries
+            );
             if (lines.Length > 0)
             {
                 string[] parts = lines[0].Split(' ', StringSplitOptions.RemoveEmptyEntries);

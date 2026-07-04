@@ -16,22 +16,20 @@ using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.FileProviders;
 using NoMercy.Api.Hubs;
 using NoMercy.Api.Middleware;
+using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
-using NoMercy.Helpers.Extensions;
-using NoMercy.MediaProcessing.Jobs.ChangesJobs;
 using NoMercy.Networking.Certificate;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.CoverArt.Client;
 using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.Helpers;
 using NoMercy.Providers.NoMercy.Client;
 using NoMercy.Providers.TMDB.Client;
-using NoMercy.Queue.MediaServer.Jobs;
 using NoMercy.Service.Configuration.Swagger;
 using NoMercy.Service.Extensions;
 using NoMercy.Storage;
-using NoMercyQueue.Workers;
 
 namespace NoMercy.Service.Configuration;
 
@@ -68,29 +66,6 @@ public static class ApplicationConfiguration
         ConfigureDynamicStaticFiles(app);
         ConfigureEndpoints(app);
         SwaggerConfiguration.UseSwaggerUi(app, provider);
-        ConfigureCronJobs(app);
-    }
-
-    private static void ConfigureCronJobs(IApplicationBuilder app)
-    {
-        CronWorker cronWorker = app.ApplicationServices.GetRequiredService<CronWorker>();
-        cronWorker.RegisterJobWithSchedule<CertificateRenewalCronJob>(
-            "certificate-renewal",
-            app.ApplicationServices
-        );
-        cronWorker.RegisterJobWithSchedule<ActivityLogRetentionCronJob>(
-            "activity-log-retention",
-            app.ApplicationServices
-        );
-        cronWorker.RegisterJobWithSchedule<TmdbChangesCronJob>(
-            "tmdb-changes-sync",
-            app.ApplicationServices
-        );
-
-        cronWorker.RegisterJobWithSchedule<DeviceDropRuleCronJob>(
-            "device-drop-rule-job",
-            app.ApplicationServices
-        );
     }
 
     private static void ConfigureLocalization(IApplicationBuilder app)
@@ -117,13 +92,14 @@ public static class ApplicationConfiguration
         app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
         app.UseMiddleware<EncoderRuntimeExceptionMiddleware>();
 
-        if (Certificate.HasValidCertificate())
+        if (app.ApplicationServices.GetRequiredService<ICertificateService>().HasValidCertificate())
         {
             app.UseHsts();
             app.UseWhen(
                 context =>
                     !context.Request.Path.StartsWithSegments("/manage")
-                    && context.Connection.LocalPort != Config.InternalServerPort + 1,
+                    && context.Connection.LocalPort
+                        != RuntimeServerSettings.Current.InternalServerPort + 1,
                 branch => branch.UseHttpsRedirection()
             );
         }
@@ -172,7 +148,7 @@ public static class ApplicationConfiguration
             async (context, next) =>
             {
                 if (
-                    !Config.Swagger
+                    !RuntimeServerSettings.Current.Swagger
                     && (
                         context.Request.Path.StartsWithSegments("/swagger")
                         || context.Request.Path.StartsWithSegments("/index.html")
@@ -281,23 +257,48 @@ public static class ApplicationConfiguration
 
     private static void ConfigureStaticFiles(IApplicationBuilder app)
     {
-        // Folders.EmptyFolder(AppFiles.TranscodePath);
-
-        app.UseStaticFiles(
-            new StaticFileOptions
+        // /transcodes serves trailer HLS output and other transcoded media. It must
+        // require the same authenticated identity as the rest of the media surface.
+        // TokenParamAuthMiddleware has already promoted ?token=/?access_token= to a
+        // Bearer header and UseAuthentication has validated it before this branch runs,
+        // so an authenticated player still streams while anonymous callers get 401.
+        app.UseWhen(
+            context => context.Request.Path.StartsWithSegments("/transcodes"),
+            branch =>
             {
-                FileProvider = new PhysicalFileProvider(AppFiles.TranscodePath),
-                RequestPath = new("/transcodes"),
-                ServeUnknownFileTypes = true,
-                HttpsCompression = HttpsCompressionMode.Compress,
-            }
-        );
+                branch.Use(
+                    async (context, next) =>
+                    {
+                        if (context.User.Identity?.IsAuthenticated != true)
+                        {
+                            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                            return;
+                        }
 
-        app.UseDirectoryBrowser(
-            new DirectoryBrowserOptions
-            {
-                FileProvider = new PhysicalFileProvider(AppFiles.TranscodePath),
-                RequestPath = new("/transcodes"),
+                        await next();
+                    }
+                );
+
+                branch.UseStaticFiles(
+                    new StaticFileOptions
+                    {
+                        FileProvider = new PhysicalFileProvider(AppFiles.TranscodePath),
+                        RequestPath = new("/transcodes"),
+                        ServeUnknownFileTypes = true,
+                        HttpsCompression = HttpsCompressionMode.Compress,
+                    }
+                );
+
+                // Directory enumeration of the transcode tree is a dev-only convenience;
+                // never expose the listing on a reachable server.
+                if (Config.IsDev)
+                    branch.UseDirectoryBrowser(
+                        new DirectoryBrowserOptions
+                        {
+                            FileProvider = new PhysicalFileProvider(AppFiles.TranscodePath),
+                            RequestPath = new("/transcodes"),
+                        }
+                    );
             }
         );
     }
@@ -324,10 +325,7 @@ public static class ApplicationConfiguration
             // ASP.NET Core middleware pipeline (IApplicationBuilder.Use*) and cannot be
             // made async without refactoring the entire startup chain. This is startup-only,
             // before any requests are served, so blocking here is safe.
-            ClaimsPrincipleExtensions
-                .RefreshFolderIdsAsync(mediaContext)
-                .GetAwaiter()
-                .GetResult();
+            UserCache.Current.RefreshFolderIdsAsync(mediaContext).GetAwaiter().GetResult();
         }
         catch (SqliteException)
         {

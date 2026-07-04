@@ -198,7 +198,7 @@ public class MetadataMergerBuildStageIntegrationTests
         };
 
         ExecutionPlan plan = BuildCopyMkvPlan();
-        BuildInput input = new(plan, "/movies/fight_club.mkv", "/output/fc", "Fight Club.NoMercy");
+        BuildInput input = new(plan, "/movies/fight_club.mkv", "/tmp/nmtest-output/fc", "Fight Club.NoMercy");
 
         StageResult result = await stage.ExecuteAsync(input, context, default);
 

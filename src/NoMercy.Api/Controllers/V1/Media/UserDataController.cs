@@ -12,17 +12,16 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.Controllers.V1.Music;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
+using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Users;
 using NoMercy.Events;
 using NoMercy.Events.Library;
-using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Controllers.V1.Media;
 
@@ -33,14 +32,15 @@ namespace NoMercy.Api.Controllers.V1.Media;
 public class UserDataController(
     IHomeRepository homeRepository,
     IUserDataRepository userDataRepository,
-    IEventBus eventBus
+    IEventBus eventBus,
+    ILogger<UserDataController> logger
 ) : BaseController
 {
     [HttpGet]
     public IActionResult Index()
     {
         // Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthenticatedResponse("You do not have permission to view user data");
 
         return Ok(new PlaceholderResponse { Data = [] });
@@ -52,7 +52,7 @@ public class UserDataController(
     public async Task<IActionResult> ContinueWatching()
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthenticatedResponse("You do not have permission to view continue watching");
 
         string language = Language();
@@ -79,7 +79,7 @@ public class UserDataController(
     public async Task<IActionResult> RemoveContinue(FavoriteRequest body)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthenticatedResponse(
                 "You do not have permission to remove continue watching"
             );
@@ -97,11 +97,11 @@ public class UserDataController(
         if (userData.Count == 0)
             return NotFoundResponse("Item not found");
 
-        Logger.Socket(userData);
+        logger.LogInformation("{UserData}", userData);
 
         await userDataRepository.DeleteUserDataAsync(userData);
 
-        await eventBus.PublishAsync(new LibraryRefreshEvent { QueryKey = ["continue-watching"] });
+        await eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["continue-watching"] });
 
         return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Item removed" });
     }
@@ -111,7 +111,7 @@ public class UserDataController(
     public async Task<IActionResult> Watched([FromQuery] FavoriteRequest body)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthenticatedResponse("You do not have permission to view watched");
 
         if (!TryParseFavoriteIds(body, out int? intId, out Ulid? ulidId))
@@ -137,7 +137,7 @@ public class UserDataController(
     public async Task<IActionResult> Favorites([FromQuery] FavoriteRequest body)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthenticatedResponse("You do not have permission to view favorites");
 
         if (!TryParseFavoriteIds(body, out int? intId, out Ulid? ulidId))

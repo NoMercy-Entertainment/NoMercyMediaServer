@@ -121,7 +121,9 @@ public class ServerControlViewModelTests
     [Fact]
     public async Task RefreshStatusAsync_WhenDisconnected_SetsDefaults()
     {
-        ServerConnection connection = new();
+        // A unique pipe name no server can be listening on — the machine-global
+        // default pipe would answer when a live dev server runs on this box.
+        ServerConnection connection = new($"nomercy-test-{Guid.NewGuid():N}");
         ServerProcessLauncher launcher = new();
         ServerControlViewModel viewModel = new(connection, launcher);
 

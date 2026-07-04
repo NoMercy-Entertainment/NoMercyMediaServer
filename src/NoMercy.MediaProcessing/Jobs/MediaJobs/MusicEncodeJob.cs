@@ -10,13 +10,11 @@
 // -----------------------------------------------------------------------------
 
 using System.Diagnostics;
-using NoMercy.Database;
 using Microsoft.Extensions.DependencyInjection;
-using NoMercyQueue;
+using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Music;
-using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Orchestration;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
@@ -28,23 +26,25 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs.Support;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.MediaProcessing.MusicGenres;
 using NoMercy.MediaProcessing.Recordings;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
-using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
-using Serilog.Events;
+using NoMercyQueue;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 
+using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
 {
     private IEncodingOrchestrator? _encodingOrchestrator;
 
-    public void InjectStorageServices(IServiceProvider serviceProvider)
+    public new void InjectStorageServices(IServiceProvider serviceProvider)
     {
+        base.InjectStorageServices(serviceProvider);
         _encodingOrchestrator = serviceProvider.GetRequiredService<IEncodingOrchestrator>();
     }
+
     public override string QueueName => "encoder";
     public override int Priority => 3;
 
@@ -80,9 +80,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
             {
                 if (profile.AudioProfiles.Length == 0)
                 {
-                    Logger.Encoder(
-                        $"Skipping profile {profile.Name}: no audio profiles configured"
-                    );
+                    Log.LogInformation("Skipping profile {Name}: no audio profiles configured", profile.Name);
                     continue;
                 }
 
@@ -161,9 +159,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
                     );
                 }
 
-                Logger.Encoder(
-                    $"Encoded {MediaFile.Path} → {encodeResult.OutputPath} in {encodeResult.Duration.TotalSeconds:F1}s ({encodeResult.Metrics?.EncoderUsed ?? "unknown"})"
-                );
+                Log.LogInformation("Encoded {Path} → {OutputPath} in {TotalSeconds:F1}s ({Unknown})", MediaFile.Path, encodeResult.OutputPath, encodeResult.Duration.TotalSeconds, encodeResult.Metrics?.EncoderUsed ?? "unknown");
 
                 await AddRecording(folder);
 
@@ -192,7 +188,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
             }
             catch (Exception e)
             {
-                Logger.Encoder(e, LogEventLevel.Error);
+                Log.LogError(e, "Music encode task failed");
 
                 if (EventBusProvider.IsConfigured)
                 {
@@ -235,7 +231,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
             artistRepository,
             musicGenreRepository,
             jobDispatcher,
-            StorageFactory
+            StorageFactory, LoggerFactory.CreateLogger<ArtistManager>()
         );
 
         RecordingRepository recordingRepository = new(context);
@@ -244,7 +240,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
             musicGenreRepository,
             artistRepository,
             StorageDriver,
-            StorageFactory
+            StorageFactory, LoggerFactory.CreateLogger<RecordingManager>()
         );
 
         await using MediaScan mediaScan = new(StorageDriver);
@@ -264,7 +260,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
 
         await Parallel.ForEachAsync(
             FolderMetaData.MusicBrainzRelease.Media,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (media, t) =>
             {
                 if (
@@ -285,22 +281,16 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
 
                 if (albumLibrary is null)
                 {
-                    Logger.MusicBrainz(
-                        $"Album Library not found: {LibraryId}",
-                        LogEventLevel.Error
-                    );
+                    Log.LogError("Album Library not found: {LibraryId}", LibraryId);
                     return;
                 }
 
                 await Parallel.ForEachAsync(
                     FoundTrack.ArtistCredit,
-                    Config.ParallelOptions,
+                    SystemParallelism.Options,
                     async (artist, _) =>
                     {
-                        Logger.MusicBrainz(
-                            $"Storing Artist: {artist.MusicBrainzArtist.Name}",
-                            LogEventLevel.Verbose
-                        );
+                        Log.LogTrace("Storing Artist: {Name}", artist.MusicBrainzArtist.Name);
                         await artistManager.Store(
                             artist.MusicBrainzArtist,
                             albumLibrary,

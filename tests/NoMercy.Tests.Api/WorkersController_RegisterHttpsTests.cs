@@ -17,7 +17,7 @@ using Moq;
 using NoMercy.Api.Controllers.V1.Dashboard.Admin;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Distribution;
-using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using Xunit;
 
 namespace NoMercy.Tests.Api;
@@ -74,7 +74,7 @@ public class WorkersController_RegisterHttpsTests
 
     /// <summary>
     /// IsOwner() checks the private static <c>_users</c> list inside
-    /// <see cref="ClaimsPrincipleExtensions"/>. Because the list is process-wide,
+    /// <see cref="ClaimsPrincipalExtensions"/>. Because the list is process-wide,
     /// another test fixture (e.g. NoMercyApiFactory) may have replaced it via
     /// InitializeAsync() or cleared it via Reset() before these tests run.
     /// We therefore reset+reseed unconditionally on every BuildController() call
@@ -83,10 +83,10 @@ public class WorkersController_RegisterHttpsTests
     private static void SeedOwnerInClaimsExtensions()
     {
         // Reset wipes whatever a prior test left in the static — InitializeAsync
-        // from integration fixtures or Reset() from ClaimsPrincipleExtensionsTests.
-        ClaimsPrincipleExtensions.Reset();
+        // from integration fixtures or Reset() from ClaimsPrincipalExtensionsTests.
+        UserCache.Current.Reset();
 
-        ClaimsPrincipleExtensions.AddUser(
+        UserCache.Current.AddUser(
             new()
             {
                 Id = OwnerUserId,

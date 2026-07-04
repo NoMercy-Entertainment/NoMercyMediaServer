@@ -52,120 +52,135 @@ public class LiveFfmpegRunner(
             ? new ResourceRequirement(gpuName, GpuSlots: 1, CpuThreads: 2)
             : new ResourceRequirement(null, GpuSlots: 0, CpuThreads: 2);
 
-        ResourceLease lease = await resourceBudget
-            .AcquireAsync(requirement, ct)
-            .ConfigureAwait(false);
-
-        storage.CreateDirectory(input.OutputDirectory);
-
-        await using LocalPathLease outputLease = storage.AcquireLocalPath(input.OutputDirectory);
-
-        string[] arguments = BuildArguments(input);
-
-        logger.LogInformation(
-            "Live FFmpeg starting for session {SessionId} → {Dir}",
-            session.SessionId,
-            input.OutputDirectory
-        );
-
-        ProgressParser progressParser = new();
-        HashSet<int> pushedSegments = [];
-        using CancellationTokenSource stopPolling = CancellationTokenSource.CreateLinkedTokenSource(
-            ct
-        );
-
-        Task pollingTask = Task.Run(
-            () => PollForSegmentsAsync(input, session, pushedSegments, stopPolling.Token),
-            stopPolling.Token
-        );
-
-        void OnStdOut(string line)
-        {
-            FfmpegProgressSnapshot? snapshot = progressParser.FeedLine(line);
-            if (snapshot is not null && snapshot.Speed > 0)
-            {
-                session.SetSpeed(snapshot.Speed);
-            }
-        }
+        // Declared outside the try so the outer finally can always see whether
+        // a lease was actually granted. Acquisition now happens INSIDE the try
+        // — it used to run before it, so a throw from CreateDirectory /
+        // AcquireLocalPath / BuildArguments below skipped the finally entirely
+        // and leaked the GPU/CPU budget forever.
+        ResourceLease? lease = null;
 
         try
         {
-            ProcessResult result = await processRunner.RunAsync(
-                options.FfmpegPath,
-                arguments,
-                OnStdOut,
-                null,
-                outputLease.Path,
-                ct
+            lease = await resourceBudget.AcquireAsync(requirement, ct).ConfigureAwait(false);
+
+            storage.CreateDirectory(input.OutputDirectory);
+
+            await using LocalPathLease outputLease = storage.AcquireLocalPath(
+                input.OutputDirectory
             );
 
-            if (!result.IsSuccess && !ct.IsCancellationRequested)
-            {
-                logger.LogWarning(
-                    "Live FFmpeg for session {SessionId} exited with code {Code}. stderr: {StdErr}",
-                    session.SessionId,
-                    result.ExitCode,
-                    Truncate(result.StdErr, 1000)
-                );
-                session.SetState(LiveSessionState.Error);
-                await PushTranscodeErrorAsync(
-                        session.SessionId,
-                        $"FFmpeg exited with code {result.ExitCode}"
-                    )
-                    .ConfigureAwait(false);
-            }
-        }
-        catch (OperationCanceledException)
-        {
+            string[] arguments = BuildArguments(input);
+
             logger.LogInformation(
-                "Live FFmpeg cancelled for session {SessionId}",
-                session.SessionId
+                "Live FFmpeg starting for session {SessionId} → {Dir}",
+                session.SessionId,
+                input.OutputDirectory
             );
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Live FFmpeg threw for session {SessionId}", session.SessionId);
-            session.SetState(LiveSessionState.Error);
-            await PushTranscodeErrorAsync(session.SessionId, ex.Message).ConfigureAwait(false);
-        }
-        finally
-        {
-            resourceBudget.Release(lease);
+
+            ProgressParser progressParser = new();
+            HashSet<int> pushedSegments = [];
+            using CancellationTokenSource stopPolling =
+                CancellationTokenSource.CreateLinkedTokenSource(ct);
+
+            Task pollingTask = Task.Run(
+                () => PollForSegmentsAsync(input, session, pushedSegments, stopPolling.Token),
+                stopPolling.Token
+            );
+
+            void OnStdOut(string line)
+            {
+                FfmpegProgressSnapshot? snapshot = progressParser.FeedLine(line);
+                if (snapshot is not null && snapshot.Speed > 0)
+                {
+                    session.SetSpeed(snapshot.Speed);
+                }
+            }
 
             try
             {
-                await stopPolling.CancelAsync();
-                await pollingTask.ConfigureAwait(false);
+                ProcessResult result = await processRunner.RunAsync(
+                    options.FfmpegPath,
+                    arguments,
+                    OnStdOut,
+                    null,
+                    outputLease.Path,
+                    ct
+                );
+
+                if (!result.IsSuccess && !ct.IsCancellationRequested)
+                {
+                    logger.LogWarning(
+                        "Live FFmpeg for session {SessionId} exited with code {Code}. stderr: {StdErr}",
+                        session.SessionId,
+                        result.ExitCode,
+                        Truncate(result.StdErr, 1000)
+                    );
+                    session.SetState(LiveSessionState.Error);
+                    await PushTranscodeErrorAsync(
+                            session.SessionId,
+                            $"FFmpeg exited with code {result.ExitCode}"
+                        )
+                        .ConfigureAwait(false);
+                }
             }
             catch (OperationCanceledException)
             {
-                // Expected
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(
-                    ex,
-                    "Segment poller for session {SessionId} faulted",
+                logger.LogInformation(
+                    "Live FFmpeg cancelled for session {SessionId}",
                     session.SessionId
                 );
             }
-
-            // Final sweep after the poller stops — the process may have written
-            // segments between the last scheduled poll and its exit.
-            try
-            {
-                PushNewSegments(input, session, pushedSegments);
-            }
             catch (Exception ex)
             {
-                logger.LogDebug(
-                    ex,
-                    "Final segment drain raised for session {SessionId}",
-                    session.SessionId
-                );
+                logger.LogError(ex, "Live FFmpeg threw for session {SessionId}", session.SessionId);
+                session.SetState(LiveSessionState.Error);
+                await PushTranscodeErrorAsync(session.SessionId, ex.Message).ConfigureAwait(false);
             }
+            finally
+            {
+                try
+                {
+                    await stopPolling.CancelAsync();
+                    await pollingTask.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(
+                        ex,
+                        "Segment poller for session {SessionId} faulted",
+                        session.SessionId
+                    );
+                }
 
-            session.Complete();
+                // Final sweep after the poller stops — the process may have written
+                // segments between the last scheduled poll and its exit.
+                try
+                {
+                    PushNewSegments(input, session, pushedSegments);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogDebug(
+                        ex,
+                        "Final segment drain raised for session {SessionId}",
+                        session.SessionId
+                    );
+                }
+            }
+        }
+        finally
+        {
+            if (lease is not null)
+                resourceBudget.Release(lease);
+
+            // Conditional: a per-seek/resume runner whose CTS has already been
+            // superseded by a newer one must not end the whole session's
+            // segment stream — see LiveSession.CompleteIfCurrentRunner.
+            session.CompleteIfCurrentRunner(ct);
         }
     }
 

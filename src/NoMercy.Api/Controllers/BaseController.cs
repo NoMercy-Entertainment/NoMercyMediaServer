@@ -12,20 +12,58 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
+using NoMercy.Authorization;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers;
 
 public class BaseController : Controller
 {
-    private IActionResult ProblemWithTrace(string title, string detail, int statusCode, string type)
+    // Media authorization policy resolved from the request's DI container.
+    // Replaces the former static ClaimsPrincipal authorization extensions.
+    // Resolved from the request's DI container; falls back to a policy over the
+    // shared user cache when there is no HttpContext (e.g. unit-constructed
+    // controllers in tests). Both paths read the same UserCache singleton.
+    protected IMediaAuthorizationPolicy AuthPolicy =>
+        HttpContext?.RequestServices?.GetService<IMediaAuthorizationPolicy>()
+        ?? new MediaAuthorizationPolicy(UserCache.Current);
+
+    protected IUserCache UserCacheService =>
+        HttpContext?.RequestServices?.GetService<IUserCache>() ?? UserCache.Current;
+
+    private IActionResult ProblemWithTrace(
+        string title,
+        string detail,
+        int statusCode,
+        string type,
+        [System.Runtime.CompilerServices.CallerMemberName] string caller = ""
+    )
     {
+        // A returned 5xx never reaches GlobalExceptionHandlerMiddleware, so it would
+        // otherwise be an unlogged, invisible server error.
+        if (statusCode >= 500)
+        {
+            ILogger? log = HttpContext
+                ?.RequestServices?.GetService<ILoggerFactory>()
+                ?.CreateLogger("NoMercy.Api.ServerError");
+            log?.LogError(
+                "[{TraceId}] {Status} returned from {Caller} for {Path}: {Detail}",
+                HttpContext?.TraceIdentifier,
+                statusCode,
+                caller,
+                HttpContext?.Request.Path.Value,
+                detail
+            );
+        }
+
         ProblemDetails problemDetails = new()
         {
             Type = type,
-            Title = title,
+            Title = title.Localize(),
             Detail = detail.Localize(),
             Instance = HttpContext.Request.Path,
             Status = statusCode,

@@ -51,6 +51,16 @@ jobs:
           echo "Injected version ${{ inputs.version }} into Directory.Build.props"
           grep '<Version>' Directory.Build.props
 
+      - name: Embed org GPG public key
+        if: vars.GPG_PUBLIC_KEY != ''
+        shell: bash
+        env:
+          GPG_PUBLIC_KEY: ${{ vars.GPG_PUBLIC_KEY }}
+        run: |
+          printf '%s\n' "$GPG_PUBLIC_KEY" \
+            > src/NoMercy.Setup/Resources/nomercy-public-key.asc
+          echo "Embedded GPG public key into nomercy-public-key.asc"
+
       - name: Build ${{ matrix.project }}
         uses: ./.github/actions/build-dotnet-project
         with:

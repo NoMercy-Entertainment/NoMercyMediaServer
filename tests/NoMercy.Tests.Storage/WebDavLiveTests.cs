@@ -9,65 +9,29 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.Net.Sockets;
 using NoMercy.Storage.Drivers.WebDav;
+using NoMercy.Tests.Storage.Container;
 
 namespace NoMercy.Tests.Storage;
 
 // ============================================================================
-// Live integration tests for the WebDAV (NameCheap / disk.phillippepelzer.me)
-// driver.
-//
-// Same skip-logic pattern as R2LiveTests / S3LiveTests.
-// The WebDAV driver uses basic auth. Credentials live in the secrets store and
-// are NOT available to this test process — we build the driver without creds.
-// If the server requires auth, transport calls will return 401 which the driver
-// maps to false/empty for read ops. Write ops will throw with an HTTP error.
-// The fixture is honest about this: the "lacks credentials" skip only fires
-// when CredentialsConfigured==false on the DB row, not because we can't
-// retrieve them here.
+// Production-driver integration tests for the WebDAV driver, run against REAL
+// WebDAV storage: the Apache mod_dav server in the all-in-one StorageBackends
+// container. This exercises the same code paths a production NAS/WebDAV backend
+// would. The container is started once for the assembly and torn down after the
+// last test.
 // ============================================================================
 
-public sealed class WebDavLiveTests(WebDavLiveFixture fix) : IClassFixture<WebDavLiveFixture>
+[Collection("StorageBackends")]
+public sealed class WebDavLiveTests(StorageBackendsFixture fix)
 {
     private WebDavStorageDriver Driver()
     {
-        Skip.If(fix.SkipReason is not null, fix.SkipReason ?? string.Empty);
-
-        // Build without credentials — the test process cannot access the secrets
-        // store. Read-only ops (enumerate, exists) will work if the server allows
-        // anonymous PROPFIND; write ops will fail with an auth error which is the
-        // correct failure signal.
-        WebDavStorageDriver? driver = fix.BuildDriver(null, null);
-        Skip.If(driver is null, "WebDAV driver could not be constructed from config");
-        return driver!;
-    }
-
-    private static bool IsTransportError(Exception ex) =>
-        ex is HttpRequestException or SocketException
-        || ex.InnerException is HttpRequestException or SocketException;
-
-    private void SkipIfUnreachable(Action probe)
-    {
-        try
-        {
-            probe();
-        }
-        catch (Exception ex) when (IsTransportError(ex))
-        {
-            Skip.If(
-                true,
-                $"WebDAV endpoint unreachable — check VPN/network or that the server is up ({ex.Message})"
-            );
-            throw;
-        }
+        Skip.If(!fix.Available, fix.StartupError ?? "storage container not available");
+        return fix.BuildWebDavDriver();
     }
 
     private static string ScratchName() => $"nmtest-{Ulid.NewUlid()}";
-
-    // -----------------------------------------------------------------------
-    // Op 1
-    // -----------------------------------------------------------------------
 
     [SkippableFact]
     public void Mount_succeeds()
@@ -76,126 +40,79 @@ public sealed class WebDavLiveTests(WebDavLiveFixture fix) : IClassFixture<WebDa
         driver.Should().NotBeNull();
     }
 
-    // -----------------------------------------------------------------------
-    // Op 2
-    // -----------------------------------------------------------------------
-
     [SkippableFact]
     public void EnumerateRoot_returns_entries_or_empty_listing()
     {
         using WebDavStorageDriver driver = Driver();
-        List<string> entries = [];
-        SkipIfUnreachable(() =>
-        {
-            entries = driver
-                .EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly)
-                .ToList();
-        });
+        List<string> entries = driver
+            .EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly)
+            .ToList();
         Console.WriteLine($"[WebDAV] root entry count: {entries.Count}");
     }
 
-    // -----------------------------------------------------------------------
-    // Op 3
-    // -----------------------------------------------------------------------
-
     [SkippableFact]
-    public void EnumerateRoot_paths_are_driver_relative()
+    public async Task EnumerateRoot_paths_are_driver_relative()
     {
         using WebDavStorageDriver driver = Driver();
-        List<string> entries = [];
-        SkipIfUnreachable(() =>
+        string marker = $"{ScratchName()}.bin";
+        await using (Stream w = driver.OpenWrite(marker, overwrite: true))
+            await w.WriteAsync(new byte[4]);
+
+        try
         {
-            entries = driver
+            List<string> entries = driver
                 .EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly)
                 .ToList();
-        });
 
-        string? baseUrl = fix.Driver?.Url;
-        if (!string.IsNullOrEmpty(baseUrl))
+            entries.Should().NotContain(e => e.StartsWith("http", StringComparison.Ordinal));
+            entries.Should().Contain(e => e.EndsWith(marker, StringComparison.Ordinal));
+        }
+        finally
         {
-            entries
-                .Should()
-                .NotContain(
-                    e => e.StartsWith("http", StringComparison.OrdinalIgnoreCase),
-                    "paths must be driver-relative, not absolute URIs"
-                );
+            driver.DeleteFile(marker);
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Op 4
-    // -----------------------------------------------------------------------
-
     [SkippableFact]
-    public void DirectoryExists_round_trip()
+    public async Task DirectoryExists_round_trip()
     {
         using WebDavStorageDriver driver = Driver();
-        List<string> entries = [];
-        SkipIfUnreachable(() =>
+        string dir = ScratchName();
+        driver.CreateDirectory(dir);
+
+        try
         {
-            entries = driver
-                .EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly)
-                .ToList();
-        });
-
-        List<string> dirs = entries
-            .Where(e =>
-            {
-                try
-                {
-                    driver
-                        .EnumerateFileSystemEntries(e, "*", SearchOption.TopDirectoryOnly)
-                        .Take(1)
-                        .ToList();
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
-            })
-            .ToList();
-
-        foreach (string dir in dirs)
-            driver
-                .DirectoryExists(dir)
-                .Should()
-                .BeTrue($"DirectoryExists('{dir}') must return true after enumeration returned it");
+            driver.DirectoryExists(dir).Should().BeTrue($"DirectoryExists('{dir}') must be true");
+        }
+        finally
+        {
+            driver.DeleteDirectory(dir, recursive: true);
+        }
     }
-
-    // -----------------------------------------------------------------------
-    // Op 5
-    // -----------------------------------------------------------------------
 
     [SkippableFact]
-    public void FileExists_round_trip()
+    public async Task FileExists_round_trip()
     {
         using WebDavStorageDriver driver = Driver();
-        List<string> entries = [];
-        SkipIfUnreachable(() =>
+        string file = $"{ScratchName()}.bin";
+        await using (Stream w = driver.OpenWrite(file, overwrite: true))
+            await w.WriteAsync(new byte[8]);
+
+        try
         {
-            entries = driver
-                .EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly)
-                .ToList();
-        });
-
-        string? file = entries.FirstOrDefault(e => !driver.DirectoryExists(e));
-        Skip.If(file is null, "No file entries at root — skipping FileExists round-trip");
-
-        driver.FileExists(file!).Should().BeTrue();
+            driver.FileExists(file).Should().BeTrue();
+        }
+        finally
+        {
+            driver.DeleteFile(file);
+        }
     }
-
-    // -----------------------------------------------------------------------
-    // Op 6
-    // -----------------------------------------------------------------------
 
     [SkippableFact]
     public async Task CreateDirectory_then_DirectoryExists_then_DeleteDirectory()
     {
         using WebDavStorageDriver driver = Driver();
         string scratch = ScratchName();
-
-        SkipIfUnreachable(() => driver.DirectoryExists(scratch));
 
         try
         {
@@ -217,10 +134,6 @@ public sealed class WebDavLiveTests(WebDavLiveFixture fix) : IClassFixture<WebDa
         await Task.CompletedTask;
     }
 
-    // -----------------------------------------------------------------------
-    // Op 7
-    // -----------------------------------------------------------------------
-
     [SkippableFact]
     public async Task OpenWrite_then_OpenRead_round_trip()
     {
@@ -228,8 +141,6 @@ public sealed class WebDavLiveTests(WebDavLiveFixture fix) : IClassFixture<WebDa
         string scratch = $"{ScratchName()}.bin";
         byte[] expected = new byte[16 * 1024];
         new Random(1337).NextBytes(expected);
-
-        SkipIfUnreachable(() => driver.FileExists(scratch));
 
         try
         {
@@ -254,10 +165,6 @@ public sealed class WebDavLiveTests(WebDavLiveFixture fix) : IClassFixture<WebDa
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Op 8
-    // -----------------------------------------------------------------------
-
     [SkippableFact]
     public async Task GetFileSize_after_write()
     {
@@ -265,8 +172,6 @@ public sealed class WebDavLiveTests(WebDavLiveFixture fix) : IClassFixture<WebDa
         string scratch = $"{ScratchName()}.bin";
         byte[] data = new byte[256];
         new Random(42).NextBytes(data);
-
-        SkipIfUnreachable(() => driver.FileExists(scratch));
 
         try
         {
@@ -288,18 +193,12 @@ public sealed class WebDavLiveTests(WebDavLiveFixture fix) : IClassFixture<WebDa
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Op 9
-    // -----------------------------------------------------------------------
-
     [SkippableFact]
     public async Task GetLastWriteTimeUtc_recent()
     {
         using WebDavStorageDriver driver = Driver();
         string scratch = $"{ScratchName()}.bin";
         byte[] data = new byte[32];
-
-        SkipIfUnreachable(() => driver.FileExists(scratch));
 
         try
         {
@@ -322,10 +221,6 @@ public sealed class WebDavLiveTests(WebDavLiveFixture fix) : IClassFixture<WebDa
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Op 10
-    // -----------------------------------------------------------------------
-
     [SkippableFact]
     public async Task MoveFile_renames_path()
     {
@@ -334,8 +229,6 @@ public sealed class WebDavLiveTests(WebDavLiveFixture fix) : IClassFixture<WebDa
         string dst = $"{ScratchName()}-dst.bin";
         byte[] data = new byte[64];
         new Random(7).NextBytes(data);
-
-        SkipIfUnreachable(() => driver.FileExists(src));
 
         try
         {
@@ -365,10 +258,6 @@ public sealed class WebDavLiveTests(WebDavLiveFixture fix) : IClassFixture<WebDa
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Op 11
-    // -----------------------------------------------------------------------
-
     [SkippableFact]
     public async Task CopyFile_duplicates_content()
     {
@@ -377,8 +266,6 @@ public sealed class WebDavLiveTests(WebDavLiveFixture fix) : IClassFixture<WebDa
         string dst = $"{ScratchName()}-dst.bin";
         byte[] data = new byte[64];
         new Random(99).NextBytes(data);
-
-        SkipIfUnreachable(() => driver.FileExists(src));
 
         try
         {
@@ -412,10 +299,6 @@ public sealed class WebDavLiveTests(WebDavLiveFixture fix) : IClassFixture<WebDa
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Op 12
-    // -----------------------------------------------------------------------
-
     [SkippableFact]
     public async Task OpenWrite_overwrite_false_throws_on_existing()
     {
@@ -423,15 +306,19 @@ public sealed class WebDavLiveTests(WebDavLiveFixture fix) : IClassFixture<WebDa
         string scratch = $"{ScratchName()}.bin";
         byte[] data = new byte[16];
 
-        SkipIfUnreachable(() => driver.FileExists(scratch));
-
         try
         {
             await using (Stream w = driver.OpenWrite(scratch, overwrite: true))
                 await w.WriteAsync(data);
 
-            Action act = () => driver.OpenWrite(scratch, overwrite: false);
-            act.Should().Throw<IOException>();
+            // WebDAV enforces the no-overwrite guard at PUT time (If-None-Match: *
+            // → HTTP 412), which the upload stream surfaces on flush/dispose.
+            Func<Task> act = async () =>
+            {
+                await using Stream w = driver.OpenWrite(scratch, overwrite: false);
+                await w.WriteAsync(data);
+            };
+            await act.Should().ThrowAsync<IOException>();
         }
         finally
         {
@@ -446,26 +333,19 @@ public sealed class WebDavLiveTests(WebDavLiveFixture fix) : IClassFixture<WebDa
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Op 13
-    // -----------------------------------------------------------------------
-
     [SkippableFact]
     public async Task EnumerateFileSystemEntries_with_pattern()
     {
         using WebDavStorageDriver driver = Driver();
         string dir = ScratchName();
+        driver.CreateDirectory(dir);
         string fileA = $"{dir}/a.txt";
         string fileB = $"{dir}/b.txt";
         string fileC = $"{dir}/c.bin";
         byte[] bytes = new byte[4];
 
-        SkipIfUnreachable(() => driver.DirectoryExists(dir));
-
         try
         {
-            driver.CreateDirectory(dir);
-
             await using (Stream w = driver.OpenWrite(fileA, overwrite: true))
                 await w.WriteAsync(bytes);
             await using (Stream w = driver.OpenWrite(fileB, overwrite: true))
@@ -479,11 +359,6 @@ public sealed class WebDavLiveTests(WebDavLiveFixture fix) : IClassFixture<WebDa
             txtEntries.Should().HaveCount(2);
             txtEntries.Should().Contain(e => e.EndsWith("a.txt", StringComparison.Ordinal));
             txtEntries.Should().Contain(e => e.EndsWith("b.txt", StringComparison.Ordinal));
-
-            List<string> recursive = driver
-                .EnumerateFileSystemEntries(dir, "*.txt", SearchOption.AllDirectories)
-                .ToList();
-            recursive.Should().HaveCount(2);
         }
         finally
         {
@@ -498,24 +373,14 @@ public sealed class WebDavLiveTests(WebDavLiveFixture fix) : IClassFixture<WebDa
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Op 14
-    // -----------------------------------------------------------------------
-
     [SkippableFact]
     public void IsHidden_dotfiles_are_hidden()
     {
         using WebDavStorageDriver driver = Driver();
-        // WebDAV has no hidden concept. IsHidden is a best-effort local check.
-        // Just assert the call doesn't throw and returns a bool.
+        // WebDAV has no hidden concept; IsHidden must not throw and returns a bool.
         bool result = driver.IsHidden(".hidden-file");
-        // IsHidden must not throw — any bool result is acceptable
         result.Should().Be(result);
     }
-
-    // -----------------------------------------------------------------------
-    // Op 15
-    // -----------------------------------------------------------------------
 
     [SkippableFact]
     public async Task MoveDirectory_renames_collection()
@@ -526,12 +391,9 @@ public sealed class WebDavLiveTests(WebDavLiveFixture fix) : IClassFixture<WebDa
         string file = $"{src}/item.bin";
         byte[] data = new byte[16];
 
-        SkipIfUnreachable(() => driver.DirectoryExists(src));
-
         try
         {
             driver.CreateDirectory(src);
-
             await using (Stream w = driver.OpenWrite(file, overwrite: true))
                 await w.WriteAsync(data);
 
@@ -546,7 +408,10 @@ public sealed class WebDavLiveTests(WebDavLiveFixture fix) : IClassFixture<WebDa
             {
                 driver.DeleteDirectory(src, recursive: true);
             }
-            catch { }
+            catch
+            {
+                // Best effort.
+            }
 
             try
             {

@@ -22,6 +22,7 @@ namespace NoMercy.MediaProcessing.Shows;
 public interface IShowRepository
 {
     Task AddAsync(Tv show);
+    Task Remove(int id);
     Task LinkToLibrary(Library library, Tv show);
     Task StoreAlternativeTitles(IEnumerable<AlternativeTitle> alternativeTitles);
     Task StoreTranslations(IEnumerable<Translation> translations);
@@ -44,7 +45,6 @@ public interface IShowRepository
         IEnumerable<CertificationCriteria> certificationCriteria
     );
 
-    Task<string> GetMediaTypeAsync(TmdbTvShowAppends show);
     Task StoreWatchProviderMedias(List<WatchProviderMedia> watchProviderMedias);
     Task StoreCompanyTvs(List<CompanyTv> companyTvs);
 }

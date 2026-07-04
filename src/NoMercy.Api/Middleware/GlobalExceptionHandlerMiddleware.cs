@@ -13,8 +13,7 @@ using System.Net.Mime;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using NoMercy.NmSystem.SystemCalls;
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 namespace NoMercy.Api.Middleware;
 
@@ -22,9 +21,15 @@ public class GlobalExceptionHandlerMiddleware
 {
     private readonly RequestDelegate _next;
 
-    public GlobalExceptionHandlerMiddleware(RequestDelegate next)
+    private readonly ILogger<GlobalExceptionHandlerMiddleware> _logger;
+
+    public GlobalExceptionHandlerMiddleware(
+        RequestDelegate next,
+        ILogger<GlobalExceptionHandlerMiddleware> logger
+    )
     {
         _next = next;
+        _logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -35,22 +40,26 @@ public class GlobalExceptionHandlerMiddleware
         }
         catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
         {
-            Logger.App(
-                $"[{context.TraceIdentifier}] Request cancelled by client: {context.Request.Path}",
-                LogEventLevel.Debug
+            _logger.LogDebug(
+                "[{TraceIdentifier}] Request cancelled by client: {Path}",
+                context.TraceIdentifier,
+                context.Request.Path
             );
         }
         catch (Exception ex) when (IsClientDisconnect(ex, context))
         {
-            Logger.App(
-                $"[{context.TraceIdentifier}] Client disconnected mid-request: {context.Request.Path} ({ex.GetType().Name}: {ex.Message})",
-                LogEventLevel.Debug
+            _logger.LogDebug(
+                "[{TraceIdentifier}] Client disconnected mid-request: {Path} ({Name}: {Message})",
+                context.TraceIdentifier,
+                context.Request.Path,
+                ex.GetType().Name,
+                ex.Message
             );
         }
         catch (Exception ex)
         {
             string traceId = context.TraceIdentifier;
-            Logger.App($"[{traceId}] Unhandled exception: {ex}", LogEventLevel.Error);
+            _logger.LogError("[{TraceId}] Unhandled exception: {Ex}", traceId, ex);
 
             // Headers already flushed (e.g. mid-stream of a media response) —
             // there's nothing more we can do without throwing again from

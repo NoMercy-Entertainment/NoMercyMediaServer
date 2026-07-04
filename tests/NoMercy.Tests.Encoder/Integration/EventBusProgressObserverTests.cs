@@ -19,7 +19,7 @@ namespace NoMercy.Tests.Encoder.Integration;
 
 /// <summary>
 /// Tests for EventBusProgressObserver — verifies that OnProgress publishes
-/// an EncoderProgressBroadcastEvent to the configured event bus, and that
+/// an EncodingProgressBroadcastedEvent to the configured event bus, and that
 /// it is silent when no bus is configured.
 /// </summary>
 [Collection("EventBusProgressObserver")]
@@ -67,9 +67,9 @@ public sealed class EventBusProgressObserverTests : IDisposable
     {
         // Arrange — wire up an InMemoryEventBus and capture published events.
         InMemoryEventBus bus = new();
-        List<EncoderProgressBroadcastEvent> captured = [];
+        List<EncodingProgressBroadcastedEvent> captured = [];
 
-        bus.Subscribe<EncoderProgressBroadcastEvent>(
+        bus.Subscribe<EncodingProgressBroadcastedEvent>(
             (evt, _) =>
             {
                 captured.Add(evt);
@@ -98,7 +98,7 @@ public sealed class EventBusProgressObserverTests : IDisposable
 
         // Assert
         captured.Should().HaveCount(1);
-        EncoderProgressBroadcastEvent published = captured[0];
+        EncodingProgressBroadcastedEvent published = captured[0];
         published.Should().NotBeNull();
         published.Source.Should().Be("Encoder");
         published.ProgressData.Should().NotBeNull();

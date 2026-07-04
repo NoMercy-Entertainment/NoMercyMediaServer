@@ -219,13 +219,13 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     }
 
     // =========================================================================
-    // ArtistsController — /api/v1/music/artist
+    // ArtistsController — /api/v1/music/artists
     // =========================================================================
 
     [Fact]
     public async Task Artists_Index_ReturnsComponentResponse()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/music/artists/_");
+        HttpResponseMessage response = await _client.GetAsync("/api/v1/music/artists/letter/_");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
@@ -241,7 +241,7 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Artists_Show_ReturnsArtistResponse()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            $"/api/v1/music/artist/{NoMercyApiFactory.ArtistId1}"
+            $"/api/v1/music/artists/{NoMercyApiFactory.ArtistId1}"
         );
 
         string body = await response.Content.ReadAsStringAsync();
@@ -264,7 +264,9 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Artists_Show_NonExistent_ReturnsNotFound()
     {
-        HttpResponseMessage response = await _client.GetAsync($"/api/v1/music/artist/{Guid.Empty}");
+        HttpResponseMessage response = await _client.GetAsync(
+            $"/api/v1/music/artists/{Guid.Empty}"
+        );
 
         Assert.True(
             response.StatusCode is HttpStatusCode.NotFound,
@@ -276,7 +278,7 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Artists_Like_ReturnsStatusResponse()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            $"/api/v1/music/artist/{NoMercyApiFactory.ArtistId1}/like",
+            $"/api/v1/music/artists/{NoMercyApiFactory.ArtistId1}/like",
             JsonBody(new { value = true })
         );
 
@@ -294,7 +296,7 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Artists_Like_NonExistent_ReturnsUnprocessable()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            $"/api/v1/music/artist/{Guid.Empty}/like",
+            $"/api/v1/music/artists/{Guid.Empty}/like",
             JsonBody(new { value = true })
         );
 
@@ -309,7 +311,7 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         // Use a non-existent ID to avoid modifying seed data
         HttpResponseMessage response = await _client.DeleteAsync(
-            $"/api/v1/music/artist/{Guid.Parse("99999999-9999-9999-9999-999999999999")}"
+            $"/api/v1/music/artists/{Guid.Parse("99999999-9999-9999-9999-999999999999")}"
         );
 
         string body = await response.Content.ReadAsStringAsync();
@@ -317,14 +319,40 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         AssertJsonHasProperty(json.RootElement, "status");
     }
 
+    [Fact]
+    public async Task Artists_MemberRoute_And_LetterBrowseRoute_ResolveToDifferentActions()
+    {
+        HttpResponseMessage memberResponse = await _client.GetAsync(
+            $"/api/v1/music/artists/{Guid.Empty}"
+        );
+        string memberBody = await memberResponse.Content.ReadAsStringAsync();
+        Assert.True(
+            memberResponse.StatusCode == HttpStatusCode.NotFound,
+            $"Expected NotFound for the artist member route (Show, not letter-browse), got {(int)memberResponse.StatusCode}: {memberBody}"
+        );
+        Assert.Contains("Artist not found", memberBody);
+
+        HttpResponseMessage letterResponse = await _client.GetAsync(
+            "/api/v1/music/artists/letter/a"
+        );
+        string letterBody = await letterResponse.Content.ReadAsStringAsync();
+        Assert.True(
+            letterResponse.StatusCode == HttpStatusCode.OK,
+            $"Expected OK for the letter-browse route, got {(int)letterResponse.StatusCode}: {letterBody}"
+        );
+
+        JsonDocument letterJson = JsonDocument.Parse(letterBody);
+        AssertJsonHasProperty(letterJson.RootElement, "data");
+    }
+
     // =========================================================================
-    // AlbumsController — /api/v1/music/album
+    // AlbumsController — /api/v1/music/albums
     // =========================================================================
 
     [Fact]
     public async Task Albums_Index_ReturnsComponentOrNotFound()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/music/albums/_");
+        HttpResponseMessage response = await _client.GetAsync("/api/v1/music/albums/letter/_");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
@@ -343,7 +371,7 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Albums_Show_ReturnsAlbumResponse()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            $"/api/v1/music/album/{NoMercyApiFactory.AlbumId1}"
+            $"/api/v1/music/albums/{NoMercyApiFactory.AlbumId1}"
         );
 
         string body = await response.Content.ReadAsStringAsync();
@@ -366,7 +394,7 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Albums_Show_NonExistent_ReturnsNotFound()
     {
-        HttpResponseMessage response = await _client.GetAsync($"/api/v1/music/album/{Guid.Empty}");
+        HttpResponseMessage response = await _client.GetAsync($"/api/v1/music/albums/{Guid.Empty}");
 
         Assert.True(
             response.StatusCode is HttpStatusCode.NotFound,
@@ -378,7 +406,7 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Albums_Like_ReturnsStatusResponse()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            $"/api/v1/music/album/{NoMercyApiFactory.AlbumId1}/like",
+            $"/api/v1/music/albums/{NoMercyApiFactory.AlbumId1}/like",
             JsonBody(new { value = true })
         );
 
@@ -402,7 +430,7 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Albums_Rescan_ReturnsStatusResponse()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            $"/api/v1/music/album/{NoMercyApiFactory.AlbumId1}/rescan",
+            $"/api/v1/music/albums/{NoMercyApiFactory.AlbumId1}/rescan",
             JsonBody(new { })
         );
 
@@ -415,6 +443,32 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
                     or HttpStatusCode.Forbidden,
             $"Expected OK, 401, or 403, got {(int)response.StatusCode}: {body}"
         );
+    }
+
+    [Fact]
+    public async Task Albums_MemberRoute_And_LetterBrowseRoute_ResolveToDifferentActions()
+    {
+        HttpResponseMessage memberResponse = await _client.GetAsync(
+            $"/api/v1/music/albums/{Guid.Empty}"
+        );
+        string memberBody = await memberResponse.Content.ReadAsStringAsync();
+        Assert.True(
+            memberResponse.StatusCode == HttpStatusCode.NotFound,
+            $"Expected NotFound for the album member route (Show, not letter-browse), got {(int)memberResponse.StatusCode}: {memberBody}"
+        );
+        Assert.Contains("Albums not found", memberBody);
+
+        HttpResponseMessage letterResponse = await _client.GetAsync(
+            "/api/v1/music/albums/letter/a"
+        );
+        string letterBody = await letterResponse.Content.ReadAsStringAsync();
+        Assert.True(
+            letterResponse.StatusCode == HttpStatusCode.OK,
+            $"Expected OK for the letter-browse route, got {(int)letterResponse.StatusCode}: {letterBody}"
+        );
+
+        JsonDocument letterJson = JsonDocument.Parse(letterBody);
+        AssertJsonHasProperty(letterJson.RootElement, "data");
     }
 
     // =========================================================================
@@ -774,8 +828,8 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Theory]
     [InlineData("/api/v1/music")]
     [InlineData("/api/v1/music/start")]
-    [InlineData("/api/v1/music/artists/_")]
-    [InlineData("/api/v1/music/albums/_")]
+    [InlineData("/api/v1/music/artists/letter/_")]
+    [InlineData("/api/v1/music/albums/letter/_")]
     [InlineData("/api/v1/music/playlists")]
     [InlineData("/api/v1/music/genres")]
     [InlineData("/api/v1/music/tracks")]

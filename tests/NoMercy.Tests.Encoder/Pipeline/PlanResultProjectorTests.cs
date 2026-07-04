@@ -85,7 +85,7 @@ public class PlanResultProjectorTests
         ExecutionPlan plan = BuildPlan([BuildVideoOutput(crf: 23)]);
         EncodingContext ctx = EncodingContext.Create();
 
-        PlanResult result = PlanResultProjector.FromExecutionPlan(plan, ctx);
+        PlanResult result = new PlanResultProjector().FromExecutionPlan(plan, ctx);
 
         result.Variants.Should().HaveCount(1);
     }
@@ -96,7 +96,7 @@ public class PlanResultProjectorTests
         ExecutionPlan plan = BuildPlan([BuildVideoOutput(crf: 23)]);
         EncodingContext ctx = EncodingContext.Create();
 
-        PlanResult result = PlanResultProjector.FromExecutionPlan(plan, ctx);
+        PlanResult result = new PlanResultProjector().FromExecutionPlan(plan, ctx);
 
         result.Strategy.Should().Contain("Hls");
         result.Strategy.Should().Contain("CRF 23");
@@ -108,7 +108,7 @@ public class PlanResultProjectorTests
         ExecutionPlan plan = BuildPlan([BuildVideoOutput(crf: 23)], segmentDuration: 4);
         EncodingContext ctx = EncodingContext.Create();
 
-        PlanResult result = PlanResultProjector.FromExecutionPlan(plan, ctx);
+        PlanResult result = new PlanResultProjector().FromExecutionPlan(plan, ctx);
 
         result.Variants[0].SegmentDurationSeconds.Should().Be(4);
     }
@@ -119,7 +119,7 @@ public class PlanResultProjectorTests
         ExecutionPlan plan = BuildPlan([BuildVideoOutput(crf: 23)], segmentDuration: 4);
         EncodingContext ctx = EncodingContext.Create();
 
-        PlanResult result = PlanResultProjector.FromExecutionPlan(plan, ctx);
+        PlanResult result = new PlanResultProjector().FromExecutionPlan(plan, ctx);
 
         // KeyframeIntervalSeconds is derived from SegmentDurationSeconds until Phase 3
         result.Variants[0].KeyframeIntervalSeconds.Should().BeGreaterThan(0);
@@ -135,7 +135,7 @@ public class PlanResultProjectorTests
         ExecutionPlan plan = BuildPlan([BuildVideoOutput(crf: 23, bitrateKbps: 0)]);
         EncodingContext ctx = EncodingContext.Create();
 
-        PlanResult result = PlanResultProjector.FromExecutionPlan(plan, ctx);
+        PlanResult result = new PlanResultProjector().FromExecutionPlan(plan, ctx);
 
         RateControl rateControl = result.Variants[0].Video.RateControl;
         rateControl.Should().BeOfType<RateControl.Crf>();
@@ -152,7 +152,7 @@ public class PlanResultProjectorTests
         ExecutionPlan plan = BuildPlan([BuildVideoOutput(crf: 0, bitrateKbps: 4000)]);
         EncodingContext ctx = EncodingContext.Create();
 
-        PlanResult result = PlanResultProjector.FromExecutionPlan(plan, ctx);
+        PlanResult result = new PlanResultProjector().FromExecutionPlan(plan, ctx);
 
         RateControl rateControl = result.Variants[0].Video.RateControl;
         rateControl.Should().BeOfType<RateControl.Abr>();
@@ -169,7 +169,7 @@ public class PlanResultProjectorTests
         ExecutionPlan plan = BuildPlan([BuildVideoOutput(crf: 23, bitrateKbps: 4000)]);
         EncodingContext ctx = EncodingContext.Create();
 
-        PlanResult result = PlanResultProjector.FromExecutionPlan(plan, ctx);
+        PlanResult result = new PlanResultProjector().FromExecutionPlan(plan, ctx);
 
         RateControl rateControl = result.Variants[0].Video.RateControl;
         rateControl.Should().BeOfType<RateControl.CrfCapped>();
@@ -189,7 +189,7 @@ public class PlanResultProjectorTests
         StageResult result = new StageSuccess<ExecutionPlan>(plan);
         EncodingContext ctx = EncodingContext.Create();
 
-        PlanResult? planResult = result.AsPlanResult(ctx);
+        PlanResult? planResult = result.AsPlanResult(ctx, new PlanResultProjector());
 
         planResult.Should().NotBeNull();
         planResult!.Variants.Should().HaveCount(1);
@@ -203,7 +203,7 @@ public class PlanResultProjectorTests
         );
         EncodingContext ctx = EncodingContext.Create();
 
-        PlanResult? planResult = result.AsPlanResult(ctx);
+        PlanResult? planResult = result.AsPlanResult(ctx, new PlanResultProjector());
 
         planResult.Should().BeNull();
     }
@@ -238,7 +238,7 @@ public class PlanResultProjectorTests
         );
         EncodingContext ctx = EncodingContext.Create();
 
-        PlanResult result = PlanResultProjector.FromExecutionPlan(plan, ctx);
+        PlanResult result = new PlanResultProjector().FromExecutionPlan(plan, ctx);
         string json = JsonConvert.SerializeObject(result, Formatting.Indented);
         JObject obj = JObject.Parse(json);
 

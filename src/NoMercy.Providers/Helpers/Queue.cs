@@ -34,8 +34,6 @@ public class Queue(QueueOptions options)
 
     private readonly Random _r = new();
 
-    public event EventHandler<QueueEventArgs>? Resolve;
-    public event EventHandler<QueueEventArgs>? Reject;
     public event EventHandler? Start;
     public event EventHandler? Stop;
     public event EventHandler? End;
@@ -47,7 +45,7 @@ public class Queue(QueueOptions options)
 
         _state = State.Running;
         Start?.Invoke(this, EventArgs.Empty);
-        RunTasks();
+        _ = Task.Run(RunTasksAsync, CancellationToken.None);
     }
 
     private void StopQueue()
@@ -68,7 +66,7 @@ public class Queue(QueueOptions options)
         End?.Invoke(this, EventArgs.Empty);
     }
 
-    private async void RunTasks()
+    private async Task RunTasksAsync()
     {
         while (ShouldRun)
             try
@@ -115,12 +113,11 @@ public class Queue(QueueOptions options)
 
             try
             {
-                Task result = value.Invoke();
-                Resolve?.Invoke(this, new() { Result = result });
+                value.Invoke();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Reject?.Invoke(this, new() { Error = ex });
+                // Failures surface to callers via the per-task TaskCompletionSource.
             }
             finally
             {
@@ -167,7 +164,6 @@ public class Queue(QueueOptions options)
                             try
                             {
                                 T result = await task();
-                                Resolve?.Invoke(this, new() { Result = result });
                                 tcs.SetResult(result);
                                 return;
                             }
@@ -178,6 +174,7 @@ public class Queue(QueueOptions options)
                                             or HttpStatusCode.ServiceUnavailable
                                             or HttpStatusCode.GatewayTimeout
                                             or HttpStatusCode.TooManyRequests
+                                            or HttpStatusCode.Forbidden
                                 )
                             {
                                 int delay = (int)Math.Pow(2, attempt + 1) * 1000;
@@ -189,7 +186,6 @@ public class Queue(QueueOptions options)
                             }
                             catch (Exception ex)
                             {
-                                Reject?.Invoke(this, new() { Error = ex });
                                 tcs.SetException(ex);
                                 if (IsExpectedTransport(ex))
                                     return;

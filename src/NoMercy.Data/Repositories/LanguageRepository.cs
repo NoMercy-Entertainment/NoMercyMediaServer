@@ -20,7 +20,7 @@ public class LanguageRepository(MediaContext context) : ILanguageRepository
 {
     public async Task<List<Language>> GetLanguagesAsync()
     {
-        return await context.Languages.ToListAsync();
+        return await context.Languages.AsNoTracking().ToListAsync();
     }
 
     public Task<List<Country>> GetCountriesAsync(CancellationToken ct = default)

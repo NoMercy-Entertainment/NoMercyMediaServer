@@ -43,7 +43,7 @@ public record ImageDto
     public long VoteCount { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     public ImageDto() { }
 

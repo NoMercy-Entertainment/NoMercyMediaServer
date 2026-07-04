@@ -16,15 +16,22 @@ namespace NoMercy.Storage.Drivers.Nfs;
 
 /// <summary>
 /// Read-only <see cref="Stream"/> over a libnfs file handle.
-/// Issues chunked <c>nfs_read</c> calls (32 KB per chunk).
+/// Issues chunked <c>nfs_read</c> calls (1 MiB per chunk).
 /// Every native call is gated on the driver's lock — the libnfs context is
 /// shared across streams and is not re-entrant; concurrent reads without
 /// the lock cause access violations inside libnfs.
 /// </summary>
 internal sealed class NfsReadStream : Stream
 {
-    private const int ChunkSize = 32 * 1024;
+    // One request per chunk. libnfs clamps a larger request to the mount's
+    // negotiated rsize internally and the loop below handles the short read,
+    // so this only trades a smaller managed↔native round-trip (lock + heap
+    // pin) count for a larger one — at 1 MiB a 5 GB file drops from ~163k
+    // native read cycles to ~5k. The default is set from the throughput sweep;
+    // the ctor accepts an override so the sweep can measure the curve.
+    private const int DefaultChunkSize = 1024 * 1024;
 
+    private readonly int _chunkSize;
     private readonly IntPtr _nfs;
     private readonly IntPtr _fh;
     private readonly SemaphoreSlim _lock;
@@ -41,7 +48,8 @@ internal sealed class NfsReadStream : Stream
         IntPtr fh,
         long length,
         SemaphoreSlim driverLock,
-        ILibNfs libNfs
+        ILibNfs libNfs,
+        int chunkSize = DefaultChunkSize
     )
     {
         _nfs = nfs;
@@ -49,6 +57,7 @@ internal sealed class NfsReadStream : Stream
         _length = length;
         _lock = driverLock;
         _libNfs = libNfs;
+        _chunkSize = chunkSize;
     }
 
     public override bool CanRead => true;
@@ -76,7 +85,7 @@ internal sealed class NfsReadStream : Stream
 
         while (totalRead < toRead)
         {
-            int chunk = Math.Min(ChunkSize, toRead - totalRead);
+            int chunk = Math.Min(_chunkSize, toRead - totalRead);
             IntPtr pinned = Marshal.AllocHGlobal(chunk);
             try
             {

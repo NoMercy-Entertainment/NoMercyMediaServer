@@ -59,8 +59,23 @@ public class ChromaprintFingerprinter(
 
         if (window is not null)
         {
-            args.Add("-ss");
-            args.Add(window.Start.TotalSeconds.ToString("F3", CultureInfo.InvariantCulture));
+            double startSeconds = window.Start.TotalSeconds;
+
+            // A negative Start means "relative to the end of the file" (e.g. the
+            // outro window). -ss only accepts a non-negative offset from the
+            // start — the end-relative case needs -sseof, which takes the same
+            // negative value ffmpeg subtracts from the input duration.
+            if (startSeconds < 0)
+            {
+                args.Add("-sseof");
+                args.Add(startSeconds.ToString("F3", CultureInfo.InvariantCulture));
+            }
+            else
+            {
+                args.Add("-ss");
+                args.Add(startSeconds.ToString("F3", CultureInfo.InvariantCulture));
+            }
+
             args.Add("-t");
             args.Add(window.Duration.TotalSeconds.ToString("F3", CultureInfo.InvariantCulture));
         }

@@ -18,29 +18,23 @@ public class PluginLoadContext : AssemblyLoadContext
 {
     private readonly AssemblyDependencyResolver _resolver;
 
-    // Assemblies that must be shared with the host so type identity is preserved.
-    // Any assembly whose types must be castable across the plugin/host boundary goes here.
-    private static readonly HashSet<string> SharedAssemblies =
-    [
-        "NoMercy.Plugins.Abstractions",
-        "NoMercy.Events",
-        "Microsoft.Extensions.Logging.Abstractions",
-        "Microsoft.Extensions.Logging",
-        "Microsoft.Extensions.DependencyInjection.Abstractions",
-        "Microsoft.Extensions.DependencyInjection",
-    ];
+    // Assemblies whose type identity must be preserved across the host/plugin
+    // boundary. Defaults come from PluginHostOptions; callers may pass a custom
+    // set (e.g. resolved from IOptions<PluginHostOptions>).
+    private readonly IReadOnlySet<string> _sharedAssemblies;
 
-    public PluginLoadContext(string pluginPath)
+    public PluginLoadContext(string pluginPath, IReadOnlySet<string>? sharedAssemblies = null)
         : base(isCollectible: true)
     {
         _resolver = new(pluginPath);
+        _sharedAssemblies = sharedAssemblies ?? PluginHostOptions.DefaultSharedAssemblies;
     }
 
     protected override Assembly? Load(AssemblyName assemblyName)
     {
         // Return null for shared assemblies so the runtime falls back to the default
         // AssemblyLoadContext. This preserves type identity across the host/plugin boundary.
-        if (assemblyName.Name is not null && SharedAssemblies.Contains(assemblyName.Name))
+        if (assemblyName.Name is not null && _sharedAssemblies.Contains(assemblyName.Name))
             return null;
 
         string? assemblyPath = _resolver.ResolveAssemblyToPath(assemblyName);

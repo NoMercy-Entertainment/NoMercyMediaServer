@@ -14,14 +14,16 @@
 // ---------------------------------------------------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Events.Media;
+using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Movies;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Models.Movies;
+using NoMercy.Storage;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -31,6 +33,15 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 [Serializable]
 public class MovieImportJob : AbstractMediaJob
 {
+    public MovieImportJob() { }
+
+    public MovieImportJob(
+        IStorageFactory storageFactory,
+        IStorageDriver storageDriver,
+        ILoggerFactory loggerFactory
+    )
+        : base(storageFactory, storageDriver, loggerFactory) { }
+
     public override string QueueName => "import";
     public override int Priority => 5;
 
@@ -44,7 +55,7 @@ public class MovieImportJob : AbstractMediaJob
             movieRepository,
             jobDispatcher,
             StorageFactory,
-            StorageDriver
+            LoggerFactory.CreateLogger<MovieManager>()
         );
 
         Library? movieLibrary = await context
@@ -55,7 +66,11 @@ public class MovieImportJob : AbstractMediaJob
 
         if (movieLibrary is null)
         {
-            Logger.App($"MovieImportJob: library {LibraryId} not found, skipping movie {Id}");
+            Log.LogInformation(
+                "MovieImportJob: library {LibraryId} not found, skipping movie {Id}",
+                LibraryId,
+                Id
+            );
             return;
         }
 
@@ -63,7 +78,16 @@ public class MovieImportJob : AbstractMediaJob
 
         TmdbMovieAppends? movieAppends = await movieManager.Add(Id, movieLibrary);
         if (movieAppends == null)
+        {
+            await ImportFailureRecorder.RecordAsync(
+                context,
+                "MovieImportJob",
+                Id.ToString(),
+                LibraryId,
+                "TMDB movie metadata fetch returned no result after retries."
+            );
             return;
+        }
 
         if (EventBusProvider.IsConfigured)
         {
@@ -86,17 +110,20 @@ public class MovieImportJob : AbstractMediaJob
 
         jobDispatcher.DispatchJob<FileRescanJob>(Id, movieLibrary);
 
-        Logger.App($"Movie {Id} added to library, extra data will be added in the background");
+        Log.LogInformation(
+            "Movie {Id} added to library, extra data will be added in the background",
+            Id
+        );
 
         if (EventBusProvider.IsConfigured)
         {
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent { QueryKey = ["base", "info", Id.ToString()] }
+                new LibraryRefreshedEvent { QueryKey = ["base", "info", Id.ToString()] }
             );
 
             if (wasEmpty)
                 await EventBusProvider.Current.PublishAsync(
-                    new LibraryRefreshEvent { QueryKey = ["libraries"] }
+                    new LibraryRefreshedEvent { QueryKey = ["libraries"] }
                 );
         }
     }

@@ -51,6 +51,7 @@ public static class ProfileRuleValidator
         EmitLadderManualEmpty(profile, rules);
         EmitLadderManualUnsorted(profile, rules);
         EmitProfileLevelResolutionMismatch(profile, rules);
+        EmitLevelInvalid(profile, rules);
         EmitBitrateTooLowForResolution(profile, rules);
         EmitCrfOutOfTypicalRange(profile, rules);
         EmitHlsKeyframeSegmentMisalignment(profile, rules);
@@ -60,6 +61,8 @@ public static class ProfileRuleValidator
         EmitSubtitlesBurnInPermanent(profile, rules);
         EmitSubtitlesAssNeedsCapableClient(profile, rules);
         EmitHdrInverseTonemapUnsupported(profile, rules);
+        EmitBitDepthVp9ProfileMismatch(profile, rules);
+        EmitBitDepthH26xProfilePromoted(profile, rules);
         EmitCustomArgsReservedFlag(profile, rules);
         EmitDrmHttpNotHttps(profile, rules);
         EmitDrmKeyMissing(profile, rules);
@@ -106,6 +109,43 @@ public static class ProfileRuleValidator
         "-hls_segment_filename",
         "-hls_playlist_type",
         "-hls_segment_type",
+        // Rate control — driven by VideoOutput.RateControl / Crf / BitrateKbps.
+        // The resolver owns the whole rate-control flag set as a unit; letting a
+        // custom flag override one member desyncs it from the others (e.g. a
+        // custom -rc cbr on top of the resolver's -cq, or a custom -maxrate that
+        // discards the computed VBV ceiling while -bufsize stays derived).
+        "-crf",
+        "-b:v",
+        "-maxrate",
+        "-bufsize",
+        "-rc",
+        "-cq",
+        "-qp",
+        "-global_quality",
+        "-q:v",
+        // Codec profile / level / pixel format — driven by VideoOutput.CodecProfile,
+        // Level, BitDepth. A custom override is emitted a SECOND time next to the
+        // typed emit (ffmpeg last-wins), so the manifest advertises one thing and
+        // the stream is another.
+        "-profile:v",
+        "-level",
+        "-pix_fmt",
+        "-profile:a",
+        // GOP — driven by KeyframeIntervalSeconds; the strategy always emits -g.
+        "-g",
+        "-keyint_min",
+        // Audio shaping — driven by AudioOutput.BitrateKbps / SampleRateHz / Channels.
+        "-b:a",
+        "-ar",
+        "-ac",
+        // HDR / color signaling — derived from the source when HDR passthrough is
+        // preserved; a custom override produces inconsistent primaries/trc/matrix.
+        "-color_primaries",
+        "-color_trc",
+        "-colorspace",
+        "-color_range",
+        // Stream tags — driven by the codec/container (hvc1/dvh1 for HEVC/DV).
+        "-tag:v",
     };
 
     /// <summary>
@@ -151,9 +191,11 @@ public static class ProfileRuleValidator
     private static void EmitProfileNoOutputs(EncodingProfile profile, List<EncoderRule> rules)
     {
         // A profile must produce at least one output stream — every encode call would be a no-op.
+        // Audio/Subtitles may be null when Newtonsoft.Json deserialises a positional record whose
+        // JSON omits those fields — guard so we emit the rule rather than throw.
         bool hasVideo = profile.Video is { Policy: not StreamPolicy.Omit };
-        bool hasAudio = profile.Audio.Any(a => a.Policy != StreamPolicy.Omit);
-        bool hasSubtitles = profile.Subtitles.Any(s => s.Policy != SubtitlePolicy.Omit);
+        bool hasAudio = (profile.Audio ?? []).Any(a => a.Policy != StreamPolicy.Omit);
+        bool hasSubtitles = (profile.Subtitles ?? []).Any(s => s.Policy != SubtitlePolicy.Omit);
 
         if (hasVideo || hasAudio || hasSubtitles)
             return;
@@ -302,7 +344,11 @@ public static class ProfileRuleValidator
         List<EncoderRule> rules
     )
     {
-        foreach (AudioOutput audio in profile.Audio.Where(a => a.Policy == StreamPolicy.Transcode))
+        foreach (
+            AudioOutput audio in (profile.Audio ?? []).Where(a =>
+                a.Policy == StreamPolicy.Transcode
+            )
+        )
         {
             if (ContainerCompatibility.SupportsAudio(profile.Container, audio.Codec))
                 continue;
@@ -323,7 +369,11 @@ public static class ProfileRuleValidator
     {
         // Lossy audio encoders need a target bitrate. FLAC and TrueHD are lossless and
         // ignore -b:a — leave those alone. Copy-mode audio is a passthrough.
-        foreach (AudioOutput audio in profile.Audio.Where(a => a.Policy == StreamPolicy.Transcode))
+        foreach (
+            AudioOutput audio in (profile.Audio ?? []).Where(a =>
+                a.Policy == StreamPolicy.Transcode
+            )
+        )
         {
             if (audio.Codec is AudioCodecType.Flac or AudioCodecType.TrueHd)
                 continue;
@@ -459,7 +509,7 @@ public static class ProfileRuleValidator
                 or Container.Dash;
 
         foreach (
-            SubtitleOutput subtitle in profile.Subtitles.Where(s =>
+            SubtitleOutput subtitle in (profile.Subtitles ?? []).Where(s =>
                 s.Codec == SubtitleCodecType.Ass && s.Policy == SubtitlePolicy.Extract
             )
         )
@@ -698,7 +748,7 @@ public static class ProfileRuleValidator
         // BurnIn writes subtitles into video pixels permanently. Worth flagging once so users
         // who pick the policy by accident see what they signed up for.
         foreach (
-            SubtitleOutput subtitle in profile.Subtitles.Where(s =>
+            SubtitleOutput subtitle in (profile.Subtitles ?? []).Where(s =>
                 s.Policy == SubtitlePolicy.BurnIn
             )
         )
@@ -762,6 +812,38 @@ public static class ProfileRuleValidator
                     + $"({lumaSamplesPerSec:N0} luma samples/sec required, "
                     + $"level {video.Level} allows {cap.MaxLumaSamplesPerSec:N0}).",
                 Fix: fix
+            )
+        );
+    }
+
+    private static void EmitLevelInvalid(EncodingProfile profile, List<EncoderRule> rules)
+    {
+        // An explicit level must be one the codec actually defines. The
+        // luma-cap rules above intentionally treat an unknown level as a
+        // pass (they only compare against a known cap), so a bogus level like
+        // H.264 "6.3" sailed through and reached ffmpeg as `-level 6.3`, which
+        // libx264 rejects ("invalid level_idc"). Whitelist against the known
+        // table — but only for codecs whose levels this catalogue enumerates,
+        // so a codec with no table (e.g. AV1) is never false-flagged.
+        if (
+            profile.Video is not { Policy: StreamPolicy.Transcode } video
+            || string.IsNullOrEmpty(video.Level)
+            || !CodecLevelFpsCaps.HasLevelTable(video.Codec)
+        )
+            return;
+
+        if (CodecLevelFpsCaps.Lookup(video.Codec, video.Level) is not null)
+            return;
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.LevelInvalid,
+                Severity: EncoderRuleSeverity.Error,
+                Field: "video.level",
+                Message: $"Level '{video.Level}' is not a valid {video.Codec} level; "
+                    + "ffmpeg would reject it and the encode would fail to start.",
+                Fix: "Set video.level to a level the codec defines (e.g. \"4.0\", \"5.1\"), "
+                    + "or leave it unset to let the encoder pick."
             )
         );
     }
@@ -928,7 +1010,11 @@ public static class ProfileRuleValidator
         // AC-3 / E-AC-3 only accept a fixed bitrate ladder per the AC-3 (ATSC A/52) spec. Any
         // bitrate outside this set silently picks the nearest supported value in libavcodec —
         // surprises the user when the encode output doesn't match the request.
-        foreach (AudioOutput audio in profile.Audio.Where(a => a.Policy == StreamPolicy.Transcode))
+        foreach (
+            AudioOutput audio in (profile.Audio ?? []).Where(a =>
+                a.Policy == StreamPolicy.Transcode
+            )
+        )
         {
             int[]? ladder = audio.Codec switch
             {
@@ -1058,7 +1144,7 @@ public static class ProfileRuleValidator
         // pixels — no track in the container — and Omit drops the track entirely. Validate only
         // the two policies that need container compatibility.
         foreach (
-            SubtitleOutput subtitle in profile.Subtitles.Where(s =>
+            SubtitleOutput subtitle in (profile.Subtitles ?? []).Where(s =>
                 s.Policy is SubtitlePolicy.Extract or SubtitlePolicy.Copy
             )
         )
@@ -1110,12 +1196,125 @@ public static class ProfileRuleValidator
         );
     }
 
-    private static void EmitCustomArgsReservedFlag(EncodingProfile profile, List<EncoderRule> rules)
+    private static void EmitBitDepthVp9ProfileMismatch(
+        EncodingProfile profile,
+        List<EncoderRule> rules
+    )
     {
-        if (profile.CustomArguments is null || profile.CustomArguments.Count == 0)
+        // libvpx-vp9 profile numbering ties chroma subsampling AND bit-depth together:
+        //   profile0 = 8-bit 4:2:0  | profile1 = 8-bit 4:2:2/4:4:4
+        //   profile2 = 10/12-bit 4:2:0 | profile3 = 10/12-bit 4:2:2/4:4:4
+        // In the NoMercy CodecProfile enum the H.264/H.265 naming is reused:
+        //   Baseline / Main / High   → 8-bit profiles (profile0 / profile1)
+        //   Main10  / High10         → 10-bit profiles (profile2 / profile3)
+        // Setting e.g. Main10 with BitDepth=8 (or Main with BitDepth=10) is
+        // structurally impossible — VP9 would silently ignore the mismatched flag.
+        if (profile.Video is not { Policy: StreamPolicy.Transcode } video)
+            return;
+        if (video.Codec != VideoCodecType.Vp9)
+            return;
+        if (video.CodecProfile == CodecProfile.Auto)
+            return; // Auto lets the encoder pick the profile — no conflict.
+
+        bool profileImplies10Bit = video.CodecProfile is CodecProfile.Main10 or CodecProfile.High10;
+        bool bitDepthIs10 = video.BitDepth >= 10;
+
+        if (profileImplies10Bit == bitDepthIs10)
+            return; // consistent — no rule.
+
+        string impliedDepth = profileImplies10Bit ? "10-bit" : "8-bit";
+        string requestedDepth = bitDepthIs10 ? "10-bit" : "8-bit";
+        string fix = profileImplies10Bit
+            ? $"Either raise video.bit_depth to 10 (to use a VP9 profile2/3 encoder), or change video.codec_profile to Main or High (8-bit VP9 profile0/1)."
+            : $"Either set video.bit_depth to 8 (matching the 8-bit profile), or change video.codec_profile to Main10 or High10 (VP9 profile2/3 for 10-bit).";
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.BitDepthVp9ProfileMismatch,
+                Severity: EncoderRuleSeverity.Error,
+                Field: "video.codec_profile",
+                Message: $"VP9 codec_profile {video.CodecProfile} implies {impliedDepth} but "
+                    + $"video.bit_depth is {video.BitDepth} ({requestedDepth}); "
+                    + "libvpx-vp9 ties the profile number to both chroma subsampling and bit depth.",
+                Fix: fix
+            )
+        );
+    }
+
+    private static void EmitBitDepthH26xProfilePromoted(
+        EncodingProfile profile,
+        List<EncoderRule> rules
+    )
+    {
+        // H.264/H.265 tie the profile string to the bit depth: "baseline",
+        // "main" and "high" are 8-bit-only. Emitting one next to a 10-bit pixel
+        // format makes the encoder abort ("high profile doesn't support a bit
+        // depth of 10"). The pipeline auto-promotes an 8-bit tier to its 10-bit
+        // sibling (high -> high10, main -> main10) so the encode still succeeds,
+        // but the operator asked for a tier that cannot carry 10-bit — surface a
+        // warning so the dashboard shows what the profile string became.
+        if (profile.Video is not { Policy: StreamPolicy.Transcode } video)
+            return;
+        if (video.Codec is not (VideoCodecType.H264 or VideoCodecType.H265))
+            return;
+        if (video.BitDepth < 10)
             return;
 
-        foreach (string key in profile.CustomArguments.Keys)
+        bool profileIs8BitOnly =
+            video.CodecProfile is CodecProfile.Baseline or CodecProfile.Main or CodecProfile.High;
+        if (!profileIs8BitOnly)
+            return;
+
+        string promoted = video.CodecProfile == CodecProfile.High ? "High10" : "Main10";
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.BitDepthH26xProfilePromoted,
+                Severity: EncoderRuleSeverity.Warning,
+                Field: "video.codec_profile",
+                Message: $"{video.Codec} codec_profile {video.CodecProfile} is 8-bit only but "
+                    + $"video.bit_depth is {video.BitDepth}; the profile will be promoted to "
+                    + $"{promoted} so the encoder accepts the 10-bit pixel format.",
+                Fix: $"Set video.codec_profile to {promoted} (10-bit) explicitly, or lower "
+                    + "video.bit_depth to 8 to keep the 8-bit profile."
+            )
+        );
+    }
+
+    private static void EmitCustomArgsReservedFlag(EncodingProfile profile, List<EncoderRule> rules)
+    {
+        // The per-stream CustomArguments dicts are the real escape hatches the
+        // pipeline merges into each output's flags (PlanStage merges
+        // VideoOutput.CustomArguments last-wins). Validating only the top-level
+        // profile.CustomArguments left every per-output override completely
+        // unchecked — a video-level -rc / -maxrate / -profile:v silently clobbered
+        // a resolver-owned flag with no error. Scan all four sources.
+        ScanCustomArgs("custom_arguments", profile.CustomArguments, rules);
+
+        if (profile.Video is not null)
+            ScanCustomArgs("video.custom_arguments", profile.Video.CustomArguments, rules);
+
+        for (int i = 0; i < profile.Audio.Length; i++)
+            ScanCustomArgs($"audio[{i}].custom_arguments", profile.Audio[i].CustomArguments, rules);
+
+        for (int i = 0; i < profile.Subtitles.Length; i++)
+            ScanCustomArgs(
+                $"subtitles[{i}].custom_arguments",
+                profile.Subtitles[i].CustomArguments,
+                rules
+            );
+    }
+
+    private static void ScanCustomArgs(
+        string fieldPrefix,
+        Dictionary<string, string>? customArgs,
+        List<EncoderRule> rules
+    )
+    {
+        if (customArgs is null || customArgs.Count == 0)
+            return;
+
+        foreach (string key in customArgs.Keys)
         {
             // Normalize: callers may store keys with or without the leading dash.
             string normalized = key.StartsWith('-') ? key : $"-{key}";
@@ -1126,12 +1325,12 @@ public static class ProfileRuleValidator
                 new EncoderRule(
                     Id: EncoderRuleId.CustomArgsReservedFlag,
                     Severity: EncoderRuleSeverity.Error,
-                    Field: $"custom_arguments[{key}]",
+                    Field: $"{fieldPrefix}[{key}]",
                     Message: $"CustomArgument '{key}' overrides a flag the encoder derives from typed "
                         + "profile fields. The profile's declared values would be ignored and the "
                         + "validator can no longer guarantee the output matches the profile.",
                     Fix: $"Remove the '{key}' override and set the matching typed field "
-                        + "(codec / container / preset / hardware preference / ladder) instead."
+                        + "(codec / container / preset / rate control / hardware preference / ladder) instead."
                 )
             );
         }

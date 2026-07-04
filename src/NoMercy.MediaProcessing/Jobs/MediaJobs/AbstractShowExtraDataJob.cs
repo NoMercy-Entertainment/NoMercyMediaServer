@@ -13,6 +13,8 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -23,6 +25,15 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 [Serializable]
 public abstract class AbstractShowExtraDataJob<T, TS> : IShouldQueue
 {
+    protected AbstractShowExtraDataJob() { }
+
+    protected AbstractShowExtraDataJob(
+        ILoggerFactory loggerFactory
+    )
+    {
+        LoggerFactory = loggerFactory;
+    }
+
     public abstract string QueueName { get; }
     public abstract int Priority { get; }
 
@@ -34,6 +45,12 @@ public abstract class AbstractShowExtraDataJob<T, TS> : IShouldQueue
         get => _storage ??= [];
         set => _storage = value.ToArray();
     }
+
+    [JsonIgnore]
+    public ILoggerFactory LoggerFactory { get; private set; } = null!;
+
+    [JsonIgnore]
+    protected ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
 
     public abstract Task Handle();
 

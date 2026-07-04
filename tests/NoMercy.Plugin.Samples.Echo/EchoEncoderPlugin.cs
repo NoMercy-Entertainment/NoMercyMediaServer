@@ -34,5 +34,19 @@ public class EchoEncoderPlugin : IEncoderPlugin
             AudioCodec = "aac",
         };
 
-    public void Dispose() { }
+    // Test-only observability hook: PluginLoader loads this sample into an
+    // isolated AssemblyLoadContext, so a static field set from the host test
+    // process is NOT visible to this instance (different ALC, different
+    // static storage). An env var IS process-wide regardless of ALC, so it's
+    // the one side channel that lets a disposal test prove Dispose() ran on
+    // an instance the host never got a reference back to. No-ops when unset —
+    // every other test that loads this sample is unaffected.
+    public void Dispose()
+    {
+        string? markerPath = Environment.GetEnvironmentVariable(
+            "NOMERCY_TEST_ECHO_DISPOSAL_MARKER"
+        );
+        if (markerPath is not null)
+            File.WriteAllText(markerPath, "disposed");
+    }
 }

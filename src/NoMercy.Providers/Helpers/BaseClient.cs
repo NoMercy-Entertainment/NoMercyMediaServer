@@ -10,7 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.AspNetCore.WebUtilities;
-using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
@@ -27,7 +27,7 @@ public class BaseClient : IDisposable
     protected virtual int ConcurrentRequests => 1;
     protected virtual int Interval => 1000;
     protected virtual Dictionary<string, string?> QueryParams => new();
-    protected virtual string UserAgent => Config.UserAgent;
+    protected virtual string UserAgent => ExternalServicesConfig.Current.UserAgent;
 
     protected BaseClient()
     {
@@ -78,7 +78,8 @@ public class BaseClient : IDisposable
 
         string newUrl = QueryHelpers.AddQueryString(url, query);
 
-        if (CacheController.Read(newUrl, out T? result))
+        (bool found, T? result) = await CacheController.ReadAsync<T>(newUrl);
+        if (found)
             return result;
 
         Logger.Http(newUrl, LogEventLevel.Verbose);

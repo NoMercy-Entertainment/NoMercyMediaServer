@@ -346,7 +346,10 @@ public abstract class TwoPassStrategyBase(
                     .Where(e =>
                         !preserveCheckpoint
                         || !Path.GetFileName(e.Path)
-                            .Equals(".checkpoint.json", StringComparison.OrdinalIgnoreCase)
+                            .Equals(
+                                CheckpointFileNames.FileName,
+                                StringComparison.OrdinalIgnoreCase
+                            )
                     )
             )
             {

@@ -19,13 +19,10 @@ using NoMercy.Database.Models.Users;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
-
-using Logger = NoMercy.NmSystem.SystemCalls.Logger;
-
+using Microsoft.Extensions.Logging;
 namespace NoMercy.Data.Repositories;
 
-public class MovieRepository(IDbContextFactory<MediaContext> contextFactory) : IMovieRepository
+public class MovieRepository(IDbContextFactory<MediaContext> contextFactory, ILogger<MovieRepository> logger) : IMovieRepository
 {
     public async Task<Movie?> GetMovieAsync(
         Guid userId,
@@ -221,7 +218,7 @@ public class MovieRepository(IDbContextFactory<MediaContext> contextFactory) : I
         }
         catch (Exception e)
         {
-            Logger.App(e.Message, Serilog.Events.LogEventLevel.Error);
+            logger.LogError(e.Message);
             return false;
         }
     }

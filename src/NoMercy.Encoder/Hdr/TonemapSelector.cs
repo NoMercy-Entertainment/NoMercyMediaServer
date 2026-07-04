@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Storage;
@@ -101,7 +102,7 @@ public class TonemapSelector : ITonemapSelector
                     .AcquireLocalPathAsync(lutPath, cancellationToken)
                     .ConfigureAwait(false);
 
-                string lutFilter = $"lut3d={lutPath}";
+                string lutFilter = $"lut3d={FilterGraphPathEscaper.Escape(lutPath)}";
 
                 decisions.Add(
                     new DecisionLog(

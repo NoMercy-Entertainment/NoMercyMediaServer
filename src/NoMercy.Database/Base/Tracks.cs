@@ -25,10 +25,10 @@ public class VideoTracks : Timestamps
     public string _tracks { get; set; } = string.Empty;
 
     [NotMapped]
-    public IVideoTrack[] Tracks
+    public VideoTrack[] Tracks
     {
         get =>
-            (_tracks != string.Empty ? JsonConvert.DeserializeObject<IVideoTrack[]>(_tracks) : [])
+            (_tracks != string.Empty ? JsonConvert.DeserializeObject<VideoTrack[]>(_tracks) : [])
             ?? [];
         set => _tracks = JsonConvert.SerializeObject(value);
     }

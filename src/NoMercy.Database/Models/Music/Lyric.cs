@@ -23,7 +23,7 @@ public class Lyric
     public LineTime Time { get; set; } = new();
 
     [JsonProperty("rtl")]
-    public bool Rtl => Text.GetTextDirection() == Str.TextDirection.RTL;
+    public bool Rtl => Text.GetTextDirection() == StringExtensions.TextDirection.RTL;
 
     public class LineTime
     {

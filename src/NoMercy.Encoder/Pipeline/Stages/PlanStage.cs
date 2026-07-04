@@ -13,7 +13,6 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
-using NoMercy.Encoder.Codecs.Definitions;
 using NoMercy.Encoder.ContentAnalysis;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
@@ -23,8 +22,6 @@ using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
-using LegacyDrmConfig = NoMercy.Encoder.BuildingBlocks.Drm.DrmConfig;
-using LegacyDrmMethod = NoMercy.Encoder.BuildingBlocks.Drm.DrmMethod;
 
 namespace NoMercy.Encoder.Pipeline.Stages;
 
@@ -66,7 +63,12 @@ public class PlanStage(
 
         try
         {
-            EncodingProfile profile = ExpandAutoLadder(input.Profile, input.Media);
+            EncodingProfile profile = AutoLadderExpander.Expand(
+                abrLadderGenerator,
+                logger,
+                input.Profile,
+                input.Media
+            );
             string? cropFilter = await ResolveCropFilterAsync(
                 profile,
                 input.Media,
@@ -500,12 +502,19 @@ public class PlanStage(
                             );
 
                             // Capped-CRF: when both a CRF target and a bitrate ceiling are set,
-                            // emit -maxrate / -bufsize so FFmpeg enforces the cap.
+                            // the ceiling is enforced by -maxrate / -bufsize (a VBV cap on a
+                            // quality-targeted encode), never by -b:v. Emitting -b:v alongside
+                            // -crf / -cq / -qp puts the encoder into a conflicting rate-control
+                            // state (libx264 silently switches to ABR; NVENC / AMF ignore or
+                            // fight the quality target), so the bitrate must NOT reach the
+                            // output plan as a target bitrate.
+                            int outputBitrateKbps = v.BitrateKbps;
                             if (v.Crf > 0 && v.BitrateKbps > 0)
                             {
                                 int bufKbps = v.BitrateKbps * 2;
                                 extraFlags["-maxrate"] = $"{v.BitrateKbps}k";
                                 extraFlags["-bufsize"] = $"{bufKbps}k";
+                                outputBitrateKbps = 0;
                             }
 
                             // HDR→HDR passthrough: preserve color metadata when source is HDR
@@ -562,12 +571,12 @@ public class PlanStage(
                                     encoder = resolved.EncoderInfo;
                                 }
 
-                                if (bdResult.Warning is not null)
+                                foreach (EncoderRule bdWarning in bdResult.Warnings)
                                 {
                                     logger.LogWarning(
                                         "Bit-depth policy [{Id}]: {Message}",
-                                        bdResult.Warning.Id,
-                                        bdResult.Warning.Message
+                                        bdWarning.Id,
+                                        bdWarning.Message
                                     );
                                 }
 
@@ -581,8 +590,7 @@ public class PlanStage(
                                 if (requestedDepth >= 10 && !encoder.Supports10Bit)
                                 {
                                     logger.LogWarning(
-                                        "Profile requests 10-bit video_{Index} but encoder {Encoder} "
-                                            + "does not support 10-bit. Downgrading to 8-bit output.",
+                                        "Profile requests 10-bit video_{Index} but encoder {Encoder} does not support 10-bit. Downgrading to 8-bit output.",
                                         i,
                                         encoder.FfmpegName
                                     );
@@ -600,12 +608,22 @@ public class PlanStage(
 
                             // Profile/plugin CustomArguments escape hatch: merge the
                             // per-video custom flags last so user/plugin intent wins.
-                            // ProfileValidator already blocks codec/format-overriding
-                            // keys, so what reaches here is safe to apply verbatim.
+                            // Defense in depth: even though the validator now rejects
+                            // reserved-flag overrides, a code-built or legacy-validated
+                            // profile could still carry one. Skip any key a typed field
+                            // already owns so the argv can never emit a duplicate /
+                            // conflicting flag next to the value the resolver computed.
                             if (v.CustomArguments is not null)
                             {
                                 foreach ((string argKey, string argValue) in v.CustomArguments)
+                                {
+                                    string normalizedKey = argKey.StartsWith('-')
+                                        ? argKey
+                                        : $"-{argKey}";
+                                    if (ProfileRuleValidator.ReservedFlags.Contains(normalizedKey))
+                                        continue;
                                     extraFlags[argKey] = argValue;
+                                }
                             }
 
                             return new VideoOutputPlan(
@@ -613,16 +631,22 @@ public class PlanStage(
                                 Height: outputHeight,
                                 EncoderName: outputEncoderName,
                                 Crf: crf,
-                                BitrateKbps: v.BitrateKbps,
+                                BitrateKbps: outputBitrateKbps,
                                 Preset: EncoderArgumentResolver.ResolvePreset(v.Preset, encoder),
                                 Profile: EncoderArgumentResolver.ResolveProfile(
                                     codecProfileString,
-                                    encoder
+                                    encoder,
+                                    outputTenBit ? 10 : 8
                                 ),
                                 Level: v.Level,
                                 TenBit: outputTenBit,
                                 PixelFormat: outputPixelFormat,
-                                MapLabel: $"[v{i}]",
+                                // Copy outputs must map directly from the input stream.
+                                // A bracketed label like [v0] forces ffmpeg to route the
+                                // stream through filter_complex, which is forbidden when
+                                // the output codec is "copy" (exit -22). Direct stream
+                                // references (0:v:0) bypass filter_complex entirely.
+                                MapLabel: v.Policy == StreamPolicy.Copy ? "0:v:0" : $"[v{i}]",
                                 ExtraFlags: extraFlags,
                                 FrameRate: media.VideoStreams[0].FrameRate,
                                 SegmentNameTemplate: v.SegmentNameTemplate,
@@ -651,154 +675,11 @@ public class PlanStage(
 
         // Build one AudioOutputPlan per matching source stream.
         // AllowedLanguages is a FILTER — the actual language comes from the source stream.
-        List<AudioOutputPlan> audioPlans = [];
-        foreach (AudioOutput audioProfile in profile.Audio)
-        {
-            string encoderName = AudioCodecDefinitions.GetEncoder(audioProfile.Codec).FfmpegName;
-            HashSet<string> allowed =
-                audioProfile.AllowedLanguages.Length > 0
-                    ? new HashSet<string>(
-                        audioProfile.AllowedLanguages,
-                        StringComparer.OrdinalIgnoreCase
-                    )
-                    : [];
+        AudioOutputPlan[] audioPlan = AudioPlanBuilder.Build(profile, media);
 
-            for (int si = 0; si < media.AudioStreams.Count; si++)
-            {
-                AudioStreamInfo stream = media.AudioStreams[si];
-                string streamLang = stream.Language ?? "und";
+        SubtitleOutputPlan[] subtitlePlan = SubtitlePlanBuilder.Build(profile, media);
 
-                if (allowed.Count > 0 && !allowed.Contains(streamLang))
-                    continue;
-
-                LoudnessMode loudnessMode = audioProfile.Loudness?.Mode ?? LoudnessMode.None;
-                DownmixMode downmixMode = audioProfile.Downmix?.Mode ?? DownmixMode.Auto;
-                string? customPanMatrix = audioProfile.Downmix?.CustomPanMatrix;
-
-                string? audioFilter = BuildAudioFilter(loudnessMode, downmixMode, customPanMatrix);
-
-                audioPlans.Add(
-                    new(
-                        EncoderName: encoderName,
-                        BitrateKbps: audioProfile.BitrateKbps,
-                        Channels: audioProfile.Channels,
-                        SampleRate: audioProfile.SampleRateHz,
-                        Action: StreamAction.Transcode,
-                        Language: streamLang,
-                        MapLabel: $"0:a:{si}",
-                        SegmentNameTemplate: audioProfile.SegmentNameTemplate,
-                        PlaylistNameTemplate: audioProfile.PlaylistNameTemplate,
-                        AudioFilter: audioFilter,
-                        ExtraFlags: audioProfile.CustomArguments is not null
-                            ? new Dictionary<string, string>(audioProfile.CustomArguments)
-                            : null
-                    )
-                );
-            }
-        }
-
-        // Disambiguate any audio plans whose templates would resolve to the
-        // same on-disk path. The default audio template is
-        // "audio_{lang}_{codec}/audio_{lang}_{codec}", so three English AAC
-        // streams all collapse to the same directory + filename. Append the
-        // source stream index to colliding plans only — single-stream-per-
-        // language sources keep their stable templates.
-        AudioOutputPlan[] audioPlan = PlanStageDisambiguation
-            .DisambiguateAudio(audioPlans)
-            .ToArray();
-
-        // Build one SubtitleOutputPlan per matching source stream.
-        // Deduplicate by source stream index — first matching profile wins.
-        // Variants are resolved across ALL source streams once so the per-
-        // language "full vs alt" promotion sees every track, not just the
-        // ones a given profile happens to allow.
-        IReadOnlyList<string> subtitleVariants = SubtitleClassifier.ResolveVariants(
-            media.SubtitleStreams
-        );
-        List<SubtitleOutputPlan> subtitlePlans = [];
-        HashSet<int> claimedStreams = [];
-        foreach (SubtitleOutput subProfile in profile.Subtitles)
-        {
-            HashSet<string> allowed =
-                subProfile.AllowedLanguages.Length > 0
-                    ? new HashSet<string>(
-                        subProfile.AllowedLanguages,
-                        StringComparer.OrdinalIgnoreCase
-                    )
-                    : [];
-
-            for (int si = 0; si < media.SubtitleStreams.Count; si++)
-            {
-                if (claimedStreams.Contains(si))
-                    continue;
-
-                SubtitleStreamInfo stream = media.SubtitleStreams[si];
-                string streamLang = stream.Language ?? "und";
-
-                if (allowed.Count > 0 && !allowed.Contains(streamLang))
-                    continue;
-
-                claimedStreams.Add(si);
-                subtitlePlans.Add(
-                    new(
-                        OutputCodec: subProfile.Codec,
-                        Action: subProfile.Policy == SubtitlePolicy.BurnIn
-                            ? StreamAction.Transcode
-                            : StreamAction.Extract,
-                        Language: streamLang,
-                        SourceIndex: si,
-                        MapLabel: $"0:s:{si}",
-                        PlaylistNameTemplate: subProfile.PlaylistNameTemplate,
-                        Policy: subProfile.Policy,
-                        Variant: subtitleVariants[si],
-                        ExtraFlags: subProfile.CustomArguments is not null
-                            ? new Dictionary<string, string>(subProfile.CustomArguments)
-                            : null
-                    )
-                );
-            }
-        }
-
-        SubtitleOutputPlan[] subtitlePlan = subtitlePlans.ToArray();
-
-        ThumbnailOutputPlan? thumbPlan = null;
-        if (media.VideoStreams.Count > 0)
-        {
-            // Explicit profile.Thumbnails wins. Otherwise fall back to
-            // HlsDerivatives: when GenerateSpriteVtt is on (the default for HLS),
-            // build a ThumbnailOutput from SpriteVttThumbnailWidth +
-            // SpriteVttIntervalSeconds so sprites land for every HLS preset
-            // without each author having to also set the legacy Thumbnails field.
-            // Null HlsDerivatives (V1-backfilled presets) gets treated as a
-            // fresh HlsDerivatives() so the sprite-on defaults still apply.
-            ThumbnailOutput? thumbConfig = profile.Thumbnails;
-            if (thumbConfig is null)
-            {
-                HlsDerivatives derivatives = profile.HlsDerivatives ?? new HlsDerivatives();
-                if (derivatives.GenerateSpriteVtt)
-                {
-                    thumbConfig = new ThumbnailOutput(
-                        Width: derivatives.SpriteVttThumbnailWidth,
-                        IntervalSeconds: derivatives.SpriteVttIntervalSeconds
-                    );
-                }
-            }
-
-            if (thumbConfig is not null)
-            {
-                int thumbHeight = (int)(
-                    2
-                    * Math.Round(
-                        (double)thumbConfig.Width
-                            * media.VideoStreams[0].Height
-                            / media.VideoStreams[0].Width
-                            / 2
-                    )
-                );
-
-                thumbPlan = new(thumbConfig.Width, thumbHeight, thumbConfig.IntervalSeconds);
-            }
-        }
+        ThumbnailOutputPlan? thumbPlan = ThumbnailPlanBuilder.Build(profile, media);
 
         // Clamp segment duration to input length for very short files.
         int segmentDuration = profile.SegmentDurationSeconds;
@@ -847,10 +728,12 @@ public class PlanStage(
 
         if (media.StereoMode is not null && videoIsCopy && videoPlan.Length > 0)
         {
-            // MKV: -metadata:s:v stereo_mode=<value> tags the video track.
+            // MKV: -metadata:s:v stereo_mode=<value> tags the video track — the
+            // flag and the key=value pair are separate argv tokens, so the dict
+            // key must be just the flag, not "flag key" glued together.
             // MP4: stream-copy keeps the st3d box automatically when -c:v copy is
             //      used; the extra tag does not hurt non-MKV containers.
-            videoPlan[0].ExtraFlags["-metadata:s:v stereo_mode"] = media.StereoMode;
+            videoPlan[0].ExtraFlags["-metadata:s:v"] = $"stereo_mode={media.StereoMode}";
         }
 
         // VR spherical projection preservation: pass-through the sv3d/proj box
@@ -902,175 +785,32 @@ public class PlanStage(
             thumbPlan,
             segmentDuration,
             PreserveDolbyVision: dvDecision.Preserved,
-            Drm: ConvertDrmConfig(profile.Drm),
+            Drm: DrmConfigConverter.Convert(profile.Drm),
             HlsOptions: hlsOptions,
             Layout: layout,
             GenerateChapterThumbs: generateChapterThumbs,
             EmitSubtitleWebVttChunks: emitSubtitleChunks,
-            GlobalExtraFlags: profile.CustomArguments is { Count: > 0 }
-                ? new Dictionary<string, string>(profile.CustomArguments)
-                : null
+            GlobalExtraFlags: BuildGlobalExtraFlags(profile.CustomArguments)
         );
     }
 
-    /// <summary>
-    /// When the profile opts into <see cref="LadderMode.Auto"/>, expand the
-    /// single reference video output into a multi-tier ABR ladder generated
-    /// from the source media's resolution + bitrate density. The generated
-    /// outputs are stored as Manual rungs so <see cref="PlanStageHelpers.EnumerateVideo"/>
-    /// materialises them correctly on subsequent passes.
-    /// Passthrough when auto-ladder is off or when the source has no video.
-    /// </summary>
-    private EncodingProfile ExpandAutoLadder(EncodingProfile profile, MediaInfo media)
-    {
-        if (profile.Ladder?.Mode != LadderMode.Auto || media.VideoStreams.Count == 0)
-            return profile;
-
-        LadderRung[] existingRungs = profile.Ladder.Rungs ?? [];
-
-        // Auto + multiple rungs → keep rungs as-is, switch to Manual
-        if (existingRungs.Length > 1)
-        {
-            logger.LogWarning(
-                "AutoLadder with {Count} rungs: falling back to Manual mode.",
-                existingRungs.Length
-            );
-            return profile with
-            {
-                Ladder = new LadderConfig { Mode = LadderMode.Manual, Rungs = existingRungs },
-            };
-        }
-
-        VideoOutput? reference =
-            profile.Video
-            ?? (
-                existingRungs.Length == 1
-                    ? PlanStageHelpers.BuildSyntheticReference(existingRungs[0])
-                    : null
-            );
-
-        if (reference is null)
-        {
-            logger.LogWarning(
-                "AutoLadder requires a reference Video output or at least one rung; "
-                    + "profile has neither. Falling back to no video outputs."
-            );
-            return profile;
-        }
-
-        LadderRung[] rungs;
-
-        if (profile.Ladder.AutoConfig is not null)
-        {
-            rungs = abrLadderGenerator.GenerateLadder(
-                media,
-                reference.Codec,
-                profile.Ladder.AutoConfig,
-                reference
-            );
-        }
-        else
-        {
-            VideoOutput[] ladder = abrLadderGenerator.Generate(media, reference);
-            if (ladder.Length == 0)
-                return profile;
-
-            rungs = ladder
-                .Select(v => new LadderRung(
-                    Width: v.Width,
-                    Height: v.Height ?? 0,
-                    Codec: v.Codec,
-                    BitrateKbps: v.BitrateKbps,
-                    MaxBitrateKbps: v.MaxBitrateKbps ?? 0,
-                    BufferSizeKbps: v.BufferSizeKbps ?? 0,
-                    Framerate: 0,
-                    Preset: v.Preset,
-                    CodecProfile: v.CodecProfile,
-                    BitDepth: v.BitDepth,
-                    PixelFormat: v.PixelFormat
-                ))
-                .ToArray();
-        }
-
-        if (rungs.Length == 0)
-            return profile;
-
-        logger.LogInformation(
-            "AutoLadder expanded 1 reference profile → {Count} variants for {Source}",
-            rungs.Length,
-            media.FilePath
-        );
-
-        return profile with
-        {
-            Ladder = new LadderConfig { Mode = LadderMode.Manual, Rungs = rungs },
-        };
-    }
-
-    /// <summary>
-    /// Builds a single FFmpeg audio-filter chain: <c>pan=</c> (when an explicit
-    /// downmix matrix is requested) chained with <c>loudnorm</c> (when a
-    /// loudness target is requested). Pan runs first because loudnorm expects
-    /// the final channel layout. Returns null when neither filter is needed.
-    /// </summary>
-    internal static string? BuildAudioFilter(
-        LoudnessMode loudness,
-        DownmixMode downmix,
-        string? customPanMatrix
+    // Cap ffmpeg's global thread count so a single encode leaves the host usable
+    // instead of auto-threading across every core. Reserve ~a quarter of the cores
+    // (at least one) for the OS and whoever is using the machine. The user's own
+    // -threads in CustomArguments overrides this (user override is non-negotiable).
+    private static Dictionary<string, string> BuildGlobalExtraFlags(
+        Dictionary<string, string>? customArguments
     )
     {
-        string? pan = BuildPanFilter(downmix, customPanMatrix);
-        string? loudnorm = BuildLoudnormFilter(loudness);
+        int reserved = Math.Max(1, Environment.ProcessorCount / 4);
+        int encodeThreads = Math.Max(1, Environment.ProcessorCount - reserved);
 
-        return (pan, loudnorm) switch
-        {
-            (null, null) => null,
-            (not null, null) => pan,
-            (null, not null) => loudnorm,
-            _ => $"{pan},{loudnorm}",
-        };
-    }
+        Dictionary<string, string> flags = new() { ["-threads"] = encodeThreads.ToString() };
 
-    private static string? BuildPanFilter(DownmixMode mode, string? customPanMatrix) =>
-        mode switch
-        {
-            // ITU-R BS.775 5.1 → stereo. Center folded at -3 dB, surrounds at -3 dB.
-            DownmixMode.StereoItuR128 =>
-                "pan=stereo|FL<FL+0.707*FC+0.707*BL+0.707*SL|FR<FR+0.707*FC+0.707*BR+0.707*SR",
-            // Simple equal-weight sum; safe for any input channel layout.
-            DownmixMode.Mono => "pan=mono|c0<0.5*FL+0.5*FR+0.5*FC+0.25*BL+0.25*BR+0.25*SL+0.25*SR",
-            DownmixMode.Custom => string.IsNullOrWhiteSpace(customPanMatrix)
-                ? null
-                : $"pan={customPanMatrix}",
-            _ => null,
-        };
+        if (customArguments is { Count: > 0 })
+            foreach ((string key, string value) in customArguments)
+                flags[key] = value;
 
-    private static string? BuildLoudnormFilter(LoudnessMode loudness) =>
-        loudness switch
-        {
-            // EBU R128 streaming target: -16 LUFS integrated, -1.5 dBTP true peak, 11 LU LRA.
-            LoudnessMode.EbuR128 => "loudnorm=I=-16:TP=-1.5:LRA=11",
-            // ReplayGain target: -18 LUFS integrated, same peak + range as R128.
-            LoudnessMode.ReplayGain => "loudnorm=I=-18:TP=-1.5:LRA=11",
-            // Custom loudnorm left to CustomArguments on the profile; no auto filter here.
-            LoudnessMode.Custom => null,
-            _ => null,
-        };
-
-    private static LegacyDrmConfig? ConvertDrmConfig(DrmConfig? v2Drm)
-    {
-        if (v2Drm is null)
-            return null;
-
-        LegacyDrmMethod method = v2Drm.Scheme.ToLowerInvariant() switch
-        {
-            "aes128" or "aes-128" => LegacyDrmMethod.Aes128,
-            "cenc" => LegacyDrmMethod.Cenc,
-            _ => LegacyDrmMethod.None,
-        };
-
-        string keyUri = v2Drm.Parameters?.GetValueOrDefault("key_uri") ?? string.Empty;
-
-        return new LegacyDrmConfig(Method: method, KeyUri: keyUri);
+        return flags;
     }
 }

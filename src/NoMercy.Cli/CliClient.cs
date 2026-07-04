@@ -14,7 +14,7 @@ using NoMercy.Networking.Discovery;
 
 namespace NoMercy.Cli;
 
-internal sealed class CliClient : IDisposable
+internal sealed class CliClient : ICliClient
 {
     private readonly IpcClient _client;
 

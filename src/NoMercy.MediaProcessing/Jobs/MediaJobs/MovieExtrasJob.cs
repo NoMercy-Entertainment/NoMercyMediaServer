@@ -13,12 +13,14 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Movies;
 using NoMercy.MediaProcessing.People;
 using NoMercy.Providers.TMDB.Models.Movies;
+using NoMercy.Storage;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -28,6 +30,15 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 [Serializable]
 public class MovieExtrasJob : AbstractMediaExraDataJob<TmdbMovieAppends>
 {
+    public MovieExtrasJob() { }
+
+    public MovieExtrasJob(
+        IStorageFactory storageFactory,
+        IStorageDriver storageDriver,
+        ILoggerFactory loggerFactory
+    )
+        : base(storageFactory, storageDriver, loggerFactory) { }
+
     public override string QueueName => "extras";
     public override int Priority => 1;
 
@@ -41,11 +52,18 @@ public class MovieExtrasJob : AbstractMediaExraDataJob<TmdbMovieAppends>
             movieRepository,
             jobDispatcher,
             StorageFactory,
-            StorageDriver
+            LoggerFactory.CreateLogger<MovieManager>()
         );
 
-        PersonRepository personRepository = new(context);
-        PersonManager personManager = new(personRepository, jobDispatcher);
+        PersonRepository personRepository = new(
+            context,
+            LoggerFactory.CreateLogger<PersonRepository>()
+        );
+        PersonManager personManager = new(
+            personRepository,
+            jobDispatcher,
+            LoggerFactory.CreateLogger<PersonManager>()
+        );
 
         await personManager.Store(Storage);
 
@@ -60,7 +78,7 @@ public class MovieExtrasJob : AbstractMediaExraDataJob<TmdbMovieAppends>
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent { QueryKey = ["base", "info", Storage.Id.ToString()] }
+                new LibraryRefreshedEvent { QueryKey = ["base", "info", Storage.Id.ToString()] }
             );
     }
 }

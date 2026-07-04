@@ -17,7 +17,7 @@ namespace NoMercy.Networking.Discovery;
 
 public static class NetworkProbe
 {
-    private static readonly string[] ProbeTargets = ["api.nomercy.tv", "1.1.1.1", "8.8.8.8"];
+    public static string[] ProbeTargets { get; set; } = ["api.nomercy.tv", "1.1.1.1", "8.8.8.8"];
 
     public static async Task<bool> CheckConnectivity(int timeoutMs = 3000)
     {

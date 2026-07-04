@@ -10,15 +10,15 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Logging;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.People;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Episode;
 using NoMercy.Providers.TMDB.Models.Movies;
@@ -26,14 +26,15 @@ using NoMercy.Providers.TMDB.Models.People;
 using NoMercy.Providers.TMDB.Models.Season;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
-using Serilog.Events;
 using TmdbGender = NoMercy.Database.Models.People.TmdbGender;
 
 namespace NoMercy.MediaProcessing.People;
 
-public class PersonManager(IPersonRepository personRepository, JobDispatcher jobDispatcher)
-    : BaseManager,
-        IPersonManager
+public class PersonManager(
+    IPersonRepository personRepository,
+    JobDispatcher jobDispatcher,
+    ILogger<PersonManager> logger
+) : BaseManager, IPersonManager
 {
     public async Task Store(TmdbTvShowAppends show)
     {
@@ -68,21 +69,22 @@ public class PersonManager(IPersonRepository personRepository, JobDispatcher job
         });
 
         await personRepository.Store(people);
-        Logger.MovieDb($"Show {show.Name}: People stored");
+        logger.LogInformation("Show {Name}: People stored", show.Name);
 
         await personRepository.StoreRoles(roles);
-        Logger.MovieDb($"Show {show.Name}: Roles stored", LogEventLevel.Debug);
+        logger.LogDebug("Show {Name}: Roles stored", show.Name);
 
         await personRepository.StoreJobs(jobs);
-        Logger.MovieDb($"Show {show.Name}: Jobs stored", LogEventLevel.Debug);
+        logger.LogDebug("Show {Name}: Jobs stored", show.Name);
 
         List<int> ids = personRepository.GetIds();
 
-        await personRepository.StoreCast(casts.Where(c => ids.Contains(c.PersonId)), Type.TvShow);
-        Logger.MovieDb($"Show {show.Name}: Cast stored", LogEventLevel.Debug);
-
-        await personRepository.StoreCrew(crews.Where(c => ids.Contains(c.PersonId)), Type.TvShow);
-        Logger.MovieDb($"Show {show.Name}: Crew stored", LogEventLevel.Debug);
+        await personRepository.StoreAggregateCreditsAsync(
+            casts.Where(c => ids.Contains(c.PersonId)),
+            crews.Where(c => ids.Contains(c.PersonId)),
+            Type.TvShow
+        );
+        logger.LogDebug("Show {Name}: Aggregate credits stored", show.Name);
 
         foreach (Person person in people)
             jobDispatcher.DispatchColorPaletteJob("person", person.Id.ToString());
@@ -123,32 +125,40 @@ public class PersonManager(IPersonRepository personRepository, JobDispatcher job
         });
 
         await personRepository.Store(people);
-        Logger.MovieDb($"Show {season.Name}; Season {season.SeasonNumber}: People stored");
+        logger.LogInformation(
+            "Show {Name}; Season {SeasonNumber}: People stored",
+            season.Name,
+            season.SeasonNumber
+        );
 
         await personRepository.StoreRoles(roles);
-        Logger.MovieDb(
-            $"Show {season.Name}; Season {season.SeasonNumber}: Roles stored",
-            LogEventLevel.Debug
+        logger.LogDebug(
+            "Show {Name}; Season {SeasonNumber}: Roles stored",
+            season.Name,
+            season.SeasonNumber
         );
 
         await personRepository.StoreJobs(jobs);
-        Logger.MovieDb(
-            $"Show {season.Name}; Season {season.SeasonNumber}: Jobs stored",
-            LogEventLevel.Debug
+        logger.LogDebug(
+            "Show {Name}; Season {SeasonNumber}: Jobs stored",
+            season.Name,
+            season.SeasonNumber
         );
 
         List<int> ids = personRepository.GetIds();
 
         await personRepository.StoreCast(casts.Where(c => ids.Contains(c.PersonId)), Type.Season);
-        Logger.MovieDb(
-            $"Show {season.Name}; Season {season.SeasonNumber}: Cast stored",
-            LogEventLevel.Debug
+        logger.LogDebug(
+            "Show {Name}; Season {SeasonNumber}: Cast stored",
+            season.Name,
+            season.SeasonNumber
         );
 
         await personRepository.StoreCrew(crews.Where(c => ids.Contains(c.PersonId)), Type.Season);
-        Logger.MovieDb(
-            $"Show {season.Name}; Season {season.SeasonNumber}: Crew stored",
-            LogEventLevel.Debug
+        logger.LogDebug(
+            "Show {Name}; Season {SeasonNumber}: Crew stored",
+            season.Name,
+            season.SeasonNumber
         );
     }
 
@@ -185,34 +195,45 @@ public class PersonManager(IPersonRepository personRepository, JobDispatcher job
         });
 
         await personRepository.Store(people);
-        Logger.MovieDb(
-            $"Show {episode.Name}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: People stored"
+        logger.LogInformation(
+            "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: People stored",
+            episode.Name,
+            episode.SeasonNumber,
+            episode.EpisodeNumber
         );
 
         await personRepository.StoreRoles(roles);
-        Logger.MovieDb(
-            $"Show {episode.Name}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: Roles stored",
-            LogEventLevel.Debug
+        logger.LogDebug(
+            "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: Roles stored",
+            episode.Name,
+            episode.SeasonNumber,
+            episode.EpisodeNumber
         );
 
         await personRepository.StoreJobs(jobs);
-        Logger.MovieDb(
-            $"Show {episode.Name}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: Jobs stored",
-            LogEventLevel.Debug
+        logger.LogDebug(
+            "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: Jobs stored",
+            episode.Name,
+            episode.SeasonNumber,
+            episode.EpisodeNumber
         );
 
         List<int> ids = personRepository.GetIds();
 
         await personRepository.StoreCast(casts.Where(c => ids.Contains(c.PersonId)), Type.Episode);
-        Logger.MovieDb(
-            $"Show {episode.Name}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: Cast stored",
-            LogEventLevel.Debug
+        logger.LogDebug(
+            "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: Cast stored",
+            episode.Name,
+            episode.SeasonNumber,
+            episode.EpisodeNumber
         );
 
         await personRepository.StoreCrew(crews.Where(c => ids.Contains(c.PersonId)), Type.Episode);
-        Logger.MovieDb(
-            $"Show {episode.Name}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: Crew stored",
-            LogEventLevel.Debug
+        logger.LogDebug(
+            "Show {Name}: Season {SeasonNumber} Episode {EpisodeNumber}: Crew stored",
+            episode.Name,
+            episode.SeasonNumber,
+            episode.EpisodeNumber
         );
     }
 
@@ -249,21 +270,21 @@ public class PersonManager(IPersonRepository personRepository, JobDispatcher job
         });
 
         await personRepository.Store(people);
-        Logger.MovieDb($"Movie: {movie.Title}: People stored");
+        logger.LogInformation("Movie: {Title}: People stored", movie.Title);
 
         await personRepository.StoreRoles(roles);
-        Logger.MovieDb($"Movie: {movie.Title}: Roles stored", LogEventLevel.Debug);
+        logger.LogDebug("Movie: {Title}: Roles stored", movie.Title);
 
         await personRepository.StoreJobs(jobs);
-        Logger.MovieDb($"Movie: {movie.Title}: Jobs stored", LogEventLevel.Debug);
+        logger.LogDebug("Movie: {Title}: Jobs stored", movie.Title);
 
         List<int> ids = personRepository.GetIds();
 
         await personRepository.StoreCast(casts.Where(c => ids.Contains(c.PersonId)), Type.Movie);
-        Logger.MovieDb($"Movie: {movie.Title}: Cast stored", LogEventLevel.Debug);
+        logger.LogDebug("Movie: {Title}: Cast stored", movie.Title);
 
         await personRepository.StoreCrew(crews.Where(c => ids.Contains(c.PersonId)), Type.Movie);
-        Logger.MovieDb($"Movie: {movie.Title}: Crew stored", LogEventLevel.Debug);
+        logger.LogDebug("Movie: {Title}: Crew stored", movie.Title);
 
         foreach (Person person in people)
             jobDispatcher.DispatchColorPaletteJob("person", person.Id.ToString());
@@ -273,12 +294,17 @@ public class PersonManager(IPersonRepository personRepository, JobDispatcher job
 
     public Task Update(string showName, TmdbTvShowAppends show)
     {
-        throw new NotImplementedException();
+        // Re-importing the show's people/credits is an idempotent upsert,
+        // so re-running Store refreshes them in place.
+        return Store(show);
     }
 
-    public Task Remove(string showName, TmdbTvShowAppends show)
+    public async Task Remove(string showName, TmdbTvShowAppends show)
     {
-        throw new NotImplementedException();
+        // Remove this show's cast/crew associations. Shared Person rows are
+        // left intact as they may still be referenced by other titles.
+        await personRepository.RemoveAggregateCreditsAsync(show.Id);
+        logger.LogDebug("Show {ShowName}: People credits removed", showName);
     }
 
     public async Task UpdatePersonAsync(int personId)
@@ -292,7 +318,7 @@ public class PersonManager(IPersonRepository personRepository, JobDispatcher job
 
         if (person?.Name is null)
         {
-            Logger.MovieDb($"Person {personId} not found during refresh", LogEventLevel.Warning);
+            logger.LogWarning("Person {PersonId} not found during refresh", personId);
             return;
         }
 
@@ -300,7 +326,7 @@ public class PersonManager(IPersonRepository personRepository, JobDispatcher job
         await StoreTranslations(person);
         await StoreImages(person);
 
-        Logger.MovieDb($"Person {person.Name}: refreshed from TMDB changes", LogEventLevel.Debug);
+        logger.LogDebug("Person {Name}: refreshed from TMDB changes", person.Name);
     }
 
     private static Person ToPersonEntity(TmdbPersonAppends person)
@@ -631,7 +657,7 @@ public class PersonManager(IPersonRepository personRepository, JobDispatcher job
 
             await Parallel.ForEachAsync(
                 ids,
-                Config.ParallelOptions,
+                SystemParallelism.Options,
                 async (id, _) =>
                 {
                     try
@@ -645,7 +671,7 @@ public class PersonManager(IPersonRepository personRepository, JobDispatcher job
 
                         if (personTask?.Name is null)
                         {
-                            Logger.MovieDb($"Person {id} not found", LogEventLevel.Warning);
+                            logger.LogWarning("Person {Id} not found", id);
                             return;
                         }
 
@@ -653,7 +679,7 @@ public class PersonManager(IPersonRepository personRepository, JobDispatcher job
                     }
                     catch (Exception e)
                     {
-                        Logger.MovieDb(e.Message, LogEventLevel.Error);
+                        logger.LogError(e.Message);
                     }
                 }
             );
@@ -662,7 +688,7 @@ public class PersonManager(IPersonRepository personRepository, JobDispatcher job
         }
         catch (Exception e)
         {
-            Logger.MovieDb(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
         }
 
         return [];

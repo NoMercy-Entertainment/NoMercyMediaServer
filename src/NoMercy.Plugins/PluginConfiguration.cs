@@ -20,7 +20,13 @@ public class PluginConfiguration : IPluginConfiguration
 {
     private readonly string _configFilePath;
     private readonly IStorage _storage;
-    private readonly object _lock = new();
+
+    // SemaphoreSlim, not a plain lock object: the Async members below need to
+    // hold this across an await, which a `lock` statement cannot do. The sync
+    // and async members previously used DIFFERENT guards (this lock vs none
+    // at all on the Async methods), so a sync Save/Get racing an async one
+    // could interleave a read with a concurrent write.
+    private readonly SemaphoreSlim _lock = new(1, 1);
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -41,7 +47,8 @@ public class PluginConfiguration : IPluginConfiguration
     public T? GetConfiguration<T>()
         where T : class, new()
     {
-        lock (_lock)
+        _lock.Wait();
+        try
         {
             if (!_storage.Exists(_configFilePath))
             {
@@ -52,18 +59,30 @@ public class PluginConfiguration : IPluginConfiguration
             string json = Encoding.UTF8.GetString(bytes);
             return TryDeserialize<T>(json);
         }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     public async Task<T?> GetConfigurationAsync<T>(CancellationToken ct = default)
         where T : class, new()
     {
-        if (!_storage.Exists(_configFilePath))
+        await _lock.WaitAsync(ct).ConfigureAwait(false);
+        try
         {
-            return null;
-        }
+            if (!_storage.Exists(_configFilePath))
+            {
+                return null;
+            }
 
-        string json = await _storage.ReadAllTextAsync(_configFilePath, ct);
-        return TryDeserialize<T>(json);
+            string json = await _storage.ReadAllTextAsync(_configFilePath, ct);
+            return TryDeserialize<T>(json);
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     private static T? TryDeserialize<T>(string json)
@@ -88,7 +107,8 @@ public class PluginConfiguration : IPluginConfiguration
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
-        lock (_lock)
+        _lock.Wait();
+        try
         {
             string? directory = Path.GetDirectoryName(_configFilePath);
             if (directory is not null && !_storage.Exists(directory))
@@ -99,6 +119,10 @@ public class PluginConfiguration : IPluginConfiguration
             string json = JsonSerializer.Serialize(configuration, JsonOptions);
             _storage.Write(_configFilePath, Encoding.UTF8.GetBytes(json));
         }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     public async Task SaveConfigurationAsync<T>(T configuration, CancellationToken ct = default)
@@ -106,14 +130,22 @@ public class PluginConfiguration : IPluginConfiguration
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
-        string? directory = Path.GetDirectoryName(_configFilePath);
-        if (directory is not null && !_storage.Exists(directory))
+        await _lock.WaitAsync(ct).ConfigureAwait(false);
+        try
         {
-            _storage.CreateDirectory(directory);
-        }
+            string? directory = Path.GetDirectoryName(_configFilePath);
+            if (directory is not null && !_storage.Exists(directory))
+            {
+                _storage.CreateDirectory(directory);
+            }
 
-        string json = JsonSerializer.Serialize(configuration, JsonOptions);
-        await _storage.WriteAllTextAsync(_configFilePath, json, ct);
+            string json = JsonSerializer.Serialize(configuration, JsonOptions);
+            await _storage.WriteAllTextAsync(_configFilePath, json, ct);
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     public bool HasConfiguration()
@@ -123,12 +155,17 @@ public class PluginConfiguration : IPluginConfiguration
 
     public void DeleteConfiguration()
     {
-        lock (_lock)
+        _lock.Wait();
+        try
         {
             if (_storage.Exists(_configFilePath))
             {
                 _storage.Delete(_configFilePath);
             }
+        }
+        finally
+        {
+            _lock.Release();
         }
     }
 }

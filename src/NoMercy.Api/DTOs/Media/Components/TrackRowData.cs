@@ -38,7 +38,7 @@ public record TrackRowData
     public string Link { get; set; } = null!;
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("date")]
     public string? Date { get; set; }
@@ -99,7 +99,7 @@ public record TrackRowData
         {
             Id = at.ArtistId.ToString(),
             Name = at.Artist.Name,
-            Link = new($"/music/artist/{at.ArtistId}", UriKind.Relative),
+            Link = new($"/music/artists/{at.ArtistId}", UriKind.Relative),
             Type = "artist",
         });
     }
@@ -132,7 +132,7 @@ public record TrackRowData
             {
                 Id = at.ArtistId.ToString(),
                 Name = at.Artist.Name,
-                Link = new($"/music/artist/{at.ArtistId}", UriKind.Relative),
+                Link = new($"/music/artists/{at.ArtistId}", UriKind.Relative),
                 Type = "artist",
             });
         AlbumTrack = track
@@ -141,7 +141,7 @@ public record TrackRowData
             {
                 Id = at.AlbumId.ToString(),
                 Name = at.Album.Name,
-                Link = new($"/music/album/{at.AlbumId}", UriKind.Relative),
+                Link = new($"/music/albums/{at.AlbumId}", UriKind.Relative),
                 Type = "album",
             });
     }
@@ -151,7 +151,7 @@ public record TrackRowData
         Id = track.Id.ToString();
         Name = track.Name;
         string? colorPaletteStr = track.AlbumColorPalette ?? track.ArtistColorPalette;
-        ColorPalette = IColorPalettes.FromJsonOrNull(colorPaletteStr);
+        ColorPalette = ColorPalette.FromJsonOrNull(colorPaletteStr);
         string? cover = track.AlbumCover ?? track.ArtistCover;
         Cover = cover is not null ? $"/images/music{cover}" : null;
         Path = $"/{track.FolderId}{track.Folder}{track.Filename}";
@@ -169,14 +169,14 @@ public record TrackRowData
         {
             Id = at.Id.ToString(),
             Name = at.Name,
-            Link = new($"/music/artist/{at.Id}", UriKind.Relative),
+            Link = new($"/music/artists/{at.Id}", UriKind.Relative),
             Type = "artist",
         });
         AlbumTrack = track.Albums.Select(at => new TrackArtist
         {
             Id = at.Id.ToString(),
             Name = at.Name,
-            Link = new($"/music/album/{at.Id}", UriKind.Relative),
+            Link = new($"/music/albums/{at.Id}", UriKind.Relative),
             Type = "album",
         });
     }

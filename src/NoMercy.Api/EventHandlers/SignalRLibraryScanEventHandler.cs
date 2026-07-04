@@ -9,11 +9,11 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Events.Media;
 using NoMercy.Networking.Messaging;
-using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.EventHandlers;
 
@@ -22,8 +22,15 @@ public class SignalRLibraryScanEventHandler : IDisposable
     private readonly IClientMessenger _clientMessenger;
     private readonly List<IDisposable> _subscriptions = [];
 
-    public SignalRLibraryScanEventHandler(IEventBus eventBus, IClientMessenger clientMessenger)
+    private readonly ILogger<SignalRLibraryScanEventHandler> _logger;
+
+    public SignalRLibraryScanEventHandler(
+        ILogger<SignalRLibraryScanEventHandler> logger,
+        IEventBus eventBus,
+        IClientMessenger clientMessenger
+    )
     {
+        _logger = logger;
         _clientMessenger = clientMessenger;
         _subscriptions.Add(eventBus.Subscribe<LibraryScanStartedEvent>(OnScanStarted));
         _subscriptions.Add(eventBus.Subscribe<LibraryScanCompletedEvent>(OnScanCompleted));
@@ -44,7 +51,7 @@ public class SignalRLibraryScanEventHandler : IDisposable
             }
         );
 
-        Logger.Socket($"Library scan started: {@event.LibraryName}");
+        _logger.LogInformation("Library scan started: {LibraryName}", @event.LibraryName);
     }
 
     internal async Task OnScanCompleted(LibraryScanCompletedEvent @event, CancellationToken ct)
@@ -62,8 +69,10 @@ public class SignalRLibraryScanEventHandler : IDisposable
             }
         );
 
-        Logger.Socket(
-            $"Library scan completed: {@event.LibraryName}, {@event.ItemsFound} items found"
+        _logger.LogInformation(
+            "Library scan completed: {LibraryName}, {ItemsFound} items found",
+            @event.LibraryName,
+            @event.ItemsFound
         );
     }
 

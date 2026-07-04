@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.EventHandlers;
 using NoMercy.Api.Services.Music;
 using NoMercy.Database;
@@ -29,21 +30,33 @@ public static class EventHandlerExtensions
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
-            return new(eventBus, clientMessenger);
+            return new(
+                sp.GetRequiredService<ILogger<SignalRPlaybackEventHandler>>(),
+                eventBus,
+                clientMessenger
+            );
         });
 
         services.AddSingleton<SignalREncodingEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
-            return new(eventBus, clientMessenger);
+            return new(
+                sp.GetRequiredService<ILogger<SignalREncodingEventHandler>>(),
+                eventBus,
+                clientMessenger
+            );
         });
 
         services.AddSingleton<SignalRLibraryScanEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
-            return new(eventBus, clientMessenger);
+            return new(
+                sp.GetRequiredService<ILogger<SignalRLibraryScanEventHandler>>(),
+                eventBus,
+                clientMessenger
+            );
         });
 
         services.AddSingleton<SignalRLibraryRefreshEventHandler>(sp =>
@@ -58,7 +71,12 @@ public static class EventHandlerExtensions
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IStorageDriver storageDriver = sp.GetRequiredService<IStorageDriver>();
             IStorageFactory storageFactory = sp.GetRequiredService<IStorageFactory>();
-            return new(eventBus, storageDriver, storageFactory);
+            return new(
+                sp.GetRequiredService<ILogger<FileWatcherEventHandler>>(),
+                eventBus,
+                storageDriver,
+                storageFactory
+            );
         });
 
         services.AddSingleton<FolderPathEventHandler>(sp =>
@@ -71,10 +89,8 @@ public static class EventHandlerExtensions
         services.AddSingleton<MusicLikeEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
-            MusicPlayerStateManager stateManager = sp.GetRequiredService<MusicPlayerStateManager>();
             MusicPlaybackService playbackService = sp.GetRequiredService<MusicPlaybackService>();
-            IServiceScopeFactory scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
-            return new(eventBus, stateManager, playbackService, scopeFactory);
+            return new(eventBus, playbackService);
         });
 
         services.AddSingleton<SignalRNotificationEventHandler>(sp =>
@@ -102,7 +118,11 @@ public static class EventHandlerExtensions
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
-            return new(eventBus, clientMessenger);
+            return new(
+                sp.GetRequiredService<ILogger<UserPermissionsEventHandler>>(),
+                eventBus,
+                clientMessenger
+            );
         });
 
         services.AddSingleton<IInboxMetadataProbe, TmdbMusicBrainzMetadataProbe>();
@@ -129,10 +149,11 @@ public static class EventHandlerExtensions
             InboxRoutingService routing = sp.GetRequiredService<InboxRoutingService>();
             IStorageFactory storageFactory = sp.GetRequiredService<IStorageFactory>();
             return new InboxClassifierEventHandler(
+                sp.GetRequiredService<ILogger<InboxClassifierEventHandler>>(),
                 eventBus,
                 classifier,
                 routing,
-                () => new MediaContext(),
+                () => sp.GetRequiredService<IDbContextFactory<MediaContext>>().CreateDbContext(),
                 storageFactory
             );
         });
@@ -140,7 +161,11 @@ public static class EventHandlerExtensions
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
-            return new SignalRInboxEventHandler(eventBus, clientMessenger);
+            return new SignalRInboxEventHandler(
+                sp.GetRequiredService<ILogger<SignalRInboxEventHandler>>(),
+                eventBus,
+                clientMessenger
+            );
         });
 
         return services;

@@ -19,6 +19,8 @@ public interface IConnectivityStatus
     bool PortForwarded { get; set; }
     string? StunPublicIp { get; set; }
     int? StunPublicPort { get; set; }
+
+    string? CloudflareTunnelToken { get; set; }
 }
 
 public class ConnectivityStatus : IConnectivityStatus
@@ -27,4 +29,6 @@ public class ConnectivityStatus : IConnectivityStatus
     public bool PortForwarded { get; set; }
     public string? StunPublicIp { get; set; }
     public int? StunPublicPort { get; set; }
+
+    public string? CloudflareTunnelToken { get; set; }
 }

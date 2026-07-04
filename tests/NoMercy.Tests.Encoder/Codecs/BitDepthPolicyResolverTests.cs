@@ -96,7 +96,7 @@ public class BitDepthPolicyResolverTests
 
         result.FinalBitDepth.Should().Be(8);
         result.PixelFormat.Should().Be("yuv420p");
-        result.Warning.Should().BeNull();
+        result.Warnings.Should().BeEmpty();
         result.Failure.Should().BeNull();
         result.SwitchedToEncoder.Should().BeNull();
     }
@@ -122,7 +122,7 @@ public class BitDepthPolicyResolverTests
 
         result.FinalBitDepth.Should().Be(10);
         result.PixelFormat.Should().Be("yuv420p10le");
-        result.Warning.Should().BeNull();
+        result.Warnings.Should().BeEmpty();
         result.Failure.Should().BeNull();
         result.SwitchedToEncoder.Should().BeNull();
     }
@@ -148,9 +148,12 @@ public class BitDepthPolicyResolverTests
         result.FinalBitDepth.Should().Be(8);
         result.PixelFormat.Should().Be("yuv420p");
         result.Failure.Should().BeNull();
-        result.Warning.Should().NotBeNull();
-        result.Warning!.Id.Should().Be(EncoderRuleId.BitDepthAutoDowngrade);
-        result.Warning.Severity.Should().Be(EncoderRuleSeverity.Warning);
+        result.Warnings.Should().HaveCount(2);
+        result.Warnings.Should().Contain(w => w.Id == EncoderRuleId.BitDepthNoHardwareSupport);
+        result.Warnings.Should().Contain(w => w.Id == EncoderRuleId.BitDepthAutoDowngrade);
+        result
+            .Warnings.Should()
+            .AllSatisfy(w => w.Severity.Should().Be(EncoderRuleSeverity.Warning));
     }
 
     // -----------------------------------------------------------------------
@@ -174,7 +177,7 @@ public class BitDepthPolicyResolverTests
         result.Failure.Should().NotBeNull();
         result.Failure!.HttpStatusCode.Should().Be(422);
         result.Failure.Shape.Id.Should().Be(EncoderRuleId.BitDepthStrictViolation);
-        result.Warning.Should().BeNull();
+        result.Warnings.Should().BeEmpty();
         result.FinalBitDepth.Should().Be(0);
     }
 
@@ -200,7 +203,7 @@ public class BitDepthPolicyResolverTests
         result.FinalBitDepth.Should().Be(10);
         result.SwitchedToEncoder.Should().Be("libx264");
         result.PixelFormat.Should().Be("yuv420p10le");
-        result.Warning.Should().BeNull();
+        result.Warnings.Should().BeEmpty();
         result.Failure.Should().BeNull();
     }
 
@@ -224,7 +227,7 @@ public class BitDepthPolicyResolverTests
 
         result.FinalBitDepth.Should().Be(8);
         result.PixelFormat.Should().Be("yuv420p");
-        result.Warning.Should().BeNull();
+        result.Warnings.Should().BeEmpty();
         result.Failure.Should().BeNull();
 
         sink.Snapshot()
@@ -308,9 +311,13 @@ public class BitDepthPolicyResolverTests
         );
 
         result.FinalBitDepth.Should().Be(8);
-        result.Warning!.Id.Should().Be(EncoderRuleId.BitDepthAutoDowngrade);
+        result.Warnings.Should().Contain(w => w.Id == EncoderRuleId.BitDepthAutoDowngrade);
         // The message contains the specific encoder name but the policy result is identical.
-        result.Warning.Message.Should().Contain(encoderName);
+        result
+            .Warnings.Should()
+            .Contain(w =>
+                w.Id == EncoderRuleId.BitDepthAutoDowngrade && w.Message.Contains(encoderName)
+            );
     }
 
     [Theory]

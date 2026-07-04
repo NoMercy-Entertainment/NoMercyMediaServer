@@ -120,6 +120,36 @@ public class AudioHlsOutputStrategyTests
     }
 
     [Fact]
+    public void ConfigureOutput_TranscodeMp3_DoesNotForceAacProfile()
+    {
+        // -profile:a aac_low is AAC-only; libmp3lame rejects it and refuses to
+        // start. A valid MP3 audio-HLS profile must not carry it.
+        AudioHlsOutputStrategy strategy = new();
+        FfmpegCommandBuilder builder = new();
+        OutputPlan plan = PlanWith(TranscodeAudio(encoderName: "libmp3lame"));
+
+        strategy.ConfigureOutput(builder, plan, "/out");
+        string args = string.Join(" ", builder.Build("ffmpeg").Arguments);
+
+        args.Should().Contain("libmp3lame");
+        args.Should().NotContain("-profile:a");
+    }
+
+    [Fact]
+    public void ConfigureOutput_TranscodeEac3_DoesNotForceAacProfile()
+    {
+        AudioHlsOutputStrategy strategy = new();
+        FfmpegCommandBuilder builder = new();
+        OutputPlan plan = PlanWith(TranscodeAudio(encoderName: "eac3"));
+
+        strategy.ConfigureOutput(builder, plan, "/out");
+        string args = string.Join(" ", builder.Build("ffmpeg").Arguments);
+
+        args.Should().Contain("eac3");
+        args.Should().NotContain("-profile:a");
+    }
+
+    [Fact]
     public void ConfigureOutput_CopyAction_DoesNotAddAacProfile()
     {
         AudioHlsOutputStrategy strategy = new();

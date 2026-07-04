@@ -132,7 +132,7 @@ public class AcoustIdBaseClientTests
         Assert.Equal("url", parameters[0].Name);
         Assert.Equal("query", parameters[1].Name);
         Assert.Equal("priority", parameters[2].Name);
-        Assert.Equal("retry", parameters[3].Name);
+        Assert.Equal("skipCache", parameters[3].Name);
     }
 
     [Fact]

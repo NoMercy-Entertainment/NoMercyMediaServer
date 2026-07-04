@@ -11,7 +11,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
-using NoMercy.Data.Logic;
+using NoMercy.Data.Services;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Movies;
@@ -19,23 +19,46 @@ using NoMercy.Database.Models.TvShows;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Factory;
 using NoMercyQueue.Core.Interfaces;
 
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using NoMercyQueue;
 namespace NoMercy.Data.Jobs;
 
 [Serializable]
-public class FindMediaFilesJob : IShouldQueue
+public class FindMediaFilesJob : IShouldQueue, IJobStorageInjector
 {
+    [JsonIgnore]
+    public ILoggerFactory LoggerFactory { get; set; } = null!;
+
+    [JsonIgnore]
+    private ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
+
+    public void InjectStorageServices(IServiceProvider serviceProvider)
+    {
+        LoggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+    }
+
     public string QueueName => "import";
     public int Priority => 5;
 
     public int Id { get; set; }
     public Library? Library { get; set; }
+
+    // Constructor injection: the queue worker builds the job via
+    // ActivatorUtilities, so the logger factory arrives without the
+    // post-construction InjectStorageServices hook. The parameterless
+    // ctor below is kept for deserialization and direct construction.
+    [ActivatorUtilitiesConstructor]
+    public FindMediaFilesJob(ILoggerFactory loggerFactory)
+    {
+        LoggerFactory = loggerFactory;
+    }
 
     public FindMediaFilesJob()
     {
@@ -53,7 +76,7 @@ public class FindMediaFilesJob : IShouldQueue
         if (Library == null)
             return;
 
-        Logger.Queue($"Finding media files for {Id} in library {Library.Id.ToString()}");
+        Log.LogDebug("Finding media files for {Id} in library {ToString}", Id, Library.Id.ToString());
 
         await using MediaContext context = new();
         Library? library = await context
@@ -77,12 +100,12 @@ public class FindMediaFilesJob : IShouldQueue
             NullLogger<StorageFactory>.Instance,
             driverConfigResolver
         );
-        await using FileLogic file = new(Id, library, context, storageFactory, storageDriver);
+        await using FileLogic file = new(Id, library, context, storageFactory, storageDriver, LoggerFactory.CreateLogger<FileLogic>());
         await file.Process();
 
         if (file.Files.Count > 0)
         {
-            Logger.App($"Found {file.Files.Count} files in {file.Files.FirstOrDefault()?.Path}");
+            Log.LogInformation("Found {Count} files in {Path}", file.Files.Count, file.Files.FirstOrDefault()?.Path);
 
             if (library.LibraryMovies.Count > 0)
             {
@@ -107,13 +130,13 @@ public class FindMediaFilesJob : IShouldQueue
 
             if (EventBusProvider.IsConfigured)
                 await EventBusProvider.Current.PublishAsync(
-                    new LibraryRefreshEvent { QueryKey = ["libraries", library.Id.ToString()] }
+                    new LibraryRefreshedEvent { QueryKey = ["libraries", library.Id.ToString()] }
                 );
         }
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent
+                new LibraryRefreshedEvent
                 {
                     QueryKey =
                     [

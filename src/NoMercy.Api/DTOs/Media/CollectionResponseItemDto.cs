@@ -13,9 +13,8 @@ using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.TMDB.Models.Collections;
 
 namespace NoMercy.Api.DTOs.Media;
@@ -50,7 +49,7 @@ public record CollectionResponseItemDto
     public int Duration { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("collection")]
     public CollectionMovieDto[] Collection { get; set; } = [];
@@ -217,9 +216,6 @@ public record CollectionResponseItemDto
         Id = tmdbCollectionAppends.Id;
         Title = !string.IsNullOrEmpty(title) ? title : tmdbCollectionAppends.Name;
         Overview = !string.IsNullOrEmpty(overview) ? overview : tmdbCollectionAppends.Overview;
-        Id = tmdbCollectionAppends.Id;
-        Title = tmdbCollectionAppends.Name;
-        Overview = tmdbCollectionAppends.Overview;
         Backdrop = tmdbCollectionAppends.BackdropPath;
         Poster = tmdbCollectionAppends.PosterPath;
         TitleSort = tmdbCollectionAppends.Name.TitleSort();

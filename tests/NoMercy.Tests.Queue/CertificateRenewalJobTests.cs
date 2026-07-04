@@ -10,7 +10,10 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using NoMercy.Networking.Certificate;
+using NoMercy.NmSystem.Auth;
 using NoMercy.Queue.MediaServer.Jobs;
 using NoMercyQueue.Core.Interfaces;
 using Xunit;
@@ -24,7 +27,11 @@ public class CertificateRenewalCronJobTests
     {
         // Arrange
         Mock<ILogger<CertificateRenewalCronJob>> logger = new();
-        CertificateRenewalCronJob job = new(logger.Object);
+        CertificateRenewalCronJob job = new(
+            logger.Object,
+            new AuthTokenStore(),
+            new CertificateService(NullLogger<CertificateService>.Instance, null!)
+        );
 
         // Act
         string cronExpression = job.CronExpression;
@@ -40,7 +47,11 @@ public class CertificateRenewalCronJobTests
     {
         // Arrange
         Mock<ILogger<CertificateRenewalCronJob>> logger = new();
-        CertificateRenewalCronJob job = new(logger.Object);
+        CertificateRenewalCronJob job = new(
+            logger.Object,
+            new AuthTokenStore(),
+            new CertificateService(NullLogger<CertificateService>.Instance, null!)
+        );
 
         // Act
         string jobName = job.JobName;
@@ -54,7 +65,11 @@ public class CertificateRenewalCronJobTests
     {
         // Arrange
         Mock<ILogger<CertificateRenewalCronJob>> loggerMock = new();
-        CertificateRenewalCronJob job = new(loggerMock.Object);
+        CertificateRenewalCronJob job = new(
+            loggerMock.Object,
+            new AuthTokenStore(),
+            new CertificateService(NullLogger<CertificateService>.Instance, null!)
+        );
 
         // Act & Assert
         // Note: This test will fail in the test environment because Certificate.RenewSslCertificate()
@@ -93,7 +108,11 @@ public class CertificateRenewalCronJobTests
         Mock<ILogger<CertificateRenewalCronJob>> logger = new();
 
         // Act
-        CertificateRenewalCronJob job = new(logger.Object);
+        CertificateRenewalCronJob job = new(
+            logger.Object,
+            new AuthTokenStore(),
+            new CertificateService(NullLogger<CertificateService>.Instance, null!)
+        );
 
         // Assert
         Assert.IsAssignableFrom<ICronJobExecutor>(job);
@@ -104,7 +123,11 @@ public class CertificateRenewalCronJobTests
     {
         // Arrange
         Mock<ILogger<CertificateRenewalCronJob>> logger = new();
-        CertificateRenewalCronJob job = new(logger.Object);
+        CertificateRenewalCronJob job = new(
+            logger.Object,
+            new AuthTokenStore(),
+            new CertificateService(NullLogger<CertificateService>.Instance, null!)
+        );
 
         // Act & Assert
         Assert.NotNull(job.CronExpression);

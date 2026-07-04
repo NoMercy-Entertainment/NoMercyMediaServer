@@ -15,9 +15,11 @@ using NoMercy.NmSystem.Information;
 namespace NoMercy.Tests;
 
 /// <summary>
-/// Runs once per test assembly before any test executes.
-/// Routes all file paths to NoMercy_test and cleans the folder
-/// so tests never touch the real dev/production environment.
+/// Runs once per test assembly (i.e. per test-host process) before any test
+/// executes. Marks the run as a test run and gives the process its own isolated
+/// app-data root so test assemblies can run in parallel
+/// (<c>default.runsettings</c> MaxCpuCount=0) without sharing a database, cache
+/// or log directory — which is what previously forced serial execution.
 /// </summary>
 public static class TestEnvironmentSetup
 {
@@ -25,14 +27,30 @@ public static class TestEnvironmentSetup
     public static void Initialize()
     {
         Config.IsTest = true;
+        EnsureIsolatedAppData();
 
-        // Ensure the test directory exists — don't delete it here because
-        // dotnet test runs multiple assemblies in parallel, and deleting
-        // while another assembly is using it causes cascading failures.
-        // Use `dotnet test -- RunConfiguration.TestSessionCleanup=true` or
-        // a CI script to clean NoMercy_test between full runs if needed.
         string testPath = AppFiles.AppPath;
         if (!Directory.Exists(testPath))
             Directory.CreateDirectory(testPath);
+    }
+
+    /// <summary>
+    /// Points this process at its own app-data root via NOMERCY_APP_PATH so that
+    /// parallel test-host processes never touch the same database/cache/logs.
+    /// Idempotent and ordering-independent: safe to call from any module
+    /// initializer (the first caller wins; an explicit NOMERCY_APP_PATH, e.g. from
+    /// scripts/run-tests.sh, is always respected). Must be invoked before any
+    /// AppFiles path is read.
+    /// </summary>
+    public static void EnsureIsolatedAppData()
+    {
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NOMERCY_APP_PATH")))
+            return;
+
+        string root = Path.Combine(
+            Path.GetTempPath(),
+            $"nomercy-test-{Environment.ProcessId}-{Guid.NewGuid():N}");
+        Environment.SetEnvironmentVariable("NOMERCY_APP_PATH", root);
+        Directory.CreateDirectory(root);
     }
 }

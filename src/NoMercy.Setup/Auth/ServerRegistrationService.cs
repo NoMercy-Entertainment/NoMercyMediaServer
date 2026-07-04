@@ -14,12 +14,14 @@ using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Users;
-using NoMercy.Helpers.Extensions;
 using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Discovery;
+using NoMercy.NmSystem.Auth;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
+using NoMercy.NmSystem.Status;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Dto;
 using Serilog.Events;
@@ -30,53 +32,84 @@ public class ServerRegistrationService : IServerRegistrationService
 {
     private readonly IDbContextFactory<AppDbContext> _appDbContextFactory;
     private readonly IUserProvisioningService _userProvisioningService;
+    private readonly IConnectivityStatus _connectivityStatus;
     private readonly INetworkDiscovery? _networkDiscovery;
-    
+
     private static readonly int[] BackoffSeconds = [2, 5, 15, 30, 60];
     private readonly SemaphoreSlim _initLock = new(1, 1);
+    private Task? _inFlightInit;
     private DateTime _lastFailureUtc = DateTime.MinValue;
     private static readonly TimeSpan FailureCooldown = TimeSpan.FromSeconds(60);
 
+    private readonly IAuthTokenStore _authTokenStore;
+    private readonly ICertificateService _certificateService;
+
     public ServerRegistrationService(
+        IAuthTokenStore authTokenStore,
         IDbContextFactory<AppDbContext> appDbContextFactory,
         IUserProvisioningService userProvisioningService,
+        IConnectivityStatus connectivityStatus,
+        ICertificateService certificateService,
         INetworkDiscovery? networkDiscovery = null
     )
     {
+        _authTokenStore = authTokenStore;
+        _certificateService = certificateService;
         _appDbContextFactory = appDbContextFactory;
         _userProvisioningService = userProvisioningService;
+        _connectivityStatus = connectivityStatus;
         _networkDiscovery = networkDiscovery;
     }
 
-    public async Task Init(int maxRetries = 5)
+    /// <summary>
+    /// Registers + assigns the server and renews its certificate. Concurrent
+    /// callers share the SAME in-flight attempt instead of a "loser" returning
+    /// early on a non-blocking lock: the loser used to advance to Registered
+    /// (and check for a certificate) before the winner's attempt — including
+    /// the certificate renewal — had actually finished, producing a spurious
+    /// "certificate not acquired" downstream. A caller that joins an
+    /// already-running attempt does not apply its own <paramref name="maxRetries"/>
+    /// — only the value the FIRST caller passed seeds the shared attempt.
+    /// </summary>
+    public Task Init(int maxRetries = 5)
     {
         TimeSpan sinceLastFailure = DateTime.UtcNow - _lastFailureUtc;
         if (sinceLastFailure < FailureCooldown)
         {
-            Logger.Register($"Registration failed recently, cooling down for {(FailureCooldown - sinceLastFailure).TotalSeconds:F0}s");
+            Logger.Register(
+                $"Registration failed recently, cooling down for {(FailureCooldown - sinceLastFailure).TotalSeconds:F0}s"
+            );
             throw new InvalidOperationException("Registration on cooldown after recent failure");
         }
 
-        if (!await _initLock.WaitAsync(0))
+        _initLock.Wait();
+        try
         {
-            Logger.Register("Registration already in progress, skipping duplicate call");
-            return;
-        }
+            if (_inFlightInit is null || _inFlightInit.IsCompleted)
+            {
+                _inFlightInit = RunRegistrationAsync(maxRetries);
+            }
 
+            return _inFlightInit;
+        }
+        finally
+        {
+            _initLock.Release();
+        }
+    }
+
+    private async Task RunRegistrationAsync(int maxRetries)
+    {
         try
         {
             await RegisterServer(maxRetries);
             await AssignServerWithRetry(maxRetries);
-            await Certificate.RenewSslCertificate();
+            await _certificateService.RenewSslCertificate(_authTokenStore.AccessToken);
         }
         catch
         {
             _lastFailureUtc = DateTime.UtcNow;
             throw;
-        }
-        finally
-        {
-            _initLock.Release();
         }
     }
 
@@ -89,8 +122,11 @@ public class ServerRegistrationService : IServerRegistrationService
             try
             {
                 Dictionary<string, string> serverData = await GetServerInfo();
-                GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
-                authClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
+                GenericHttpClient authClient = new(ExternalServicesConfig.Current.ApiServerBaseUrl);
+                authClient.SetDefaultHeaders(
+                    ExternalServicesConfig.Current.UserAgent,
+                    _authTokenStore.AccessToken
+                );
                 string response = await authClient.SendAndReadAsync(
                     HttpMethod.Post,
                     "register",
@@ -99,7 +135,9 @@ public class ServerRegistrationService : IServerRegistrationService
 
                 object? data = JsonConvert.DeserializeObject(response);
                 if (data == null)
-                    throw new InvalidOperationException("Failed to register Server — empty response");
+                    throw new InvalidOperationException(
+                        "Failed to register Server — empty response"
+                    );
 
                 Logger.Register("Server registered successfully");
                 return;
@@ -107,7 +145,10 @@ public class ServerRegistrationService : IServerRegistrationService
             catch (Exception ex) when (attempt < maxRetries)
             {
                 int delay = BackoffSeconds[Math.Min(attempt - 1, BackoffSeconds.Length - 1)];
-                Logger.Register($"Registration failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})", LogEventLevel.Warning);
+                Logger.Register(
+                    $"Registration failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})",
+                    LogEventLevel.Warning
+                );
 
                 if (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
                     break;
@@ -129,7 +170,10 @@ public class ServerRegistrationService : IServerRegistrationService
             catch (Exception ex) when (attempt < maxRetries)
             {
                 int delay = BackoffSeconds[Math.Min(attempt - 1, BackoffSeconds.Length - 1)];
-                Logger.Register($"Server assignment failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})", LogEventLevel.Warning);
+                Logger.Register(
+                    $"Server assignment failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})",
+                    LogEventLevel.Warning
+                );
 
                 if (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
                     break;
@@ -145,8 +189,11 @@ public class ServerRegistrationService : IServerRegistrationService
 
         Logger.Register("Assigning Server, this takes a moment...");
 
-        GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
-        authClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
+        GenericHttpClient authClient = new(ExternalServicesConfig.Current.ApiServerBaseUrl);
+        authClient.SetDefaultHeaders(
+            ExternalServicesConfig.Current.UserAgent,
+            _authTokenStore.AccessToken
+        );
 
         string response = await authClient.SendAndReadAsync(
             HttpMethod.Post,
@@ -184,8 +231,11 @@ public class ServerRegistrationService : IServerRegistrationService
         {
             Dictionary<string, string> serverData = await GetServerInfo();
 
-            GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
-            authClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
+            GenericHttpClient authClient = new(ExternalServicesConfig.Current.ApiServerBaseUrl);
+            authClient.SetDefaultHeaders(
+                ExternalServicesConfig.Current.UserAgent,
+                _authTokenStore.AccessToken
+            );
 
             string response = await authClient.SendAndReadAsync(
                 HttpMethod.Post,
@@ -193,12 +243,13 @@ public class ServerRegistrationService : IServerRegistrationService
                 new FormUrlEncodedContent(serverData)
             );
 
-            ServerTunnelAvailabilityResponse? data = response.FromJson<ServerTunnelAvailabilityResponse>();
+            ServerTunnelAvailabilityResponse? data =
+                response.FromJson<ServerTunnelAvailabilityResponse>();
 
             if (data is null || !data.Allowed || data.Token is null)
                 return;
 
-            Config.CloudflareTunnelToken = data.Token;
+            _connectivityStatus.CloudflareTunnelToken = data.Token;
 
             Logger.Register("Cloudflare tunnel is available", LogEventLevel.Verbose);
         }
@@ -217,13 +268,14 @@ public class ServerRegistrationService : IServerRegistrationService
             { "internal_ip", _networkDiscovery?.RegistrationInternalIp ?? "0.0.0.0" },
             { "internal_ipv6", (_networkDiscovery?.InternalIpV6).OrEmpty() },
             { "external_ipv6", (_networkDiscovery?.ExternalIpV6).OrEmpty() },
-            { "internal_port", Config.InternalServerPort.ToString() },
-            { "external_port", Config.ExternalServerPort.ToString() },
+            { "internal_port", RuntimeServerSettings.Current.InternalServerPort.ToString() },
+            { "external_port", RuntimeServerSettings.Current.ExternalServerPort.ToString() },
             { "version", Software.Version!.ToString() },
             { "platform", Info.Platform },
-            { "stun_public_ip", Config.StunPublicIp.OrEmpty() },
-            { "stun_public_port", (Config.StunPublicPort?.ToString()).OrEmpty() },
-            { "stun_nat_type", Config.NatStatus.ToString() },
+            { "stun_public_ip", _connectivityStatus.StunPublicIp.OrEmpty() },
+            { "stun_public_port", (_connectivityStatus.StunPublicPort?.ToString()).OrEmpty() },
+            { "stun_nat_type", _connectivityStatus.NatStatus.ToString() },
+            { "dns_scheme", RuntimeServerSettings.Current.UseSynthesizedDns ? "srv" : "apex" },
         };
     }
 
@@ -232,7 +284,9 @@ public class ServerRegistrationService : IServerRegistrationService
         try
         {
             await using AppDbContext appContext = await _appDbContextFactory.CreateDbContextAsync();
-            Configuration? device = await appContext.Configuration.FirstOrDefaultAsync(device => device.Key == "serverName");
+            Configuration? device = await appContext.Configuration.FirstOrDefaultAsync(device =>
+                device.Key == "serverName"
+            );
 
             Info.DeviceName = device?.Value ?? Environment.MachineName;
         }

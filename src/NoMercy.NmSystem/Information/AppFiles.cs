@@ -28,8 +28,14 @@ public static class AppFiles
             )
             : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
+    // An explicit NOMERCY_APP_PATH override lets each process (notably each
+    // parallel test assembly) use a fully isolated app-data root — its own
+    // database, cache and logs — so concurrent test processes never collide
+    // on shared on-disk state. Unset in production, so behaviour is unchanged.
     public static string AppPath =>
-        Config.IsTest ? Path.Combine(AppDataPath, "NoMercy_test")
+        Environment.GetEnvironmentVariable("NOMERCY_APP_PATH") is { Length: > 0 } appPathOverride
+            ? appPathOverride
+        : Config.IsTest ? Path.Combine(AppDataPath, "NoMercy_test")
         : Config.IsDev ? Path.Combine(AppDataPath, "NoMercy_dev")
         : Path.Combine(AppDataPath, "NoMercy");
 
@@ -56,6 +62,12 @@ public static class AppFiles
 
     public static string DataPath => Path.Combine(AppPath, "data");
     public static string LogPath => Path.Combine(AppPath, "log");
+
+    // AES-128 HLS DRM keys, protected at rest via DataProtection (see
+    // NoMercy.NmSystem.Security.DrmKeyStore). Never served as static files —
+    // outside CachePath/TranscodePath so it can never land in a published
+    // transcode output.
+    public static string DrmKeysPath => Path.Combine(DataPath, "drm_keys");
 
     // ── Cache ────────────────────────────────────────────────────────────
 
@@ -107,6 +119,11 @@ public static class AppFiles
     public static string FfmpegPath => Path.Combine(FfmpegFolder, "ffmpeg" + Info.ExecSuffix);
     public static string FfProbePath => Path.Combine(FfmpegFolder, "ffprobe" + Info.ExecSuffix);
     public static string FfPlayPath => Path.Combine(FfmpegFolder, "ffplay" + Info.ExecSuffix);
+
+    // shaka-packager lives alongside ffmpeg so EncoderOptions resolves it as the
+    // "packager" sibling of the ffmpeg path for CENC/raw-key DRM packaging.
+    public static string ShakaPackagerPath =>
+        Path.Combine(FfmpegFolder, "packager" + Info.ExecSuffix);
 
     public static string YtdlpPath => Path.Combine(DependenciesPath, "yt-dlp" + Info.ExecSuffix);
 

@@ -12,7 +12,6 @@
 using Moq;
 using NoMercy.Database;
 using NoMercy.Database.Models.Queue;
-using NoMercy.Resources;
 using NoMercy.Tests.Queue.TestHelpers;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
@@ -144,7 +143,12 @@ public class BudgetGateTests : IDisposable
         _context.QueueJobs.Add(queueJob);
         await _context.SaveChangesAsync();
 
-        QueueWorker worker = new(_jobQueue, "encoder-gpu", resourceBudget: budget.Object);
+        QueueWorker worker = new(
+            _jobQueue,
+            "encoder-gpu",
+            resourceBudget: budget.Object,
+            resourceAwareQueues: new HashSet<string> { "encoder-gpu", "encoder-cpu" }
+        );
 
         // Cancel shortly after the job executes — the worker will process one job
         // then wait on WorkAvailable with the stop token, exiting cleanly.

@@ -231,8 +231,8 @@ public class PluginManagerTests : IDisposable
         string dllPath = Path.Combine(pluginDir, "BadPlugin.dll");
         await File.WriteAllTextAsync(dllPath, "not a valid dll");
 
-        List<PluginErrorEvent> errors = [];
-        _eventBus.Subscribe<PluginErrorEvent>(
+        List<PluginErrorOccurredEvent> errors = [];
+        _eventBus.Subscribe<PluginErrorOccurredEvent>(
             (evt, _) =>
             {
                 errors.Add(evt);
@@ -413,8 +413,8 @@ public class PluginManagerTests : IDisposable
         string manifestPath = Path.Combine(pluginDir, "plugin.json");
         await File.WriteAllTextAsync(manifestPath, manifestJson);
 
-        List<PluginErrorEvent> errors = [];
-        _eventBus.Subscribe<PluginErrorEvent>(
+        List<PluginErrorOccurredEvent> errors = [];
+        _eventBus.Subscribe<PluginErrorOccurredEvent>(
             (evt, _) =>
             {
                 errors.Add(evt);
@@ -438,8 +438,8 @@ public class PluginManagerTests : IDisposable
         string manifestPath = Path.Combine(pluginDir, "plugin.json");
         await File.WriteAllTextAsync(manifestPath, "not valid json");
 
-        List<PluginErrorEvent> errors = [];
-        _eventBus.Subscribe<PluginErrorEvent>(
+        List<PluginErrorOccurredEvent> errors = [];
+        _eventBus.Subscribe<PluginErrorOccurredEvent>(
             (evt, _) =>
             {
                 errors.Add(evt);
@@ -475,8 +475,8 @@ public class PluginManagerTests : IDisposable
         string manifestPath = Path.Combine(pluginDir, "plugin.json");
         await File.WriteAllTextAsync(manifestPath, manifestJson);
 
-        List<PluginErrorEvent> errors = [];
-        _eventBus.Subscribe<PluginErrorEvent>(
+        List<PluginErrorOccurredEvent> errors = [];
+        _eventBus.Subscribe<PluginErrorOccurredEvent>(
             (evt, _) =>
             {
                 errors.Add(evt);
@@ -511,8 +511,8 @@ public class PluginManagerTests : IDisposable
         string manifestPath = Path.Combine(pluginDir, "plugin.json");
         await File.WriteAllTextAsync(manifestPath, manifestJson);
 
-        List<PluginErrorEvent> errors = [];
-        _eventBus.Subscribe<PluginErrorEvent>(
+        List<PluginErrorOccurredEvent> errors = [];
+        _eventBus.Subscribe<PluginErrorOccurredEvent>(
             (evt, _) =>
             {
                 errors.Add(evt);

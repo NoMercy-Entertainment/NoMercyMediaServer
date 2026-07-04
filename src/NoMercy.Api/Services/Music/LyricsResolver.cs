@@ -14,8 +14,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Music;
-using NoMercy.Providers.MusixMatch.Models;
-using NoMercy.Providers.NoMercy.Client;
+using NoMercy.Providers.Abstractions;
+using NoMercy.Providers.Lyrics;
 
 namespace NoMercy.Api.Services.Music;
 
@@ -25,7 +25,7 @@ namespace NoMercy.Api.Services.Music;
 /// and every caller awaits that single result. Without this each device hits the
 /// rate-limited Lrclib/Musixmatch queues independently, stacking the delay.
 /// </summary>
-public class LyricsResolver(IServiceScopeFactory scopeFactory)
+public class LyricsResolver(IServiceScopeFactory scopeFactory, ILyricsAggregator lyricsAggregator)
 {
     private readonly ConcurrentDictionary<Guid, Lazy<Task<Lyric[]?>>> _inFlight = new();
 
@@ -57,12 +57,24 @@ public class LyricsResolver(IServiceScopeFactory scopeFactory)
 
             // A racing request may have persisted lyrics between the caller's
             // cache check and us acquiring the in-flight slot.
-            if (track.Lyrics is not null)
+            // A non-empty array is a real cache hit. An empty array is the
+            // negative marker persisted below: the track has been checked and
+            // has no lyrics, so don't re-query the rate-limited providers.
+            if (track.Lyrics is { Length: > 0 })
                 return track.Lyrics;
-
-            MusixMatchFormattedLyric[]? lyrics = await NoMercyLyricsClient.SearchLyrics(track);
-            if (lyrics is null)
+            if (track.Lyrics is not null)
                 return null;
+
+            LyricLine[]? lyrics = await lyricsAggregator.SearchLyrics(track);
+            if (lyrics is null)
+            {
+                // Negative cache: record "checked, none found" so every later
+                // play of this track doesn't re-hit Lrclib/Musixmatch and trip
+                // their rate limits. A library rescan still overwrites this if
+                // lyrics appear for the track later.
+                await repository.UpdateTrackLyricsAsync(track, "[]");
+                return null;
+            }
 
             return await repository.UpdateTrackLyricsAsync(
                 track,

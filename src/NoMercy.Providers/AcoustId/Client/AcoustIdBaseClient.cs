@@ -13,91 +13,60 @@ using System.Net;
 using Microsoft.AspNetCore.WebUtilities;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.Abstractions;
 using NoMercy.Providers.AcoustId.Models;
 using NoMercy.Providers.Helpers;
 using Serilog.Events;
 
 namespace NoMercy.Providers.AcoustId.Client;
 
-public class AcoustIdBaseClient : IDisposable
+public class AcoustIdBaseClient : ExternalApiClient
 {
-    private const int MaxRetries = 10;
-    private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(5);
-
-    private readonly Uri _baseUrl = new("https://api.acoustid.org/v2/");
-    private readonly HttpClient _client;
-
-    protected AcoustIdBaseClient()
-    {
-        _client = HttpClientProvider.CreateClient(HttpClientNames.AcoustId);
-        _client.BaseAddress ??= _baseUrl;
-    }
+    protected AcoustIdBaseClient() { }
 
     protected AcoustIdBaseClient(Guid id)
-    {
-        _client = HttpClientProvider.CreateClient(HttpClientNames.AcoustId);
-        _client.BaseAddress ??= _baseUrl;
-        Id = id;
-    }
+        : base(id) { }
 
-    private static Queue? _queue;
+    protected override string HttpClientName => HttpClientNames.AcoustId;
+    protected override Uri BaseUrl => new("https://api.acoustid.org/v2/");
+    protected override int ConcurrentRequests => 3;
 
-    private static Queue GetQueue()
-    {
-        return _queue ??= new(
-            new()
-            {
-                Concurrent = 3,
-                Interval = 1000,
-                Start = true,
-            }
-        );
-    }
+    protected override void LogRequest(string url) => Logger.AcoustId(url, LogEventLevel.Verbose);
 
-    protected Guid Id { get; private set; }
-
-    protected async Task<T?> Get<T>(
+    // AcoustId-specific fetch: only returns a fingerprint that actually carries
+    // recordings (a 200 with no recordings counts as "no result"). This needs
+    // the AcoustIdFingerprint constraint, so it cannot reuse the base Get.
+    // Transient failures are retried by the shared Queue, not here.
+    protected async Task<T?> GetFingerprint<T>(
         string url,
-        Dictionary<string, string?>? query = default,
-        bool? priority = false,
-        int retry = 0
+        Dictionary<string, string?>? query = null,
+        bool? priority = false
     )
         where T : AcoustIdFingerprint
     {
         query ??= new();
         string newUrl = QueryHelpers.AddQueryString(url, query);
 
-        if (CacheController.Read(newUrl, out T? cached) && HasRecordings(cached))
+        (bool found, T? cached) = await CacheController.ReadAsync<T>(newUrl);
+        if (found && HasRecordings(cached))
             return cached;
 
-        Logger.AcoustId(newUrl, LogEventLevel.Verbose);
+        LogRequest(BaseUrl + newUrl);
 
         try
         {
-            string response = await GetQueue()
-                .Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
+            string response = await RequestQueue.Enqueue(
+                () => Client.GetStringAsync(newUrl),
+                newUrl,
+                priority
+            );
             await CacheController.Write(newUrl, response);
-
             T? data = response.FromJson<T>();
             return HasRecordings(data) ? data : null;
         }
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
             return null;
-        }
-        catch (HttpRequestException ex) when (retry < MaxRetries)
-        {
-            Logger.AcoustId(
-                $"AcoustId {ex.StatusCode} retry {retry + 1}/{MaxRetries} for {newUrl}",
-                LogEventLevel.Debug
-            );
-            await Task.Delay(RetryDelay);
-            return await Get<T>(url, query, priority, retry + 1);
-        }
-        catch (TaskCanceledException) when (retry < MaxRetries)
-        {
-            await Task.Delay(RetryDelay);
-            return await Get<T>(url, query, priority, retry + 1);
         }
     }
 
@@ -109,10 +78,5 @@ public class AcoustIdBaseClient : IDisposable
                 fpResult.Recordings is not null
                 && fpResult.Recordings.Any(recording => recording?.Title != null)
             );
-    }
-
-    public void Dispose()
-    {
-        GC.SuppressFinalize(this);
     }
 }

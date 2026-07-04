@@ -10,21 +10,15 @@
 // -----------------------------------------------------------------------------
 
 using System.Diagnostics;
-using System.Net;
 using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Runtime.Loader;
-using Asp.Versioning;
-using Asp.Versioning.ApiExplorer;
-using CommandLine;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
+using NoMercy.Networking.Cast;
 using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Discovery;
+using NoMercy.NmSystem.Auth;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Plugins.Abstractions;
-using NoMercy.Service.Configuration;
-using NoMercy.Service.Hosting;
 using NoMercy.Service.Seeds;
 using NoMercy.Setup.Boot;
 using NoMercy.Setup.Server;
@@ -32,14 +26,12 @@ using NoMercy.Setup.Ui;
 using NoMercy.Storage;
 using NoMercyQueue;
 
-
 namespace NoMercy.Service.Hosting;
 
 public sealed class ServerBootstrapper
 {
     public async Task RunAsync(StartupOptions options)
     {
-
         switch (options.RunAsService)
         {
             case true:
@@ -104,11 +96,27 @@ public sealed class ServerBootstrapper
         // Use certificate presence for the initial forceHttp decision — this is a
         // filesystem check that doesn't require DI. BootOrchestrator (resolved below)
         // will own the real needsSetupMode determination via token validation.
-        bool hasCert = Certificate.HasValidCertificate();
+        bool hasCert;
+        await using (
+            ServiceProvider certPresenceProvider = new ServiceCollection()
+                .AddHttpClient()
+                .AddSingleton<ICertificateService, CertificateService>()
+                .BuildServiceProvider()
+        )
+        {
+            hasCert = certPresenceProvider
+                .GetRequiredService<ICertificateService>()
+                .HasValidCertificate();
+        }
 
         WebApplication app = WebHostFactory.Create(options, forceHttp: !hasCert);
 
-        IShutdownCoordinator shutdownCoordinator = app.Services.GetRequiredService<IShutdownCoordinator>();
+        // Resolve the cert service once so its boot handle (Start.Certificate) is set
+        // before any runtime consumer (ServerRunner, SetupEndpoints) needs it.
+        _ = app.Services.GetRequiredService<ICertificateService>();
+
+        IShutdownCoordinator shutdownCoordinator =
+            app.Services.GetRequiredService<IShutdownCoordinator>();
         IPortManager portManager = app.Services.GetRequiredService<IPortManager>();
 
         IApiKeyLoader apiKeyLoader = app.Services.GetRequiredService<IApiKeyLoader>();
@@ -117,7 +125,7 @@ public sealed class ServerBootstrapper
         // Proactively resolve port conflicts before proceeding.
         // This avoids the costly build→fail→kill→rebuild cycle and prevents
         // CronWorker "Failed to start database job workers" errors.
-        await portManager.EnsurePortAvailable(Config.InternalServerPort);
+        await portManager.EnsurePortAvailable(RuntimeServerSettings.Current.InternalServerPort);
 
         // Hand the phase tracker to the static accessor so boot helpers in
         // NoMercy.Setup (Start.cs, Binaries.cs) can advance stages without DI
@@ -143,16 +151,14 @@ public sealed class ServerBootstrapper
 
         // Rename on-disk bundle directories when a built-in preset slug changed.
         await DatabaseSeeder.RunBundleSlugRenamePassAsync(
-            app.Services.GetRequiredService<IStorageFactory>()
+            app.Services.GetRequiredService<IStorageFactory>(),
+            app.Services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<NoMercy.Encoder.Bundle.BundleSlugRenamer>>()
         );
 
         // BootOrchestrator owns Phase 2 (auth) and Phase 3 (registration).
         // It returns true when interactive auth is required (setup mode).
         BootOrchestrator orchestrator = app.Services.GetRequiredService<BootOrchestrator>();
-        bool needsSetupMode = await orchestrator.RunAsync(
-            app.Services,
-            shutdownCoordinator.Token
-        );
+        bool needsSetupMode = await orchestrator.RunAsync(app.Services, shutdownCoordinator.Token);
 
         // The initial forceHttp decision used cert presence as a proxy for "auth done".
         // It's wrong when a cert exists but tokens are missing/unreadable (DataProtection
@@ -168,14 +174,45 @@ public sealed class ServerBootstrapper
             app = WebHostFactory.Create(options, forceHttp: true);
             diStorage = app.Services.GetRequiredService<IStorage>();
             orchestrator = app.Services.GetRequiredService<BootOrchestrator>();
+
+            // The disposed container took its ShutdownCoordinator (and the
+            // CancellationTokenSource behind shutdownCoordinator.Token) with it.
+            // Rebind to the new container so later consumers don't touch a
+            // disposed token source.
+            shutdownCoordinator = app.Services.GetRequiredService<IShutdownCoordinator>();
         }
 
         // Load SSL cert from database now that TokenStore is initialized by BootOrchestrator
-        Certificate.LoadFromDb();
+        Start.Certificate!.LoadFromDb();
+
+        // Inverse of the setup rebuild above: the host was built HTTP-only because
+        // no certificate existed when the forceHttp decision was made, but
+        // BootOrchestrator.RunAsync just registered the server and acquired one
+        // (the has-token-no-cert first boot). Without this the server keeps serving
+        // plain HTTP until a manual restart. Rebind to HTTPS now — the host has not
+        // started yet, so this is a clean pre-start swap, not a live restart.
+        if (!needsSetupMode && !hasCert && Start.Certificate!.HasValidCertificate())
+        {
+            Logger.App("Certificate acquired during boot — rebinding host to HTTPS");
+            await app.DisposeAsync();
+            app = WebHostFactory.Create(options);
+            diStorage = app.Services.GetRequiredService<IStorage>();
+            shutdownCoordinator = app.Services.GetRequiredService<IShutdownCoordinator>();
+
+            // Resolve the cert service on the new container (this sets the
+            // Start.Certificate boot handle to the new singleton) and load the
+            // freshly acquired cert into its cache so Kestrel's certificate
+            // selector has it on the first TLS handshake.
+            _ = app.Services.GetRequiredService<ICertificateService>();
+            Start.Certificate!.LoadFromDb();
+        }
 
         // Auth completed — seed auth-dependent data (users, library assignment, claims)
         if (!needsSetupMode)
-            await DatabaseSeeder.SeedAuthData(diStorage);
+            await DatabaseSeeder.SeedAuthData(
+                diStorage,
+                app.Services.GetRequiredService<IAuthTokenStore>().AccessToken
+            );
 
         // Force QueueRunner singleton creation and initialize workers immediately —
         // don't wait for InitRemaining() which can be blocked by rate-limited HTTP calls.
@@ -196,6 +233,8 @@ public sealed class ServerBootstrapper
         // post-startup concerns belong here.
         _ = Task.Run(async () =>
         {
+            // Eagerly resolve the cast service so its boot handle (Start.ChromeCast) is populated.
+            _ = app.Services.GetService<IChromeCastService>();
             INetworkDiscovery? networkDiscovery = app.Services.GetService<INetworkDiscovery>();
             if (networkDiscovery is not null)
             {
@@ -232,8 +271,12 @@ public sealed class ServerBootstrapper
 
         if (shouldRetry)
         {
+            // RunHost/RunWithHttpsRestart already disposed the host (and the
+            // CancellationTokenSource behind shutdownCoordinator) before signalling a
+            // retry, so we must NOT touch shutdownCoordinator here — the retry host
+            // below builds its own. Calling RequestShutdown() on the disposed
+            // coordinator threw ObjectDisposedException on the port-conflict path.
             Logger.App("Rebuilding server after port conflict resolution...");
-            shutdownCoordinator.RequestShutdown(); // Reset existing (if any)
 
             Stopwatch retryStopWatch = new();
             retryStopWatch.Start();
@@ -241,7 +284,8 @@ public sealed class ServerBootstrapper
             WebApplication retryHost = WebHostFactory.Create(options, forceHttp: needsSetupMode);
             HostLifecycleHooks.Register(retryHost, retryStopWatch);
 
-            IServerRunner retryServerRunner = retryHost.Services.GetRequiredService<IServerRunner>();
+            IServerRunner retryServerRunner =
+                retryHost.Services.GetRequiredService<IServerRunner>();
 
             // Force the DI container to instantiate QueueRunner (it's a lazy singleton).
             QueueRunner retryQueueRunner = retryHost.Services.GetRequiredService<QueueRunner>();

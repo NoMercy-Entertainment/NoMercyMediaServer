@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Text;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Server;
@@ -35,12 +36,12 @@ public abstract class ConsoleMessages
             ? $"{_("#00a10d")}".Pastel("#00a10d")
                 + "      "
                 + "  visit:".Pastel("#cccccc")
-                + $"  {Config.AppBaseUrl}   ".Pastel("#ffffff")
+                + $"  {ExternalServicesConfig.Current.AppBaseUrl}   ".Pastel("#ffffff")
                 + $"{_("#00a10d")}".Pastel("#00a10d")
             : $"{_("#00a10d")}".Pastel("#00a10d")
                 + "      "
                 + "  visit:".Pastel("#cccccc")
-                + $"  {Config.AppBaseUrl}       ".Pastel("#ffffff")
+                + $"  {ExternalServicesConfig.Current.AppBaseUrl}       ".Pastel("#ffffff")
                 + $"{_("#00a10d")}".Pastel("#00a10d");
 
         Logger.WriteBanner([
@@ -50,7 +51,7 @@ public abstract class ConsoleMessages
                 $"{_("#00a10d")}".Pastel("#00a10d")
                     + "     "
                     + "Secure Server running: on port:".Pastel("#5ffa71")
-                    + $" {Config.InternalServerPort}     ".Pastel("#ffffff")
+                    + $" {RuntimeServerSettings.Current.InternalServerPort}     ".Pastel("#ffffff")
                     + $"{_("#00a10d")}".Pastel("#00a10d"),
                 LogEventLevel.Information
             ),

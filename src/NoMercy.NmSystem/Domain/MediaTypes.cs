@@ -19,5 +19,11 @@ public static class MediaTypes
     public const string MusicMediaType = "music";
     public const string InboxMediaType = "inbox";
     public const string CollectionMediaType = "collection";
-    public const string SpecialMediaType = "special";
+    // Wire/stored value is the plural "specials" everywhere else (all the
+    // Special* DTOs, SpecialController, and UserData.Type rows persisted from
+    // the client). The singular "special" here silently failed every
+    // playlist-type match for specials (SetTime threw "Invalid playlist type",
+    // and the special comparisons in VideoPlaybackCommandHandler / UserData
+    // repositories never matched).
+    public const string SpecialMediaType = "specials";
 }

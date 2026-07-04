@@ -18,7 +18,7 @@ namespace NoMercy.Cli.Commands;
 
 internal static class ConfigCommand
 {
-    public static Command Create(Option<string?> pipeOption)
+    public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
         Command getCmd = new("get") { Description = "Show current configuration" };
 
@@ -26,16 +26,16 @@ internal static class ConfigCommand
             async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
-                using CliClient client = new(pipe);
+                using ICliClient client = clientFactory.Create(pipe);
                 ConfigResponse? config = await client.GetAsync<ConfigResponse>(
-                    "/manage/config",
+                    ApiRoutes.Config,
                     ct
                 );
 
                 if (config is null)
                 {
                     await Console.Error.WriteLineAsync("Could not connect to server.");
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
 
                 Console.WriteLine($"Server Name:      {config.ServerName}");
@@ -49,7 +49,7 @@ internal static class ConfigCommand
                 Console.WriteLine($"File Workers:     {config.FileWorkers}");
                 Console.WriteLine($"Request Workers:  {config.RequestWorkers}");
                 Console.WriteLine($"Swagger:          {config.Swagger}");
-                return 0;
+                return (int)ExitCode.Success;
             }
         );
 
@@ -67,7 +67,7 @@ internal static class ConfigCommand
                 string key = parseResult.GetValue(keyArg)!;
                 string val = parseResult.GetValue(valArg)!;
 
-                using CliClient client = new(pipe);
+                using ICliClient client = clientFactory.Create(pipe);
 
                 Dictionary<string, object> payload = new()
                 {
@@ -76,15 +76,15 @@ internal static class ConfigCommand
                 string json = JsonConvert.SerializeObject(payload);
                 StringContent content = new(json, Encoding.UTF8, "application/json");
 
-                bool ok = await client.PutAsync("/manage/config", content, ct);
+                bool ok = await client.PutAsync(ApiRoutes.Config, content, ct);
 
                 if (ok)
                 {
                     Console.WriteLine($"Configuration updated: {key} = {val}");
-                    return 0;
+                    return (int)ExitCode.Success;
                 }
 
-                return 1;
+                return (int)ExitCode.ServerError;
             }
         );
 

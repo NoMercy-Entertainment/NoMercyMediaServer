@@ -18,6 +18,8 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
+using NoMercy.NmSystem.Auth;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -30,6 +32,11 @@ namespace NoMercy.Setup.Auth;
 public class AuthManager
 {
     private readonly AppDbContext _appContext;
+
+    // Serialises read-then-write upserts: _appContext is a non-thread-safe EF
+    // DbContext and concurrent callers (PKCE callback + refresh timer) could
+    // otherwise both miss the existing row and insert a duplicate key.
+    private readonly SemaphoreSlim _upsertLock = new(1, 1);
     private readonly IStorageDriver _driver;
 
     private readonly object _authReadyLock = new();
@@ -38,8 +45,15 @@ public class AuthManager
     );
     private CancellationTokenSource? _refreshCts;
 
-    public AuthManager(AppDbContext appContext, IStorageDriver driver)
+    private readonly IAuthTokenStore _authTokenStore;
+
+    public AuthManager(
+        AppDbContext appContext,
+        IStorageDriver driver,
+        IAuthTokenStore authTokenStore
+    )
     {
+        _authTokenStore = authTokenStore;
         _appContext = appContext;
         _driver = driver;
     }
@@ -71,7 +85,7 @@ public class AuthManager
         if (!TokenIssuerMatchesConfiguredRealm(accessToken))
         {
             Logger.Auth(
-                $"Cached token issuer doesn't match configured realm {Config.AuthBaseUrl} — discarding and requiring re-auth",
+                $"Cached token issuer doesn't match configured realm {ExternalServicesConfig.Current.AuthBaseUrl} — discarding and requiring re-auth",
                 LogEventLevel.Warning
             );
             await UpsertSecureValue("auth_access_token", string.Empty);
@@ -85,7 +99,7 @@ public class AuthManager
 
         if (isValid)
         {
-            Globals.Globals.AccessToken = accessToken;
+            _authTokenStore.SetAccessToken(accessToken);
             OfflineJwksCache.LoadCachedPublicKey();
             SignalAuthReady();
             Logger.Auth("Using cached token (still valid)");
@@ -94,12 +108,22 @@ public class AuthManager
 
         if (!string.IsNullOrEmpty(refreshToken))
         {
-            Logger.Auth("Token expired — attempting refresh");
-            bool refreshed = await TryRefreshToken(refreshToken);
-            if (refreshed)
+            Logger.Auth("Token expired — attempting refresh with retries");
+            int[] delays = [1, 3, 5]; // seconds — a brief Keycloak hiccup at boot
+            // must not force a full re-auth when the refresh token is still valid.
+            for (int attempt = 0; attempt < delays.Length; attempt++)
             {
-                SignalAuthReady();
-                return true;
+                bool refreshed = await TryRefreshToken(refreshToken);
+                if (refreshed)
+                {
+                    SignalAuthReady();
+                    return true;
+                }
+
+                Logger.Auth(
+                    $"Refresh attempt {attempt + 1} failed, waiting {delays[attempt]}s before retry..."
+                );
+                await Task.Delay(TimeSpan.FromSeconds(delays[attempt]));
             }
         }
 
@@ -129,7 +153,7 @@ public class AuthManager
         };
         await UpsertSecureValue("auth_token_metadata", JsonConvert.SerializeObject(metadata));
 
-        Globals.Globals.AccessToken = accessToken;
+        _authTokenStore.SetAccessToken(accessToken);
         SignalAuthReady();
 
         Logger.Auth("Tokens stored to DB");
@@ -171,7 +195,7 @@ public class AuthManager
         if (string.IsNullOrEmpty(refreshToken))
         {
             Logger.Auth("No refresh token in DB — re-auth required", LogEventLevel.Warning);
-            Globals.Globals.AccessToken = null;
+            _authTokenStore.SetAccessToken(null);
             ResetAuthReady();
             return;
         }
@@ -180,7 +204,7 @@ public class AuthManager
         if (!success)
         {
             Logger.Auth("Background refresh failed — clearing access token", LogEventLevel.Warning);
-            Globals.Globals.AccessToken = null;
+            _authTokenStore.SetAccessToken(null);
             ResetAuthReady();
         }
     }
@@ -189,7 +213,7 @@ public class AuthManager
     {
         _refreshCts?.Cancel();
         await UpsertSecureValue("auth_refresh_token", string.Empty);
-        Globals.Globals.AccessToken = null;
+        _authTokenStore.SetAccessToken(null);
         ResetAuthReady();
         Logger.Auth(
             "Refresh token rejected as invalid_grant — re-authentication required through /setup UI",
@@ -210,7 +234,7 @@ public class AuthManager
                 {
                     try
                     {
-                        string? accessToken = Globals.Globals.AccessToken;
+                        string? accessToken = _authTokenStore.AccessToken;
                         DateTime expiry = DateTime.UtcNow.AddMinutes(5);
 
                         if (!string.IsNullOrEmpty(accessToken))
@@ -272,7 +296,8 @@ public class AuthManager
     public static async Task<bool> TryCompletePkceFromCallbackAsync(
         string code,
         string state,
-        string redirectUri
+        string redirectUri,
+        IAuthTokenStore? authTokenStore = null
     )
     {
         if (_pendingCodeVerifier is null || _pendingState is null || _pkceCompletionSource is null)
@@ -283,17 +308,18 @@ public class AuthManager
 
         try
         {
-            if (string.IsNullOrEmpty(Config.TokenClientId))
+            if (string.IsNullOrEmpty(ExternalServicesConfig.Current.TokenClientId))
                 throw new InvalidOperationException("Auth configuration not available");
 
             List<KeyValuePair<string, string>> body = BuildAuthorizationCodeBody(
-                Config.TokenClientId,
+                ExternalServicesConfig.Current.TokenClientId,
                 code,
                 redirectUri,
                 _pendingCodeVerifier
             );
 
-            string tokenEndpoint = $"{Config.AuthBaseUrl}protocol/openid-connect/token";
+            string tokenEndpoint =
+                $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
 
             using HttpClient httpClient = new();
             httpClient.WithNoMercyUserAgent();
@@ -314,7 +340,7 @@ public class AuthManager
             if (data?.AccessToken is null)
                 throw new InvalidOperationException("Token response missing access_token");
 
-            Globals.Globals.AccessToken = data.AccessToken;
+            authTokenStore?.SetAccessToken(data.AccessToken);
             _pkceCompletionSource.TrySetResult(true);
             return true;
         }
@@ -353,7 +379,7 @@ public class AuthManager
 
     private async Task<bool> TryRefreshToken(string refreshToken)
     {
-        if (string.IsNullOrEmpty(Config.TokenClientId))
+        if (string.IsNullOrEmpty(ExternalServicesConfig.Current.TokenClientId))
         {
             Logger.Auth("TokenClientId not configured — cannot refresh", LogEventLevel.Warning);
             return false;
@@ -361,10 +387,11 @@ public class AuthManager
 
         try
         {
-            string tokenEndpoint = $"{Config.AuthBaseUrl}protocol/openid-connect/token";
+            string tokenEndpoint =
+                $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
 
             List<KeyValuePair<string, string>> body = BuildRefreshTokenBody(
-                Config.TokenClientId,
+                ExternalServicesConfig.Current.TokenClientId,
                 refreshToken
             );
 
@@ -416,7 +443,7 @@ public class AuthManager
             JwtSecurityTokenHandler handler = new();
             JwtSecurityToken jwt = handler.ReadJwtToken(accessToken);
             string issuer = (jwt.Issuer ?? string.Empty).TrimEnd('/');
-            string configured = Config.AuthBaseUrl.TrimEnd('/');
+            string configured = ExternalServicesConfig.Current.AuthBaseUrl.TrimEnd('/');
             return issuer.Equals(configured, StringComparison.OrdinalIgnoreCase);
         }
         catch
@@ -477,28 +504,36 @@ public class AuthManager
 
     private async Task UpsertSecureValue(string key, string value)
     {
-        Configuration? existing = await _appContext.Configuration.FirstOrDefaultAsync(c =>
-            c.Key == key
-        );
-
-        if (existing is not null)
+        await _upsertLock.WaitAsync();
+        try
         {
-            existing.SecureValue = value;
-            _appContext.Configuration.Update(existing);
-        }
-        else
-        {
-            _appContext.Configuration.Add(
-                new()
-                {
-                    Key = key,
-                    Value = string.Empty,
-                    SecureValue = value,
-                }
+            Configuration? existing = await _appContext.Configuration.FirstOrDefaultAsync(c =>
+                c.Key == key
             );
-        }
 
-        await _appContext.SaveChangesAsync();
+            if (existing is not null)
+            {
+                existing.SecureValue = value;
+                _appContext.Configuration.Update(existing);
+            }
+            else
+            {
+                _appContext.Configuration.Add(
+                    new()
+                    {
+                        Key = key,
+                        Value = string.Empty,
+                        SecureValue = value,
+                    }
+                );
+            }
+
+            await _appContext.SaveChangesAsync();
+        }
+        finally
+        {
+            _upsertLock.Release();
+        }
     }
 
     private static DateTime ParseExpiresAt(string? accessToken, string? metadataJson)

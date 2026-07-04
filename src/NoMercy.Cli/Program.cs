@@ -26,17 +26,19 @@ internal static class Program
         RootCommand rootCommand = new("NoMercy MediaServer CLI");
         rootCommand.Options.Add(pipeOption);
 
-        rootCommand.Subcommands.Add(StartCommand.Create(pipeOption));
-        rootCommand.Subcommands.Add(StatusCommand.Create(pipeOption));
-        rootCommand.Subcommands.Add(LogsCommand.Create(pipeOption));
-        rootCommand.Subcommands.Add(StopCommand.Create(pipeOption));
-        rootCommand.Subcommands.Add(RestartCommand.Create(pipeOption));
-        rootCommand.Subcommands.Add(ConfigCommand.Create(pipeOption));
-        rootCommand.Subcommands.Add(PluginCommand.Create(pipeOption));
-        rootCommand.Subcommands.Add(QueueCommand.Create(pipeOption));
-        rootCommand.Subcommands.Add(ResourcesCommand.Create(pipeOption));
-        rootCommand.Subcommands.Add(AutoStartCommand.Create(pipeOption));
-        rootCommand.Subcommands.Add(UpdateCommand.Create(pipeOption));
+        ICliClientFactory clientFactory = new CliClientFactory();
+
+        rootCommand.Subcommands.Add(StartCommand.Create(pipeOption, clientFactory));
+        rootCommand.Subcommands.Add(StatusCommand.Create(pipeOption, clientFactory));
+        rootCommand.Subcommands.Add(LogsCommand.Create(pipeOption, clientFactory));
+        rootCommand.Subcommands.Add(StopCommand.Create(pipeOption, clientFactory));
+        rootCommand.Subcommands.Add(RestartCommand.Create(pipeOption, clientFactory));
+        rootCommand.Subcommands.Add(ConfigCommand.Create(pipeOption, clientFactory));
+        rootCommand.Subcommands.Add(PluginCommand.Create(pipeOption, clientFactory));
+        rootCommand.Subcommands.Add(QueueCommand.Create(pipeOption, clientFactory));
+        rootCommand.Subcommands.Add(ResourcesCommand.Create(pipeOption, clientFactory));
+        rootCommand.Subcommands.Add(AutoStartCommand.Create(pipeOption, clientFactory));
+        rootCommand.Subcommands.Add(UpdateCommand.Create(pipeOption, clientFactory));
 
         ParseResult parseResult = rootCommand.Parse(args);
         return await parseResult.InvokeAsync();

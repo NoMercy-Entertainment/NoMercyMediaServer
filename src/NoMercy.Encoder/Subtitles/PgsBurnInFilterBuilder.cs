@@ -23,7 +23,23 @@ namespace NoMercy.Encoder.Subtitles;
 /// <c>[burned]</c>. Using this label in place of the original video
 /// stream selector routes the composited output to the encoder.
 /// </param>
-public record PgsBurnInFilterChain(string FilterComplex, string MapLabel);
+/// <param name="VideoLabels">
+/// One distinct output pad per video output (rung). A filtergraph output
+/// pad can feed exactly one consumer, so with more than one video output the
+/// overlay result is <c>split</c> into one pad per rung — mapping a single
+/// pad twice makes ffmpeg abort. For a single video output this is just
+/// <c>[<see cref="MapLabel"/>]</c>.
+/// </param>
+/// <param name="ThumbnailLabel">
+/// The distinct output pad the thumbnail/sprite branch should read from, or
+/// null when no thumbnails were requested. Comes off the same <c>split</c>.
+/// </param>
+public record PgsBurnInFilterChain(
+    string FilterComplex,
+    string MapLabel,
+    IReadOnlyList<string> VideoLabels,
+    string? ThumbnailLabel
+);
 
 /// <summary>
 /// Builds a <c>-filter_complex</c> chain that overlays PGS (bitmap)
@@ -58,11 +74,57 @@ public sealed class PgsBurnInFilterBuilder
     /// <see cref="PgsBurnInFilterChain.MapLabel"/> replaces the video
     /// stream in <c>-map</c>.
     /// </returns>
-    public PgsBurnInFilterChain Build(int videoStreamIndex, int subtitleStreamIndex)
-    {
-        string filterComplex =
-            $"[0:v:{videoStreamIndex}][0:s:{subtitleStreamIndex}]overlay=format=auto[burned]";
+    public PgsBurnInFilterChain Build(int videoStreamIndex, int subtitleStreamIndex) =>
+        Build(videoStreamIndex, subtitleStreamIndex, videoOutputCount: 1, includeThumbnails: false);
 
-        return new PgsBurnInFilterChain(FilterComplex: filterComplex, MapLabel: "[burned]");
+    /// <summary>
+    /// Builds the PGS overlay chain, splitting the composited output into one
+    /// distinct pad per consumer (each video rung, plus an optional thumbnail
+    /// branch). A single filtergraph output pad can only feed one <c>-map</c>,
+    /// so a multi-rung ladder or a thumbnails output would abort ffmpeg if they
+    /// all mapped the same <c>[burned]</c> pad.
+    /// </summary>
+    public PgsBurnInFilterChain Build(
+        int videoStreamIndex,
+        int subtitleStreamIndex,
+        int videoOutputCount,
+        bool includeThumbnails
+    )
+    {
+        int consumers = Math.Max(1, videoOutputCount) + (includeThumbnails ? 1 : 0);
+
+        string overlay = $"[0:v:{videoStreamIndex}][0:s:{subtitleStreamIndex}]overlay=format=auto";
+
+        // One consumer and no thumbnails: the overlay pad is mapped once — no
+        // split needed, keep the single [burned] label.
+        if (consumers == 1)
+        {
+            return new PgsBurnInFilterChain(
+                FilterComplex: $"{overlay}[burned]",
+                MapLabel: "[burned]",
+                VideoLabels: ["[burned]"],
+                ThumbnailLabel: null
+            );
+        }
+
+        List<string> videoLabels = [];
+        for (int i = 0; i < Math.Max(1, videoOutputCount); i++)
+            videoLabels.Add($"[burned{i}]");
+
+        string? thumbnailLabel = includeThumbnails ? "[burnedthumbs]" : null;
+
+        List<string> splitPads = [.. videoLabels];
+        if (thumbnailLabel is not null)
+            splitPads.Add(thumbnailLabel);
+
+        string splitTargets = string.Concat(splitPads);
+        string filterComplex = $"{overlay},split={consumers}{splitTargets}";
+
+        return new PgsBurnInFilterChain(
+            FilterComplex: filterComplex,
+            MapLabel: videoLabels[0],
+            VideoLabels: videoLabels,
+            ThumbnailLabel: thumbnailLabel
+        );
     }
 }

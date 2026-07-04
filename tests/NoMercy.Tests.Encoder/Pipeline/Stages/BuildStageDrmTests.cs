@@ -20,6 +20,7 @@ using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.PostProcess;
+using NoMercy.Storage;
 using NoMercy.Tests.Encoder.Storage;
 
 namespace NoMercy.Tests.Encoder.Pipeline.Stages;
@@ -65,11 +66,28 @@ public class BuildStageDrmTests
             // the prepared keyinfo file.
             int idx = Array.IndexOf(commands[0].Arguments, "-hls_key_info_file");
             idx.Should().BeGreaterThan(-1, "DRM processor should inject the flag");
-            commands[0].Arguments[idx + 1].Should().EndWith("drm_keyinfo.txt");
+            string keyInfoPath = commands[0].Arguments[idx + 1];
+            keyInfoPath.Should().EndWith("drm_keyinfo.txt");
 
-            // Artifacts must land on disk in the output directory.
-            File.Exists(Path.Combine(tempDir, "drm.key")).Should().BeTrue();
-            File.Exists(Path.Combine(tempDir, "drm_keyinfo.txt")).Should().BeTrue();
+            // The raw key must NEVER land in the published output directory —
+            // it would ship next to the ciphertext it's meant to protect.
+            File.Exists(Path.Combine(tempDir, "drm.key")).Should().BeFalse();
+            File.Exists(Path.Combine(tempDir, "drm_keyinfo.txt")).Should().BeFalse();
+
+            // Artifacts land in a per-encode temp directory outside TempRoot's
+            // sibling published dirs, and are readable there for ffmpeg.
+            string fullKeyInfoDir = Path.GetFullPath(Path.GetDirectoryName(keyInfoPath)!);
+            string fullTempRoot = Path.GetFullPath(StoragePaths.TempRoot);
+            fullKeyInfoDir
+                .Should()
+                .StartWith(
+                    fullTempRoot,
+                    "DRM key artifacts must live under TempRoot, never the published output dir"
+                );
+            File.Exists(keyInfoPath).Should().BeTrue();
+            File.Exists(Path.Combine(fullKeyInfoDir, "drm.key")).Should().BeTrue();
+
+            Directory.Delete(fullKeyInfoDir, recursive: true);
         }
         finally
         {
@@ -122,7 +140,7 @@ public class BuildStageDrmTests
     }
 
     [Fact]
-    public async Task Drm_NoMatchingProcessor_ContinuesWithoutEncryption()
+    public async Task Drm_NoMatchingProcessor_FailsTheEncode()
     {
         string tempDir = Path.Combine(Path.GetTempPath(), $"drm-build-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
@@ -136,7 +154,8 @@ public class BuildStageDrmTests
             };
 
             // Empty processor list — the profile asks for AES-128 but nothing
-            // registered to handle it. Build should warn + continue.
+            // registered to handle it. Build must fail rather than silently
+            // shipping an unencrypted encode while reporting success.
             BuildStage stage = new(
                 options,
                 new FontExtractor(TestStorageFactory.CreateLocal()),
@@ -155,9 +174,9 @@ public class BuildStageDrmTests
 
             StageResult result = await stage.ExecuteAsync(input, context, default);
 
-            result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
-            FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
-            commands[0].Arguments.Should().NotContain("-hls_key_info_file");
+            result.Should().BeOfType<StageFailure>();
+            StageFailure failure = (StageFailure)result;
+            failure.Error.Message.Should().Contain("Aes128");
         }
         finally
         {

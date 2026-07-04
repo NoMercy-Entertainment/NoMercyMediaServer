@@ -44,12 +44,12 @@ public class WriteLockTests : IDisposable
         // Use reflection to verify the lock object is a dedicated object, not the Context
         FieldInfo? writeLockField = typeof(JobQueue).GetField(
             "_writeLock",
-            BindingFlags.NonPublic | BindingFlags.Static
+            BindingFlags.NonPublic | BindingFlags.Instance
         );
 
         Assert.NotNull(writeLockField);
 
-        object? writeLockValue = writeLockField.GetValue(null);
+        object? writeLockValue = writeLockField.GetValue(_jobQueue);
         Assert.NotNull(writeLockValue);
 
         // The lock object must be a dedicated object (not a DbContext or IQueueContext)
@@ -57,24 +57,24 @@ public class WriteLockTests : IDisposable
     }
 
     [Fact]
-    public void WriteLock_IsStaticAndSharedAcrossInstances()
+    public void WriteLock_IsPerInstance_NotSharedAcrossInstances()
     {
-        // Two JobQueue instances should share the same static lock object
+        // Each JobQueue owns its own write lock; independent queues do not serialise against each other
         using QueueContext context2 = TestQueueContextFactory.CreateInMemoryContext();
         IQueueContext adapter2 = new EfQueueContextAdapter(context2);
         JobQueue jobQueue2 = new(adapter2);
 
         FieldInfo? writeLockField = typeof(JobQueue).GetField(
             "_writeLock",
-            BindingFlags.NonPublic | BindingFlags.Static
+            BindingFlags.NonPublic | BindingFlags.Instance
         );
 
         Assert.NotNull(writeLockField);
 
         // Static field — same value regardless of instance
-        object? lockFromInstance1 = writeLockField.GetValue(null);
-        object? lockFromInstance2 = writeLockField.GetValue(null);
-        Assert.Same(lockFromInstance1, lockFromInstance2);
+        object? lockFromInstance1 = writeLockField.GetValue(_jobQueue);
+        object? lockFromInstance2 = writeLockField.GetValue(jobQueue2);
+        Assert.NotSame(lockFromInstance1, lockFromInstance2);
 
         adapter2.Dispose();
     }

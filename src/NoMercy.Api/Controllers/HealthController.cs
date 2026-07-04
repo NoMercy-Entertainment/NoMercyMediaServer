@@ -16,6 +16,7 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Status;
 using NoMercy.Setup.Boot;
 
 namespace NoMercy.Api.Controllers;
@@ -26,7 +27,7 @@ namespace NoMercy.Api.Controllers;
 [ApiController]
 [Route("[controller]")]
 [AllowAnonymous]
-public class HealthController(MediaContext mediaContext) : ControllerBase
+public class HealthController(MediaContext mediaContext, IBootStatus bootStatus) : ControllerBase
 {
     /// <summary>
     /// Basic liveness probe — returns 200 if the server process is running
@@ -48,7 +49,7 @@ public class HealthController(MediaContext mediaContext) : ControllerBase
     {
         bool databaseHealthy = await CheckDatabase();
 
-        bool isReady = Config.Started && databaseHealthy;
+        bool isReady = bootStatus.IsStarted && databaseHealthy;
         string status = isReady ? "ready" : "not_ready";
 
         ReadinessResponse response = new()
@@ -56,7 +57,7 @@ public class HealthController(MediaContext mediaContext) : ControllerBase
             Status = status,
             Timestamp = DateTime.UtcNow,
             Database = databaseHealthy ? "ok" : "unavailable",
-            ServerStarted = Config.Started,
+            ServerStarted = bootStatus.IsStarted,
         };
 
         return isReady
@@ -75,7 +76,7 @@ public class HealthController(MediaContext mediaContext) : ControllerBase
         bool databaseHealthy = await CheckDatabase();
         bool isDegraded = Start.IsDegradedMode;
 
-        string status = DetermineStatus(databaseHealthy, isDegraded);
+        string status = DetermineStatus(bootStatus.IsStarted, databaseHealthy, isDegraded);
 
         DetailedHealthResponse response = new()
         {
@@ -100,9 +101,9 @@ public class HealthController(MediaContext mediaContext) : ControllerBase
             : StatusCode(StatusCodes.Status503ServiceUnavailable, response);
     }
 
-    private static string DetermineStatus(bool databaseHealthy, bool isDegraded)
+    private static string DetermineStatus(bool serverStarted, bool databaseHealthy, bool isDegraded)
     {
-        if (!Config.Started)
+        if (!serverStarted)
             return "starting";
         if (!databaseHealthy)
             return "unhealthy";

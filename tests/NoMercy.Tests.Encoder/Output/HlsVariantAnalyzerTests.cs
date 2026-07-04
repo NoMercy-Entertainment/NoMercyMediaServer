@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Output;
 using NoMercy.Tests.Encoder.Storage;
 
@@ -36,9 +37,7 @@ public class HlsVariantAnalyzerTests
     [Fact]
     public void MissingPlaylist_ReturnsZeros()
     {
-        HlsVariantAnalyzer.VariantMetrics metrics = _analyzer.Measure(
-            "/nonexistent/path/playlist.m3u8"
-        );
+        VariantMetrics metrics = _analyzer.Measure("/nonexistent/path/playlist.m3u8");
 
         metrics.PeakBandwidth.Should().Be(0);
         metrics.AverageBandwidth.Should().Be(0);
@@ -54,7 +53,7 @@ public class HlsVariantAnalyzerTests
             string playlist = Path.Combine(dir, "empty.m3u8");
             File.WriteAllText(playlist, "#EXTM3U\n#EXT-X-VERSION:3\n");
 
-            HlsVariantAnalyzer.VariantMetrics metrics = _analyzer.Measure(playlist);
+            VariantMetrics metrics = _analyzer.Measure(playlist);
 
             metrics.PeakBandwidth.Should().Be(0);
             metrics.AverageBandwidth.Should().Be(0);
@@ -93,7 +92,7 @@ public class HlsVariantAnalyzerTests
                     + "#EXT-X-ENDLIST\n"
             );
 
-            HlsVariantAnalyzer.VariantMetrics metrics = _analyzer.Measure(playlist);
+            VariantMetrics metrics = _analyzer.Measure(playlist);
 
             // Peak = slowest seg / duration = 2,666,666 bps approx.
             metrics.PeakBandwidth.Should().BeInRange(2_600_000, 2_700_000);
@@ -130,7 +129,7 @@ public class HlsVariantAnalyzerTests
                     + "#EXT-X-ENDLIST\n"
             );
 
-            HlsVariantAnalyzer.VariantMetrics metrics = _analyzer.Measure(playlist);
+            VariantMetrics metrics = _analyzer.Measure(playlist);
 
             // Only seg0 contributes.
             metrics.AverageBandwidth.Should().BeInRange(1_200_000, 1_500_000);
@@ -158,7 +157,7 @@ public class HlsVariantAnalyzerTests
                 "#EXTM3U\n" + "#EXTINF:0,\n" + "seg0.ts\n" + "#EXT-X-ENDLIST\n"
             );
 
-            HlsVariantAnalyzer.VariantMetrics metrics = _analyzer.Measure(playlist);
+            VariantMetrics metrics = _analyzer.Measure(playlist);
 
             metrics.PeakBandwidth.Should().Be(0);
             metrics.AverageBandwidth.Should().Be(0);
@@ -194,7 +193,7 @@ public class HlsVariantAnalyzerTests
                     + "#EXT-X-ENDLIST\n"
             );
 
-            HlsVariantAnalyzer.VariantMetrics metrics = _analyzer.Measure(playlist);
+            VariantMetrics metrics = _analyzer.Measure(playlist);
 
             metrics.PeakBandwidth.Should().BeGreaterThan(metrics.AverageBandwidth);
         }

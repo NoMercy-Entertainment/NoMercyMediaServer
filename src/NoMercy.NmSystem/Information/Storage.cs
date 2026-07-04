@@ -225,7 +225,9 @@ public class Storage
         if (!driver.DirectoryExists(path))
             throw new ArgumentException($"Path does not exist: {path}");
 
-        string output = Shell.ExecCommand($"df -T {path} | awk 'NR==2 {{print $2}}'");
+        string output = Shell.ExecCommand(
+            $"df -T {Shell.EscapeShellArgument(path)} | awk 'NR==2 {{print $2}}'"
+        );
         return output.Trim();
     }
 

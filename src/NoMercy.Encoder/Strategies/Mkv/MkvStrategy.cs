@@ -9,9 +9,10 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Progress;
+using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Strategies.Mkv;
 
@@ -25,14 +26,8 @@ namespace NoMercy.Encoder.Strategies.Mkv;
 /// is one file either way), but 2-pass can still matter for software
 /// encoders targeting a specific bitrate. That's a future strategy.
 /// </summary>
-public class MkvStrategy(IEncoder encoder) : IEncodingStrategy
+public class MkvStrategy(IEncoder encoder, ILogger<MkvStrategy> logger, IStorage storage)
+    : SinglePassStrategyBase(encoder, logger, storage)
 {
-    public OutputFormat Format => OutputFormat.Mkv;
-    public EncodeMode EncodeMode => EncodeMode.SinglePass;
-
-    public Task<EncodingResult> EncodeAsync(
-        EncodingRequest request,
-        IProgressObserver? progress,
-        CancellationToken ct
-    ) => encoder.EncodeAsync(request, progress, ct);
+    public override OutputFormat Format => OutputFormat.Mkv;
 }

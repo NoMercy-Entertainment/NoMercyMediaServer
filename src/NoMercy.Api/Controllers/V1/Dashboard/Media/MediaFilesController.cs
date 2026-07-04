@@ -15,7 +15,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using NoMercy.Database.Models.Media;
-using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Files;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
@@ -30,7 +29,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 [ApiController]
 [Tags("Dashboard Server Media Files")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "Moderator")]
 [Route("api/v{version:apiVersion}/dashboard/media/files", Order = 10)]
 public class MediaFilesController(IFileRepository fileRepository) : BaseController
 {
@@ -41,8 +40,6 @@ public class MediaFilesController(IFileRepository fileRepository) : BaseControll
         CancellationToken ct = default
     )
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to search media files");
 
         // Hard ceiling on `limit` — clients shouldn't be able to pull the whole
         // catalogue through this picker endpoint.

@@ -9,29 +9,11 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.Diagnostics;
-using System.Net;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
-using Asp.Versioning;
-using Asp.Versioning.ApiExplorer;
 using CommandLine;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
-using NoMercy.Networking.Certificate;
-using NoMercy.Networking.Discovery;
-using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Plugins.Abstractions;
-using NoMercy.Service.Configuration;
 using NoMercy.Service.Hosting;
-using NoMercy.Service.Seeds;
-using NoMercy.Setup.Boot;
-using NoMercy.Setup.Server;
-using NoMercy.Setup.Ui;
-using NoMercy.Storage;
-using NoMercyQueue;
-
 
 namespace NoMercy.Service;
 
@@ -67,16 +49,25 @@ public static class Program
         // patterns, GC'd before await) raise here. Marking them observed
         // keeps them from escalating to UnhandledException. async-void
         // chains aren't covered by this — those are handled defensively
-        // at the source (see ChromeCast.NeutralizeTimer).
+        // at the source (see ChromeCastService.NeutralizeTimer).
         TaskScheduler.UnobservedTaskException += (_, e) =>
         {
             Logger.App("UnobservedTaskException " + e.Exception);
             e.SetObserved();
         };
 
-        await Parser
-            .Default.ParseArguments<StartupOptions>(args)
-            .MapResult(o => new ServerBootstrapper().RunAsync(o), ErrorParsingArguments);
+        try
+        {
+            await Parser
+                .Default.ParseArguments<StartupOptions>(args)
+                .MapResult(o => new ServerBootstrapper().RunAsync(o), ErrorParsingArguments);
+        }
+        catch (StartupAbortException ex)
+        {
+            Logger.App($"Fatal startup error: {ex.Message}");
+            Environment.ExitCode = 1;
+            Environment.Exit(1);
+        }
 
         static Task ErrorParsingArguments(IEnumerable<Error> errors)
         {

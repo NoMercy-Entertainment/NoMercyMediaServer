@@ -13,10 +13,9 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Storage;
-using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -25,27 +24,40 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 // Code
 // ---------------------------------------------------------------------------------------------------------------------
 [Serializable]
-public abstract class AbstractMediaJob : IShouldQueue, IJobStorageInjector
+public abstract class AbstractMediaJob : IShouldQueue
 {
+    protected AbstractMediaJob() { }
+
+    protected AbstractMediaJob(
+        IStorageFactory storageFactory,
+        IStorageDriver storageDriver,
+        ILoggerFactory loggerFactory
+    )
+    {
+        StorageFactory = storageFactory;
+        StorageDriver = storageDriver;
+        LoggerFactory = loggerFactory;
+    }
+
     public int Id { get; set; }
     public Ulid LibraryId { get; set; }
 
     [JsonIgnore]
-    public IStorageFactory StorageFactory { get; set; } = null!;
+    public IStorageFactory StorageFactory { get; private set; } = null!;
 
     [JsonIgnore]
-    public IStorageDriver StorageDriver { get; set; } = null!;
+    public IStorageDriver StorageDriver { get; private set; } = null!;
+
+    [JsonIgnore]
+    public ILoggerFactory LoggerFactory { get; private set; } = null!;
+
+    [JsonIgnore]
+    protected ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
 
     public abstract string QueueName { get; }
     public abstract int Priority { get; }
 
     public abstract Task Handle();
-
-    public void InjectStorageServices(IServiceProvider serviceProvider)
-    {
-        StorageFactory = serviceProvider.GetRequiredService<IStorageFactory>();
-        StorageDriver = serviceProvider.GetRequiredService<IStorageDriver>();
-    }
 
     public void Dispose() { }
 }

@@ -11,35 +11,26 @@
 
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
-using MovieFileLibrary;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.Events;
-using NoMercy.Events.Media;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs.Dto;
-using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.NmSystem;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.FFProbe;
-using NoMercy.NmSystem.Domain;
-using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.AcoustId;
 using NoMercy.Providers.AcoustId.Client;
 using NoMercy.Providers.AcoustId.Models;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
-using NoMercy.Providers.TMDB.Client;
-using NoMercy.Providers.TMDB.Models.Episode;
-using NoMercy.Providers.TMDB.Models.Movies;
-using NoMercy.Providers.TMDB.Models.Shared;
-using NoMercy.Providers.TMDB.Models.TV;
 using NoMercy.Storage;
 using Serilog.Events;
 
@@ -72,6 +63,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         }
 
         existing.EpisodeId = videoFile.EpisodeId;
+        existing.LastEpisodeNumber = videoFile.LastEpisodeNumber;
         existing.MovieId = videoFile.MovieId;
         existing.Folder = videoFile.Folder;
         existing.HostFolder = videoFile.HostFolder;
@@ -189,1118 +181,13 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
     /// </summary>
     public static IStorageDriver StorageDriverFromStorage(IStorage storage) => storage.Driver;
 
-    public FileInfo[] GetVideoFilesInDirectory(string directoryPath)
-    {
-        return storageDriver
-            .EnumerateFileSystemEntries(directoryPath, "*", SearchOption.TopDirectoryOnly)
-            .Where(p => !storageDriver.DirectoryExists(p))
-            .Where(p =>
-            {
-                string ext = Path.GetExtension(p);
-                return ext is ".mkv" or ".mp4" or ".avi" or ".webm" or ".flv";
-            })
-            .Select(p => new FileInfo(p))
-            .ToArray();
-    }
-
-    public FileInfo[] GetAudioFilesInDirectory(string directoryPath)
-    {
-        return storageDriver
-            .EnumerateFileSystemEntries(directoryPath, "*", SearchOption.TopDirectoryOnly)
-            .Where(p => !storageDriver.DirectoryExists(p))
-            .Where(p =>
-            {
-                string ext = Path.GetExtension(p);
-                return ext is ".mp3" or ".flac" or ".wav" or ".m4a";
-            })
-            .Select(p => new FileInfo(p))
-            .ToArray();
-    }
-
-    private static readonly string[] VideoExtensions = [".mkv", ".mp4", ".avi", ".webm", ".flv"];
-    private static readonly string[] AudioExtensions = [".mp3", ".flac", ".wav", ".m4a"];
-
-    public async Task<List<FileItem>> GetFilesInDirectory(string directoryPath, string libraryType)
-    {
-        DirectoryInfo directoryInfo = new(directoryPath);
-
-        FileInfo[] videoFiles = GetVideoFilesInDirectory(directoryPath);
-
-        FileInfo[] audioFiles = GetAudioFilesInDirectory(directoryPath);
-
-        ConcurrentBag<FileItem> fileList = [];
-        if (videoFiles.Length == 0 && audioFiles.Length == 0)
-            return fileList.ToList();
-
-        if (audioFiles.Length > 0 && videoFiles.Length == 0)
-        {
-            const string pattern =
-                @"(?<library_folder>.+?)[\\\/]((?<letter>.{1})?|\[(?<type>.+?)\])[\\\/](?<artist>.+?)?[\\\/]?(\[(?<year>\d{4})\]|\[(?<releaseType>Singles)\])\s?(?<album>.*)?";
-            Match match = Regex.Match(directoryPath, pattern);
-
-            int year = match.Groups["year"].Success
-                ? Convert.ToInt32(match.Groups["year"].Value)
-                : 0;
-            string albumName = match.Groups["album"].Success
-                ? match.Groups["album"].Value
-                : Regex.Replace(directoryInfo.Name, @"\[\d{4}\]\s?", "");
-
-            await Parallel.ForEachAsync(
-                audioFiles,
-                Config.ParallelOptions,
-                (file, _) =>
-                {
-                    fileList.Add(
-                        new()
-                        {
-                            Size = file.Length,
-                            Mode = (int)file.Attributes,
-                            Name = Path.Combine(directoryPath, file.Name),
-                            Parent = directoryPath,
-                            Parsed = new(directoryPath)
-                            {
-                                Title =
-                                    albumName + " - " + Path.GetFileNameWithoutExtension(file.Name),
-                                Year = year.ToString(),
-                                IsSeries = false,
-                                IsSuccess = true,
-                            },
-                            Match = new() { Title = albumName },
-                            Path = Path.Combine(directoryPath, file.FullName),
-                        }
-                    );
-                    return ValueTask.CompletedTask;
-                }
-            );
-        }
-        else if (videoFiles.Length > 0)
-        {
-            // Process video files sequentially - each file may add shows/movies to the DB,
-            // and parallel processing causes race conditions when the show isn't known yet
-            // (multiple iterations see "not found" simultaneously, all try to add, some fail)
-            foreach (FileInfo file in videoFiles)
-            {
-                try
-                {
-                    await ProcessVideoFileInfo(context, libraryType, file, fileList);
-                }
-                catch (Exception e)
-                {
-                    Logger.App(e.Message, LogEventLevel.Error);
-                }
-            }
-        }
-
-        return fileList.OrderBy(file => file.Name).ToList();
-    }
-
-    /// <summary>
-    /// Driver-aware variant of <see cref="GetFilesInDirectory"/>. Uses
-    /// <paramref name="storage"/> to enumerate entries so the path never
-    /// touches the local filesystem — required for NFS / S3 / WebDAV sources.
-    /// ffprobe receives a real local path via <see cref="IStorage.AcquireLocalPath"/>.
-    /// </summary>
-    public async Task<List<FileItem>> GetFilesInDirectory(
-        string directoryPath,
-        string libraryType,
-        IStorage storage
-    )
-    {
-        IReadOnlyList<StorageEntry> allEntries = storage.List(
-            directoryPath,
-            pattern: null,
-            recursive: false
-        );
-
-        StorageEntry[] videoEntries = allEntries
-            .Where(e =>
-                !e.IsDirectory
-                && VideoExtensions.Contains(
-                    Path.GetExtension(e.Path),
-                    StringComparer.OrdinalIgnoreCase
-                )
-            )
-            .ToArray();
-
-        StorageEntry[] audioEntries = allEntries
-            .Where(e =>
-                !e.IsDirectory
-                && AudioExtensions.Contains(
-                    Path.GetExtension(e.Path),
-                    StringComparer.OrdinalIgnoreCase
-                )
-            )
-            .ToArray();
-
-        ConcurrentBag<FileItem> fileList = [];
-
-        if (videoEntries.Length == 0 && audioEntries.Length == 0)
-            return fileList.ToList();
-
-        if (audioEntries.Length > 0 && videoEntries.Length == 0)
-        {
-            // Use the same audio pattern as the local path, but derive folder
-            // name from the driver-relative directoryPath.
-            string folderName = StoragePathHelpers.GetName(directoryPath);
-
-            const string pattern =
-                @"(?<library_folder>.+?)[\\\/]((?<letter>.{1})?|\[(?<type>.+?)\])[\\\/](?<artist>.+?)?[\\\/]?(\[(?<year>\d{4})\]|\[(?<releaseType>Singles)\])\s?(?<album>.*)?";
-
-            Match match = Regex.Match(directoryPath, pattern);
-
-            int year = match.Groups["year"].Success
-                ? Convert.ToInt32(match.Groups["year"].Value)
-                : 0;
-
-            string albumName = match.Groups["album"].Success
-                ? match.Groups["album"].Value
-                : Regex.Replace(folderName, @"\[\d{4}\]\s?", "");
-
-            await Parallel.ForEachAsync(
-                audioEntries,
-                Config.ParallelOptions,
-                (entry, _) =>
-                {
-                    string name = StoragePathHelpers.GetName(entry.Path);
-                    fileList.Add(
-                        new()
-                        {
-                            Size = entry.SizeBytes,
-                            Mode = 0,
-                            Name = entry.Path,
-                            Parent = directoryPath,
-                            Parsed = new(directoryPath)
-                            {
-                                Title =
-                                    albumName
-                                    + " - "
-                                    + StoragePathHelpers.GetNameWithoutExtension(entry.Path),
-                                Year = year.ToString(),
-                                IsSeries = false,
-                                IsSuccess = true,
-                            },
-                            Match = new() { Title = albumName },
-                            Path = entry.Path,
-                        }
-                    );
-                    return ValueTask.CompletedTask;
-                }
-            );
-        }
-        else if (videoEntries.Length > 0)
-        {
-            foreach (StorageEntry entry in videoEntries)
-            {
-                try
-                {
-                    await ProcessVideoStorageEntry(context, libraryType, entry, storage, fileList);
-                }
-                catch (Exception e)
-                {
-                    Logger.App(e.Message, LogEventLevel.Error);
-                }
-            }
-        }
-
-        return fileList.OrderBy(file => file.Name).ToList();
-    }
-
-    private static async Task<bool> ProcessVideoStorageEntry(
-        MediaContext ctx,
-        string libraryType,
-        StorageEntry entry,
-        IStorage storage,
-        ConcurrentBag<FileItem> fileList
-    )
-    {
-        string entryPath = entry.Path;
-        string fileName = StoragePathHelpers.GetName(entryPath);
-        string? directoryName = StoragePathHelpers.GetParent(entryPath);
-
-        // Build a synthetic FileInfo-like object using storage metadata so the
-        // parsing helpers stay unchanged. We do not touch raw System.IO here.
-        string rawFileName = StoragePathHelpers.GetNameWithoutExtension(entryPath);
-
-        int? overrideTmdbId = rawFileName.TryGetTmdbHint();
-
-        string cleanedForYear = Str.RemoveBracketedString().Replace(rawFileName, string.Empty);
-        string? extractedYear = cleanedForYear.TryGetYear();
-
-        string title = entryPath.Replace("v2", "");
-        title = Str.RemoveBracketedString().Replace(title, string.Empty);
-
-        // Filelist runs FOR EVERY FILE the user wants to triage; ffprobe over
-        // a non-seekable stdin pipe scans to EOF on container formats whose
-        // duration lives at end-of-file (mp4 mvhd, etc.) — 30 s/file on NFS.
-        // The encode queue probes the full file later anyway. Skip ffprobe
-        // here for remote drivers; the only reliable consumer of Streams in
-        // the filelist response is the local-encode pre-flight which still
-        // works end-to-end for LocalStorage.
-        FfProbeData ffprobeData =
-            storage.Driver is Storage.Drivers.Local.LocalStorageDriver
-                ? await FfProbe.CreateAsync(entryPath)
-                : new FfProbeData();
-
-        MovieFile parsed = ParseVideoFileName(fileName, directoryName, title);
-
-        parsed.Year = extractedYear ?? parsed.Year;
-        if (parsed.Title == null)
-            return true;
-
-        parsed.Title = Str.RemoveParenthesizedString().Replace(parsed.Title, string.Empty);
-
-        bool seasonExplicit = parsed.Season.HasValue;
-
-        if (parsed.Episode.HasValue && !parsed.Season.HasValue)
-            parsed.Season = 1;
-
-        if (!parsed.Season.HasValue && !parsed.Episode.HasValue)
-        {
-            Regex regex = Str.MatchNumbers();
-            Match numberMatch = regex.Match(parsed.Title);
-            if (numberMatch.Success)
-            {
-                parsed.Season = 1;
-                parsed.Episode = int.Parse(numberMatch.Value);
-                parsed.Title = regex.Split(parsed.Title).FirstOrDefault();
-            }
-        }
-
-        (MovieOrEpisode episodeMatch, string? imdbId)? result = libraryType switch
-        {
-            MediaTypes.AnimeMediaType or MediaTypes.TvMediaType => await ResolveShowEpisodeAsync(
-                ctx,
-                libraryType,
-                parsed,
-                ffprobeData.Format.Duration,
-                overrideTmdbId,
-                seasonExplicit
-            ),
-            MediaTypes.MovieMediaType => await ResolveMovieMatchAsync(
-                ctx,
-                libraryType,
-                parsed,
-                ffprobeData.Format.Duration,
-                overrideTmdbId
-            ),
-            _ => null,
-        };
-
-        if (result == null)
-            return true;
-
-        parsed.ImdbId = result.Value.imdbId;
-
-        // For driver-relative paths the "parent" is the directory that contains
-        // the season folder, i.e. one level above directoryName.
-        string? parentPath = string.IsNullOrEmpty(directoryName)
-            ? "/"
-            : StoragePathHelpers.GetParent(directoryName) ?? "/";
-
-        ApplyEpisodeCardLabel(parsed, result.Value.episodeMatch);
-
-        fileList.Add(
-            new()
-            {
-                Size = entry.SizeBytes,
-                Mode = 0,
-                Name = StoragePathHelpers.GetNameWithoutExtension(fileName),
-                Parent = parentPath,
-                Parsed = parsed,
-                Match = result.Value.episodeMatch,
-                Path = entryPath,
-                Streams = new()
-                {
-                    Video = ffprobeData.VideoStreams.Select(video => new Video
-                    {
-                        Index = video.Index,
-                        Width = video.Width,
-                        Height = video.Height,
-                    }),
-                    Audio = ffprobeData.AudioStreams.Select(stream => new Audio
-                    {
-                        Index = stream.Index,
-                        Language = stream.Language,
-                    }),
-                    Subtitle = ffprobeData.SubtitleStreams.Select(stream => new Subtitle
-                    {
-                        Index = stream.Index,
-                        Language = stream.Language ?? "und",
-                    }),
-                },
-            }
-        );
-
-        return false;
-    }
-
-    /// <summary>
-    /// Replaces parsed.Title with the canonical TMDB English show name so the
-    /// dashboard's '<parsed.title> SxxExx - <match.title>' template renders a
-    /// label consistent with Stoney's file-naming convention even when the
-    /// source filename uses a transliterated / fan-sub title.
-    /// Movies and unmatched items keep their filename-derived parsed.Title.
-    /// </summary>
-    private static void ApplyEpisodeCardLabel(MovieFile parsed, MovieOrEpisode match)
-    {
-        if (string.IsNullOrWhiteSpace(match.ShowName))
-            return;
-
-        parsed.Title = match.ShowName;
-    }
-
-    private async Task<bool> ProcessVideoFileInfo(
-        MediaContext ctx,
-        string libraryType,
-        FileInfo file,
-        ConcurrentBag<FileItem> fileList
-    )
-    {
-        string rawFileName = Path.GetFileNameWithoutExtension(file.Name);
-
-        // Check for a [tmdb-1234] hint baked into the filename, e.g. "[tmdb-553604]Spring (2019).mkv"
-        int? overrideTmdbId = rawFileName.TryGetTmdbHint();
-
-        string cleanedForYear = Str.RemoveBracketedString().Replace(rawFileName, string.Empty);
-        string? extractedYear = cleanedForYear.TryGetYear();
-
-        string title = file.FullName.Replace("v2", "");
-        title = Str.RemoveBracketedString().Replace(title, string.Empty);
-
-        FfProbeData ffprobeData = await FfProbe.CreateAsync(file.FullName);
-        MovieFile parsed = ParseVideoFileName(file, title);
-
-        parsed.Year = extractedYear ?? parsed.Year;
-        if (parsed.Title == null)
-            return true;
-
-        parsed.Title = Str.RemoveParenthesizedString().Replace(parsed.Title, string.Empty);
-
-        // Track whether the season came from the filename or was defaulted to 1.
-        // This controls whether the absolute-index fallback is allowed in ResolveShowEpisodeAsync.
-        bool seasonExplicit = parsed.Season.HasValue;
-
-        if (parsed.Episode.HasValue && !parsed.Season.HasValue)
-            parsed.Season = 1;
-
-        if (!parsed.Season.HasValue && !parsed.Episode.HasValue)
-        {
-            Regex regex = Str.MatchNumbers();
-            Match numberMatch = regex.Match(parsed.Title);
-            if (numberMatch.Success)
-            {
-                parsed.Season = 1;
-                parsed.Episode = int.Parse(numberMatch.Value);
-                parsed.Title = regex.Split(parsed.Title).FirstOrDefault();
-            }
-        }
-
-        (MovieOrEpisode episodeMatch, string? imdbId)? result = libraryType switch
-        {
-            MediaTypes.AnimeMediaType or MediaTypes.TvMediaType => await ResolveShowEpisodeAsync(
-                ctx,
-                libraryType,
-                parsed,
-                ffprobeData.Format.Duration,
-                overrideTmdbId,
-                seasonExplicit
-            ),
-            MediaTypes.MovieMediaType => await ResolveMovieMatchAsync(
-                ctx,
-                libraryType,
-                parsed,
-                ffprobeData.Format.Duration,
-                overrideTmdbId
-            ),
-            _ => null,
-        };
-
-        if (result == null)
-            return true;
-
-        parsed.ImdbId = result.Value.imdbId;
-        fileList.Add(BuildFileItem(file, parsed, result.Value.episodeMatch, ffprobeData));
-
-        return false;
-    }
-
-    private static MovieFile ParseVideoFileName(FileInfo file, string title) =>
-        ParseVideoFileName(file.Name, file.DirectoryName, title);
-
-    private static MovieFile ParseVideoFileName(
-        string fileNameWithExt,
-        string? directoryName,
-        string title
-    )
-    {
-        string cleanedFileName = Str.RemoveBracketedString()
-            .Replace(Path.GetFileNameWithoutExtension(fileNameWithExt), string.Empty)
-            .Trim();
-
-        // S##E## at start of filename (e.g. "S01E01-some.title.mkv")
-        Match epMatch = Str.MatchEpisodePrefix().Match(cleanedFileName);
-        if (epMatch.Success)
-        {
-            return new(title)
-            {
-                Title = ExtractTitleFromFolder(directoryName),
-                Season = int.Parse(epMatch.Groups[1].Value),
-                Episode = int.Parse(epMatch.Groups[2].Value),
-                IsSeries = true,
-                IsSuccess = true,
-            };
-        }
-
-        // "Episode XX" pattern (e.g. "Blade - Episode 02 - title.mp4")
-        string fileNameNoParens = Str.RemoveParenthesizedString()
-            .Replace(cleanedFileName, string.Empty)
-            .Trim();
-        Match episodeWordMatch = Str.MatchEpisodeWord().Match(fileNameNoParens);
-        if (episodeWordMatch.Success)
-        {
-            int episodeNumber = int.Parse(episodeWordMatch.Groups[1].Value);
-            string showTitle = fileNameNoParens[..episodeWordMatch.Index]
-                .TrimEnd('-', '.', '_', ' ');
-
-            // Strip trailing year from title (year is captured separately by TryGetYear)
-            Match yearInEpisodeTitle = Str.MatchYearRegex().Match(showTitle);
-            if (yearInEpisodeTitle.Success)
-                showTitle = showTitle[..yearInEpisodeTitle.Index].TrimEnd('-', '.', '_', ' ');
-
-            if (string.IsNullOrWhiteSpace(showTitle) || showTitle.Length <= 1)
-                showTitle = ExtractTitleFromFolder(directoryName);
-
-            return new(title)
-            {
-                Title = showTitle,
-                Season = 1,
-                Episode = episodeNumber,
-                IsSeries = true,
-                IsSuccess = true,
-            };
-        }
-
-        // S##E#### anywhere in filename (e.g. "One.Piece.S01E1109.Title.mkv")
-        Match seasonEpMatch = Str.MatchSeasonEpisode().Match(cleanedFileName);
-        if (seasonEpMatch.Success)
-        {
-            string showTitle = cleanedFileName[..seasonEpMatch.Index]
-                .Replace('.', ' ')
-                .Replace('_', ' ')
-                .TrimEnd('-', ' ')
-                .Trim();
-
-            // Strip trailing year from title (year is captured separately by TryGetYear)
-            Match yearInSeasonTitle = Str.MatchYearRegex().Match(showTitle);
-            if (yearInSeasonTitle.Success)
-                showTitle = showTitle[..yearInSeasonTitle.Index].TrimEnd('-', '.', '_', ' ');
-
-            if (string.IsNullOrWhiteSpace(showTitle) || showTitle.Length <= 1)
-                showTitle = ExtractTitleFromFolder(directoryName);
-
-            return new(title)
-            {
-                Title = showTitle,
-                Season = int.Parse(seasonEpMatch.Groups[1].Value),
-                Episode = int.Parse(seasonEpMatch.Groups[2].Value),
-                IsSeries = true,
-                IsSuccess = true,
-            };
-        }
-
-        // Fallback to MovieDetector library
-        MovieDetector movieDetector = new();
-        return movieDetector.GetInfo(title);
-    }
-
-    private static string ExtractTitleFromFolder(FileInfo file) =>
-        ExtractTitleFromFolder(file.DirectoryName);
-
-    private static string ExtractTitleFromFolder(string? directoryName)
-    {
-        string? folderName = Path.GetFileName(directoryName);
-        if (string.IsNullOrWhiteSpace(folderName))
-            return "";
-
-        string cleaned = Str.RemoveBracketedString().Replace(folderName, string.Empty);
-        cleaned = Str.RemoveParenthesizedString().Replace(cleaned, string.Empty);
-
-        Match seasonTag = Str.MatchSeasonTag().Match(cleaned);
-        if (seasonTag.Success && seasonTag.Index > 0)
-            cleaned = cleaned[..seasonTag.Index];
-
-        string folderTitle = cleaned
-            .Replace('.', ' ')
-            .Replace('_', ' ')
-            .TrimEnd('-', '.', '_', ' ')
-            .Trim();
-
-        // Strip trailing year from folder-derived title (year is captured separately by TryGetYear)
-        Match yearInFolder = Str.MatchYearRegex().Match(folderTitle);
-        if (yearInFolder.Success)
-            folderTitle = folderTitle[..yearInFolder.Index].TrimEnd('-', '.', '_', ' ');
-
-        return folderTitle;
-    }
-
-    private static async Task<(MovieOrEpisode match, string? imdbId)?> ResolveShowEpisodeAsync(
-        MediaContext ctx,
-        string libraryType,
-        MovieFile parsed,
-        TimeSpan? duration,
-        int? overrideTmdbId,
-        bool seasonExplicit = false
-    )
-    {
-        TmdbSearchClient searchClient = new();
-
-        TmdbTvShow? show;
-        TmdbPaginatedResponse<TmdbTvShow>? shows = null;
-
-        if (overrideTmdbId.HasValue)
-        {
-            // Resolve directly by TMDB ID — no text search, no ambiguity
-            TmdbTvClient overrideTvClient = new(overrideTmdbId.Value);
-            TmdbTvShowDetails? overrideDetails = await overrideTvClient.Details(true);
-            if (overrideDetails == null)
-                return null;
-            show = overrideDetails; // TmdbTvShowDetails : TmdbTvShow
-        }
-        else
-        {
-            shows = await searchClient.TvShow(parsed.Title.OrEmpty(), parsed.Year.OrEmpty(), true);
-            show = shows?.Results.FirstOrDefault();
-        }
-
-        if (show == null || !parsed.Season.HasValue || !parsed.Episode.HasValue)
-            return null;
-
-        Ulid libraryId = await ctx
-            .Libraries.Where(item => item.Type == libraryType)
-            .Select(item => item.Id)
-            .FirstOrDefaultAsync();
-
-        await EnsureShowInLibraryAsync(ctx, show.Id, show.Name, libraryId);
-
-        Episode? episode = ctx
-            .Episodes.Where(item => item.TvId == show.Id)
-            .Where(item => item.SeasonNumber == parsed.Season)
-            .FirstOrDefault(item => item.EpisodeNumber == parsed.Episode);
-
-        // When the season was explicit in the filename (e.g. S02E19), try the TMDB API first,
-        // then episode groups (e.g. Crunchyroll splits seasons differently from TMDB default).
-        if (episode == null && seasonExplicit)
-        {
-            TmdbEpisodeClient episodeClient = new(
-                show.Id,
-                parsed.Season.Value,
-                parsed.Episode.Value
-            );
-            TmdbEpisodeDetails? details = await episodeClient.Details(true);
-
-            // TMDB default doesn't have this season — try episode groups for alternate season splits
-            if (details == null)
-                episode = await ResolveSeasonedEpisodeFromGroupsAsync(
-                    ctx,
-                    show.Id,
-                    parsed.Season.Value,
-                    parsed.Episode.Value
-                );
-
-            if (details != null && episode == null)
-            {
-                Season? season = await ctx.Seasons.FirstOrDefaultAsync(s =>
-                    s.TvId == show.Id && s.SeasonNumber == details.SeasonNumber
-                );
-
-                episode = new()
-                {
-                    Id = details.Id,
-                    TvId = show.Id,
-                    SeasonNumber = details.SeasonNumber,
-                    EpisodeNumber = details.EpisodeNumber,
-                    Title = details.Name,
-                    Overview = details.Overview,
-                    Still = details.StillPath,
-                    VoteAverage = details.VoteAverage,
-                    VoteCount = details.VoteCount,
-                    AirDate = details.AirDate,
-                    SeasonId = season?.Id ?? 0,
-                };
-
-                ctx.Episodes.Add(episode);
-                await ctx.SaveChangesAsync();
-            }
-        }
-
-        if (episode == null)
-        {
-            List<Episode> episodes = ctx
-                .Episodes.Where(item => item.TvId == show.Id)
-                .Where(item => item.SeasonNumber > 0)
-                .OrderBy(item => item.SeasonNumber)
-                .ThenBy(item => item.EpisodeNumber)
-                .ToList();
-
-            episode = episodes.ElementAtOrDefault(parsed.Episode.Value - 1);
-        }
-
-        if (episode == null)
-            episode = await ResolveAbsoluteEpisodeAsync(ctx, show.Id, parsed.Episode.Value);
-
-        // Try alternate search results for absolute-order anime (e.g. TMDB ranks live-action above anime)
-        if (episode == null && shows!.Results.Count > 1)
-        {
-            foreach (TmdbTvShow altShow in shows.Results.Skip(1).Take(4))
-            {
-                TmdbTvClient altTvClient = new(altShow.Id);
-                TmdbTvEpisodeGroups? altGroups = await altTvClient.EpisodeGroups(true);
-                if (altGroups?.Results.Any(g => g.Type == 2) != true)
-                    continue;
-
-                await EnsureShowInLibraryAsync(ctx, altShow.Id, altShow.Name, libraryId);
-                episode = await ResolveAbsoluteEpisodeAsync(ctx, altShow.Id, parsed.Episode.Value);
-                if (episode != null)
-                    break;
-            }
-        }
-
-        if (episode == null)
-        {
-            TmdbEpisodeClient episodeClient = new(
-                show.Id,
-                parsed.Season.Value,
-                parsed.Episode.Value
-            );
-            TmdbEpisodeDetails? details = await episodeClient.Details(true);
-            if (details == null)
-                return null;
-
-            Season? season = await ctx.Seasons.FirstOrDefaultAsync(s =>
-                s.TvId == show.Id && s.SeasonNumber == details.SeasonNumber
-            );
-
-            episode = new()
-            {
-                Id = details.Id,
-                TvId = show.Id,
-                SeasonNumber = details.SeasonNumber,
-                EpisodeNumber = details.EpisodeNumber,
-                Title = details.Name,
-                Overview = details.Overview,
-                Still = details.StillPath,
-                VoteAverage = details.VoteAverage,
-                VoteCount = details.VoteCount,
-                AirDate = details.AirDate,
-                SeasonId = season?.Id ?? 0,
-            };
-
-            ctx.Episodes.Add(episode);
-            await ctx.SaveChangesAsync();
-        }
-
-        // Prefer the DB row over the search-side TmdbTvShow.Name — the local
-        // Tv table is the source of truth for show metadata after a scan, and
-        // a freshly added show may have been written by EnsureShowInLibraryAsync
-        // above.
-        string? showName =
-            await ctx.Tvs.Where(t => t.Id == show.Id).Select(t => t.Title).FirstOrDefaultAsync()
-            ?? show.Name;
-
-        MovieOrEpisode match = new()
-        {
-            Id = episode.Id,
-            Title = episode.Title.OrEmpty(),
-            ShowName = showName,
-            EpisodeNumber = episode.EpisodeNumber,
-            SeasonNumber = episode.SeasonNumber,
-            Still = episode.Still,
-            Duration = duration,
-            Overview = episode.Overview,
-        };
-
-        return (match, episode.ImdbId);
-    }
-
-    private static async Task<(MovieOrEpisode match, string? imdbId)?> ResolveMovieMatchAsync(
-        MediaContext ctx,
-        string libraryType,
-        MovieFile parsed,
-        TimeSpan? duration,
-        int? overrideTmdbId
-    )
-    {
-        TmdbMovie? movie;
-
-        if (overrideTmdbId.HasValue)
-        {
-            // Resolve directly by TMDB ID — no text search, no ambiguity
-            movie = new() { Id = overrideTmdbId.Value };
-        }
-        else
-        {
-            TmdbSearchClient searchClient = new();
-            TmdbPaginatedResponse<TmdbMovie>? movies = await searchClient.Movie(
-                parsed.Title.OrEmpty(),
-                parsed.Year.OrEmpty(),
-                true
-            );
-            movie = movies?.Results.FirstOrDefault();
-        }
-
-        if (movie == null)
-            return null;
-
-        Movie? movieItem = ctx.Movies.FirstOrDefault(item => item.Id == movie.Id);
-
-        if (movieItem == null)
-        {
-            TmdbMovieClient movieClient = new(movie.Id);
-            TmdbMovieDetails? details = await movieClient.Details(true);
-            if (details == null)
-                return null;
-
-            bool hasMovie = ctx.Movies.Any(item => item.Id == movie.Id);
-
-            Ulid libraryId = await ctx
-                .Libraries.Where(item => item.Type == libraryType)
-                .Select(item => item.Id)
-                .FirstOrDefaultAsync();
-
-            if (!hasMovie)
-            {
-                if (EventBusProvider.IsConfigured)
-                {
-                    await EventBusProvider.Current.PublishAsync(
-                        new UserNotificationEvent
-                        {
-                            Title = "Movie not found",
-                            Message = $"Movie {movie.Title} not found in library, adding now",
-                            Type = "info",
-                        }
-                    );
-                }
-                MovieImportJob job = new() { LibraryId = libraryId, Id = movie.Id };
-                await job.Handle();
-            }
-
-            movieItem = new()
-            {
-                Id = details.Id,
-                Title = details.Title,
-                Overview = details.Overview,
-                Poster = details.PosterPath,
-            };
-        }
-
-        MovieOrEpisode match = new()
-        {
-            Id = movieItem.Id,
-            Title = movieItem.Title,
-            Still = movieItem.Poster,
-            Duration = duration,
-            Overview = movieItem.Overview,
-        };
-
-        return (match, movieItem.ImdbId);
-    }
-
-    private static async Task EnsureShowInLibraryAsync(
-        MediaContext ctx,
-        int showId,
-        string showName,
-        Ulid libraryId
-    )
-    {
-        bool hasShow = ctx.Tvs.Any(item => item.Id == showId);
-        if (hasShow)
-            return;
-
-        if (EventBusProvider.IsConfigured)
-        {
-            await EventBusProvider.Current.PublishAsync(
-                new UserNotificationEvent
-                {
-                    Title = "Show not found",
-                    Message = $"Show {showName} not found in library, adding now",
-                    Type = "info",
-                }
-            );
-        }
-
-        ShowImportJob job = new()
-        {
-            LibraryId = libraryId,
-            Id = showId,
-            HighPriority = true,
-        };
-        await job.Handle();
-    }
-
-    private static FileItem BuildFileItem(
-        FileInfo file,
-        MovieFile parsed,
-        MovieOrEpisode match,
-        FfProbeData ffprobeData
-    )
-    {
-        string? parentPath = string.IsNullOrEmpty(file.DirectoryName)
-            ? "/"
-            : Path.GetDirectoryName(Path.Combine(file.DirectoryName, ".."));
-
-        ApplyEpisodeCardLabel(parsed, match);
-
-        return new()
-        {
-            Size = file.Length,
-            Mode = (int)file.Attributes,
-            Name = Path.GetFileNameWithoutExtension(file.Name),
-            Parent = parentPath,
-            Parsed = parsed,
-            Match = match,
-            Path = file.FullName,
-            Streams = new()
-            {
-                Video = ffprobeData.VideoStreams.Select(video => new Video
-                {
-                    Index = video.Index,
-                    Width = video.Width,
-                    Height = video.Height,
-                }),
-                Audio = ffprobeData.AudioStreams.Select(stream => new Audio
-                {
-                    Index = stream.Index,
-                    Language = stream.Language,
-                }),
-                Subtitle = ffprobeData.SubtitleStreams.Select(stream => new Subtitle
-                {
-                    Index = stream.Index,
-                    Language = stream.Language ?? "und",
-                }),
-            },
-        };
-    }
-
-    private static async Task<Episode?> ResolveAbsoluteEpisodeAsync(
-        MediaContext ctx,
-        int showId,
-        int absoluteEpisodeNumber
-    )
-    {
-        TmdbTvClient tvClient = new(showId);
-        TmdbTvEpisodeGroups? episodeGroups = await tvClient.EpisodeGroups(true);
-        if (episodeGroups == null)
-        {
-            Logger.App($"No episode groups found for show {showId}", LogEventLevel.Debug);
-            return null;
-        }
-
-        // Try all "Absolute" type groups (type 2) — some shows have multiple
-        TmdbEpisodeGroupsResult[] absoluteGroups = episodeGroups
-            .Results.Where(g => g.Type == 2)
-            .ToArray();
-
-        if (absoluteGroups.Length == 0)
-        {
-            Logger.App(
-                $"No absolute episode group (type 2) for show {showId}, available types: {string.Join(", ", episodeGroups.Results.Select(g => $"{g.Name}={g.Type}"))}",
-                LogEventLevel.Debug
-            );
-            return null;
-        }
-
-        foreach (TmdbEpisodeGroupsResult absoluteGroup in absoluteGroups)
-        {
-            TmdbEpisodeGroupClient groupClient = new(absoluteGroup.Id);
-            TmdbEpisodeGroupDetails? groupDetails = await groupClient.Details(true);
-            if (groupDetails == null)
-            {
-                Logger.App(
-                    $"Failed to fetch episode group details for {absoluteGroup.Id} ({absoluteGroup.Name})",
-                    LogEventLevel.Debug
-                );
-                continue;
-            }
-
-            // Flatten all episodes across all groups, ordered by group order
-            List<TmdbEpisodeGroupEpisode> allEpisodes = groupDetails
-                .Groups.OrderBy(g => g.Order)
-                .SelectMany(g => g.Episodes)
-                .ToList();
-
-            if (absoluteEpisodeNumber < 1 || absoluteEpisodeNumber > allEpisodes.Count)
-            {
-                Logger.App(
-                    $"Absolute episode {absoluteEpisodeNumber} out of range in '{absoluteGroup.Name}' (has {allEpisodes.Count} episodes)",
-                    LogEventLevel.Debug
-                );
-                continue;
-            }
-
-            TmdbEpisodeGroupEpisode target = allEpisodes[absoluteEpisodeNumber - 1];
-            Logger.App(
-                $"Resolved absolute episode {absoluteEpisodeNumber} → S{target.SeasonNumber:D2}E{target.EpisodeNumber:D2} ({target.Name}) via '{absoluteGroup.Name}'"
-            );
-
-            // Look up the resolved episode in the DB
-            Episode? episode = await ctx.Episodes.FirstOrDefaultAsync(e =>
-                e.TvId == showId
-                && e.SeasonNumber == target.SeasonNumber
-                && e.EpisodeNumber == target.EpisodeNumber
-            );
-
-            if (episode != null)
-                return episode;
-
-            // Fetch from TMDB and add to DB
-            TmdbEpisodeClient episodeClient = new(
-                showId,
-                target.SeasonNumber,
-                target.EpisodeNumber
-            );
-            TmdbEpisodeDetails? details = await episodeClient.Details(true);
-            if (details == null)
-                continue;
-
-            Season? season = await ctx.Seasons.FirstOrDefaultAsync(s =>
-                s.TvId == showId && s.SeasonNumber == details.SeasonNumber
-            );
-
-            episode = new()
-            {
-                Id = details.Id,
-                TvId = showId,
-                SeasonNumber = details.SeasonNumber,
-                EpisodeNumber = details.EpisodeNumber,
-                Title = details.Name,
-                Overview = details.Overview,
-                Still = details.StillPath,
-                VoteAverage = details.VoteAverage,
-                VoteCount = details.VoteCount,
-                AirDate = details.AirDate,
-                SeasonId = season?.Id ?? 0,
-            };
-
-            ctx.Episodes.Add(episode);
-            await ctx.SaveChangesAsync();
-
-            return episode;
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Resolves an episode using TMDB episode groups when the default season structure doesn't match.
-    /// E.g. Crunchyroll splits a show into S01/S02 but TMDB has it as a single season.
-    /// Searches all episode group types for a group whose season/order matches the parsed season,
-    /// then finds the episode by number within that group.
-    /// </summary>
-    private static async Task<Episode?> ResolveSeasonedEpisodeFromGroupsAsync(
-        MediaContext ctx,
-        int showId,
-        int seasonNumber,
-        int episodeNumber
-    )
-    {
-        TmdbTvClient tvClient = new(showId);
-        TmdbTvEpisodeGroups? episodeGroups = await tvClient.EpisodeGroups(true);
-        if (episodeGroups?.Results is not { Length: > 0 })
-            return null;
-
-        // Prefer episode groups with the fewest sub-groups that still cover the target season.
-        // E.g. for Season 2, a 2-group set (S1+S2) is better than a 3-group set (Specials+S1+S2).
-        IEnumerable<TmdbEpisodeGroupsResult> sortedResults = episodeGroups
-            .Results.Where(g => g.GroupCount >= seasonNumber)
-            .OrderBy(g => g.GroupCount);
-
-        foreach (TmdbEpisodeGroupsResult groupResult in sortedResults)
-        {
-            TmdbEpisodeGroupClient groupClient = new(groupResult.Id);
-            TmdbEpisodeGroupDetails? groupDetails = await groupClient.Details(true);
-            if (groupDetails == null)
-                continue;
-
-            // Groups within an episode group represent seasons/parts. Order values vary
-            // (some 0-based, some 1-based), so sort by Order and use positional index.
-            // Skip groups with no episodes (e.g. empty specials groups).
-            List<TmdbEpisodeGroup> sortedGroups = groupDetails
-                .Groups.Where(g => g.Episodes.Length > 0)
-                .OrderBy(g => g.Order)
-                .ToList();
-
-            TmdbEpisodeGroup? targetGroup =
-                sortedGroups.Count >= seasonNumber ? sortedGroups[seasonNumber - 1] : null;
-
-            if (targetGroup == null)
-                continue;
-
-            // Find the episode by position within this group. Order values are show-global
-            // (e.g. 24-47 for Season 2), so use sorted index instead.
-            TmdbEpisodeGroupEpisode? target = targetGroup
-                .Episodes.OrderBy(e => e.Order)
-                .ElementAtOrDefault(episodeNumber - 1);
-
-            if (target == null)
-                continue;
-
-            Logger.App(
-                $"Resolved S{seasonNumber:D2}E{episodeNumber:D2} → TMDB S{target.SeasonNumber:D2}E{target.EpisodeNumber:D2} ({target.Name}) via episode group '{groupResult.Name}'"
-            );
-
-            // Look up in DB first
-            Episode? episode = await ctx.Episodes.FirstOrDefaultAsync(e =>
-                e.TvId == showId
-                && e.SeasonNumber == target.SeasonNumber
-                && e.EpisodeNumber == target.EpisodeNumber
-            );
-
-            if (episode != null)
-                return episode;
-
-            // Fetch from TMDB and create
-            TmdbEpisodeClient episodeClient = new(
-                showId,
-                target.SeasonNumber,
-                target.EpisodeNumber
-            );
-            TmdbEpisodeDetails? details = await episodeClient.Details(true);
-            if (details == null)
-                continue;
-
-            Season? season = await ctx.Seasons.FirstOrDefaultAsync(s =>
-                s.TvId == showId && s.SeasonNumber == details.SeasonNumber
-            );
-
-            episode = new()
-            {
-                Id = details.Id,
-                TvId = showId,
-                SeasonNumber = details.SeasonNumber,
-                EpisodeNumber = details.EpisodeNumber,
-                Title = details.Name,
-                Overview = details.Overview,
-                Still = details.StillPath,
-                VoteAverage = details.VoteAverage,
-                VoteCount = details.VoteCount,
-                AirDate = details.AirDate,
-                SeasonId = season?.Id ?? 0,
-            };
-
-            ctx.Episodes.Add(episode);
-            await ctx.SaveChangesAsync();
-
-            return episode;
-        }
-
-        return null;
-    }
-
+    // Tracks recent CoverArt search queries to avoid duplicate lookups within a scan.
     private static readonly List<string> PrevSearchQueries = [];
 
     public static async Task<List<FileItem>> GetMusicBrainzReleasesInDirectory(
         string folder,
-        IStorageDriver storageDriver
+        IStorageDriver storageDriver,
+        IAudioFingerprinter audioFingerprinter
     )
     {
         PrevSearchQueries.Clear();
@@ -1327,7 +214,8 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                 mediaFiles,
                 musicBrainzReleaseClient,
                 lookupReleaseIds,
-                musicBrainzRecordingClient
+                musicBrainzRecordingClient,
+                audioFingerprinter
             );
 
         releases = await FetchReleaseAppends(lookupReleaseIds, musicBrainzReleaseClient, releases);
@@ -1342,7 +230,8 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         ConcurrentBag<MediaFile> mediaFiles,
         MusicBrainzReleaseClient musicBrainzReleaseClient,
         List<Guid> lookupReleaseIds,
-        MusicBrainzRecordingClient musicBrainzRecordingClient
+        MusicBrainzRecordingClient musicBrainzRecordingClient,
+        IAudioFingerprinter audioFingerprinter
     )
     {
         string prevMusicBrainzReleaseId = string.Empty;
@@ -1352,7 +241,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
         await Parallel.ForEachAsync(
             mediaFiles,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (mediaFile, _) =>
             {
                 AudioTagModel audioTagModel = await AudioTagModel.Create(mediaFile);
@@ -1377,7 +266,8 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                             musicBrainzReleaseClient,
                             mediaFile,
                             lockObject,
-                            releases
+                            releases,
+                            audioFingerprinter
                         ) ?? prevMusicBrainzReleaseId;
                 }
             }
@@ -1390,11 +280,12 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         MusicBrainzReleaseClient musicBrainzReleaseClient,
         MediaFile mediaFile,
         object lockObject,
-        List<MusicBrainzReleaseAppends> releases
+        List<MusicBrainzReleaseAppends> releases,
+        IAudioFingerprinter audioFingerprinter
     )
     {
         string prevMusicBrainzReleaseId;
-        AcoustIdFingerprintClient acoustIdFingerprintClient = new();
+        AcoustIdFingerprintClient acoustIdFingerprintClient = new(audioFingerprinter);
         AcoustIdFingerprint? acoustIds = await acoustIdFingerprintClient.Lookup(mediaFile.Path);
         if (acoustIds == null)
             return null;
@@ -1531,7 +422,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
         await Parallel.ForEachAsync(
             releases,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (release, _) =>
             {
                 if (files.Any(x => x.Match.Id == release.Id))
@@ -1594,7 +485,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         lookupReleaseIds = lookupReleaseIds.DistinctBy(x => x).ToList();
         await Parallel.ForEachAsync(
             lookupReleaseIds,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (releaseId, _) =>
             {
                 MusicBrainzReleaseAppends? musicBrainzRelease =
@@ -1622,7 +513,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
         await Parallel.ForEachAsync(
             matchedReleases,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (release, cancellationToken) =>
             {
                 int score = await CalculateMatchScoreAsync(release, mediaFiles);
@@ -1652,7 +543,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
         await Parallel.ForEachAsync(
             release.Media,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (media, cancellationToken) =>
             {
                 if (media.Tracks.Length == 0 || media.TrackCount == 0)
@@ -1660,7 +551,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
                 await Parallel.ForEachAsync(
                     localFiles,
-                    Config.ParallelOptions,
+                    SystemParallelism.Options,
                     async (file, ct) =>
                     {
                         try

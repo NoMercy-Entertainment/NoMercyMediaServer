@@ -294,6 +294,66 @@ namespace NoMercy.Database.Migrations
                     b.ToTable("FolderLibrary");
                 });
 
+            modelBuilder.Entity("NoMercy.Database.Models.Libraries.ImportFailure", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("ErrorMessage")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FilePath")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("JobType")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("LastAttemptAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LibraryId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Resolved")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("RetryCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("JobType");
+
+                    b.HasIndex("LibraryId");
+
+                    b.HasIndex("Resolved");
+
+                    b.ToTable("ImportFailures", t =>
+                        {
+                            t.HasTrigger("update_ImportFailures_updated_at");
+                        });
+                });
+
             modelBuilder.Entity("NoMercy.Database.Models.Libraries.InboxItem", b =>
                 {
                     b.Property<string>("Id")
@@ -1445,6 +1505,9 @@ namespace NoMercy.Database.Migrations
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("LastEpisodeNumber")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("MetadataId")
                         .HasColumnType("TEXT");
@@ -4671,7 +4734,7 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Music.Track", "AudioTrack")
                         .WithOne()
                         .HasForeignKey("NoMercy.Database.Models.Media.Metadata", "AudioTrackId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("AudioTrack");
                 });
@@ -5432,7 +5495,7 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Media.Metadata", "Metadata")
                         .WithMany()
                         .HasForeignKey("MetadataId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("LibraryFolder");
 

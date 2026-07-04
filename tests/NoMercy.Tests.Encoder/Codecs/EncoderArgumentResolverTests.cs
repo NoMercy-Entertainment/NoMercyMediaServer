@@ -283,6 +283,175 @@ public class EncoderArgumentResolverTests
         (h % 2).Should().Be(0, "encoders require even dimensions");
     }
 
+    [Fact]
+    public void ResolveProfile_HighOnNumericVocabulary_MapsToHighNotFirstEntry()
+    {
+        // h264_videotoolbox exposes numeric profiles ("66"=Baseline, "77"=Main,
+        // "100"=High). "high" must map to "100", never silently fall back to the
+        // first entry "66" (Baseline) — that ran Baseline while the profile
+        // asked for High.
+        EncoderInfo videotoolbox = new(
+            FfmpegName: "h264_videotoolbox",
+            RequiredVendor: null,
+            Presets: [],
+            Profiles: ["66", "77", "100"],
+            Levels: [],
+            QualityRange: new(0, 100, 50),
+            SupportedRateControl: [RateControlMode.QualityLevel],
+            Supports10Bit: false,
+            SupportsHdr: false,
+            MaxConcurrentSessions: 3,
+            PixelFormat10Bit: "yuv420p10le",
+            VendorSpecificFlags: new()
+        );
+
+        EncoderArgumentResolver.ResolveProfile("high", videotoolbox).Should().Be("100");
+        EncoderArgumentResolver.ResolveProfile("main", videotoolbox).Should().Be("77");
+        EncoderArgumentResolver.ResolveProfile("baseline", videotoolbox).Should().Be("66");
+    }
+
+    [Fact]
+    public void ResolveProfile_KnownVocabulary_PassesThroughVerbatim()
+    {
+        EncoderInfo libx264 = new(
+            FfmpegName: "libx264",
+            RequiredVendor: null,
+            Presets: ["medium"],
+            Profiles: ["baseline", "main", "high"],
+            Levels: ["4.1"],
+            QualityRange: new(0, 51, 23),
+            SupportedRateControl: [RateControlMode.Crf],
+            Supports10Bit: false,
+            SupportsHdr: false,
+            MaxConcurrentSessions: int.MaxValue,
+            PixelFormat10Bit: "yuv420p10le",
+            VendorSpecificFlags: new()
+        );
+
+        EncoderArgumentResolver.ResolveProfile("high", libx264).Should().Be("high");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // ResolveProfile — bit-depth coupling (10-bit must not emit an 8-bit profile)
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("high")]
+    [InlineData("main")]
+    [InlineData("baseline")]
+    public void ResolveProfile_H264_TenBit_PromotesEightBitTierToHigh10(string requested)
+    {
+        // libx264 with a 10-bit pixel format rejects an 8-bit-only profile
+        // string ("high profile doesn't support a bit depth of 10"). H.264's
+        // ONLY 10-bit profile is high10 (there is no h264 "main10"), so every
+        // 8-bit tier promotes to high10 — the profile libx264 actually accepts.
+        EncoderInfo libx264 = GetH264Encoder("libx264");
+        EncoderArgumentResolver
+            .ResolveProfile(requested, libx264, finalBitDepth: 10)
+            .Should()
+            .Be("high10");
+    }
+
+    [Fact]
+    public void ResolveProfile_H264_TenBit_KeepsAlreadyTenBitProfile()
+    {
+        EncoderInfo libx264 = GetH264Encoder("libx264");
+        EncoderArgumentResolver
+            .ResolveProfile("high10", libx264, finalBitDepth: 10)
+            .Should()
+            .Be("high10");
+    }
+
+    [Fact]
+    public void ResolveProfile_H264_EightBit_LeavesEightBitTierUntouched()
+    {
+        // The promotion must never fire at 8-bit — "high" stays "high".
+        EncoderInfo libx264 = GetH264Encoder("libx264");
+        EncoderArgumentResolver
+            .ResolveProfile("high", libx264, finalBitDepth: 8)
+            .Should()
+            .Be("high");
+    }
+
+    [Fact]
+    public void ResolveProfile_H265_TenBit_PromotesMainToMain10()
+    {
+        EncoderInfo libx265 = GetEncoder(VideoCodecType.H265, "libx265");
+        EncoderArgumentResolver
+            .ResolveProfile("main", libx265, finalBitDepth: 10)
+            .Should()
+            .Be("main10");
+    }
+
+    [Fact]
+    public void ResolveProfile_H264_TenBit_NullProfile_FallsBackToTenBitCapable()
+    {
+        // A null (Auto) request at 10-bit must not fall back to Profiles[0]
+        // ("baseline", 8-bit only) — the fallback itself has to be 10-bit-capable.
+        EncoderInfo libx264 = GetH264Encoder("libx264");
+        string? resolved = EncoderArgumentResolver.ResolveProfile(null, libx264, finalBitDepth: 10);
+        resolved.Should().BeOneOf("high10", "high422", "high444p");
+    }
+
+    [Fact]
+    public void ResolveProfile_Vp9_TenBit_DoesNotApplyH26xPromotion()
+    {
+        // VP9 numeric profiles mean chroma/bit-depth, NOT an H.264 tier. The
+        // H26x promotion must not touch them — "main" is not VP9 vocabulary, so
+        // it falls back to the encoder's own first profile, never "main10".
+        EncoderInfo vpx = GetEncoder(VideoCodecType.Vp9, "libvpx-vp9");
+        EncoderArgumentResolver
+            .ResolveProfile("main", vpx, finalBitDepth: 10)
+            .Should()
+            .Be("0", "VP9 falls back to its own first profile, never an H26x sibling");
+    }
+
+    [Fact]
+    public void ResolveDimensions_OddExplicitWidth_IsRoundedEven()
+    {
+        // 1921 passes validation (Width > 0) but reaches scale=1921:-2, which
+        // libx264 rejects ("width not divisible by 2"). Width must be evened.
+        VideoOutput profile = MakeVideoOutput(width: 1921);
+        (int w, int _) = EncoderArgumentResolver.ResolveDimensions(profile, 3840, 2160);
+        (w % 2).Should().Be(0, "an odd luma width aborts the encode");
+        w.Should().Be(1920, "round DOWN so the result never exceeds the request/source");
+    }
+
+    [Fact]
+    public void ResolveDimensions_OddManualRungWidth_IsRoundedEven()
+    {
+        // Manual ladder rungs carry hand-authored widths (e.g. 853 for 480p);
+        // an odd rung width hits the same scale=W:-2 abort as an odd profile width.
+        VideoOutput rung = MakeVideoOutput(width: 853, height: 480);
+        (int w, int h) = EncoderArgumentResolver.ResolveDimensions(rung, 1920, 1080);
+        (w % 2).Should().Be(0);
+        (h % 2).Should().Be(0);
+        w.Should().Be(852);
+    }
+
+    [Fact]
+    public void ResolveDimensions_ZeroSourceWidth_DoesNotCollapseHeightToZero()
+    {
+        // A corrupt/partial probe can report sourceWidth = 0. With a derived
+        // (null) height the old code produced height 0 → RESOLUTION=WIDTHx0 in
+        // the HLS master. Height must fall back to a real value.
+        VideoOutput profile = MakeVideoOutput(width: 1920, height: null);
+        (int _, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 0, 0);
+        h.Should().BeGreaterThan(0, "a zero-height variant is skipped by every player");
+        (h % 2).Should().Be(0);
+    }
+
+    [Fact]
+    public void ResolveDimensions_ExplicitHeightAboveSource_IsClampedNoUpscale()
+    {
+        // Height=2160 on a 1280x720 source passed the width-only upscale guard
+        // and reached scale_cuda=1280:2160 — a stretched upscale. Explicit
+        // height must clamp to the source just like width does.
+        VideoOutput profile = MakeVideoOutput(width: 1280, height: 2160);
+        (int _, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 1280, 720);
+        h.Should().Be(720, "explicit height must not upscale beyond source");
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     // Helpers
     // ──────────────────────────────────────────────────────────────────────────

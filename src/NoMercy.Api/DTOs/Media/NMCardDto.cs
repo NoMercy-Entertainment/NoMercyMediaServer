@@ -16,8 +16,8 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Models.Movies;
 
@@ -65,7 +65,7 @@ public class NmCardDto
     public string? Logo { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("have_items")]
     public int? HaveItems { get; set; }
@@ -268,7 +268,7 @@ public class NmCardDto
         NumberOfItems = 1;
         HaveItems = movie.VideoFileCount;
 
-        ColorPalette = IColorPalettes.FromJsonOrNull(movie.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(movie.ColorPalette);
 
         if (movie.CertificationRating != null)
         {
@@ -300,7 +300,7 @@ public class NmCardDto
         NumberOfItems = tv.NumberOfEpisodes;
         HaveItems = tv.EpisodesWithVideo;
 
-        ColorPalette = IColorPalettes.FromJsonOrNull(tv.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(tv.ColorPalette);
 
         if (tv.CertificationRating != null)
         {
@@ -363,7 +363,7 @@ public class NmCardDto
         CreatedAt = dto.CreatedAt;
         HaveItems = dto.HaveMovies + dto.HaveEpisodes;
 
-        ColorPalette = IColorPalettes.FromJsonOrNull(dto.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(dto.ColorPalette);
 
         if (dto.CertificationRating != null)
         {
@@ -404,10 +404,10 @@ public class NmCardDto
             CreatedAt = item.Special.CreatedAt;
 
             int availableMovies = item.Special.Items.Count(specialItem =>
-                specialItem.MovieId != null && specialItem.Movie?.VideoFiles.Count != 0
+                specialItem.MovieId != null && specialItem.Movie?.VideoFiles.Count > 0
             );
             int availableEpisodes = item.Special.Items.Count(specialItem =>
-                specialItem.Episode != null && specialItem.Episode?.VideoFiles.Count != 0
+                specialItem.Episode != null && specialItem.Episode?.VideoFiles.Count > 0
             );
             HaveItems = availableMovies + availableEpisodes;
 
@@ -597,7 +597,7 @@ public class NmCardDto
         NumberOfItems = 1;
         HaveItems = movie.VideoFileCount;
 
-        ColorPalette = IColorPalettes.FromJsonOrNull(movie.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(movie.ColorPalette);
 
         if (movie.CertificationRating != null)
         {
@@ -628,7 +628,7 @@ public class NmCardDto
         NumberOfItems = tv.NumberOfEpisodes;
         HaveItems = tv.EpisodesWithVideo;
 
-        ColorPalette = IColorPalettes.FromJsonOrNull(tv.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(tv.ColorPalette);
 
         if (tv.CertificationRating != null)
         {

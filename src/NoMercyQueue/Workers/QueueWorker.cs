@@ -12,24 +12,13 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NoMercy.NmSystem.Lifecycle;
-using NoMercy.Resources;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
+using NoMercyQueue.Core.Resources;
 using BootStage = NoMercy.NmSystem.Lifecycle.BootStage;
 using Exception = System.Exception;
 
 namespace NoMercyQueue.Workers;
-
-/// <summary>
-/// Names of queues whose jobs participate in resource-budget gating.
-/// Workers on these queues check <see cref="IResourceBudget"/> before
-/// running a job and re-queue it when the budget is saturated.
-/// </summary>
-internal static class ResourceAwareQueues
-{
-    internal static bool IsResourceAware(string queueName) =>
-        queueName is "encoder-gpu" or "encoder-cpu";
-}
 
 public class QueueWorker(
     JobQueue queue,
@@ -39,7 +28,9 @@ public class QueueWorker(
     IServiceScopeFactory? scopeFactory = null,
     IServerReadinessGate? readinessGate = null,
     IServerPhaseTracker? phaseTracker = null,
-    IResourceBudget? resourceBudget = null
+    IResourceBudget? resourceBudget = null,
+    IReadOnlySet<string>? resourceAwareQueues = null,
+    BootStage readyStage = BootStage.All
 )
 {
     private static readonly TimeSpan BudgetRetryDelay = TimeSpan.FromSeconds(5);
@@ -85,38 +76,21 @@ public class QueueWorker(
     {
         if (phaseTracker is not null)
         {
-            await phaseTracker.WhenReachedAsync(BootStage.All, stopToken).ConfigureAwait(false);
-            NoMercy.NmSystem.SystemCalls.Logger.App(
-                $"[QueueWorker {name}] all boot stages complete, entering poll loop"
-            );
+            // Per-worker poll-loop lines were ~one per worker thread; the single
+            // "Queue workers spawned per queue" summary in QueueRunner covers this.
+            await phaseTracker.WhenReachedAsync(readyStage, stopToken).ConfigureAwait(false);
         }
         else if (readinessGate is not null)
         {
-            NoMercy.NmSystem.SystemCalls.Logger.App(
-                $"[QueueWorker {name}] awaiting readiness gate"
-            );
             await readinessGate.WaitForReadyAsync(stopToken).ConfigureAwait(false);
-            NoMercy.NmSystem.SystemCalls.Logger.App(
-                $"[QueueWorker {name}] gate resolved, entering poll loop"
-            );
         }
 
         if (stopToken.IsCancellationRequested)
             return;
 
-        bool firstPoll = true;
         while (_isRunning && !stopToken.IsCancellationRequested)
         {
             QueueJobModel? job = queue.ReserveJob(name, _currentJobId);
-
-            if (firstPoll)
-            {
-                NoMercy.NmSystem.SystemCalls.Logger.App(
-                    $"[QueueWorker {name}] first ReserveJob → {(job is null ? "null" : "id=" + job.Id)}",
-                    Serilog.Events.LogEventLevel.Information
-                );
-                firstPoll = false;
-            }
 
             if (job != null)
             {
@@ -126,7 +100,7 @@ public class QueueWorker(
                 // again after a short delay.
                 ResourceLease? lease = null;
 
-                if (resourceBudget is not null && ResourceAwareQueues.IsResourceAware(name))
+                if (resourceBudget is not null && resourceAwareQueues?.Contains(name) == true)
                 {
                     if (!TryAcquireBudget(job, out lease))
                     {
@@ -351,10 +325,23 @@ public class QueueWorker(
     {
         IServiceScope? scope = null;
 
-        if (scopeFactory is not null && job is IJobStorageInjector injector)
+        if (scopeFactory is not null)
         {
             scope = scopeFactory.CreateScope();
-            injector.InjectStorageServices(scope.ServiceProvider);
+            IServiceProvider serviceProvider = scope.ServiceProvider;
+
+            // Rebuild the job through DI so constructor dependencies are injected,
+            // then re-apply the serialized job data. Upstream deserialization yields
+            // a data-only instance; services are resolved from the per-job scope.
+            IShouldQueue rebuilt = (IShouldQueue)
+                ActivatorUtilities.CreateInstance(serviceProvider, job.GetType());
+            SerializationHelper.Populate(queueJob.Payload, rebuilt);
+            job = rebuilt;
+
+            // Back-compat: jobs not yet migrated to constructor injection still
+            // receive their services via this post-construction hook.
+            if (job is IJobStorageInjector injector)
+                injector.InjectStorageServices(serviceProvider);
         }
 
         if (job is IJobIdReceiver idReceiver)

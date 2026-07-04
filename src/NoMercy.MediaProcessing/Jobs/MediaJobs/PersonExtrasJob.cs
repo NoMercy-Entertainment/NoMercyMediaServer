@@ -13,11 +13,10 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.MediaProcessing.People;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Models.People;
-using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -27,6 +26,13 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 [Serializable]
 public class PersonExtrasJob : AbstractShowExtraDataJob<TmdbPersonAppends, string>
 {
+    public PersonExtrasJob() { }
+
+    public PersonExtrasJob(
+        ILoggerFactory loggerFactory
+    )
+        : base(loggerFactory) { }
+
     public override string QueueName => "extras";
     public override int Priority => 1;
 
@@ -36,8 +42,12 @@ public class PersonExtrasJob : AbstractShowExtraDataJob<TmdbPersonAppends, strin
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        PersonRepository personRepository = new(context);
-        PersonManager personManager = new(personRepository, jobDispatcher);
+        PersonRepository personRepository = new(context, LoggerFactory.CreateLogger<PersonRepository>());
+        PersonManager personManager = new(
+            personRepository,
+            jobDispatcher,
+            LoggerFactory.CreateLogger<PersonManager>()
+        );
 
         foreach (TmdbPersonAppends person in Storage)
         {
@@ -45,6 +55,6 @@ public class PersonExtrasJob : AbstractShowExtraDataJob<TmdbPersonAppends, strin
             await personManager.StoreImages(person);
         }
 
-        Logger.MovieDb($"Show {Name}: People: Translations and Images stored", LogEventLevel.Debug);
+        Log.LogDebug("Show {Name}: People: Translations and Images stored", Name);
     }
 }

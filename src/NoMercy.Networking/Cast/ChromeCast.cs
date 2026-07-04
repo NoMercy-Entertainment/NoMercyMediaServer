@@ -13,12 +13,12 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json.Serialization;
 using System.Timers;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Events;
 using NoMercy.Events.Cast;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.SystemCalls;
 using Sharpcaster;
 using Sharpcaster.Models;
 using Sharpcaster.Models.ChromecastStatus;
@@ -27,49 +27,67 @@ using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace NoMercy.Networking.Cast;
 
-public class ChromeCast
+public class ChromeCastService : IChromeCastService
 {
-    public static INetworkDiscovery? NetworkDiscovery { get; set; }
+    private readonly INetworkDiscovery _networkDiscovery;
 
-    private static readonly ChromecastLocator Locator = new();
-    private static IEnumerable<ChromecastReceiver> _chromecastReceivers =
-        new List<ChromecastReceiver>();
+    private readonly ILogger<ChromeCastService> _logger;
+
+    public ChromeCastService(ILogger<ChromeCastService> logger, INetworkDiscovery networkDiscovery)
+    {
+        _logger = logger;
+        _networkDiscovery = networkDiscovery;
+    }
+
+    private readonly ChromecastLocator Locator = new();
+    private IEnumerable<ChromecastReceiver> _chromecastReceivers = new List<ChromecastReceiver>();
 
     // Synthesized entries survive mDNS rescans (which replace _chromecastReceivers
     // wholesale). Without this, two TVs alternate wiping each other every ping.
-    private static readonly ConcurrentDictionary<string, ChromecastReceiver> _synthesizedReceivers =
-        new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, ChromecastReceiver> _synthesizedReceivers = new(
+        StringComparer.OrdinalIgnoreCase
+    );
 
-    private static readonly SemaphoreSlim _rediscoveryGate = new(1, 1);
-    private static DateTime _lastRediscoveryUtc = DateTime.MinValue;
-    private static readonly TimeSpan _rediscoveryCooldown = TimeSpan.FromSeconds(30);
+    private readonly SemaphoreSlim _rediscoveryGate = new(1, 1);
+    private DateTime _lastRediscoveryUtc = DateTime.MinValue;
+    private readonly TimeSpan _rediscoveryCooldown = TimeSpan.FromSeconds(30);
 
     // Per-receiver client pool keyed by receiver name. Thread-safe.
-    private static readonly ConcurrentDictionary<string, ChromecastClient> ClientPool = new(
+    private readonly ConcurrentDictionary<string, ChromecastClient> ClientPool = new(
         StringComparer.OrdinalIgnoreCase
     );
 
     // Per-name connect gate so concurrent callers (VideoHub, MusicHub × 2
     // observed in practice) don't each open a wasted TCP connection to the
     // same TV. First caller wins, others wait and read from ClientPool.
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> _connectGates = new(
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _connectGates = new(
         StringComparer.OrdinalIgnoreCase
     );
 
     // Tracks which receiver was most recently selected (for compat callers that
     // call SelectChromecast then Launch/CastPlaylist without passing a name).
-    [ThreadStatic]
-    private static string? _lastSelectedName;
+    private volatile string? _lastSelectedName;
 
-    public static async Task Init()
+    public async Task Init()
     {
-        _chromecastReceivers = (await Locator.FindReceiversAsync()).ToList();
+        // Serialize with the on-demand rediscovery path (FindReceiverNameByIpAsync)
+        // so a boot-time scan and a cache-miss rescan cannot race on _chromecastReceivers.
+        await _rediscoveryGate.WaitAsync();
+        try
+        {
+            _chromecastReceivers = (await Locator.FindReceiversAsync()).ToList();
+            _lastRediscoveryUtc = DateTime.UtcNow;
 
-        foreach (ChromecastReceiver chromecast in _chromecastReceivers)
-            Logger.Ping($"Found chromecast: {chromecast.Name}");
+            foreach (ChromecastReceiver chromecast in _chromecastReceivers)
+                _logger.LogInformation("Found chromecast: {Name}", chromecast.Name);
+        }
+        finally
+        {
+            _rediscoveryGate.Release();
+        }
     }
 
-    public static string[] GetChromeCasts()
+    public string[] GetChromeCasts()
     {
         return _chromecastReceivers.Select(x => x.Name).ToArray();
     }
@@ -83,7 +101,7 @@ public class ChromeCast
     /// because Init() runs at server start and stale caches are common — the
     /// TV may have come online after that boot phase.
     /// </summary>
-    public static async Task<string?> FindReceiverNameByIpAsync(string ip)
+    public async Task<string?> FindReceiverNameByIpAsync(string ip)
     {
         if (string.IsNullOrEmpty(ip))
             return null;
@@ -102,18 +120,20 @@ public class ChromeCast
             if (shouldRescan)
             {
                 _lastRediscoveryUtc = DateTime.UtcNow;
-                Logger.Ping($"Chromecast cache miss for {ip} — refreshing mDNS");
+                _logger.LogInformation("Chromecast cache miss for {Ip} — refreshing mDNS", ip);
                 try
                 {
                     _chromecastReceivers = (await Locator.FindReceiversAsync()).ToList();
                     foreach (ChromecastReceiver chromecast in _chromecastReceivers)
-                        Logger.Ping(
-                            $"Discovered chromecast: {chromecast.Name} @ {chromecast.DeviceUri.Host}"
+                        _logger.LogInformation(
+                            "Discovered chromecast: {Name} @ {Host}",
+                            chromecast.Name,
+                            chromecast.DeviceUri.Host
                         );
                 }
                 catch (Exception ex)
                 {
-                    Logger.Ping($"Chromecast re-discovery failed: {ex.Message}");
+                    _logger.LogInformation("Chromecast re-discovery failed: {Message}", ex.Message);
                 }
             }
         }
@@ -153,8 +173,9 @@ public class ChromeCast
 
             if (_synthesizedReceivers.TryAdd(ip, candidate))
             {
-                Logger.Ping(
-                    $"Synthesized Chromecast receiver for {ip}:8009 — mDNS unavailable, will attempt direct connect"
+                _logger.LogInformation(
+                    "Synthesized Chromecast receiver for {Ip}:8009 — mDNS unavailable, will attempt direct connect",
+                    ip
                 );
                 synthetic = candidate;
             }
@@ -167,7 +188,7 @@ public class ChromeCast
         return synthetic.Name;
     }
 
-    private static string? LookupNameByIp(string ip)
+    private string? LookupNameByIp(string ip)
     {
         foreach (ChromecastReceiver receiver in _chromecastReceivers)
         {
@@ -185,7 +206,7 @@ public class ChromeCast
 
     // --- Pool helpers ---
 
-    private static ChromecastClient BuildClient(string receiverName)
+    private ChromecastClient BuildClient(string receiverName)
     {
         ChromecastClient client = new();
 
@@ -254,13 +275,12 @@ public class ChromeCast
     // of Sharpcaster's TimerElapsed and swallows synchronously — no
     // async-void chain ever starts. Real fix is to vendor-fork Sharpcaster
     // and try/catch its TimerElapsed body.
-    private static readonly FieldInfo? _timerOnIntervalElapsedField =
-        typeof(System.Timers.Timer).GetField(
-            "_onIntervalElapsed",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
+    private readonly FieldInfo? _timerOnIntervalElapsedField = typeof(System.Timers.Timer).GetField(
+        "_onIntervalElapsed",
+        BindingFlags.NonPublic | BindingFlags.Instance
+    );
 
-    private static void DisableSharpcasterHeartbeat(ChromecastClient client)
+    private void DisableSharpcasterHeartbeat(ChromecastClient client)
     {
         try
         {
@@ -301,7 +321,7 @@ public class ChromeCast
         }
         catch (Exception ex)
         {
-            Logger.Ping($"DisableSharpcasterHeartbeat failed: {ex.Message}");
+            _logger.LogInformation("DisableSharpcasterHeartbeat failed: {Message}", ex.Message);
         }
     }
 
@@ -311,13 +331,13 @@ public class ChromeCast
     // neutralize every WardenIntervalMs across every client in the pool. Catching
     // here is mandatory — the warden's own Elapsed must never re-throw.
     private const double WardenIntervalMs = 2000;
-    private static readonly System.Timers.Timer _heartbeatWarden = new(WardenIntervalMs)
+    private readonly System.Timers.Timer _heartbeatWarden = new(WardenIntervalMs)
     {
         AutoReset = true,
     };
-    private static int _wardenStarted;
+    private int _wardenStarted;
 
-    private static void EnsureHeartbeatWardenStarted()
+    private void EnsureHeartbeatWardenStarted()
     {
         if (Interlocked.CompareExchange(ref _wardenStarted, 1, 0) != 0)
             return;
@@ -349,11 +369,11 @@ public class ChromeCast
     // Wire disconnect cleanup once per client: when Sharpcaster reports the SSL/TCP
     // session dropped, remove from the pool so the next caller gets a fresh client
     // instead of reusing one whose heartbeat is about to PING a dead socket.
-    private static void WireDisconnectCleanup(string name, ChromecastClient client)
+    private void WireDisconnectCleanup(string name, ChromecastClient client)
     {
         client.Disconnected += (_, _) =>
         {
-            Logger.Ping($"Chromecast disconnected: {name} — removing from pool");
+            _logger.LogInformation("Chromecast disconnected: {Name} — removing from pool", name);
             if (ClientPool.TryRemove(name, out ChromecastClient? removed))
             {
                 try
@@ -368,7 +388,7 @@ public class ChromeCast
         };
     }
 
-    private static void NeutralizeTimersIn(object owner)
+    private void NeutralizeTimersIn(object owner)
     {
         foreach (
             FieldInfo field in owner
@@ -391,7 +411,7 @@ public class ChromeCast
         }
     }
 
-    private static void NeutralizeTimer(System.Timers.Timer timer)
+    private void NeutralizeTimer(System.Timers.Timer timer)
     {
         try
         {
@@ -428,7 +448,7 @@ public class ChromeCast
         // ticks still fire but our no-op runs, no SendAsync, no SocketException.
     }
 
-    private static async Task<ChromecastClient?> GetOrCreateClientAsync(string name)
+    private async Task<ChromecastClient?> GetOrCreateClientAsync(string name)
     {
         ChromecastReceiver? receiver = _chromecastReceivers.FirstOrDefault(x =>
             string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)
@@ -447,7 +467,7 @@ public class ChromeCast
 
         if (receiver == null)
         {
-            Logger.Ping($"Chromecast not found: {name}");
+            _logger.LogInformation("Chromecast not found: {Name}", name);
             return null;
         }
 
@@ -468,7 +488,7 @@ public class ChromeCast
                 return raced;
 
             ChromecastClient newClient = BuildClient(name);
-            Logger.Ping($"Connecting to chromecast: {name}");
+            _logger.LogInformation("Connecting to chromecast: {Name}", name);
             await newClient.ConnectChromecast(receiver);
 
             // Disable Sharpcaster's internal heartbeat after Connect — the
@@ -493,18 +513,18 @@ public class ChromeCast
     /// makes it the "current" receiver for subsequent parameterless calls on
     /// this thread.
     /// </summary>
-    public static async Task SelectChromecast(string name)
+    public async Task SelectChromecast(string name)
     {
         ChromecastClient? client = await GetOrCreateClientAsync(name);
         if (client is not null)
             _lastSelectedName = name;
     }
 
-    public static async Task SelectChromecast(ChromecastReceiver? receiver)
+    public async Task SelectChromecast(ChromecastReceiver? receiver)
     {
         if (receiver == null)
         {
-            Logger.Ping("Chromecast not found");
+            _logger.LogInformation("Chromecast not found");
             return;
         }
 
@@ -516,7 +536,7 @@ public class ChromeCast
     /// <paramref name="name"/> is null the last receiver selected on this
     /// thread is used.
     /// </summary>
-    public static async Task Launch(string? name = null)
+    public async Task Launch(string? name = null)
     {
         string? target = name ?? _lastSelectedName;
         if (target == null)
@@ -525,11 +545,11 @@ public class ChromeCast
         if (!ClientPool.TryGetValue(target, out ChromecastClient? client))
             return;
 
-        Logger.Ping($"Launching chromecast: {target}");
+        _logger.LogInformation("Launching chromecast: {Target}", target);
         _ = await client.LaunchApplicationAsync("925B4C3C");
     }
 
-    private static int _androidLaunchRequestId = new Random().Next();
+    private int _androidLaunchRequestId = new Random().Next();
 
     /// <summary>
     /// Launches the NoMercy cast application as an Android TV receiver. Sends
@@ -546,7 +566,7 @@ public class ChromeCast
     /// it. The APK ignores auth fields (it has its own persistent Keycloak
     /// session); the Web Receiver consumes them to bootstrap volatile auth.
     /// </summary>
-    public static async Task LaunchAndroidReceiver(
+    public async Task LaunchAndroidReceiver(
         string? name = null,
         object? customData = null,
         bool useAndroidReceiver = true
@@ -573,8 +593,10 @@ public class ChromeCast
         }
         catch (Exception ex)
         {
-            Logger.Ping(
-                $"LaunchAndroidReceiver pre-LAUNCH GET_STATUS failed for {target}: {ex.Message}"
+            _logger.LogInformation(
+                "LaunchAndroidReceiver pre-LAUNCH GET_STATUS failed for {Target}: {Message}",
+                target,
+                ex.Message
             );
         }
 
@@ -582,8 +604,11 @@ public class ChromeCast
         string json = BuildLaunchJson(requestId, customData, useAndroidReceiver);
 
         string flavor = useAndroidReceiver ? "androidReceiverCompatible" : "webReceiverOnly";
-        Logger.Ping(
-            $"Launching cast-tv ({flavor}{(customData is null ? "" : ", customData")}) on {target}"
+        _logger.LogInformation(
+            "Launching cast-tv ({Flavor}{CustomData}) on {Target}",
+            flavor,
+            (customData is null ? "" : ", customData"),
+            target
         );
 
         // Watch for cast_shell's reply on this request id. RECEIVER_STATUS
@@ -624,8 +649,9 @@ public class ChromeCast
 
             if (!launchAccepted)
             {
-                Logger.Ping(
-                    $"LaunchAndroidReceiver: no LAUNCH ack from {target} within 5s — retrying once"
+                _logger.LogInformation(
+                    "LaunchAndroidReceiver: no LAUNCH ack from {Target} within 5s — retrying once",
+                    target
                 );
                 int retryRequestId = Interlocked.Increment(ref _androidLaunchRequestId);
                 string retryJson = BuildLaunchJson(retryRequestId, customData, useAndroidReceiver);
@@ -634,7 +660,11 @@ public class ChromeCast
         }
         catch (Exception ex)
         {
-            Logger.Ping($"LaunchAndroidReceiver failed for {target}: {ex.Message}");
+            _logger.LogInformation(
+                "LaunchAndroidReceiver failed for {Target}: {Message}",
+                target,
+                ex.Message
+            );
         }
         finally
         {
@@ -642,11 +672,7 @@ public class ChromeCast
         }
     }
 
-    private static string BuildLaunchJson(
-        int requestId,
-        object? customData,
-        bool useAndroidReceiver
-    )
+    private string BuildLaunchJson(int requestId, object? customData, bool useAndroidReceiver)
     {
         // Newtonsoft.Json honours [JsonProperty("snake_case")] on
         // LaunchCustomData so the receiver sees access_token / refresh_token /
@@ -706,7 +732,7 @@ public class ChromeCast
         return JsonConvert.SerializeObject(payloadWithCustomData);
     }
 
-    private static async Task SendLaunchAsync(ChromecastClient client, int requestId, string json)
+    private async Task SendLaunchAsync(ChromecastClient client, int requestId, string json)
     {
         await client.SendAsync(
             logger: null,
@@ -721,7 +747,7 @@ public class ChromeCast
     /// Casts a playlist to the named receiver. If <paramref name="name"/> is
     /// null the last receiver selected on this thread is used.
     /// </summary>
-    public static async Task CastPlaylist(string value, string? name = null)
+    public async Task CastPlaylist(string value, string? name = null, string? accessToken = null)
     {
         string? target = name ?? _lastSelectedName;
         if (target == null)
@@ -730,10 +756,10 @@ public class ChromeCast
         if (!ClientPool.TryGetValue(target, out ChromecastClient? client))
             return;
 
-        Logger.Ping($"Casting playlist to {target}: {value}");
+        _logger.LogInformation("Casting playlist to {Target}: {Value}", target, value);
 
-        string externalAddress = (NetworkDiscovery?.ExternalAddress).OrEmpty();
-        string? token = Globals.Globals.AccessToken;
+        string externalAddress = (_networkDiscovery?.ExternalAddress).OrEmpty();
+        string? token = accessToken;
 
         CastCustomData customData = new()
         {
@@ -753,7 +779,7 @@ public class ChromeCast
     /// Returns the status for the named receiver, or the last selected one if
     /// <paramref name="name"/> is null.
     /// </summary>
-    public static ChromecastStatus? GetChromecastStatus(string? name = null)
+    public ChromecastStatus? GetChromecastStatus(string? name = null)
     {
         string? target = name ?? _lastSelectedName;
         if (target == null)
@@ -768,7 +794,7 @@ public class ChromeCast
     /// Returns the media status for the named receiver, or the last selected
     /// one if <paramref name="name"/> is null.
     /// </summary>
-    public static MediaStatus? GetMediaStatus(string? name = null)
+    public MediaStatus? GetMediaStatus(string? name = null)
     {
         string? target = name ?? _lastSelectedName;
         if (target == null)
@@ -783,7 +809,7 @@ public class ChromeCast
     /// Stops media on the named receiver, or the last selected one if
     /// <paramref name="name"/> is null.
     /// </summary>
-    public static async Task Stop(string? name = null)
+    public async Task Stop(string? name = null)
     {
         string? target = name ?? _lastSelectedName;
         if (target == null)
@@ -800,7 +826,7 @@ public class ChromeCast
     /// pool. If <paramref name="name"/> is null the last selected receiver is
     /// used. Pass "*" to disconnect all receivers.
     /// </summary>
-    public static async Task Disconnect(string? name = null)
+    public async Task Disconnect(string? name = null)
     {
         if (name == "*")
         {
@@ -829,7 +855,7 @@ public class ChromeCast
     /// Disconnects and disposes every client in the pool. Called on
     /// application shutdown.
     /// </summary>
-    public static async Task DisconnectAllAsync()
+    public async Task DisconnectAllAsync()
     {
         string[] keys = ClientPool.Keys.ToArray();
         foreach (string key in keys)

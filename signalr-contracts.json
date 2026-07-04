@@ -506,7 +506,7 @@
       "duration":           "number (milliseconds)",
       "deviceId":           "string | null",
       "volumePercentage":   "number (0-100)",
-      "currentList":        "string (relative URI, e.g. '/music/album/uuid')",
+      "currentList":        "string (relative URI, e.g. '/music/albums/uuid')",
       "repeat":             "string ('off' | 'context' | 'track')",
       "actions":            "PlayerActions",
       "ignoreCurrentTimeUntil": "string (ISO datetime)"

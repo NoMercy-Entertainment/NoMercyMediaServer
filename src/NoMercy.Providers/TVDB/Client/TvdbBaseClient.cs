@@ -14,6 +14,7 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.WebUtilities;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.Abstractions;
 using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TVDB.Models.Auth;
 using NoMercy.Providers.TVDB.Models.Shared;
@@ -22,46 +23,32 @@ using Serilog.Events;
 
 namespace NoMercy.Providers.TVDB.Client;
 
-public class TvdbBaseClient : IDisposable
+public class TvdbBaseClient : ExternalApiClient
 {
-    private readonly Uri _baseUrl = new("https://api4.thetvdb.com/v4/");
     private readonly string _language;
-    private bool _disposed;
-
-    public int Id { get; private set; }
-
-    private readonly HttpClient _client;
 
     private static TvdbLoginResponse? Token { get; set; }
     private static readonly SemaphoreSlim TokenLock = new(1, 1);
-    private static Queue? _queue;
 
     protected TvdbBaseClient()
     {
-        _client = HttpClientProvider.CreateClient(HttpClientNames.Tvdb);
-        _client.BaseAddress ??= _baseUrl;
         _language = "eng";
     }
 
     protected TvdbBaseClient(int id, string language = "eng")
     {
-        _client = HttpClientProvider.CreateClient(HttpClientNames.Tvdb);
-        _client.BaseAddress ??= _baseUrl;
         Id = id;
         _language = language;
     }
 
-    protected static Queue GetQueue()
-    {
-        return _queue ??= new(
-            new()
-            {
-                Concurrent = 50,
-                Interval = 1000,
-                Start = true,
-            }
-        );
-    }
+    // TVDB identifies entities with integer ids, unlike the Guid-based default.
+    public new int Id { get; private set; }
+
+    protected override string HttpClientName => HttpClientNames.Tvdb;
+    protected override Uri BaseUrl => new("https://api4.thetvdb.com/v4/");
+    protected override int ConcurrentRequests => 50;
+
+    protected override void LogRequest(string url) => Logger.Tvdb(url, LogEventLevel.Verbose);
 
     private static int Max(int available, int wanted, int constraint)
     {
@@ -76,6 +63,7 @@ public class TvdbBaseClient : IDisposable
     {
         if (token is null)
             return false;
+
         // ExpiresAt is set to ~1 month after login. Refresh 5 min early.
         return token.Data.ExpiresAt >= DateTime.UtcNow.AddMinutes(5);
     }
@@ -110,13 +98,15 @@ public class TvdbBaseClient : IDisposable
         try
         {
             HttpClient loginClient = HttpClientProvider.CreateClient(HttpClientNames.TvdbLogin);
-            loginClient.BaseAddress ??= _baseUrl;
+            loginClient.BaseAddress ??= BaseUrl;
 
-            using JsonContent content = JsonContent.Create(new { apikey = ApiKeyStore.Current.TvdbKey });
+            using JsonContent content = JsonContent.Create(
+                new { apikey = ApiKeyStore.Current.TvdbKey }
+            );
             using HttpRequestMessage request = new(HttpMethod.Post, "login");
             request.Content = content;
-            using HttpResponseMessage response = await loginClient.SendAsync(request);
 
+            using HttpResponseMessage response = await loginClient.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
                 Logger.Tvdb(
@@ -139,7 +129,7 @@ public class TvdbBaseClient : IDisposable
         }
     }
 
-    protected async Task<T?> Get<T>(
+    protected override async Task<T?> Get<T>(
         string url,
         Dictionary<string, string?>? query = null,
         bool? priority = false,
@@ -154,33 +144,33 @@ public class TvdbBaseClient : IDisposable
         query ??= new();
         string newUrl = QueryHelpers.AddQueryString(url, query);
 
-        if (!skipCache && CacheController.Read(newUrl, out T? result))
-            return result;
+        if (!skipCache)
+        {
+            (bool found, T? result) = await CacheController.ReadAsync<T>(newUrl);
+            if (found)
+                return result;
+        }
 
-        Logger.Tvdb(_baseUrl + newUrl, LogEventLevel.Verbose);
+        LogRequest(BaseUrl + newUrl);
 
         try
         {
-            string response = await GetQueue()
-                .Enqueue(
-                    () =>
-                    {
-                        if (_disposed)
-                        {
-                            throw new ObjectDisposedException(
-                                nameof(TvdbBaseClient),
-                                "Cannot access a disposed TVDB client."
-                            );
-                        }
-                        return SendAuthorizedAsync(newUrl);
-                    },
-                    newUrl,
-                    priority
-                );
+            string response = await RequestQueue.Enqueue(
+                () =>
+                {
+                    if (Disposed)
+                        throw new ObjectDisposedException(
+                            nameof(TvdbBaseClient),
+                            "Cannot access a disposed TVDB client."
+                        );
+                    return SendAuthorizedAsync(newUrl);
+                },
+                newUrl,
+                priority
+            );
 
             if (!skipCache)
                 await CacheController.Write(newUrl, response);
-
             return response.FromJson<T>();
         }
         catch (ObjectDisposedException)
@@ -208,13 +198,13 @@ public class TvdbBaseClient : IDisposable
         if (!string.IsNullOrEmpty(_language))
             request.Headers.Add("Accept-Language", _language);
 
-        using HttpResponseMessage response = await _client.SendAsync(request);
-
+        using HttpResponseMessage response = await Client.SendAsync(request);
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             // Token rotated/expired mid-flight — clear and let the next call re-login.
             Token = null;
         }
+
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadAsStringAsync();
     }
@@ -227,14 +217,12 @@ public class TvdbBaseClient : IDisposable
         where T : class
     {
         List<T> list = [];
-
         Dictionary<string, string?> first = query is null ? new() : new(query);
         TvdbPaginatedResponse<T>? page = await Get<TvdbPaginatedResponse<T>>(url, first);
         if (page is null)
             return list;
 
         list.AddRange(page.Data ?? []);
-
         int pages = 1;
         while (!string.IsNullOrEmpty(page?.Links?.Next) && pages < Max(int.MaxValue, limit, 500))
         {
@@ -243,17 +231,10 @@ public class TvdbBaseClient : IDisposable
             page = await Get<TvdbPaginatedResponse<T>>(url, next);
             if (page is null)
                 break;
+
             list.AddRange(page.Data ?? []);
         }
 
         return list;
-    }
-
-    public void Dispose()
-    {
-        if (_disposed)
-            return;
-        _disposed = true;
-        GC.SuppressFinalize(this);
     }
 }

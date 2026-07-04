@@ -21,15 +21,15 @@
     <PackageReference Include="FlexLabs.EntityFrameworkCore.Upsert" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
     <PackageReference Include="QRCoder" />
+    <PackageReference Include="BouncyCastle.Cryptography" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\NoMercy.Encoder\NoMercy.Encoder.csproj" />
-    <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj" />
     <ProjectReference Include="..\NoMercy.Database\NoMercy.Database.csproj" />
-    <ProjectReference Include="..\NoMercy.Helpers\NoMercy.Helpers.csproj" />
     <ProjectReference Include="..\NoMercy.Networking\NoMercy.Networking.csproj" />
     <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
+    <ProjectReference Include="..\NoMercy.Authorization\NoMercy.Authorization.csproj" />
     <ProjectReference Include="..\NoMercy.Storage\NoMercy.Storage.csproj" />
     <ProjectReference Include="..\NoMercyQueue\NoMercyQueue.csproj" />
   </ItemGroup>
@@ -48,5 +48,6 @@
     <EmbeddedResource Include="Resources\setup.css" />
     <EmbeddedResource Include="Resources\setup.js" />
     <EmbeddedResource Include="Resources\favicon.ico" />
+    <EmbeddedResource Include="Resources\nomercy-public-key.asc" Condition="Exists('Resources\nomercy-public-key.asc')" />
   </ItemGroup>
 </Project>

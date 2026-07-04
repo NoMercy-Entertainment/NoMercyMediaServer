@@ -38,6 +38,11 @@ internal interface ILibNfs
     void SetGid(IntPtr nfs, int gid);
     int SetVersion(IntPtr nfs, int version);
 
+    // NFSv4 client identity — unique per context so multiple drivers in one
+    // process don't share an open-owner seqid (NFS4ERR_BAD_SEQID).
+    void SetClientName(IntPtr nfs, string id);
+    void SetVerifier(IntPtr nfs, string verifier);
+
     // Error
     string GetError(IntPtr nfs);
 

@@ -22,6 +22,7 @@ public interface IMovieRepository
 {
     Task Add(Movie movie);
     Task LinkToLibrary(Library library, Movie movie);
+    Task Remove(int id);
     Task StoreAlternativeTitles(IEnumerable<AlternativeTitle> alternativeTitles);
     Task StoreTranslations(IEnumerable<Translation> translations);
     Task StoreContentRatings(IEnumerable<CertificationMovie> certifications);

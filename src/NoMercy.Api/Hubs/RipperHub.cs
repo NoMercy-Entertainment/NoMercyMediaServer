@@ -12,17 +12,16 @@
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using NoMercy.Authorization;
 using NoMercy.Data.Activity;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
-using NoMercy.Helpers.Extensions;
 using NoMercy.Networking;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.OpticalMedia.Drives;
 using NoMercy.OpticalMedia.Sources;
-using Serilog.Events;
 
 namespace NoMercy.Api.Hubs;
 
@@ -33,7 +32,10 @@ public class RipperHub : ConnectionHub
     private readonly IDriveMonitor _driveMonitor;
     private readonly DiscSourceFactory _discSourceFactory;
 
+    private readonly ILogger<RipperHub> _logger;
+
     public RipperHub(
+        ILogger<RipperHub> logger,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<MediaContext> contextFactory,
         ConnectedClients connectedClients,
@@ -43,24 +45,25 @@ public class RipperHub : ConnectionHub
     )
         : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
+        _logger = logger;
         _driveMonitor = driveMonitor;
         _discSourceFactory = discSourceFactory;
     }
 
     public override async Task OnConnectedAsync()
     {
-        User user = Context.User.User()!;
+        User user = UserCacheService.GetUser(Context.User.UserId())!;
 
         CurrentDevices.TryAdd(Context.ConnectionId, user.Id);
 
         await base.OnConnectedAsync();
-        Logger.Socket("Ripper client connected", LogEventLevel.Debug);
+        _logger.LogDebug("Ripper client connected");
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         await base.OnDisconnectedAsync(exception);
-        Logger.Socket("Ripper client disconnected", LogEventLevel.Debug);
+        _logger.LogDebug("Ripper client disconnected");
     }
 
     /// <summary>
@@ -72,7 +75,7 @@ public class RipperHub : ConnectionHub
     /// </summary>
     public async Task<object?> GetDriveState(string drivePath)
     {
-        if (!Context.User.IsModerator())
+        if (!AuthPolicy.IsModerator(Context.User))
             return null;
 
         DiscDrive? drive = _driveMonitor
@@ -115,10 +118,7 @@ public class RipperHub : ConnectionHub
 
         try
         {
-            DiscInfo info = await source.ProbeAsync(
-                drive,
-                CancellationToken.None
-            );
+            DiscInfo info = await source.ProbeAsync(drive, CancellationToken.None);
             return new
             {
                 path = drive.Path.TrimEnd(Path.DirectorySeparatorChar),

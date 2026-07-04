@@ -17,8 +17,8 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
+using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
-using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Music;
@@ -26,7 +26,7 @@ namespace NoMercy.Api.Controllers.V1.Music;
 [ApiController]
 [ApiVersion(1.0)]
 [Tags("Music")]
-[Authorize]
+[Authorize(Policy = "MediaAccess")]
 [Route("api/v{version:apiVersion}/music")]
 public class MusicController : BaseController
 {
@@ -43,8 +43,6 @@ public class MusicController : BaseController
     public async Task<IActionResult> Index([FromQuery] PageRequestDto request)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view music");
 
         // Run 3 groups of 3 queries in parallel using separate DbContext instances
         MusicStartPageData data = await _musicRepository.GetMusicStartPageAsync(userId);
@@ -130,7 +128,7 @@ public class MusicController : BaseController
                 .Carousel()
                 .WithId("artists")
                 .WithTitle("Artists".Localize())
-                .WithMoreLink("/music/artists/_")
+                .WithMoreLink("/music/artists/letter/_")
                 .WithNavigation("playlists", "albums")
                 .WithItems(
                     data.LatestArtists.Select(item => Component.MusicCard(new MusicCardData(item)))
@@ -142,7 +140,7 @@ public class MusicController : BaseController
                 .Carousel()
                 .WithId("albums")
                 .WithTitle("Albums".Localize())
-                .WithMoreLink("/music/albums/_")
+                .WithMoreLink("/music/albums/letter/_")
                 .WithNavigation("artists", "genres")
                 .WithItems(
                     data.LatestAlbums.Select(item => Component.MusicCard(new MusicCardData(item)))
@@ -169,8 +167,6 @@ public class MusicController : BaseController
     public async Task<IActionResult> Favorites()
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view music");
 
         TopMusicItemDto? topArtist = await _musicRepository.GetTopArtistAsync(userId);
         TopMusicItemDto? topAlbum = await _musicRepository.GetTopAlbumAsync(userId);
@@ -213,8 +209,6 @@ public class MusicController : BaseController
     public async Task<IActionResult> FavoriteArtists([FromBody] CardRequestDto request)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view music");
 
         List<ArtistCardDto> favoriteArtists = await _musicRepository.GetFavoriteArtistCardsAsync(
             userId
@@ -241,8 +235,6 @@ public class MusicController : BaseController
     public async Task<IActionResult> FavoriteAlbums([FromBody] CardRequestDto request)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view music");
 
         List<AlbumCardDto> favoriteAlbums = await _musicRepository.GetFavoriteAlbumCardsAsync(
             userId
@@ -269,8 +261,6 @@ public class MusicController : BaseController
     public async Task<IActionResult> Playlists([FromBody] CardRequestDto request)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view music");
 
         List<PlaylistCardDto> playlists = await _musicRepository.GetPlaylistCardsAsync(userId);
 
@@ -305,9 +295,6 @@ public class MusicController : BaseController
     [Route("search")]
     public async Task<IActionResult> Search([FromQuery] SearchQueryRequest request)
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to search music");
-
         Guid userId = User.UserId();
         string country = Country();
         string normalizedQuery = request.Query.NormalizeSearch();
@@ -434,9 +421,6 @@ public class MusicController : BaseController
     [Route("search/{query}/{Type}")]
     public IActionResult TypeSearch(string query, string type)
     {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to search music");
-
         return Ok(new PlaceholderResponse { Data = [] });
     }
 }

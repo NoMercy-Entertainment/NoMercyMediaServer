@@ -50,7 +50,7 @@ public record SpecialsResponseItemDto
     public Uri Link { get; set; } = null!;
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("poster")]
     public string? Poster { get; set; }
