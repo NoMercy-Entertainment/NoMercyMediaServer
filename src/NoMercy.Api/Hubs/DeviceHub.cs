@@ -189,6 +189,10 @@ public sealed class DeviceHub : ConnectionHub
     {
         await base.OnConnectedAsync();
 
+        User? user = UserCacheService.GetUser(Context.User.UserId());
+        if (user is null)
+            return;
+
         // Wait briefly so the client's 'DeviceListChanged' handler is registered
         // before the broadcast lands. Mirrors the same fix on MusicHub — without
         // this delay the SignalR Java client drops the initial push because the
@@ -203,7 +207,25 @@ public sealed class DeviceHub : ConnectionHub
         }
 
         List<DeviceListItem> list = await GetDevices();
-        await Clients.Caller.SendAsync("DeviceListChanged", list);
+
+        // Broadcast to the WHOLE user group, not just the connecting client.
+        // Clients.Caller only refreshed the newly-connected device's own picker;
+        // every other already-connected device (e.g. a second TV, a phone) never
+        // learned about the new device until it happened to reconnect itself.
+        await Clients.User(user.Id.ToString()).SendAsync("DeviceListChanged", list);
+    }
+
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        User? user = UserCacheService.GetUser(Context.User.UserId());
+
+        await base.OnDisconnectedAsync(exception);
+
+        if (user is null)
+            return;
+
+        List<DeviceListItem> list = await GetDevices();
+        await Clients.User(user.Id.ToString()).SendAsync("DeviceListChanged", list);
     }
 }
 

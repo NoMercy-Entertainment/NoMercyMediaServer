@@ -49,7 +49,10 @@ public class SqliteNormalizeSearchInterceptor : DbConnectionInterceptor
         try
         {
             using SqliteCommand command = connection.CreateCommand();
-            command.CommandText = "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=30000;";
+            // Matches SqliteConnectionInterceptor's busy_timeout — see that file for why
+            // this stays short rather than 30s (compounds with the execution strategy's
+            // own retry backoff otherwise).
+            command.CommandText = "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;";
             command.ExecuteNonQuery();
         }
         catch (SqliteException ex) when (ex.SqliteErrorCode == 8) // SQLITE_READONLY

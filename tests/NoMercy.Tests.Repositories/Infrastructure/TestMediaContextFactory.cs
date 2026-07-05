@@ -154,6 +154,45 @@ public static class TestMediaContextFactory
         return (new TestDbContextFactory(options), keepAliveConnection);
     }
 
+    // Mirrors CreateFactory exactly, plus a caller-supplied interceptor — for tests that need
+    // to assert on the SHAPE of the generated SQL (e.g. query count), not just the result.
+    public static (
+        IDbContextFactory<MediaContext> Factory,
+        SqliteConnection Connection
+    ) CreateFactoryWithInterceptor(SqlCaptureInterceptor interceptor, string? databaseName = null)
+    {
+        string dbName = databaseName ?? Guid.NewGuid().ToString();
+        string connectionString = $"DataSource={dbName};Mode=Memory;Cache=Shared;Foreign Keys=True";
+
+        SqliteConnection keepAliveConnection = new(connectionString);
+        keepAliveConnection.Open();
+        keepAliveConnection.CreateFunction(
+            "normalize_search",
+            (string? input) => input?.NormalizeSearch() ?? string.Empty
+        );
+
+        using (SqliteCommand walCmd = keepAliveConnection.CreateCommand())
+        {
+            walCmd.CommandText = "PRAGMA journal_mode=WAL;";
+            walCmd.ExecuteNonQuery();
+        }
+
+        DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
+            .UseSqlite(
+                connectionString,
+                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+            )
+            .AddInterceptors(interceptor, new SqliteNormalizeSearchInterceptor())
+            .Options;
+
+        using (TestMediaContext initContext = new(options))
+        {
+            initContext.Database.EnsureCreated();
+        }
+
+        return (new TestDbContextFactory(options), keepAliveConnection);
+    }
+
     public static (
         IDbContextFactory<MediaContext> Factory,
         SqliteConnection Connection
@@ -177,8 +216,7 @@ public static class TestMediaContextFactory
     ) CreateSeededFactoryWithInterceptor(string? databaseName = null)
     {
         string dbName = databaseName ?? Guid.NewGuid().ToString();
-        string connectionString =
-            $"DataSource={dbName};Mode=Memory;Cache=Shared;Foreign Keys=True";
+        string connectionString = $"DataSource={dbName};Mode=Memory;Cache=Shared;Foreign Keys=True";
 
         SqliteConnection keepAliveConnection = new(connectionString);
         keepAliveConnection.Open();

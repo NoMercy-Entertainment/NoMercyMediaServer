@@ -62,113 +62,285 @@ public partial class MusicRepository
 
     #region Playlist Management
 
-    public async Task<PlaylistTrack?> GetPlaylistTrackAsync(
+    // Rooted directly at PlaylistTrack (never through Playlist.Tracks) — an
+    // AsNoTracking() Include that leaves this root type and comes back to it via a
+    // collection navigation (e.g. Playlist.Tracks, the inverse of this same FK) is
+    // a genuine cycle to EF Core's no-tracking validator and throws unconditionally:
+    // "The Include path 'Playlist->Tracks' results in a cycle." This shape never
+    // revisits PlaylistTrack, so it can't recreate that cycle.
+    public async Task<List<PlaylistTrack>> GetPlaylistTracksAsync(
         Guid userId,
         Guid playlistId,
-        Guid trackId,
         CancellationToken ct = default
     )
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
         return await mediaContext
             .PlaylistTrack.AsNoTracking()
-            .Where(pt =>
-                pt.PlaylistId == playlistId && pt.TrackId == trackId && pt.Playlist.UserId == userId
-            )
+            .Where(pt => pt.PlaylistId == playlistId && pt.Playlist.UserId == userId)
             .Include(pt => pt.Track)
-                .ThenInclude(track => track.Images)
-            .Include(pt => pt.Playlist)
-                .ThenInclude(playlist => playlist.Tracks)
-                    .ThenInclude(playlistTrack => playlistTrack.Track)
-                        .ThenInclude(track => track.ArtistTrack)
-                            .ThenInclude(artistTrack => artistTrack.Artist)
-            .Include(pt => pt.Playlist)
-                .ThenInclude(playlist => playlist.Tracks)
-                    .ThenInclude(playlistTrack => playlistTrack.Track)
-                        .ThenInclude(track => track.AlbumTrack)
-                            .ThenInclude(albumTrack => albumTrack.Album)
-            .FirstOrDefaultAsync(ct);
+                .ThenInclude(track => track.AlbumTrack)
+                    .ThenInclude(albumTrack => albumTrack.Album)
+                        .ThenInclude(album => album.AlbumArtist)
+                            .ThenInclude(albumArtist => albumArtist.Artist)
+                                .ThenInclude(artist => artist.Images)
+            .Include(pt => pt.Track)
+                .ThenInclude(track => track.ArtistTrack)
+                    .ThenInclude(artistTrack => artistTrack.Artist)
+            .Include(pt => pt.Track)
+                .ThenInclude(track => track.TrackUser)
+            .ToListAsync(ct);
     }
 
-    public async Task<AlbumTrack?> GetAlbumTrackAsync(
+    // Three flat queries, never one rooted through Album.AlbumTrack (that revisits this same
+    // entity type — the identical no-tracking cycle shape as the playlist/artist bugs above;
+    // this call site ran tracked, dodging the crash, but still forced the same split-query
+    // correlation to re-derive the join per branch under SQLite).
+    //
+    // Step 1 roots at AlbumTrack directly (WHERE AlbumId = @albumId, indexed) — that alone
+    // already yields every track on the album, so there is no need to detour through
+    // Album.AlbumTrack at all. Track.ArtistTrack is a different entity type than the root
+    // and can be included directly without recreating the cycle.
+    //
+    // Step 2 roots at Track (not AlbumTrack) to fetch which OTHER albums each track also
+    // belongs to: Track.AlbumTrack is the same entity type as step 1's root, and chaining it
+    // from an AlbumTrack root would revisit that type — the identical no-tracking cycle
+    // shape as the playlist bug, just one hop deeper. Rooting at Track instead avoids it.
+    // Deliberately stops at the join row — it does NOT chase ThenInclude(Album).Images/
+    // Translations here, because every track on THIS album shares the same handful of
+    // albums; doing so joined Images/Translations once PER TRACK ROW instead of once per
+    // distinct album, which measured 15-19 real seconds (nearly all of it kernel/IO time,
+    // not CPU — confirmed via a raw sqlite3 execution of the exact generated SQL, reproduced
+    // consistently on a second run, ruling out a cold-cache/cold-JIT explanation) against
+    // the real dev DB for a 38-track album with a shared Translations table carrying
+    // 500k+ rows across every entity type.
+    //
+    // Step 3 roots at Album directly (WHERE Id IN distinctAlbumIds — typically just one row)
+    // to fetch Images/Translations exactly once per distinct album, however many tracks
+    // reference it, then attaches the result onto each AlbumTrack.Album in memory.
+    public async Task<List<AlbumTrack>> GetAlbumTracksAsync(
         Guid userId,
         Guid albumId,
-        Guid trackId,
         CancellationToken ct = default
     )
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
-        return await mediaContext
-            .AlbumTrack.Where(at => at.AlbumId == albumId && at.TrackId == trackId)
+
+        List<AlbumTrack> albumTracks = await mediaContext
+            .AlbumTrack.AsNoTracking()
+            .Where(at => at.AlbumId == albumId)
             .Include(at => at.Track)
-            .Include(at => at.Album)
-                .ThenInclude(album =>
-                    album
-                        .AlbumTrack.OrderBy(albumTrack => albumTrack.Track.DiscNumber)
-                        .ThenBy(albumTrack => albumTrack.Track.TrackNumber)
-                )
-                    .ThenInclude(albumTrack => albumTrack.Track)
-                        .ThenInclude(track => track.ArtistTrack)
-                            .ThenInclude(artistTrack => artistTrack.Artist)
-            .FirstOrDefaultAsync(ct);
+                .ThenInclude(track => track.ArtistTrack)
+                    .ThenInclude(artistTrack => artistTrack.Artist)
+            .Include(at => at.Track)
+                .ThenInclude(track => track.TrackUser)
+            .ToListAsync(ct);
+
+        if (albumTracks.Count == 0)
+            return albumTracks;
+
+        List<Guid> trackIds = albumTracks.Select(at => at.TrackId).Distinct().ToList();
+        List<Track> tracksWithAlbumLinks = await mediaContext
+            .Tracks.AsNoTracking()
+            .Where(track => trackIds.Contains(track.Id))
+            .Include(track => track.AlbumTrack)
+            .ToListAsync(ct);
+
+        List<Guid> distinctAlbumIds = tracksWithAlbumLinks
+            .SelectMany(track => track.AlbumTrack)
+            .Select(at => at.AlbumId)
+            .Distinct()
+            .ToList();
+
+        List<Album> albumsWithDetails = await mediaContext
+            .Albums.AsNoTracking()
+            .Where(album => distinctAlbumIds.Contains(album.Id))
+            .Include(album => album.Images)
+            .Include(album => album.Translations)
+            .ToListAsync(ct);
+
+        Dictionary<Guid, Album> albumById = albumsWithDetails.ToDictionary(album => album.Id);
+
+        foreach (Track track in tracksWithAlbumLinks)
+        foreach (AlbumTrack albumTrack in track.AlbumTrack)
+            if (albumById.TryGetValue(albumTrack.AlbumId, out Album? album))
+                albumTrack.Album = album;
+
+        Dictionary<Guid, ICollection<AlbumTrack>> albumsByTrackId =
+            tracksWithAlbumLinks.ToDictionary(track => track.Id, track => track.AlbumTrack);
+
+        foreach (AlbumTrack albumTrack in albumTracks)
+            if (
+                albumsByTrackId.TryGetValue(albumTrack.TrackId, out ICollection<AlbumTrack>? albums)
+            )
+                albumTrack.Track.AlbumTrack = albums;
+
+        return albumTracks;
     }
 
-    public async Task<ArtistTrack?> GetArtistTrackAsync(
+    // Three flat queries, never one rooted through Artist.ArtistTrack (that combines three
+    // chained one-to-many collections — ArtistTrack, AlbumTrack, Translations — behind a
+    // single-row filter, which forces SQLite's split-query correlation to re-derive the
+    // same 5-table join per branch; that shape measured 80-100s for a 153-track artist).
+    //
+    // Step 1 roots at ArtistTrack directly (WHERE ArtistId = @artistId, indexed), so every
+    // branch off it is one collection hop from an already-flat, already-filtered result.
+    // Deliberately stops at the AlbumTrack join row — it does NOT chase
+    // ThenInclude(Album).Translations here, for the identical reason as the album fix:
+    // tracks on one artist very often share the same handful of albums, and chasing
+    // Album.Translations per track re-derives it once per track instead of once per
+    // distinct album. This redundancy is what actually measured 80-100s live for a
+    // 153-track artist — worse than the album case because an artist's tracks span many
+    // albums, so this join re-derives EVERY one of them repeatedly, not just one.
+    //
+    // Step 2 roots at Track (not ArtistTrack) to fetch the full artist-credit list per
+    // track: Track.ArtistTrack is the same entity type as step 1's root, and chaining it
+    // from an ArtistTrack root would revisit that type — the identical no-tracking cycle
+    // shape as the playlist bug above, just one hop deeper. Rooting at Track instead avoids
+    // it, and the two result sets are attached in memory.
+    //
+    // Step 3 roots at Album directly (WHERE Id IN distinctAlbumIds) to fetch Translations
+    // exactly once per distinct album, however many of this artist's tracks reference it,
+    // then attaches the result onto each AlbumTrack.Album in memory — mirrors
+    // GetAlbumTracksAsync's step 3 exactly.
+    public async Task<List<ArtistTrack>> GetArtistTracksAsync(
         Guid userId,
         Guid artistId,
-        Guid trackId,
         CancellationToken ct = default
     )
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
-        return await mediaContext
-            .ArtistTrack.Where(at => at.ArtistId == artistId && at.TrackId == trackId)
-            .Include(at => at.Track)
-            .Include(at => at.Artist)
-                .ThenInclude(artist => artist.ArtistTrack)
-                    .ThenInclude(artistTrack => artistTrack.Track)
-                        .ThenInclude(track => track.AlbumTrack)
-                            .ThenInclude(albumTrack => albumTrack.Album)
-                                .ThenInclude(album => album.Translations)
+
+        List<ArtistTrack> artistTracks = await mediaContext
+            .ArtistTrack.AsNoTracking()
+            .Where(at => at.ArtistId == artistId)
             .Include(at => at.Artist)
                 .ThenInclude(artist => artist.Images)
-            .FirstOrDefaultAsync(ct);
+            .Include(at => at.Track)
+                .ThenInclude(track => track.AlbumTrack)
+            .Include(at => at.Track)
+                .ThenInclude(track => track.TrackUser)
+            .ToListAsync(ct);
+
+        if (artistTracks.Count == 0)
+            return artistTracks;
+
+        List<Guid> trackIds = artistTracks.Select(at => at.TrackId).Distinct().ToList();
+        List<Track> tracksWithCredits = await mediaContext
+            .Tracks.AsNoTracking()
+            .Where(track => trackIds.Contains(track.Id))
+            .Include(track => track.ArtistTrack)
+                .ThenInclude(artistTrack => artistTrack.Artist)
+            .ToListAsync(ct);
+
+        Dictionary<Guid, ICollection<ArtistTrack>> creditsByTrackId =
+            tracksWithCredits.ToDictionary(track => track.Id, track => track.ArtistTrack);
+
+        foreach (ArtistTrack artistTrack in artistTracks)
+            if (
+                creditsByTrackId.TryGetValue(
+                    artistTrack.TrackId,
+                    out ICollection<ArtistTrack>? credits
+                )
+            )
+                artistTrack.Track.ArtistTrack = credits;
+
+        List<Guid> distinctAlbumIds = artistTracks
+            .SelectMany(at => at.Track.AlbumTrack)
+            .Select(albumTrack => albumTrack.AlbumId)
+            .Distinct()
+            .ToList();
+
+        List<Album> albumsWithTranslations = await mediaContext
+            .Albums.AsNoTracking()
+            .Where(album => distinctAlbumIds.Contains(album.Id))
+            .Include(album => album.Translations)
+            .ToListAsync(ct);
+
+        Dictionary<Guid, Album> albumById = albumsWithTranslations.ToDictionary(album => album.Id);
+
+        foreach (ArtistTrack artistTrack in artistTracks)
+        foreach (AlbumTrack albumTrack in artistTrack.Track.AlbumTrack)
+            if (albumById.TryGetValue(albumTrack.AlbumId, out Album? album))
+                albumTrack.Album = album;
+
+        return artistTracks;
     }
 
-    public async Task<MusicGenreTrack?> GetGenreTrackAsync(
+    // Two flat queries, never one rooted through Genre.MusicGenreTracks (that revisits this
+    // same entity type — the identical no-tracking cycle shape as the playlist/artist/album
+    // bugs above; this call site ran tracked, dodging the crash, but still forced the same
+    // split-query correlation to re-derive the join three times over, once per branch).
+    //
+    // Step 1 roots directly at MusicGenreTrack (WHERE GenreId = @genreId, indexed) — already
+    // yields every track in the genre, so there is no need to detour through
+    // Genre.MusicGenreTracks at all. ArtistTrack.Artist and TrackUser hang off Track (a
+    // different entity type than the root) and can be included directly without recreating
+    // the cycle — unlike the playlist/artist/album fixes, revisiting MusicGenreTrack was
+    // never the issue here, so no second query is needed just to dodge that. Deliberately
+    // stops at the AlbumTrack join row for the SAME reason as the album/artist fixes: many
+    // tracks in a genre share the same handful of albums, and chasing
+    // Album.AlbumArtist.Artist.Images / Album.Translations per track re-derives them once
+    // per track instead of once per distinct album.
+    //
+    // Step 2 roots at Album directly (WHERE Id IN distinctAlbumIds) to fetch
+    // AlbumArtist.Artist.Images and Translations exactly once per distinct album, however
+    // many tracks in the genre reference it, then attaches the result onto each
+    // AlbumTrack.Album in memory — mirrors GetAlbumTracksAsync's step 3 exactly.
+    public async Task<List<MusicGenreTrack>> GetGenreTracksAsync(
         Guid userId,
         Guid genreId,
-        Guid trackId,
         CancellationToken ct = default
     )
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
-        return await mediaContext
-            .MusicGenreTrack.Where(genre =>
-                genre.Genre.AlbumMusicGenres.Any(g =>
+
+        List<MusicGenreTrack> genreTracks = await mediaContext
+            .MusicGenreTrack.AsNoTracking()
+            .Where(mgt =>
+                mgt.Genre.AlbumMusicGenres.Any(g =>
                     g.Album.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
-                || genre.Genre.ArtistMusicGenres.Any(g =>
+                || mgt.Genre.ArtistMusicGenres.Any(g =>
                     g.Artist.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
             )
-            .Where(mgt => mgt.GenreId == genreId && mgt.TrackId == trackId)
+            .Where(mgt => mgt.GenreId == genreId)
             .Include(mgt => mgt.Track)
-            .Include(mgt => mgt.Genre)
-                .ThenInclude(genre => genre.MusicGenreTracks)
-                    .ThenInclude(genreTrack => genreTrack.Track)
-                        .ThenInclude(track => track.ArtistTrack)
-                            .ThenInclude(artistTrack => artistTrack.Artist)
-            .Include(mgt => mgt.Genre)
-                .ThenInclude(genre => genre.MusicGenreTracks)
-                    .ThenInclude(genreTrack => genreTrack.Track)
-                        .ThenInclude(track => track.AlbumTrack)
-                            .ThenInclude(albumTrack => albumTrack.Album)
-            .Include(mgt => mgt.Genre)
-                .ThenInclude(genre => genre.MusicGenreTracks)
-                    .ThenInclude(genreTrack => genreTrack.Track)
-                        .ThenInclude(track => track.TrackUser)
-            .FirstOrDefaultAsync(ct);
+                .ThenInclude(track => track.AlbumTrack)
+            .Include(mgt => mgt.Track)
+                .ThenInclude(track => track.ArtistTrack)
+                    .ThenInclude(artistTrack => artistTrack.Artist)
+            .Include(mgt => mgt.Track)
+                .ThenInclude(track => track.TrackUser)
+            .ToListAsync(ct);
+
+        if (genreTracks.Count == 0)
+            return genreTracks;
+
+        List<Guid> distinctAlbumIds = genreTracks
+            .SelectMany(mgt => mgt.Track.AlbumTrack)
+            .Select(albumTrack => albumTrack.AlbumId)
+            .Distinct()
+            .ToList();
+
+        List<Album> albumsWithDetails = await mediaContext
+            .Albums.AsNoTracking()
+            .Where(album => distinctAlbumIds.Contains(album.Id))
+            .Include(album => album.AlbumArtist)
+                .ThenInclude(albumArtist => albumArtist.Artist)
+                    .ThenInclude(artist => artist.Images)
+            .Include(album => album.Translations)
+            .ToListAsync(ct);
+
+        Dictionary<Guid, Album> albumById = albumsWithDetails.ToDictionary(album => album.Id);
+
+        foreach (MusicGenreTrack genreTrack in genreTracks)
+        foreach (AlbumTrack albumTrack in genreTrack.Track.AlbumTrack)
+            if (albumById.TryGetValue(albumTrack.AlbumId, out Album? album))
+                albumTrack.Album = album;
+
+        return genreTracks;
     }
 
     #endregion

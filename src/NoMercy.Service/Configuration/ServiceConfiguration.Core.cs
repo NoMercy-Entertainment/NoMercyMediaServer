@@ -572,6 +572,7 @@ public static partial class ServiceConfiguration
         services.AddHostedService<AutoEncodeSubscriber>();
         services.AddHostedService<IntroDetectionSubscriber>();
         services.AddHostedService<PaletteBackfillStartupService>();
+        services.AddHostedService<MusicQueryWarmupService>();
 
         services.AddPluginSystem(AppFiles.PluginsPath);
         services.RegisterPluginServicesFromManifests(AppFiles.PluginsPath);

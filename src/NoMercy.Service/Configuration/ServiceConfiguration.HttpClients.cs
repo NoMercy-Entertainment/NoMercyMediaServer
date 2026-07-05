@@ -20,7 +20,9 @@ public static partial class ServiceConfiguration
     {
         TimeSpan defaultTimeout = TimeSpan.FromMinutes(5);
 
-        IServerConfiguration config = services.BuildServiceProvider().GetRequiredService<IServerConfiguration>();
+        IServerConfiguration config = services
+            .BuildServiceProvider()
+            .GetRequiredService<IServerConfiguration>();
         string userAgent = config.UserAgent;
 
         services.AddHttpClient(
@@ -155,6 +157,14 @@ public static partial class ServiceConfiguration
             }
         );
 
+        // Lyrics providers sit behind a synchronous /lyrics HTTP request from the
+        // client (LyricsResolver), so a hanging call must fail fast rather than
+        // inherit HttpClient's 100s default -- LyricsAggregator's own per-stage
+        // WaitAsync bound gives up on the caller side well before this, but the
+        // request itself still needs to actually stop so the provider's
+        // rate-limited Queue slot is freed instead of held for the full 100s.
+        TimeSpan lyricsProviderTimeout = TimeSpan.FromSeconds(15);
+
         services.AddHttpClient(
             HttpClientNames.Lrclib,
             client =>
@@ -163,6 +173,7 @@ public static partial class ServiceConfiguration
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new("application/json"));
                 client.DefaultRequestHeaders.Add("User-Agent", userAgent);
+                client.Timeout = lyricsProviderTimeout;
             }
         );
 
@@ -176,6 +187,7 @@ public static partial class ServiceConfiguration
                 client.DefaultRequestHeaders.Add("User-Agent", userAgent);
                 client.DefaultRequestHeaders.Add("authority", "apic-desktop.musixmatch.com");
                 client.DefaultRequestHeaders.Add("cookie", "x-mxm-token-guid=");
+                client.Timeout = lyricsProviderTimeout;
             }
         );
 

@@ -123,6 +123,7 @@ public static class Logger
         { "fanart", new("fanart", "Fanart", Color.DodgerBlue, "Providers") },
         { "fingerprint", new("fingerprint", "Fingerprint", Color.DodgerBlue, "Providers") },
         { "lrclib", new("lrclib", "Lrclib", Color.DodgerBlue, "Providers") },
+        { "lyrics", new("lyrics", "Lyrics", Color.DodgerBlue, "Providers") },
         { "moviedb", new("moviedb", "TheMovieDB", Color.DodgerBlue, "Providers") },
         { "musicbrainz", new("musicbrainz", "MusicBrainz", Color.DodgerBlue, "Providers") },
         { "musixmatch", new("musixmatch", "MusixMatch", Color.DodgerBlue, "Providers") },
@@ -270,8 +271,8 @@ public static class Logger
     private static void WriteConsoleFallback(LogEntry entry)
     {
         LogCategory category = LogCategories.Resolve(entry.Type);
-        bool color = !Console.IsOutputRedirected
-            && Environment.GetEnvironmentVariable("NO_COLOR") is null;
+        bool color =
+            !Console.IsOutputRedirected && Environment.GetEnvironmentVariable("NO_COLOR") is null;
         string line = ConsoleLineRenderer.Render(
             entry.Time.ToLocalTime(),
             ToMelLevel(entry.LogLevel),
@@ -306,8 +307,7 @@ public static class Logger
             // No attached console; fall through to a sensible default.
         }
 
-        return int.TryParse(Environment.GetEnvironmentVariable("COLUMNS"), out int cols)
-            && cols > 0
+        return int.TryParse(Environment.GetEnvironmentVariable("COLUMNS"), out int cols) && cols > 0
             ? cols
             : 120;
     }
@@ -474,6 +474,9 @@ public static class Logger
 
     public static void Lrclib<T>(T message, LogEventLevel level = LogEventLevel.Information)
         where T : class => Log("lrclib", message, level);
+
+    public static void Lyrics<T>(T message, LogEventLevel level = LogEventLevel.Information)
+        where T : class => Log("lyrics", message, level);
 
     public static void MovieDb<T>(T message, LogEventLevel level = LogEventLevel.Information)
         where T : class => Log("moviedb", message, level);

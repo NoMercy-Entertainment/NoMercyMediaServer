@@ -18,7 +18,7 @@ namespace NoMercy.Database;
 /// <summary>
 /// Configures each SQLite connection for concurrent use:
 /// - WAL journal mode: allows concurrent readers alongside the writer
-/// - busy_timeout: retry for up to 30 s instead of immediately throwing SQLITE_BUSY
+/// - busy_timeout: retry for up to 5 s instead of immediately throwing SQLITE_BUSY
 /// - synchronous=NORMAL: safe with WAL and faster than FULL
 /// </summary>
 public class SqliteConnectionInterceptor : DbConnectionInterceptor
@@ -43,8 +43,17 @@ public class SqliteConnectionInterceptor : DbConnectionInterceptor
         using DbCommand cmd = connection.CreateCommand();
 
         // busy_timeout and synchronous are connection-level — always safe to set.
+        // Kept short deliberately: SqliteRetryingExecutionStrategy already retries
+        // "database is locked" with its own exponential backoff on top of whatever
+        // this pragma blocks for per attempt. Stacking a long busy_timeout under a
+        // multi-retry backoff compounds — a single contended query can silently
+        // stall for (busy_timeout + backoff) x retry-count, tens of seconds past
+        // what any interactive caller (e.g. a SignalR hub method a client is
+        // waiting on) should ever wait. 5 s absorbs a normal contention blip;
+        // anything longer should surface to the execution strategy's own bounded
+        // retry loop instead of being invisible inside the driver.
         cmd.CommandText = """
-            PRAGMA busy_timeout=30000;
+            PRAGMA busy_timeout=5000;
             PRAGMA synchronous=NORMAL;
             """;
         cmd.ExecuteNonQuery();

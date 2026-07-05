@@ -100,31 +100,33 @@ public interface IMusicRepository
 
     Task<List<Track>> GetTracksByIdsAsync(List<Guid> trackIds, CancellationToken ct = default);
 
-    Task<PlaylistTrack?> GetPlaylistTrackAsync(
+    // Returns every PlaylistTrack row for the playlist (ownership-scoped to userId),
+    // fully hydrated for DTO projection. Deliberately NOT rooted through
+    // Playlist.Tracks — see MusicRepository.Playlists.cs for why.
+    Task<List<PlaylistTrack>> GetPlaylistTracksAsync(
         Guid userId,
         Guid playlistId,
-        Guid trackId,
         CancellationToken ct = default
     );
 
-    Task<AlbumTrack?> GetAlbumTrackAsync(
+    // Returns every AlbumTrack row for the album, fully hydrated for DTO projection.
+    Task<List<AlbumTrack>> GetAlbumTracksAsync(
         Guid userId,
         Guid albumId,
-        Guid trackId,
         CancellationToken ct = default
     );
 
-    Task<ArtistTrack?> GetArtistTrackAsync(
+    // Returns every ArtistTrack row for the artist, fully hydrated for DTO projection.
+    Task<List<ArtistTrack>> GetArtistTracksAsync(
         Guid userId,
         Guid artistId,
-        Guid trackId,
         CancellationToken ct = default
     );
 
-    Task<MusicGenreTrack?> GetGenreTrackAsync(
+    // Returns every MusicGenreTrack row for the genre, fully hydrated for DTO projection.
+    Task<List<MusicGenreTrack>> GetGenreTracksAsync(
         Guid userId,
         Guid genreId,
-        Guid trackId,
         CancellationToken ct = default
     );
 

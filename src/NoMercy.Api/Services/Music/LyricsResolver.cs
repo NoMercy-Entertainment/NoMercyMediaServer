@@ -14,7 +14,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Music;
-using NoMercy.Providers.Abstractions;
 using NoMercy.Providers.Lyrics;
 
 namespace NoMercy.Api.Services.Music;
@@ -29,13 +28,43 @@ public class LyricsResolver(IServiceScopeFactory scopeFactory, ILyricsAggregator
 {
     private readonly ConcurrentDictionary<Guid, Lazy<Task<Lyric[]?>>> _inFlight = new();
 
+    // A provider hiccup (timeout / rate limit / unexpected error) is not a
+    // confirmed "no lyrics" and must not be cached as one -- but replaying the
+    // exact same slow chain on the very next play of the same track just to
+    // hit the same hiccup again is wasted latency. This short backoff means a
+    // track that just failed transiently returns null immediately for a
+    // while, then gets a real attempt again once it expires.
+    private readonly ConcurrentDictionary<Guid, DateTime> _transientBackoffUntil = new();
+    private static readonly TimeSpan DefaultTransientBackoff = TimeSpan.FromMinutes(2);
+    private readonly TimeSpan _transientBackoff = DefaultTransientBackoff;
+
+    // Test-only seam (NoMercy.Tests.Api has InternalsVisibleTo) so a backoff
+    // expiry test can shrink the window instead of waiting out the real one.
+    internal LyricsResolver(
+        IServiceScopeFactory scopeFactory,
+        ILyricsAggregator lyricsAggregator,
+        TimeSpan transientBackoff
+    )
+        : this(scopeFactory, lyricsAggregator)
+    {
+        _transientBackoff = transientBackoff;
+    }
+
     /// <summary>
     /// Returns the track's lyrics, fetching + persisting them once even when
     /// called concurrently for the same track. Returns null when no lyrics
-    /// could be resolved.
+    /// could be resolved (including while a prior transient failure is still
+    /// within its backoff window).
     /// </summary>
     public Task<Lyric[]?> ResolveAsync(Guid trackId)
     {
+        if (_transientBackoffUntil.TryGetValue(trackId, out DateTime until))
+        {
+            if (DateTime.UtcNow < until)
+                return Task.FromResult<Lyric[]?>(null);
+            _transientBackoffUntil.TryRemove(trackId, out _);
+        }
+
         // Lazy guarantees the factory runs once even under GetOrAdd contention.
         return _inFlight.GetOrAdd(trackId, _ => new(() => FetchAndPersistAsync(trackId))).Value;
     }
@@ -65,8 +94,17 @@ public class LyricsResolver(IServiceScopeFactory scopeFactory, ILyricsAggregator
             if (track.Lyrics is not null)
                 return null;
 
-            LyricLine[]? lyrics = await lyricsAggregator.SearchLyrics(track);
-            if (lyrics is null)
+            LyricsFetchResult result = await lyricsAggregator.SearchLyrics(track);
+
+            if (result.IsTransientError)
+            {
+                _transientBackoffUntil[trackId] = DateTime.UtcNow.Add(_transientBackoff);
+                return null;
+            }
+
+            _transientBackoffUntil.TryRemove(trackId, out _);
+
+            if (result.Lines is null)
             {
                 // Negative cache: record "checked, none found" so every later
                 // play of this track doesn't re-hit Lrclib/Musixmatch and trip
@@ -78,7 +116,7 @@ public class LyricsResolver(IServiceScopeFactory scopeFactory, ILyricsAggregator
 
             return await repository.UpdateTrackLyricsAsync(
                 track,
-                JsonConvert.SerializeObject(lyrics)
+                JsonConvert.SerializeObject(result.Lines)
             );
         }
         finally

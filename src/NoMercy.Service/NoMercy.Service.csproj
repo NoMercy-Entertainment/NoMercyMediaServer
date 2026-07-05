@@ -21,6 +21,7 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="NoMercy.Tests.Setup" />
+    <InternalsVisibleTo Include="NoMercy.Tests.Api" />
   </ItemGroup>
   <PropertyGroup>
     <TargetName>NoMercyMediaServer</TargetName>

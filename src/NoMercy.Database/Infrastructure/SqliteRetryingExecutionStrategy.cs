@@ -11,6 +11,8 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using NoMercy.NmSystem.SystemCalls;
+using Serilog.Events;
 
 namespace NoMercy.Database;
 
@@ -45,8 +47,20 @@ public class SqliteRetryingExecutionStrategy : ExecutionStrategy
     )
         : base(dependencies, maxRetryCount, maxRetryDelay) { }
 
-    private new const int DefaultMaxRetryCount = 6;
-    private static new readonly TimeSpan DefaultMaxDelay = TimeSpan.FromSeconds(30);
+    // Bounded deliberately low: this is one of TWO independent wait layers a
+    // contended query passes through — Microsoft.Data.Sqlite's own busy_timeout
+    // pragma (see SqliteConnectionInterceptor) already absorbs short contention
+    // blips inside the driver before an exception ever reaches here. Stacking a
+    // 6-retry, up-to-30s-per-retry backoff ON TOP of that turned a live incident
+    // into a 79s stall on an interactive SignalR hub method a client was blocking
+    // on (see MusicHub.StartPlaybackCommand) — worse, one long enough to trip an
+    // unrelated 15s liveness watchdog and kill the user's session as a side effect.
+    // 4 retries up to 5s absorbs a real contention burst (sum of backoff delays
+    // ~9s) without manufacturing a minute-plus hang out of transient lock
+    // contention that WAL-mode SQLite should clear in low single digits of
+    // seconds under normal load.
+    private new const int DefaultMaxRetryCount = 4;
+    private static new readonly TimeSpan DefaultMaxDelay = TimeSpan.FromSeconds(5);
 
     /// <summary>
     /// The base <see cref="ExecutionStrategy"/> rejects any ambient transaction on first
@@ -73,6 +87,14 @@ public class SqliteRetryingExecutionStrategy : ExecutionStrategy
                 && current.Message.Contains("is locked", StringComparison.OrdinalIgnoreCase)
             )
             {
+                // Contention was previously invisible end to end — a stalled query
+                // just looked slow, with nothing in the log distinguishing "the
+                // query is slow" from "the query is retrying behind another
+                // writer". This makes the next incident provable at a glance.
+                Logger.System(
+                    $"SQLite lock contention — retry {ExceptionsEncountered.Count} of {DefaultMaxRetryCount}: {current.Message}",
+                    LogEventLevel.Warning
+                );
                 return true;
             }
         }

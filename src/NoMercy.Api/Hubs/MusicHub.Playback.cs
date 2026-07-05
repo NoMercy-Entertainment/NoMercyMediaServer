@@ -23,6 +23,12 @@ public partial class MusicHub
 {
     public async Task StartPlaybackCommand(string? type, Guid? listId, Guid? trackId)
     {
+        // Epoch-ms marks (not just deltas) so a live device measurement can line
+        // this line up directly against the client's own epoch-stamped tap time —
+        // see the matching marks in PlaybackCommand and
+        // MusicPlaybackService.DebouncedUpdatePlaybackState.
+        long entryMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
         User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
@@ -46,6 +52,23 @@ public partial class MusicHub
 
         SemaphoreSlim userLock = GetUserLock(user.Id);
         await userLock.WaitAsync();
+        long lockAcquiredMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        // SignalR dispatches invocations on one connection serially by default
+        // (MaximumParallelInvocationsPerClient=1, left untouched deliberately —
+        // raising it globally would let ReportPositionForItemCommand/PlaybackCommand
+        // run CONCURRENTLY with this method on the same connection, and every mutation
+        // in this hub assumes single-threaded access per user via GetUserLock; that
+        // would need a full thread-safety audit of MusicHub, not a one-line config
+        // flip). That means a slow GetPlaylist (contended DB, cold cache, a large
+        // artist) starves this SAME connection's queued position reports for its
+        // entire duration, while MusicPlaybackService's 100ms watchdog keeps ticking
+        // independently and would otherwise see no heartbeat and kill the session
+        // out from under a client that is still very much alive and simply queued.
+        // BeginPlaybackStart/EndPlaybackStart bracket that window so the watchdog
+        // never treats it as staleness; a genuinely dead device is still caught on
+        // the very next cadence once the flag clears (see MusicPlaybackService).
+        _musicPlaybackService.BeginPlaybackStart(user.Id);
         try
         {
             string country = GetCountryFromContext();
@@ -61,6 +84,7 @@ public partial class MusicHub
                     country
                 );
             playlistStopwatch.Stop();
+            long playlistFetchedMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             _logger.Log(
                 playlistStopwatch.ElapsedMilliseconds > 1000 ? LogLevel.Warning : LogLevel.Debug,
                 "[MusicHub.StartPlaybackCommand] GetPlaylist({Type}) took {ElapsedMilliseconds}ms ({Count} tracks)",
@@ -70,6 +94,26 @@ public partial class MusicHub
             );
 
             await HandlePlaybackState(user, type, listId.Value, item, playlist);
+
+            // Round-trip proof: entry -> lock -> playlist fetch -> HandlePlaybackState
+            // (which awaits MusicPlaybackService.UpdatePlaybackState internally, so
+            // broadcastMs is when the relay's SendTo/Task.WhenAll across every
+            // connected device for this user actually completed).
+            long broadcastMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            _logger.LogInformation(
+                "{Name}: [MusicHub.StartPlaybackCommand] type={Type} entryMs={EntryMs} lockAcquiredMs={LockAcquiredMs} (+{LockWaitMs}ms) playlistFetchedMs={PlaylistFetchedMs} (+{PlaylistMs}ms) broadcastMs={BroadcastMs} (+{BroadcastDeltaMs}ms) totalMs={TotalMs}ms playlist={PlaylistCount}",
+                user.Name,
+                type,
+                entryMs,
+                lockAcquiredMs,
+                lockAcquiredMs - entryMs,
+                playlistFetchedMs,
+                playlistFetchedMs - lockAcquiredMs,
+                broadcastMs,
+                broadcastMs - playlistFetchedMs,
+                broadcastMs - entryMs,
+                playlist.Count
+            );
         }
         catch (ArgumentException ex)
         {
@@ -121,6 +165,7 @@ public partial class MusicHub
         }
         finally
         {
+            _musicPlaybackService.EndPlaybackStart(user.Id);
             userLock.Release();
         }
     }
@@ -229,6 +274,15 @@ public partial class MusicHub
 
     private async Task HandleExistingPlaylistState(User user, MusicPlayerState state)
     {
+        // Promotes the caller to active only when there is no active device recorded
+        // (e.g. resuming right after a graceful release — ChangeDeviceCommand("") or a
+        // disconnect) or when the caller already IS active; a passive device toggling
+        // play/pause while someone else owns the session must never steal it. Without
+        // this, resuming the exact same track/list from a new device after a release
+        // left the session with DeviceId permanently null — no device recognized as
+        // active, so the liveness watchdog could never refresh or ever expire it.
+        UpdateDeviceInfo(state);
+
         state.PlayState = !state.PlayState;
         UpdateActionsDisallows(state);
         _musicPlaybackService.StartPlaybackTimer(user);
@@ -244,11 +298,16 @@ public partial class MusicHub
         // Stop the old timer before modifying state to prevent race conditions
         _musicPlaybackService.RemoveTimer(user.Id);
 
+        // See the identical call in HandleExistingPlaylistState: promotes the caller to
+        // active only when nobody currently owns the session, so resuming/reordering
+        // from a new device right after a graceful release actually claims it.
+        UpdateDeviceInfo(state);
+
         // Check if it's the current item
         if (state.CurrentItem?.Id == item.Id)
         {
             // Already playing this track, just restart it
-            state.Time = 0;
+            state.SetPosition(0);
             state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
             state.PlayState = true;
             UpdateActionsDisallows(state);
@@ -281,7 +340,7 @@ public partial class MusicHub
             // Set the selected track as current
             // The remaining playlist continues naturally from here
             state.CurrentItem = item;
-            state.Time = 0;
+            state.SetPosition(0);
             state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
             state.PlayState = true;
             state.Duration = item.Duration.ToMilliSeconds();
@@ -305,7 +364,7 @@ public partial class MusicHub
 
                 // Set the selected track as current
                 state.CurrentItem = item;
-                state.Time = 0;
+                state.SetPosition(0);
                 state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
                 state.PlayState = true;
                 state.Duration = item.Duration.ToMilliSeconds();
@@ -389,7 +448,7 @@ public partial class MusicHub
             UriKind.Relative
         );
         state.Backlog.Add(item);
-        state.Time = 0;
+        state.SetPosition(0);
         state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
         state.Duration = item.Duration.ToMilliSeconds();
     }
@@ -435,11 +494,23 @@ public partial class MusicHub
         if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? caller))
             MusicPlaybackService.TryRefreshHeartbeat(playerState, caller.DeviceId);
 
+        // A direct read is its own clock-sync emit — without a fresh stamp here a
+        // client polling state (rather than receiving a push) would derive elapsed
+        // time against a ServerTimeMs left over from whenever the last broadcast
+        // happened to fire.
+        playerState.ServerTimeMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
         return playerState;
     }
 
     public async Task PlaybackCommand(string? command, object? data = null)
     {
+        // See the matching epoch-ms marks in StartPlaybackCommand and
+        // MusicPlaybackService.DebouncedUpdatePlaybackState — same convention,
+        // so a live device measurement can subtract this against the client's
+        // own epoch-stamped tap time and see exactly where the round trip goes.
+        long entryMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
         User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
@@ -455,6 +526,7 @@ public partial class MusicHub
 
         SemaphoreSlim userLock = GetUserLock(user.Id);
         await userLock.WaitAsync();
+        long lockAcquiredMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         try
         {
             if (!_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? state))
@@ -482,14 +554,39 @@ public partial class MusicHub
 
             UpdateActionsDisallows(state);
 
+            long handlerDoneMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
             bool isSkipCommand =
                 command.Equals("next", StringComparison.OrdinalIgnoreCase)
                 || command.Equals("previous", StringComparison.OrdinalIgnoreCase);
 
+            // next/previous go through the 150ms debounce — broadcastMs below only
+            // marks when the debounce Timer was SCHEDULED, not when the relay
+            // actually left; MusicPlaybackService.DebouncedUpdatePlaybackState logs
+            // the real fire-and-send timing separately once the timer elapses.
             if (isSkipCommand)
                 _musicPlaybackService.DebouncedUpdatePlaybackState(user, state);
             else
                 await _musicPlaybackService.UpdatePlaybackState(user, state);
+
+            long broadcastMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+            _logger.LogInformation(
+                "{Name}: [MusicHub.PlaybackCommand] cmd={Command} entryMs={EntryMs} lockAcquiredMs={LockAcquiredMs} (+{LockWaitMs}ms) handlerDoneMs={HandlerDoneMs} (+{HandlerMs}ms) broadcastMs={BroadcastMs} (+{BroadcastDeltaMs}ms) totalMs={TotalMs}ms debounced={Debounced} playlist={PlaylistCount} backlog={BacklogCount}",
+                user.Name,
+                command,
+                entryMs,
+                lockAcquiredMs,
+                lockAcquiredMs - entryMs,
+                handlerDoneMs,
+                handlerDoneMs - lockAcquiredMs,
+                broadcastMs,
+                broadcastMs - handlerDoneMs,
+                broadcastMs - entryMs,
+                isSkipCommand,
+                state.Playlist.Count,
+                state.Backlog.Count
+            );
         }
         finally
         {
@@ -497,6 +594,11 @@ public partial class MusicHub
         }
     }
 
+    // Untagged: the server has no track id to compare a report against, so it
+    // cannot reject a report that has gone stale across a track change — it can
+    // only be trusted as-is. Kept exactly as-is (signature and behavior) for old
+    // clients; new clients should prefer CurrentTimeForItemCommand /
+    // ReportPositionForItemCommand below, which close that gap.
     public async Task CurrentTimeCommand(int? time)
     {
         if (time is null)
@@ -504,6 +606,7 @@ public partial class MusicHub
         await ReportPositionCommand(time.Value * 1000);
     }
 
+    // See the untagged-vs-tagged note on CurrentTimeCommand above.
     public async Task ReportPositionCommand(int? positionMs)
     {
         User? user = UserCacheService.GetUser(Context.User.UserId());
@@ -513,30 +616,95 @@ public partial class MusicHub
         if (positionMs is null)
             return;
 
-        if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
-        {
-            if (DateTime.UtcNow < playerState.IgnoreCurrentTimeUntil)
-                return;
-
-            ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? caller);
-
-            // Only the device the server considers active may prove the session is
-            // genuinely still playing somewhere or move the authoritative position —
-            // a stray/passive report must never mask a truly-dead active device from
-            // MusicPlaybackService's staleness sweep, and must never snap everyone
-            // else's playback back to a passive mirror's own (possibly paused, torn
-            // down, or drifted) position. A passive report is a complete no-op.
-            if (!MusicPlaybackService.TryRefreshHeartbeat(playerState, caller?.DeviceId))
-                return;
-
-            playerState.Time = positionMs.Value;
-
-            await _musicPlaybackService.UpdatePlaybackState(user, playerState);
-        }
-        else
+        if (!_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
             await _musicPlaybackService.UpdatePlaybackState(user, playerState);
+            return;
         }
+
+        ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? caller);
+
+        // Liveness first, ahead of the ignore-window gate below: a report from the
+        // ACTIVE device that is about to be dropped for landing inside the ignore
+        // window still proves the device is alive right now. Only the device the
+        // server considers active may prove the session is genuinely still playing
+        // somewhere or move the authoritative position — a stray/passive report
+        // must never mask a truly-dead active device from MusicPlaybackService's
+        // staleness sweep, and must never snap everyone else's playback back to a
+        // passive mirror's own (possibly paused, torn down, or drifted) position. A
+        // passive report is a complete no-op for both liveness and position.
+        if (!MusicPlaybackService.TryRefreshHeartbeat(playerState, caller?.DeviceId))
+            return;
+
+        if (DateTime.UtcNow < playerState.IgnoreCurrentTimeUntil)
+            return;
+
+        playerState.SetPosition(positionMs.Value);
+
+        await _musicPlaybackService.UpdatePlaybackState(user, playerState);
+    }
+
+    /// <summary>
+    /// Item-tagged twin of <see cref="CurrentTimeCommand"/> — seconds instead of
+    /// whole-second int, forwarded through <see cref="ReportPositionForItemCommand"/>.
+    /// </summary>
+    public async Task CurrentTimeForItemCommand(double? seconds, string? itemId)
+    {
+        if (seconds is null)
+            return;
+        await ReportPositionForItemCommand((long)Math.Round(seconds.Value * 1000), itemId);
+    }
+
+    /// <summary>
+    /// Item-tagged twin of <see cref="ReportPositionCommand"/>: identical accept
+    /// path (active-device + IgnoreCurrentTimeUntil gating), plus one extra guard —
+    /// when <paramref name="itemId"/> is supplied and does not match
+    /// <see cref="MusicPlayerState.CurrentItem"/>'s id, the report is dropped
+    /// outright (no mutation, no broadcast). This closes the track-boundary race
+    /// an untagged report cannot defend against: an in-flight position report for
+    /// a track that has since changed (auto-advance, skip, crossfade) would
+    /// otherwise silently overwrite the new track's fresh Time with a stale value —
+    /// the "mirror shows the previous item's position" bug. A null itemId behaves
+    /// exactly like <see cref="ReportPositionCommand"/> — untagged reports keep
+    /// working unchanged; they simply forgo the stale-item check.
+    /// </summary>
+    public async Task ReportPositionForItemCommand(long? positionMs, string? itemId)
+    {
+        User? user = UserCacheService.GetUser(Context.User.UserId());
+        if (user is null)
+            return;
+
+        if (positionMs is null)
+            return;
+
+        if (!_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
+        {
+            await _musicPlaybackService.UpdatePlaybackState(user, playerState);
+            return;
+        }
+
+        ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? caller);
+
+        // Liveness first, ahead of both drop gates below: a report from the ACTIVE
+        // device that is about to be rejected as stale-item or as landing inside
+        // the ignore window still proves the device is alive right now. Only the
+        // device the server considers active may prove the session is genuinely
+        // still playing somewhere or move the authoritative position — a
+        // stray/passive report must never mask a truly-dead active device from
+        // MusicPlaybackService's staleness sweep. A passive report is a complete
+        // no-op for both liveness and position.
+        if (!MusicPlaybackService.TryRefreshHeartbeat(playerState, caller?.DeviceId))
+            return;
+
+        if (!MusicPlaybackService.IsReportForCurrentItem(playerState, itemId))
+            return;
+
+        if (DateTime.UtcNow < playerState.IgnoreCurrentTimeUntil)
+            return;
+
+        playerState.SetPosition((int)positionMs.Value);
+
+        await _musicPlaybackService.UpdatePlaybackState(user, playerState);
     }
 
     public long GetServerTime()

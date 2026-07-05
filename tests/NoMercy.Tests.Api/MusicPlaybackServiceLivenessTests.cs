@@ -405,4 +405,144 @@ public class MusicPlaybackServiceLivenessTests
             service.RemoveTimer(userId);
         }
     }
+
+    // ── BeginPlaybackStart / EndPlaybackStart (StartPlaybackCommand in-flight guard) ──
+    // SignalR dispatches invocations on one connection serially by default, so a slow
+    // playlist fetch inside StartPlaybackCommand starves that connection's queued
+    // position reports for its whole duration — the watchdog must not kill the session
+    // out from under a client that is still alive and simply queued behind its own
+    // start command, but a genuinely dead device must still be caught once the flag
+    // clears.
+
+    [Fact]
+    public void BeginPlaybackStart_StampsFreshHeartbeat_ForExistingSession()
+    {
+        (MusicPlaybackService service, MusicPlayerStateManager stateManager, _, _) = MakeService();
+
+        Guid userId = Guid.NewGuid();
+        MusicPlayerState state = MakePlayingState("device-a", DateTime.UtcNow.AddHours(-1));
+        stateManager.UpdateState(userId, state);
+
+        service.BeginPlaybackStart(userId);
+
+        state.LastActiveHeartbeatUtc.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(2));
+
+        service.EndPlaybackStart(userId);
+    }
+
+    [Fact]
+    public void IsPlaybackStartInFlight_FalseBeforeBegin_TrueAfterBegin_FalseAfterEnd()
+    {
+        (MusicPlaybackService service, _, _, _) = MakeService();
+        Guid userId = Guid.NewGuid();
+
+        service.IsPlaybackStartInFlight(userId).Should().BeFalse();
+
+        service.BeginPlaybackStart(userId);
+        service.IsPlaybackStartInFlight(userId).Should().BeTrue();
+
+        service.EndPlaybackStart(userId);
+        service.IsPlaybackStartInFlight(userId).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task StartPlaybackTimer_DoesNotEndSession_WhilePlaybackStartIsInFlight_EvenIfHeartbeatIsStale()
+    {
+        (
+            MusicPlaybackService service,
+            MusicPlayerStateManager stateManager,
+            MusicActiveDeviceRegistry registry,
+            _
+        ) = MakeService();
+
+        Guid userId = Guid.NewGuid();
+        User user = new() { Id = userId, Name = "Test User" };
+        registry.Set(userId, new() { DeviceId = "zombie-device", Type = "web" });
+
+        MusicPlayerState state = MakePlayingState("zombie-device", DateTime.UtcNow);
+        state.CurrentItem = MakeTrack();
+        stateManager.UpdateState(userId, state);
+
+        try
+        {
+            service.BeginPlaybackStart(userId);
+            service.StartPlaybackTimer(user);
+
+            // Simulate the long GetPlaylist fetch: no further reports arrive and the
+            // heartbeat ages well past ActiveDeviceStaleTimeoutMs while the flag is set.
+            state.LastActiveHeartbeatUtc = DateTime.UtcNow.AddMilliseconds(
+                -(MusicPlaybackService.ActiveDeviceStaleTimeoutMs + 1_000)
+            );
+
+            await Task.Delay(300);
+
+            stateManager.TryGetValue(userId, out MusicPlayerState? observed);
+            observed.Should().NotBeNull();
+            observed!
+                .CurrentItem.Should()
+                .NotBeNull("a start in flight must never look stale to the watchdog");
+            observed.PlayState.Should().BeTrue();
+            registry.TryGet(userId, out _).Should().BeTrue();
+        }
+        finally
+        {
+            service.EndPlaybackStart(userId);
+            service.RemoveTimer(userId);
+        }
+    }
+
+    [Fact]
+    public async Task StartPlaybackTimer_EndsSession_OnceInFlightFlagClears_IfStillStale()
+    {
+        // A genuinely dead device must still be caught on the very next cadence once
+        // the in-flight flag clears — the guard above only defers detection for the
+        // duration of a legitimate start, it must never suppress it permanently.
+        (
+            MusicPlaybackService service,
+            MusicPlayerStateManager stateManager,
+            MusicActiveDeviceRegistry registry,
+            _
+        ) = MakeService();
+
+        Guid userId = Guid.NewGuid();
+        User user = new() { Id = userId, Name = "Test User" };
+        registry.Set(userId, new() { DeviceId = "zombie-device", Type = "web" });
+
+        MusicPlayerState state = MakePlayingState("zombie-device", DateTime.UtcNow);
+        state.CurrentItem = MakeTrack();
+        stateManager.UpdateState(userId, state);
+
+        try
+        {
+            service.BeginPlaybackStart(userId);
+            service.StartPlaybackTimer(user);
+            state.LastActiveHeartbeatUtc = DateTime.UtcNow.AddMilliseconds(
+                -(MusicPlaybackService.ActiveDeviceStaleTimeoutMs + 1_000)
+            );
+
+            // The flag clears — mirrors StartPlaybackCommand's finally block once its
+            // (slow) work finishes without ever receiving a fresh report.
+            service.EndPlaybackStart(userId);
+
+            MusicPlayerState? observed = null;
+            for (
+                int attempt = 0;
+                attempt < 40 && (observed is null || observed.CurrentItem is not null);
+                attempt++
+            )
+            {
+                await Task.Delay(50);
+                stateManager.TryGetValue(userId, out observed);
+            }
+
+            observed.Should().NotBeNull();
+            observed!.CurrentItem.Should().BeNull();
+            observed.PlayState.Should().BeFalse();
+            registry.TryGet(userId, out _).Should().BeFalse();
+        }
+        finally
+        {
+            service.RemoveTimer(userId);
+        }
+    }
 }

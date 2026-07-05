@@ -9,28 +9,51 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Diagnostics;
 using System.Globalization;
 using NoMercy.Database.Models.Music;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.Providers.Abstractions;
+using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Lrclib.Client;
 using NoMercy.Providers.Lrclib.Models;
 using NoMercy.Providers.MusixMatch.Client;
 using NoMercy.Providers.MusixMatch.Models;
 using NoMercy.Providers.NoMercy.Client;
 using NoMercy.Providers.NoMercy.Models;
+using Serilog.Events;
 
 namespace NoMercy.Providers.Lyrics;
 
 public class LyricsAggregator : ILyricsAggregator
 {
+    // Bounds how long a single provider stage may keep the caller waiting.
+    // Lrclib/Musixmatch normally answer in well under a second once their
+    // rate-limited Queue lets the request through, so the default is generous.
+    // A stage that blows the budget is NOT cancelled server-side -- its
+    // HttpClient.Timeout / Queue retry chain keeps running in the background
+    // so the provider's rate-limited slot is still released cleanly -- the
+    // caller just stops waiting on it and the resolve treats it as an error.
+    private static readonly TimeSpan DefaultProviderTimeout = TimeSpan.FromSeconds(8);
+
+    private readonly TimeSpan _providerTimeout;
+
+    public LyricsAggregator()
+        : this(DefaultProviderTimeout) { }
+
+    // Test-only seam (NoMercy.Tests.Providers has InternalsVisibleTo) so a
+    // timeout test can shrink the budget instead of waiting out the real one.
+    internal LyricsAggregator(TimeSpan providerTimeout)
+    {
+        _providerTimeout = providerTimeout;
+    }
+
     /// <summary>
     /// Resolves lyrics for a track, preferring the free Lrclib service and
     /// falling back to Musixmatch. Every candidate is validated against the
     /// track's title, artist and (for synced lyrics) release length, so a
     /// mismatched song or a wrong-release timing is rejected instead of stored.
     /// </summary>
-    public async Task<LyricLine[]?> SearchLyrics(Track track)
+    public async Task<LyricsFetchResult> SearchLyrics(Track track)
     {
         // `using` so an exception mid-search doesn't leak the HttpClient wrappers.
         using MusixmatchClient musixmatchClient = new();
@@ -44,57 +67,169 @@ public class LyricsAggregator : ILyricsAggregator
         int? durationSeconds = parsedDuration > 0 ? parsedDuration : null;
 
         LyricQuery query = new(track.Name, artists, albumName, durationSeconds);
+        string label = $"{track.Name} - {string.Join(", ", artists)}";
+        Stopwatch total = Stopwatch.StartNew();
 
-        // Free service first, but timed (synced) lyrics always win over untimed:
-        // if Lrclib only has plain lyrics, still try Musixmatch for a synced match
-        // and prefer it. Fall back to whatever plain result exists otherwise.
-        LyricCandidate? lrclib = await FromLrclib(lrclibClient, query, artists);
-        if (lrclib is { HasSyncedLyrics: true })
-            return lrclib.Lines;
+        // The /get endpoint is an exact artist+title+album+duration lookup.
+        // When it yields a synced match that passes validation it's
+        // authoritative, so skip the broader /search + Musixmatch calls
+        // entirely: one provider round trip instead of up to four.
+        ProviderAttempt exact = await RunProvider(
+            "Lrclib-get",
+            () => FromLrclibGet(lrclibClient, query, artists)
+        );
+        if (exact.Candidate is { HasSyncedLyrics: true })
+            return Resolved(label, exact, total.ElapsedMilliseconds);
 
-        LyricCandidate? musixmatch = await FromMusixmatch(musixmatchClient, query);
-        if (musixmatch is { HasSyncedLyrics: true })
-            return musixmatch.Lines;
+        // /get missed or only had plain lyrics: race the fuzzy Lrclib search
+        // against Musixmatch instead of running every remaining call one after
+        // another. Racing never lets a wrong match through -- both branches
+        // still validate every candidate they see, and PickBest below scores
+        // everything that came back (plus a lingering plain /get hit) and only
+        // ever returns the best-scoring, still-valid candidate.
+        Task<ProviderAttempt> searchTask = RunProvider(
+            "Lrclib-search",
+            () => FromLrclibSearch(lrclibClient, query, artists)
+        );
+        Task<ProviderAttempt> musixmatchTask = RunMusixmatch(musixmatchClient, query);
+        ProviderAttempt[] raced = await Task.WhenAll(searchTask, musixmatchTask);
 
-        return (lrclib ?? musixmatch)?.Lines;
+        ProviderAttempt[] attempts = [exact, raced[0], raced[1]];
+        LyricCandidate? best = LyricMatcher.PickBest(
+            query,
+            attempts.Select(attempt => attempt.Candidate).OfType<LyricCandidate>()
+        );
+
+        total.Stop();
+
+        if (best is not null)
+        {
+            ProviderAttempt winner = attempts.First(attempt =>
+                ReferenceEquals(attempt.Candidate, best)
+            );
+            return Resolved(label, winner, total.ElapsedMilliseconds);
+        }
+
+        if (attempts.Any(attempt => attempt.Errored))
+        {
+            Logger.Lyrics(
+                $"lyrics NOT resolved for {label} after {total.ElapsedMilliseconds}ms: a provider call failed or timed out, treating as transient",
+                LogEventLevel.Warning
+            );
+            return LyricsFetchResult.TransientFailure;
+        }
+
+        Logger.Lyrics(
+            $"lyrics NOT found for {label} after {total.ElapsedMilliseconds}ms, providers=[Lrclib-get, Lrclib-search, Musixmatch]"
+        );
+        return LyricsFetchResult.NotFound;
     }
 
-    private static async Task<LyricCandidate?> FromLrclib(
+    private static LyricsFetchResult Resolved(string label, ProviderAttempt winner, long elapsedMs)
+    {
+        LyricCandidate candidate = winner.Candidate!;
+        Logger.Lyrics(
+            $"lyrics resolved for {label} via {winner.Provider} in {elapsedMs}ms (synced={candidate.HasSyncedLyrics})"
+        );
+        return LyricsFetchResult.Found(candidate.Lines, winner.Provider);
+    }
+
+    /// <summary>
+    /// Runs one provider stage with a timing/outcome log line and a hard wall
+    /// clock budget. A timeout or any other exception is reported as
+    /// <see cref="ProviderAttempt.Errored"/> rather than propagated, so one bad
+    /// provider stage never takes the whole resolve down with it.
+    /// </summary>
+    private async Task<ProviderAttempt> RunProvider(
+        string provider,
+        Func<Task<LyricCandidate?>> fetch
+    )
+    {
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        try
+        {
+            LyricCandidate? candidate = await fetch().WaitAsync(_providerTimeout);
+            stopwatch.Stop();
+            string outcome =
+                candidate is null ? "miss"
+                : candidate.HasSyncedLyrics ? "hit-synced"
+                : "hit-plain";
+            Logger.Lyrics($"{provider}: {outcome} in {stopwatch.ElapsedMilliseconds}ms");
+            return new(provider, candidate, false);
+        }
+        catch (TimeoutException)
+        {
+            stopwatch.Stop();
+            Logger.Lyrics(
+                $"{provider}: timed out after {stopwatch.ElapsedMilliseconds}ms (call keeps running in the background to release its rate-limit slot)",
+                LogEventLevel.Warning
+            );
+            return new(provider, null, true);
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            Logger.Lyrics(
+                $"{provider}: error after {stopwatch.ElapsedMilliseconds}ms ({ex.GetType().Name}: {ex.Message})",
+                LogEventLevel.Warning
+            );
+            return new(provider, null, true);
+        }
+    }
+
+    private async Task<ProviderAttempt> RunMusixmatch(MusixmatchClient client, LyricQuery query)
+    {
+        // Tighten first (album + duration), then relax. A clean miss on the
+        // tight query still tries the relaxed one; an error/timeout does not,
+        // since a struggling provider is unlikely to answer the second call
+        // any faster and it only extends the wait.
+        ProviderAttempt tight = await RunProvider(
+            "Musixmatch-tight",
+            () => MusixmatchTight(client, query)
+        );
+        if (tight.Candidate is not null || tight.Errored)
+            return tight;
+
+        return await RunProvider("Musixmatch-relaxed", () => MusixmatchRelaxed(client, query));
+    }
+
+    private static async Task<LyricCandidate?> FromLrclibGet(
         LrclibClient client,
         LyricQuery query,
         string[] artists
     )
     {
-        List<LyricCandidate> candidates = [];
-
         LrclibSongResult? exact = await client.Get(
             artists,
             query.Title,
             query.Album,
             query.DurationSeconds
         );
-        if (exact is not null && LrclibClient.ToCandidate(exact) is { } exactCandidate)
-        {
-            candidates.Add(exactCandidate);
+        if (exact is null || LrclibClient.ToCandidate(exact) is not { } candidate)
+            return null;
 
-            // The /get endpoint is an exact artist+title+album+duration lookup.
-            // When it yields a synced match that passes validation it's
-            // authoritative, so skip the broader /search call: one fewer
-            // rate-limited request (and Musixmatch is skipped upstream too).
-            if (LyricMatcher.PickBest(query, candidates) is { HasSyncedLyrics: true } best)
-                return best;
-        }
+        return LyricMatcher.PickBest(query, [candidate]);
+    }
 
+    private static async Task<LyricCandidate?> FromLrclibSearch(
+        LrclibClient client,
+        LyricQuery query,
+        string[] artists
+    )
+    {
         LrclibSongResult[]? results = await client.Search(artists, query.Title);
-        if (results is not null)
-            foreach (LrclibSongResult result in results)
-                if (LrclibClient.ToCandidate(result) is { } candidate)
-                    candidates.Add(candidate);
+        if (results is null)
+            return null;
+
+        List<LyricCandidate> candidates = [];
+        foreach (LrclibSongResult result in results)
+            if (LrclibClient.ToCandidate(result) is { } candidate)
+                candidates.Add(candidate);
 
         return LyricMatcher.PickBest(query, candidates);
     }
 
-    private static async Task<LyricCandidate?> FromMusixmatch(
+    private static async Task<LyricCandidate?> MusixmatchTight(
         MusixmatchClient client,
         LyricQuery query
     )
@@ -103,9 +238,7 @@ public class LyricsAggregator : ILyricsAggregator
         string duration =
             query.DurationSeconds?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
 
-        // Tighten first (album + duration), then relax. Validation gates every
-        // result, so relaxing the query never lets a wrong song through.
-        LyricCandidate? candidate = Validate(
+        return Validate(
             query,
             await client.SongSearch(
                 new()
@@ -118,8 +251,14 @@ public class LyricsAggregator : ILyricsAggregator
                 }
             )
         );
-        if (candidate is not null)
-            return candidate;
+    }
+
+    private static async Task<LyricCandidate?> MusixmatchRelaxed(
+        MusixmatchClient client,
+        LyricQuery query
+    )
+    {
+        string artistNames = string.Join(",", query.Artists);
 
         return Validate(
             query,
@@ -141,4 +280,6 @@ public class LyricsAggregator : ILyricsAggregator
             return null;
         return LyricMatcher.Score(query, candidate) >= 0 ? candidate : null;
     }
+
+    private sealed record ProviderAttempt(string Provider, LyricCandidate? Candidate, bool Errored);
 }

@@ -55,6 +55,7 @@ public class MusicPlaybackService
     private readonly ConcurrentDictionary<Guid, Timer> _timers = new();
     private readonly ConcurrentDictionary<Guid, Timer> _broadcastTimers = new();
     private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _stateLocks = new();
+    private readonly ConcurrentDictionary<Guid, byte> _playbackStartsInFlight = new();
     private const int TimerInterval = 100;
     private const int CrossfadeLeewayMs = 10000; // Send PrepareCrossfade 10s before track end (gives time to buffer)
     private const int BroadcastDebounceMs = 150;
@@ -109,7 +110,10 @@ public class MusicPlaybackService
                     if (!playerState.PlayState || playerState.CurrentItem is null)
                         return;
 
-                    if (IsActiveDeviceStale(playerState, DateTime.UtcNow))
+                    if (
+                        IsActiveDeviceStale(playerState, DateTime.UtcNow)
+                        && !IsPlaybackStartInFlight(user.Id)
+                    )
                     {
                         await EndStaleActiveSessionAsync(user, playerState);
                         return;
@@ -185,6 +189,45 @@ public class MusicPlaybackService
     }
 
     /// <summary>
+    /// Marks a <see cref="NoMercy.Api.Hubs.MusicHub.StartPlaybackCommand"/> as in flight for
+    /// <paramref name="userId"/> — see <see cref="IsPlaybackStartInFlight"/> for why the
+    /// staleness watchdog needs to know this. Also stamps a fresh heartbeat immediately if a
+    /// session already exists, covering a slow playlist fetch on an EXISTING session: the old
+    /// timer from before this call keeps ticking through the whole fetch, and without this
+    /// stamp it would only see the stale pre-fetch heartbeat until the fetch finishes.
+    /// Call from a try/finally around the whole command body, paired with
+    /// <see cref="EndPlaybackStart"/>.
+    /// </summary>
+    internal void BeginPlaybackStart(Guid userId)
+    {
+        _playbackStartsInFlight[userId] = 0;
+
+        if (_stateManager.TryGetValue(userId, out MusicPlayerState? state))
+            state.LastActiveHeartbeatUtc = DateTime.UtcNow;
+    }
+
+    internal void EndPlaybackStart(Guid userId)
+    {
+        _playbackStartsInFlight.TryRemove(userId, out _);
+    }
+
+    /// <summary>
+    /// True while a <see cref="NoMercy.Api.Hubs.MusicHub.StartPlaybackCommand"/> is in flight for
+    /// <paramref name="userId"/>. SignalR dispatches invocations on one connection serially by
+    /// default, so a slow playlist fetch (contended DB, cold cache, a large artist) starves that
+    /// same connection's queued position reports for its entire duration — the active device is
+    /// very much alive, just queued behind its own start command. The 100ms watchdog tick
+    /// consults this before killing a session on staleness so it can't race a legitimate,
+    /// still-in-progress start; once the flag clears, a genuinely dead device is still caught on
+    /// the very next tick against whatever heartbeat <see cref="BeginPlaybackStart"/> or a real
+    /// report last stamped.
+    /// </summary>
+    internal bool IsPlaybackStartInFlight(Guid userId)
+    {
+        return _playbackStartsInFlight.ContainsKey(userId);
+    }
+
+    /// <summary>
     /// True once the session says it's playing but the active device hasn't proven
     /// life (see <see cref="StartPlaybackTimer"/> and
     /// <see cref="NoMercy.Api.Hubs.MusicHub.ReportPositionCommand"/>) for
@@ -238,6 +281,25 @@ public class MusicPlaybackService
     }
 
     /// <summary>
+    /// Gate for <see cref="NoMercy.Api.Hubs.MusicHub.ReportPositionForItemCommand"/>:
+    /// a null <paramref name="itemId"/> is untagged and always passes (no stale
+    /// check possible, matches the untagged commands' existing behavior); a
+    /// non-null itemId must parse as a Guid and match
+    /// <see cref="MusicPlayerState.CurrentItem"/>'s id (an unparsable id or no
+    /// current item both count as a mismatch). Case-insensitive by virtue of
+    /// comparing parsed Guids rather than raw strings.
+    /// </summary>
+    internal static bool IsReportForCurrentItem(MusicPlayerState state, string? itemId)
+    {
+        if (itemId is null)
+            return true;
+
+        return state.CurrentItem is not null
+            && Guid.TryParse(itemId, out Guid parsed)
+            && parsed == state.CurrentItem.Id;
+    }
+
+    /// <summary>
     /// The active device stopped proving life while the session was still marked
     /// playing — a backgrounded/crashed player or an anonymous Cast Receiver that
     /// never cleanly disconnects. Ends the session outright (mirrors
@@ -267,7 +329,7 @@ public class MusicPlaybackService
 
         state.CurrentItem = null;
         state.PlayState = false;
-        state.Time = 0;
+        state.SetPosition(0);
         state.Backlog = [];
         state.Playlist = [];
         state.CurrentList = new("", UriKind.Relative);
@@ -351,7 +413,7 @@ public class MusicPlaybackService
 
         state.Playlist.RemoveRange(0, currentIndex + 1);
         state.CurrentItem = newTrack;
-        state.Time = 0;
+        state.SetPosition(0);
         state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
         state.CrossfadeSignalSent = false;
         state.IsCrossfading = false;
@@ -367,11 +429,31 @@ public class MusicPlaybackService
         if (_broadcastTimers.TryRemove(user.Id, out Timer? existing))
             existing.Dispose();
 
+        // Epoch-ms so this line correlates directly against the scheduling call's
+        // own "broadcastMs" mark in MusicHub.PlaybackCommand — that mark is only
+        // when the Timer was ARMED; this is when the relay actually fired and sent.
+        long scheduledMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
         Timer timer = new(
             async _ =>
             {
                 _broadcastTimers.TryRemove(user.Id, out Timer? _);
+                long firedMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                 await UpdatePlaybackState(user, state);
+                long sentMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+                _logger?.LogInformation(
+                    "{UserId}: [MusicPlaybackService.DebouncedUpdatePlaybackState] scheduledMs={ScheduledMs} firedMs={FiredMs} (+{FireDelayMs}ms) sentMs={SentMs} (+{SendMs}ms) totalMs={TotalMs}ms playlist={PlaylistCount} backlog={BacklogCount}",
+                    user.Id,
+                    scheduledMs,
+                    firedMs,
+                    firedMs - scheduledMs,
+                    sentMs,
+                    sentMs - firedMs,
+                    sentMs - scheduledMs,
+                    state.Playlist.Count,
+                    state.Backlog.Count
+                );
             },
             null,
             BroadcastDebounceMs,
@@ -431,8 +513,21 @@ public class MusicPlaybackService
 
     public async Task UpdatePlaybackState(User user, MusicPlayerState? state)
     {
+        MusicPlayerState? broadcastState = null;
         if (state is not null)
-            state.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        {
+            // Same instant for both: Timestamp predates ServerTimeMs and some
+            // clients may already key off it, so it stays; ServerTimeMs is the
+            // new clock-sync reference every broadcast emit carries.
+            long nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            state.Timestamp = nowMs;
+            state.ServerTimeMs = nowMs;
+
+            // Broadcast a lyric-stripped queue projection, never the stored
+            // state — see MusicPlayerState.CloneForBroadcast for why queue-item
+            // lyrics are dead weight on this ~per-5s broadcast.
+            broadcastState = state.CloneForBroadcast();
+        }
 
         EventPayload<PlayerStateEventElement> payload = new()
         {
@@ -440,7 +535,7 @@ public class MusicPlaybackService
             [
                 new()
                 {
-                    Event = new() { EventId = PlayerStateEventId, State = state },
+                    Event = new() { EventId = PlayerStateEventId, State = broadcastState },
                     Source = "musicHub",
                     Type = MusicEventType.PlayerStateChanged,
                     User = user,
@@ -539,7 +634,7 @@ public class MusicPlaybackService
         switch (state.Repeat)
         {
             case "one":
-                state.Time = 0;
+                state.SetPosition(0);
                 break;
             case "all":
                 if (currentIndex == state.Playlist.Count - 1)
@@ -556,14 +651,14 @@ public class MusicPlaybackService
                     {
                         state.CurrentItem = state.Playlist.First();
                         state.Playlist.RemoveAt(0);
-                        state.Time = 0;
+                        state.SetPosition(0);
                         state.PlayState = true;
                     }
                     else
                     {
                         // If the playlist is empty, stop playback
                         state.PlayState = false;
-                        state.Time = 0;
+                        state.SetPosition(0);
                         state.CurrentItem = null;
                     }
                 }
@@ -573,7 +668,7 @@ public class MusicPlaybackService
                         state.Backlog.Add(state.CurrentItem);
                     state.CurrentItem = state.Playlist[currentIndex + 1];
                     state.Playlist.RemoveAt(currentIndex + 1);
-                    state.Time = 0;
+                    state.SetPosition(0);
                 }
 
                 break;
@@ -583,14 +678,14 @@ public class MusicPlaybackService
                 if (currentIndex + 1 < state.Playlist.Count)
                 {
                     state.PlayState = true;
-                    state.Time = 0;
+                    state.SetPosition(0);
                     state.CurrentItem = state.Playlist[currentIndex + 1];
                     state.Playlist.RemoveAt(currentIndex + 1);
                 }
                 else
                 {
                     state.PlayState = false;
-                    state.Time = 0;
+                    state.SetPosition(0);
                     state.CurrentItem = null;
                 }
 

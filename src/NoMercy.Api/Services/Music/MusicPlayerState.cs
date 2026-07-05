@@ -70,6 +70,25 @@ public class MusicPlayerState
     [JsonProperty("timestamp")]
     public long Timestamp { get; set; }
 
+    // Epoch ms the server clock read at the instant this broadcast left
+    // MusicPlaybackService.UpdatePlaybackState. Distinct from Timestamp (which
+    // predates this field and some clients may already depend on for other
+    // purposes): this is the reference instant for GetServerTime-style clock-
+    // offset math, letting every device compute the shared server clock and
+    // therefore the same playback position regardless of its own wall-clock skew.
+    [JsonProperty("server_time_ms")]
+    public long ServerTimeMs { get; set; }
+
+    // Epoch ms the server clock read at the instant Time was last authored —
+    // an accepted position report, a seek, a device transfer, or a track
+    // change — never on the internal 100ms playback tick (which advances Time
+    // in lockstep with wall time and needs no fresh reference point). Paired
+    // with Time and ServerTimeMs, a client derives the live position via
+    // Time + (serverNow - PositionCapturedAtMs) without waiting on its own
+    // report cadence. Old clients that ignore this field are unaffected.
+    [JsonProperty("position_captured_at_ms")]
+    public long PositionCapturedAtMs { get; set; }
+
     [JsonProperty("volume_percentage")]
     public int VolumePercentage { get; set; }
 
@@ -114,4 +133,41 @@ public class MusicPlayerState
     // first position report is due. See MusicPlaybackService.IsActiveDeviceStale.
     [JsonIgnore]
     public DateTime LastActiveHeartbeatUtc { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// The single choke point for authoring Time: sets the position and stamps
+    /// <see cref="PositionCapturedAtMs"/> to server-now in the same call, so the
+    /// two can never travel out of sync. Every seek, track change, and accepted
+    /// position report must go through this rather than assigning
+    /// <see cref="Time"/> directly.
+    /// </summary>
+    public void SetPosition(int positionMs)
+    {
+        Time = positionMs;
+        PositionCapturedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+    }
+
+    /// <summary>
+    /// A lightweight serialization projection for the client broadcast: every
+    /// queue entry (<see cref="Playlist"/> and <see cref="Backlog"/>) drops its
+    /// <see cref="PlaylistTrackDto.Lyrics"/>. No client renders lyrics from a
+    /// queue item — lyrics are shown only for the current track, and both the
+    /// Android and web clients also fetch the current track's lyrics from the
+    /// REST lyrics endpoint — so a full lyric sheet per queued track is pure
+    /// wire weight. On a long queue that bloats every position broadcast
+    /// (throttled to ~5s, so each one carries the whole playlist + backlog)
+    /// enough that its flush and the receiving device's parse block prompt
+    /// delivery of the next command: the measured cause of remote-action lag.
+    /// <see cref="CurrentItem"/> keeps its lyrics for instant render. The stored
+    /// state is never mutated — this returns a throwaway shallow copy whose
+    /// queue lists hold lyric-stripped record copies (so a queue entry that
+    /// shares a reference with <see cref="CurrentItem"/> cannot strip it).
+    /// </summary>
+    public MusicPlayerState CloneForBroadcast()
+    {
+        MusicPlayerState copy = (MusicPlayerState)MemberwiseClone();
+        copy.Playlist = Playlist.Select(track => track with { Lyrics = null }).ToList();
+        copy.Backlog = Backlog.Select(track => track with { Lyrics = null }).ToList();
+        return copy;
+    }
 }

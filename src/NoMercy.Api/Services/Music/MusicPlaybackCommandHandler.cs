@@ -109,7 +109,7 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
             seekSeconds = 0;
         }
 
-        state.Time = seekSeconds * 1000;
+        state.SetPosition(seekSeconds * 1000);
         state.CrossfadeSignalSent = false; // User seeked, invalidate any pending crossfade
     }
 
@@ -128,7 +128,7 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
         {
             state.CurrentItem = state.Playlist.First();
             state.Playlist.RemoveAt(0);
-            state.Time = 0;
+            state.SetPosition(0);
             state.Duration = state.CurrentItem.Duration.ToMilliSeconds();
             state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
         }
@@ -148,7 +148,7 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
         {
             case "one":
                 // If repeat one, play the same item again
-                state.Time = 0;
+                state.SetPosition(0);
                 state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
                 musicPlaybackService.StartPlaybackTimer(user);
                 break;
@@ -160,7 +160,7 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
                 {
                     state.CurrentItem = state.Playlist.First();
                     state.Playlist.RemoveAt(0);
-                    state.Time = 0;
+                    state.SetPosition(0);
                     state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
                     state.PlayState = true;
                     musicPlaybackService.StartPlaybackTimer(user);
@@ -169,7 +169,7 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
                 {
                     // If the playlist is empty, stop playback
                     state.PlayState = false;
-                    state.Time = 0;
+                    state.SetPosition(0);
                     state.CurrentItem = null;
                 }
 
@@ -177,7 +177,7 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
             default:
                 // If repeat is off, stop playback
                 state.PlayState = false;
-                state.Time = 0;
+                state.SetPosition(0);
                 state.CurrentItem = null;
                 break;
         }
@@ -192,7 +192,7 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
         // If we're more than 3 seconds into the song, restart it
         if (state.Time > 3000)
         {
-            state.Time = 0;
+            state.SetPosition(0);
             state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
             return;
         }
@@ -201,7 +201,7 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
         // If backlog is empty, just restart the current track
         if (state.Backlog.Count == 0)
         {
-            state.Time = 0;
+            state.SetPosition(0);
             state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
             return;
         }
@@ -214,7 +214,7 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
         // Move last backlog item to current
         state.CurrentItem = state.Backlog.Last();
         state.Backlog.RemoveAt(state.Backlog.Count - 1);
-        state.Time = 0;
+        state.SetPosition(0);
         state.Duration = state.CurrentItem.Duration.ToMilliSeconds();
         state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
         state.PlayState = true;
@@ -237,7 +237,7 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
         // to active and audibly hijacked playback away from the TV.
         state.CurrentItem = null;
         state.PlayState = false;
-        state.Time = 0;
+        state.SetPosition(0);
         state.Backlog = [];
         state.Playlist = [];
         state.CurrentList = new("", UriKind.Relative);

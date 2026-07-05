@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Database.Models.Music;
-using NoMercy.Providers.Abstractions;
 
 namespace NoMercy.Providers.Lyrics;
 
@@ -20,5 +19,5 @@ namespace NoMercy.Providers.Lyrics;
 /// </summary>
 public interface ILyricsAggregator
 {
-    Task<LyricLine[]?> SearchLyrics(Track track);
+    Task<LyricsFetchResult> SearchLyrics(Track track);
 }

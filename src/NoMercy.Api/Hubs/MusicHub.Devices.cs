@@ -165,21 +165,11 @@ public partial class MusicHub
 
         if (string.IsNullOrEmpty(deviceId))
         {
-            _logger.LogWarning(
-                "{Name}: [MusicHub.ChangeDeviceCommand] ignored — deviceId was null/empty",
-                user.Name
-            );
+            await HandleReleaseActiveClaimCommand(user);
             return;
         }
 
         List<Device> connectedDevices = await MusicDevicesAsync();
-
-        await _clientMessenger.SendTo(
-            "ConnectedDevicesState",
-            "musicHub",
-            user.Id,
-            connectedDevices
-        );
 
         // If the target is a TV that owns the user but isn't currently on
         // MusicHub, fire wake_for_music over the device-bus so its panel +
@@ -269,6 +259,11 @@ public partial class MusicHub
             // get force-ended by MusicPlaybackService before it ever gets a chance
             // to prove it's alive.
             playerState.LastActiveHeartbeatUtc = DateTime.UtcNow;
+
+            // Time itself doesn't change on a transfer, but the capture instant
+            // must — the incoming device needs its own fresh drift-free reference
+            // point rather than inheriting one that predates its own handoff.
+            playerState.SetPosition(playerState.Time);
         }
         else
         {
@@ -288,6 +283,12 @@ public partial class MusicHub
         if (targetClient is not null)
             _activeDeviceRegistry.Set(user.Id, targetClient);
 
+        // Relay-first: the new active device starts playing off this the moment
+        // it arrives, so it goes out before the two broadcasts below — those are
+        // pure bookkeeping (device-list refresh, old-device status notice) and
+        // don't gate anything the target needs in order to begin playback.
+        await _musicPlaybackService.UpdatePlaybackState(user, playerState);
+
         EventPayload<BroadcastEventPayload> payload = new()
         {
             Events =
@@ -306,9 +307,55 @@ public partial class MusicHub
 
         await _clientMessenger.SendTo("ChangeDevice", "musicHub", user.Id, payload);
 
-        // Broadcast the updated playback state so the new active device receives the
-        // current track + position and starts playing. Without this, TV becomes the
-        // active device flag but stays paused with isPlaying=false.
+        await _clientMessenger.SendTo(
+            "ConnectedDevicesState",
+            "musicHub",
+            user.Id,
+            connectedDevices
+        );
+    }
+
+    /// <summary>
+    /// A null/empty deviceId on <see cref="ChangeDeviceCommand"/> means "release my active
+    /// claim" — e.g. a TV's standby job backgrounding itself — not "stop everything". Only the
+    /// device the server currently considers active may release its own claim; a passive caller
+    /// sending null/empty is a no-op, same as before this existed, so it can never end someone
+    /// else's claim by accident. Clearing DeviceId (mirrors
+    /// <see cref="MusicPlaybackService.EndStaleActiveSessionAsync"/> and the graceful-release
+    /// branch of <see cref="OnDisconnectedAsync"/>) is what lets the very next
+    /// StartPlaybackCommand from ANY connected device win active immediately. CurrentItem,
+    /// Playlist, Backlog and position all survive untouched — this is the device going dark,
+    /// not the session ending, so the user can resume this exact spot elsewhere. Deliberately
+    /// does not touch cast-wake: releasing a claim should never launch a receiver.
+    /// </summary>
+    private async Task HandleReleaseActiveClaimCommand(User user)
+    {
+        if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? caller))
+            return;
+
+        if (!_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
+            return;
+
+        bool callerIsActiveDevice =
+            !string.IsNullOrEmpty(playerState.DeviceId)
+            && playerState.DeviceId.Equals(caller.DeviceId, StringComparison.OrdinalIgnoreCase);
+
+        if (!callerIsActiveDevice)
+        {
+            _logger.LogWarning(
+                "{Name}: [MusicHub.ChangeDeviceCommand] release ignored — caller is not the active device",
+                user.Name
+            );
+            return;
+        }
+
+        _musicPlaybackService.RemoveTimer(user.Id);
+        _activeDeviceRegistry.RemoveIfMatches(user.Id, caller.DeviceId);
+
+        playerState.PlayState = false;
+        playerState.DeviceId = null;
+        UpdateActionsDisallows(playerState);
+
         await _musicPlaybackService.UpdatePlaybackState(user, playerState);
     }
 

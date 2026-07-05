@@ -22,6 +22,8 @@ using NoMercy.Database.Models.Users;
 using NoMercy.Networking.Http;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.SystemCalls;
+using Serilog.Events;
 
 namespace NoMercy.Networking;
 
@@ -79,7 +81,19 @@ public class ConnectionHub : Hub
 
         User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
+        {
+            // The "api" authorization policy already required this same UserCache
+            // lookup to succeed before SignalR let this connection through — a miss
+            // here means the cache diverged from the DB in the few milliseconds
+            // since. Without this log this connection was silently never added to
+            // ConnectedClients: every future SendTo/SendToAll for this user skips it
+            // forever, with no error anywhere, until the client happens to reconnect.
+            Logger.Socket(
+                $"{Endpoint}: OnConnectedAsync found no cached user for sub {Context.User.UserId()} — connection will not receive broadcasts",
+                LogEventLevel.Warning
+            );
             return;
+        }
 
         Client client = new()
         {
