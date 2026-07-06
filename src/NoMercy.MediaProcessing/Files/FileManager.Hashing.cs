@@ -9,14 +9,13 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Globalization;
 using System.Text.RegularExpressions;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Storage;
 using SixLabors.ImageSharp;
-using SubtitlesParserV2;
-using SubtitlesParserV2.Models;
 using Image = SixLabors.ImageSharp.Image;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
@@ -391,29 +390,142 @@ public partial class FileManager
     )
     {
         await using Stream fileStream = storage.OpenRead(chapterFile);
+        using StreamReader reader = new(fileStream);
+        string text = await reader.ReadToEndAsync();
 
-        SubtitleParserResultModel? chapterParser = SubtitleParser.ParseStream(fileStream);
+        List<IChapter> chapters = ParseChaptersVtt(text);
+        return chapters.Count == 0 ? null : chapters;
+    }
 
-        if (chapterParser?.Subtitles == null || chapterParser.Subtitles.Count == 0)
-            return null;
-
+    // Chapter files are WEBVTT (see ChapterWriter): a WEBVTT header, then
+    // blank-line-separated cue blocks of an optional id line, a
+    // `HH:MM:SS.mmm --> HH:MM:SS.mmm` timing line, and a title payload. The
+    // general subtitle parser cannot read this shape and degrades to one
+    // garbage entry per line, so chapters are parsed here directly.
+    internal static List<IChapter> ParseChaptersVtt(string text)
+    {
         List<IChapter> chapters = [];
+        if (string.IsNullOrWhiteSpace(text))
+            return chapters;
 
-        foreach (SubtitleModel subtitleParserResult in chapterParser.Subtitles)
+        string normalized = text.Replace("\r\n", "\n").Replace("\r", "\n");
+        string[] blocks = normalized.Split(["\n\n"], StringSplitOptions.None);
+
+        int index = 0;
+        foreach (string rawBlock in blocks)
         {
-            IChapter chapter = new()
-            {
-                Id = chapterParser.Subtitles.IndexOf(subtitleParserResult),
-                StartTime = subtitleParserResult.StartTime,
-                EndTime = subtitleParserResult.EndTime,
-                Title = subtitleParserResult.Lines.First(),
-            };
+            string block = rawBlock.Trim();
+            if (block.Length == 0 || block == "WEBVTT" || block.StartsWith("WEBVTT"))
+                continue;
+            if (block.StartsWith("NOTE") || block.StartsWith("STYLE") || block.StartsWith("REGION"))
+                continue;
 
-            chapters.Add(chapter);
+            string[] lines = block.Split('\n');
+
+            int timingLineIndex = -1;
+            Match? timing = null;
+            for (int lineIndex = 0; lineIndex < Math.Min(2, lines.Length); lineIndex++)
+            {
+                Match candidate = ChapterTimingRegex().Match(lines[lineIndex].Trim());
+                if (candidate.Success)
+                {
+                    timingLineIndex = lineIndex;
+                    timing = candidate;
+                    break;
+                }
+            }
+
+            if (timing is null)
+                continue;
+
+            int start = ParseVttTimestampMs(timing.Groups[1].Value);
+            int end = ParseVttTimestampMs(timing.Groups[2].Value);
+            if (start < 0 || end < 0)
+                continue;
+
+            string title =
+                lines.Length > timingLineIndex + 1
+                    ? lines[timingLineIndex + 1].Trim()
+                    : string.Empty;
+
+            chapters.Add(
+                new()
+                {
+                    Id = index++,
+                    StartTime = start,
+                    EndTime = end,
+                    Title = title,
+                }
+            );
         }
 
         return chapters;
     }
+
+    // Parse a `HH:MM:SS.mmm` (or `MM:SS.mmm`) WEBVTT timestamp into whole
+    // milliseconds. Returns -1 for unparseable input so the caller can skip it.
+    private static int ParseVttTimestampMs(string timestamp)
+    {
+        string[] parts = timestamp.Split(':');
+        double hours = 0;
+        double minutes;
+        double seconds;
+
+        if (parts.Length == 3)
+        {
+            if (
+                !double.TryParse(
+                    parts[0],
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out hours
+                )
+                || !double.TryParse(
+                    parts[1],
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out minutes
+                )
+                || !double.TryParse(
+                    parts[2],
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out seconds
+                )
+            )
+                return -1;
+        }
+        else if (parts.Length == 2)
+        {
+            if (
+                !double.TryParse(
+                    parts[0],
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out minutes
+                )
+                || !double.TryParse(
+                    parts[1],
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out seconds
+                )
+            )
+                return -1;
+        }
+        else
+        {
+            return -1;
+        }
+
+        double totalSeconds = hours * 3600 + minutes * 60 + seconds;
+        return (int)Math.Round(totalSeconds * 1000);
+    }
+
+    [GeneratedRegex(
+        @"^((?:\d{1,3}:)?\d{2}:\d{2}(?:\.\d{1,3})?)\s+-->\s+((?:\d{1,3}:)?\d{2}:\d{2}(?:\.\d{1,3})?)"
+    )]
+    private static partial Regex ChapterTimingRegex();
 
     private static T? GetMetaDataItem<T>(
         IStorage storage,
