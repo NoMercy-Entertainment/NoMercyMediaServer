@@ -114,9 +114,14 @@ public class ChapterVttParserTests
 
         List<IChapter> chapters = FileManager.ParseChaptersVtt(malformed);
 
-        chapters.Should().ContainSingle();
-        chapters[0].Title.Should().Be("Good");
-        chapters[0].StartTime.Should().Be(10000);
+        // The malformed cue is skipped; the surviving "Good" cue starts at 10s,
+        // so a synthetic "Start" chapter is prepended to cover 0 -> 10s.
+        chapters.Should().HaveCount(2);
+        chapters[0].Title.Should().Be("Start");
+        chapters[0].StartTime.Should().Be(0);
+        chapters[0].EndTime.Should().Be(10000);
+        chapters[1].Title.Should().Be("Good");
+        chapters[1].StartTime.Should().Be(10000);
     }
 
     [Theory]
@@ -127,5 +132,53 @@ public class ChapterVttParserTests
     public void Returns_empty_for_headerless_or_cueless_input(string text)
     {
         FileManager.ParseChaptersVtt(text).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Prepends_a_start_chapter_when_a_lone_late_cue_leaves_a_gap_from_zero()
+    {
+        // The exact What.If S01E01 shape: a single "Credits" cue starting at
+        // 29:58, nothing before it. Without a leading chapter the player shows
+        // one marker floating near the end. Synthesize "Start" from 0.
+        const string lateOnly =
+            "WEBVTT\n\n" + "Chapter 1\n00:29:58.833 --> 00:31:15.936\nCredits\n";
+
+        List<IChapter> chapters = FileManager.ParseChaptersVtt(lateOnly);
+
+        chapters.Should().HaveCount(2);
+        chapters[0]
+            .Should()
+            .BeEquivalentTo(
+                new
+                {
+                    Id = 0,
+                    StartTime = 0,
+                    EndTime = 1798833,
+                    Title = "Start",
+                }
+            );
+        chapters[1]
+            .Should()
+            .BeEquivalentTo(
+                new
+                {
+                    Id = 1,
+                    StartTime = 1798833,
+                    EndTime = 1875936,
+                    Title = "Credits",
+                }
+            );
+    }
+
+    [Fact]
+    public void Does_not_prepend_when_the_first_chapter_already_starts_at_zero()
+    {
+        // RealChaptersVtt's first cue starts at 00:00:00.000, so the timeline is
+        // already covered — no synthetic "Start" chapter, ids unchanged.
+        List<IChapter> chapters = FileManager.ParseChaptersVtt(RealChaptersVtt);
+
+        chapters.Should().HaveCount(4);
+        chapters[0].Title.Should().Be("Scene 01");
+        chapters[0].StartTime.Should().Be(0);
     }
 }

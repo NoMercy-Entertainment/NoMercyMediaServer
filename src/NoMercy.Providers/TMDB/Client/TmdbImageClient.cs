@@ -104,13 +104,29 @@ public abstract class TmdbImageClient
                     if (isSvg)
                         return null;
 
-                    if (maxDecodeSize.HasValue)
+                    try
                     {
-                        DecoderOptions options = new() { TargetSize = maxDecodeSize.Value };
-                        return await Image.LoadAsync<Rgba32>(options, filePath);
-                    }
+                        if (maxDecodeSize.HasValue)
+                        {
+                            DecoderOptions options = new() { TargetSize = maxDecodeSize.Value };
+                            return await Image.LoadAsync<Rgba32>(options, filePath);
+                        }
 
-                    return await Image.LoadAsync<Rgba32>(filePath);
+                        return await Image.LoadAsync<Rgba32>(filePath);
+                    }
+                    catch (Exception e)
+                        when (e is ImageFormatException or InvalidImageContentException)
+                    {
+                        // A poisoned cache entry (a non-image body persisted by an
+                        // older build, or a truncated write). Delete it so this run
+                        // re-downloads a clean copy instead of failing on every
+                        // scan forever.
+                        Logger.MovieDb(
+                            $"Discarding undecodable cached image, re-downloading: {path} - {e.Message}",
+                            LogEventLevel.Warning
+                        );
+                        await storage.DeleteAsync(filePath, CancellationToken.None);
+                    }
                 }
 
                 HttpClient httpClient = HttpClientProvider.CreateClient(HttpClientNames.TmdbImage);
@@ -139,21 +155,40 @@ public abstract class TmdbImageClient
 
                 byte[] bytes = await response.Content.ReadAsByteArrayAsync();
 
-                if (!await storage.ExistsAsync(filePath, CancellationToken.None))
-                    await storage.WriteAsync(filePath, bytes, CancellationToken.None);
+                if (isSvg)
+                {
+                    // SVG is not decoded (ImageSharp has no SVG decoder), but it
+                    // is a valid asset — cache it as-is.
+                    if (!await storage.ExistsAsync(filePath, CancellationToken.None))
+                        await storage.WriteAsync(filePath, bytes, CancellationToken.None);
+                    return null;
+                }
+
+                DecoderOptions? decoderOptions = maxDecodeSize.HasValue
+                    ? new() { TargetSize = maxDecodeSize.Value }
+                    : null;
 
                 try
                 {
-                    if (isSvg)
-                        return null;
-
-                    if (maxDecodeSize.HasValue)
+                    // Validate the downloaded bytes decode as an image BEFORE
+                    // persisting. A 200 response can still carry a non-image body
+                    // (an HTML error page, a truncated CDN response); writing it
+                    // first poisons the cache — the bad file then satisfies the
+                    // Exists check on every later run and the decode fails
+                    // forever. This probe image is disposed immediately; only a
+                    // validated download reaches disk, so a transient bad
+                    // download can be re-fetched cleanly next time.
+                    if (decoderOptions is not null)
                     {
-                        DecoderOptions options = new() { TargetSize = maxDecodeSize.Value };
-                        return Image.Load<Rgba32>(options, filePath);
+                        using Image<Rgba32> probe = Image.Load<Rgba32>(decoderOptions, bytes);
+                    }
+                    else
+                    {
+                        using Image<Rgba32> probe = Image.Load<Rgba32>(bytes);
                     }
 
-                    return Image.Load<Rgba32>(filePath);
+                    if (!await storage.ExistsAsync(filePath, CancellationToken.None))
+                        await storage.WriteAsync(filePath, bytes, CancellationToken.None);
                 }
                 catch (Exception e)
                 {
@@ -163,6 +198,13 @@ public abstract class TmdbImageClient
                     );
                     return null;
                 }
+
+                // Ownership transfers to the caller (who disposes it); load from
+                // the now-validated bytes.
+                if (decoderOptions is not null)
+                    return Image.Load<Rgba32>(decoderOptions, bytes);
+
+                return Image.Load<Rgba32>(bytes);
             }
             catch (InvalidImageContentException e)
             {

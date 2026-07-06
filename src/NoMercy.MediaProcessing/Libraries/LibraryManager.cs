@@ -11,6 +11,7 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
@@ -29,7 +30,7 @@ using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
 using NoMercy.Storage;
-using Microsoft.Extensions.Logging;
+
 namespace NoMercy.MediaProcessing.Libraries;
 
 public class LibraryManager(
@@ -204,7 +205,12 @@ public class LibraryManager(
         // Mount at configured root; MediaScan walks via absolute paths.
         IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
         await using MediaScan mediaScan = new(folderStorage.Driver);
-        string scanRoot = folderStorage.GetFullPath(folder.Path);
+        // Resolve through the driver, not the IStorage facade: the facade's
+        // GetFullPath is a LocalStorage-only escape hatch that throws on every
+        // remote backend, so a facade call here killed every rescan of an
+        // NFS / SMB / S3 / WebDAV library. The driver resolves the path within
+        // its own backend, exactly as MediaScan.Process does internally.
+        string scanRoot = folderStorage.Driver.GetFullPath(folder.Path);
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan.Process(scanRoot, depth);
 
         List<MediaFolderExtend> newFolders = rootFolders
@@ -238,7 +244,11 @@ public class LibraryManager(
             }
         );
 
-        logger.LogInformation("Found {Count} new subfolders (skipped {Count2} existing)", newFolders.Count, rootFolders.Count - newFolders.Count);
+        logger.LogInformation(
+            "Found {Count} new subfolders (skipped {Count2} existing)",
+            newFolders.Count,
+            rootFolders.Count - newFolders.Count
+        );
         return newFolders.Count;
     }
 
@@ -251,7 +261,12 @@ public class LibraryManager(
         // Mount at configured root; MediaScan walks via absolute paths.
         IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
         await using MediaScan mediaScan = new(folderStorage.Driver);
-        string scanRoot = folderStorage.GetFullPath(folder.Path);
+        // Resolve through the driver, not the IStorage facade: the facade's
+        // GetFullPath is a LocalStorage-only escape hatch that throws on every
+        // remote backend, so a facade call here killed every rescan of an
+        // NFS / SMB / S3 / WebDAV library. The driver resolves the path within
+        // its own backend, exactly as MediaScan.Process does internally.
+        string scanRoot = folderStorage.Driver.GetFullPath(folder.Path);
         List<MediaFolderExtend> rootFolders = (
             await mediaScan.DisableRegexFilter().Process(scanRoot, depth)
         )
@@ -289,7 +304,11 @@ public class LibraryManager(
             }
         );
 
-        logger.LogInformation("Found {Count} new subfolders (skipped {Count2} existing)", newFolders.Count, rootFolders.Count - newFolders.Count);
+        logger.LogInformation(
+            "Found {Count} new subfolders (skipped {Count2} existing)",
+            newFolders.Count,
+            rootFolders.Count - newFolders.Count
+        );
         return newFolders.Count;
     }
 
@@ -298,7 +317,12 @@ public class LibraryManager(
         // Mount at configured root; MediaScan walks via absolute paths.
         IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
         await using MediaScan mediaScan = new(folderStorage.Driver);
-        string scanRoot = folderStorage.GetFullPath(folder.Path);
+        // Resolve through the driver, not the IStorage facade: the facade's
+        // GetFullPath is a LocalStorage-only escape hatch that throws on every
+        // remote backend, so a facade call here killed every rescan of an
+        // NFS / SMB / S3 / WebDAV library. The driver resolves the path within
+        // its own backend, exactly as MediaScan.Process does internally.
+        string scanRoot = folderStorage.Driver.GetFullPath(folder.Path);
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan.Process(scanRoot, depth);
 
         IEventBus? bus =
@@ -337,7 +361,12 @@ public class LibraryManager(
         // Mount at configured root; MediaScan walks via absolute paths.
         IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
         await using MediaScan mediaScan = new(folderStorage.Driver);
-        string scanRoot = folderStorage.GetFullPath(folder.Path);
+        // Resolve through the driver, not the IStorage facade: the facade's
+        // GetFullPath is a LocalStorage-only escape hatch that throws on every
+        // remote backend, so a facade call here killed every rescan of an
+        // NFS / SMB / S3 / WebDAV library. The driver resolves the path within
+        // its own backend, exactly as MediaScan.Process does internally.
+        string scanRoot = folderStorage.Driver.GetFullPath(folder.Path);
         List<MediaFolderExtend> rootFolders = (
             await mediaScan.DisableRegexFilter().Process(scanRoot, depth)
         )

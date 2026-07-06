@@ -80,4 +80,30 @@ public static class StoragePathHelpers
         string trimmedChild = child.TrimStart('/', '\\');
         return $"{trimmedParent}/{trimmedChild}";
     }
+
+    /// <summary>
+    /// Rebases a driver-absolute scan path (e.g.
+    /// <c>"/mnt/vault/Media/Marvels/TV.Shows/What.If.(2021)/file.m3u8"</c>)
+    /// onto its scope-relative folder root (<c>"Marvels/TV.Shows"</c>), yielding
+    /// a facade-valid, backend-neutral key
+    /// (<c>"Marvels/TV.Shows/What.If.(2021)/file.m3u8"</c>). MediaScan resolves
+    /// every path through the driver, so it hands back absolute paths that the
+    /// <see cref="IStorage"/> facade rejects on remote backends; rebasing gives
+    /// callers a path the facade accepts and a portable value to persist.
+    /// The folder root is matched as a substring; when it is absent the input is
+    /// assumed already relative and returned with a trimmed leading slash.
+    /// </summary>
+    public static string RebaseToFolderRoot(string absolutePath, string folderPath)
+    {
+        string normalizedItem = absolutePath.Replace('\\', '/');
+        string normalizedRoot = folderPath.Replace('\\', '/').Trim('/');
+
+        if (normalizedRoot.Length == 0)
+            return normalizedItem.TrimStart('/');
+
+        int rootIndex = normalizedItem.IndexOf(normalizedRoot, StringComparison.OrdinalIgnoreCase);
+        return rootIndex < 0
+            ? normalizedItem.TrimStart('/')
+            : normalizedItem[rootIndex..].TrimStart('/');
+    }
 }

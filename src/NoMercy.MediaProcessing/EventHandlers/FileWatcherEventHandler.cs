@@ -363,9 +363,13 @@ public class FileWatcherEventHandler : IDisposable
 
         FolderLibrary? folderLibrary = library.FolderLibraries.FirstOrDefault(f =>
         {
+            // Resolve through the driver, not the IStorage facade: the facade's
+            // GetFullPath is a LocalStorage-only escape hatch that throws on
+            // every remote backend, so a facade call here killed folder
+            // matching for NFS / SMB music libraries.
             string driverRoot = _storageFactory
                 .For(f.Folder.Id, f.Folder.DriverId, string.Empty)
-                .GetFullPath(f.Folder.Path);
+                .Driver.GetFullPath(f.Folder.Path);
             return directoryPath.StartsWith(driverRoot, StringComparison.OrdinalIgnoreCase);
         });
         if (folderLibrary is null)

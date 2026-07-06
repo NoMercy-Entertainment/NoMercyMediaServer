@@ -108,7 +108,10 @@ public partial class FileManager(
             case MediaTypes.AnimeMediaType:
                 if (EventBusProvider.IsConfigured)
                     await EventBusProvider.Current.PublishAsync(
-                        new LibraryRefreshedEvent { QueryKey = ["libraries", library.Id.ToString()] }
+                        new LibraryRefreshedEvent
+                        {
+                            QueryKey = ["libraries", library.Id.ToString()],
+                        }
                     );
                 break;
             case MediaTypes.MusicMediaType:
@@ -152,7 +155,11 @@ public partial class FileManager(
             foreach (FolderLibrary libraryFolder in tv.Library.FolderLibraries)
             {
                 IStorage folderStorage = StorageFor(libraryFolder.Folder);
-                string folderRoot = folderStorage.GetFullPath(libraryFolder.Folder.Path);
+                // Resolve through the driver, not the IStorage facade: the facade's
+                // GetFullPath is a LocalStorage-only escape hatch that throws on every
+                // remote backend, so a facade call here killed rescans of NFS / SMB /
+                // S3 / WebDAV libraries.
+                string folderRoot = folderStorage.Driver.GetFullPath(libraryFolder.Folder.Path);
                 string path = folderStorage.CombinePath(folderRoot, tv.Folder);
                 if (!folderStorage.Exists(path))
                 {
@@ -178,7 +185,11 @@ public partial class FileManager(
             foreach (FolderLibrary libraryFolder in movie.Library.FolderLibraries)
             {
                 IStorage folderStorage = StorageFor(libraryFolder.Folder);
-                string folderRoot = folderStorage.GetFullPath(libraryFolder.Folder.Path);
+                // Resolve through the driver, not the IStorage facade: the facade's
+                // GetFullPath is a LocalStorage-only escape hatch that throws on every
+                // remote backend, so a facade call here killed rescans of NFS / SMB /
+                // S3 / WebDAV libraries.
+                string folderRoot = folderStorage.Driver.GetFullPath(libraryFolder.Folder.Path);
                 string path = folderStorage.CombinePath(folderRoot, movie.Folder);
                 if (!folderStorage.Exists(path))
                 {
@@ -212,7 +223,11 @@ public partial class FileManager(
         }
 
         IStorage destinationStorage = StorageFor(folder);
-        string destinationRoot = destinationStorage.GetFullPath(folder.Path);
+        // Resolve through the driver, not the IStorage facade: the facade's
+        // GetFullPath is a LocalStorage-only escape hatch that throws on every
+        // remote backend, so a facade call here killed rescans of NFS / SMB /
+        // S3 / WebDAV libraries.
+        string destinationRoot = destinationStorage.Driver.GetFullPath(folder.Path);
         string destinationFolder = destinationStorage.CombinePath(destinationRoot, folderName);
 
         Logger.App($"Moving {sourceFolder} to {destinationFolder}");

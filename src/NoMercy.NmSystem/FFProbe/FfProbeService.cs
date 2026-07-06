@@ -501,9 +501,20 @@ public class FfProbeService : IFfProbeService
         CancellationToken ct
     )
     {
+        // Remote gate first: caps concurrent network-streamed probes far below
+        // the general limit so parallel readers don't saturate the NFS/SMB/S3
+        // link and time each other out. Held for the whole probe, released in
+        // finally alongside the general slot.
+        bool remoteAcquired = await FfProbeThrottle.WaitRemoteAsync(TimeSpan.FromSeconds(120), ct);
+        if (!remoteAcquired)
+            throw new TimeoutException("Throttle timeout waiting for remote ffprobe slot");
+
         bool acquired = await FfProbeThrottle.WaitAsync(TimeSpan.FromSeconds(60), ct);
         if (!acquired)
+        {
+            FfProbeThrottle.ReleaseRemote();
             throw new TimeoutException("Throttle timeout waiting for ffprobe slot");
+        }
 
         Process? process = null;
         try
@@ -537,15 +548,20 @@ public class FfProbeService : IFfProbeService
             Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync(linkedCts.Token);
             Task pumpTask = PumpStdinAsync(driver, file, process, linkedCts.Token);
 
-            string stdOut = await stdoutTask;
-
+            // Observe the pump no matter which task settles first. If stdoutTask
+            // faults/cancels (probe timeout) we must still await pumpTask, or its
+            // exception — e.g. an NFS OpenReadIsolated IOException (BAD_SEQID) —
+            // escapes as an UnobservedTaskException and is rethrown on the
+            // finalizer thread, crashing the whole scan. ObservePumpAsync always
+            // awaits and swallows the pump's expected teardown faults.
+            string stdOut;
             try
             {
-                await pumpTask;
+                stdOut = await stdoutTask;
             }
-            catch
+            finally
             {
-                // Pump aborts on broken pipe / process exit — expected.
+                await ObservePumpAsync(pumpTask);
             }
 
             bool exited = process.WaitForExit(ExecutionTimeoutMs);
@@ -564,7 +580,25 @@ public class FfProbeService : IFfProbeService
         finally
         {
             FfProbeThrottle.Release();
+            FfProbeThrottle.ReleaseRemote();
             process?.Dispose();
+        }
+    }
+
+    // Await the stdin pump and swallow its expected teardown faults so the
+    // task is always observed. A pump fault is never fatal to the probe: the
+    // source read may fail (NFS BAD_SEQID / timeout / broken pipe) or ffprobe
+    // may close stdin early once it has the header it needs. The caller still
+    // returns whatever ffprobe wrote to stdout.
+    private static async Task ObservePumpAsync(Task pumpTask)
+    {
+        try
+        {
+            await pumpTask;
+        }
+        catch (Exception ex) when (ex is IOException or OperationCanceledException)
+        {
+            // Broken pipe / cancellation / NFS read failure — expected pump teardown.
         }
     }
 
@@ -578,25 +612,15 @@ public class FfProbeService : IFfProbeService
         const int BufferSize = 256 * 1024;
         byte[] buffer = new byte[BufferSize];
 
-        await using Stream src = driver.OpenReadIsolated(file);
-        Stream stdin = process.StandardInput.BaseStream;
-
+        // Open before the try so a failure to open (e.g. NFS BAD_SEQID) still
+        // closes stdin in the finally — otherwise ffprobe blocks forever waiting
+        // on pipe:0. ObservePumpAsync observes the rethrown IOException.
+        Stream src;
         try
         {
-            while (!ct.IsCancellationRequested && !process.HasExited)
-            {
-                int read = await src.ReadAsync(buffer.AsMemory(0, BufferSize), ct);
-                if (read == 0)
-                    break;
-                await stdin.WriteAsync(buffer.AsMemory(0, read), ct);
-            }
-            await stdin.FlushAsync(ct);
+            src = driver.OpenReadIsolated(file);
         }
-        catch (IOException)
-        {
-            // ffprobe closed its stdin — it has what it needs.
-        }
-        finally
+        catch
         {
             try
             {
@@ -605,6 +629,39 @@ public class FfProbeService : IFfProbeService
             catch
             {
                 // ignored
+            }
+            throw;
+        }
+
+        await using (src)
+        {
+            Stream stdin = process.StandardInput.BaseStream;
+
+            try
+            {
+                while (!ct.IsCancellationRequested && !process.HasExited)
+                {
+                    int read = await src.ReadAsync(buffer.AsMemory(0, BufferSize), ct);
+                    if (read == 0)
+                        break;
+                    await stdin.WriteAsync(buffer.AsMemory(0, read), ct);
+                }
+                await stdin.FlushAsync(ct);
+            }
+            catch (IOException)
+            {
+                // ffprobe closed its stdin — it has what it needs.
+            }
+            finally
+            {
+                try
+                {
+                    process.StandardInput.Close();
+                }
+                catch
+                {
+                    // ignored
+                }
             }
         }
     }

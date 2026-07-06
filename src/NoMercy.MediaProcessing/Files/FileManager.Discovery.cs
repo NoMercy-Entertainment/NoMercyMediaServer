@@ -37,8 +37,13 @@ public partial class FileManager
     private async Task<ConcurrentBag<MediaFolderExtend>> GetFiles(Library library, Folder folder)
     {
         // Mount at configured root; MediaScan walks via absolute paths.
+        // Resolve through the driver, not the IStorage facade: the facade's
+        // GetFullPath is a LocalStorage-only escape hatch that throws on every
+        // remote backend, so a facade call here killed every rescan of an
+        // NFS / SMB / S3 / WebDAV library. The driver resolves the path within
+        // its own backend, exactly as MediaScan.Process does internally.
         IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
-        string scanRoot = folderStorage.GetFullPath(folder.Path);
+        string scanRoot = folderStorage.Driver.GetFullPath(folder.Path);
         MediaScan mediaScan = new(folderStorage.Driver);
 
         int depth = library.Type switch
@@ -93,8 +98,14 @@ public partial class FileManager
         foreach (Folder rootFolder in rootFolders)
         {
             IStorage folderStorage = StorageFor(rootFolder);
-            string resolvedRoot = folderStorage.GetFullPath(rootFolder.Path);
-            string path = folderStorage.CombinePath(resolvedRoot, folder);
+
+            // Stay in scope-relative space: rootFolder.Path is the storage key
+            // as the facade wants it (e.g. "Marvels/TV.Shows"), and the facade
+            // Exists / List / downstream scan all reject absolute paths. Do NOT
+            // resolve to an OS/mount-absolute path here — GetFullPath (facade
+            // OR driver) produces "/mnt/vault/..." which StoragePathGuard then
+            // rejects as a scope-relative key.
+            string path = folderStorage.CombinePath(rootFolder.Path, folder);
 
             // Treat a transport-level failure from any single backend as
             // "not in this folder" rather than aborting the whole rescan. The
@@ -104,6 +115,12 @@ public partial class FileManager
 
             if (!exists)
             {
+                // FindMatchingDirectory walks the raw driver (DirectoryExists /
+                // EnumerateFileSystemEntries), so it needs the driver-absolute
+                // root and returns a driver-absolute directory. Convert that hit
+                // back to a scope-relative key before storing / re-checking, so
+                // the facade and the downstream scan keep working in one space.
+                string resolvedRoot = folderStorage.Driver.GetFullPath(rootFolder.Path);
                 string? match = TryFindMatchingDirectory(
                     folderStorage.Driver,
                     resolvedRoot,
@@ -111,7 +128,7 @@ public partial class FileManager
                 );
                 if (match != null)
                 {
-                    path = match;
+                    path = folderStorage.CombinePath(rootFolder.Path, folderStorage.GetName(match));
                     exists = TryExists(folderStorage, path);
                 }
             }

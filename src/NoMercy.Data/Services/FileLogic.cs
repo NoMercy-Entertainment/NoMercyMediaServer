@@ -12,6 +12,7 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -22,7 +23,7 @@ using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Storage;
-using Microsoft.Extensions.Logging;
+
 namespace NoMercy.Data.Services;
 
 public partial class FileLogic(
@@ -147,7 +148,14 @@ public partial class FileLogic(
 
         List<Subtitle> subtitles = [];
 
-        string itemPath = item.Path.Replace('\\', '/');
+        // MediaScan resolves paths through the driver, so item.Path is
+        // driver-absolute. Rebase onto the scope-relative folder root so the
+        // facade calls below (ExistsAsync / List) accept it on remote backends
+        // and the persisted path stays backend-neutral.
+        string itemPath = StoragePathHelpers.RebaseToFolderRoot(
+            item.Path.Replace('\\', '/'),
+            folder.Path
+        );
         string fileName = "/" + StoragePathHelpers.GetName(itemPath);
         string hostFolder = itemPath.Replace(fileName, "");
         string showName = (Movie?.Folder ?? Show?.Folder).OrEmpty().Trim('/', '\\');
@@ -283,7 +291,12 @@ public partial class FileLogic(
             _ => 1,
         };
 
-        string scanRoot = folderStorage.GetFullPath(folder.Path);
+        // Resolve through the driver, not the IStorage facade: the facade's
+        // GetFullPath is a LocalStorage-only escape hatch that throws on every
+        // remote backend, so a facade call here killed every rescan of an
+        // NFS / SMB / S3 / WebDAV library. The driver resolves the path within
+        // its own backend, exactly as MediaScan.Process does internally.
+        string scanRoot = folderStorage.Driver.GetFullPath(folder.Path);
 
         ConcurrentBag<MediaFolderExtend> folders = await mediaScan
             .EnableFileListing()
@@ -317,18 +330,26 @@ public partial class FileLogic(
                 rootFolder.DriverId,
                 string.Empty
             );
-            string resolvedRoot = folderStorage.GetFullPath(rootFolder.Path);
-            string path = folderStorage.CombinePath(resolvedRoot, folder);
+            // Stay in scope-relative space: rootFolder.Path is the storage key
+            // the facade wants (e.g. "Marvels/TV.Shows"); the facade Exists / List
+            // reject absolute paths. Do NOT resolve to an OS/mount-absolute path
+            // here — GetFullPath produces "/mnt/vault/..." which StoragePathGuard
+            // then rejects as a scope-relative key.
+            string path = folderStorage.CombinePath(rootFolder.Path, folder);
 
             if (!folderStorage.Exists(path))
             {
+                // FindMatchingDirectory walks the raw driver, so it needs the
+                // driver-absolute root and returns a driver-absolute directory.
+                // Convert that hit back to a scope-relative key before storing.
+                string resolvedRoot = folderStorage.Driver.GetFullPath(rootFolder.Path);
                 string? match = FileNameSanitizer.FindMatchingDirectory(
-                    storageDriver,
+                    folderStorage.Driver,
                     resolvedRoot,
                     folder
                 );
                 if (match != null)
-                    path = match;
+                    path = folderStorage.CombinePath(rootFolder.Path, folderStorage.GetName(match));
             }
 
             if (folderStorage.Exists(path))

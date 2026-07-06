@@ -313,7 +313,11 @@ public class ArtistsController : BaseController
             artist.LibraryFolder.DriverId,
             string.Empty
         );
-        string libraryRootFolder = folderStorage.GetFullPath(artist.LibraryFolder.Path);
+        // Resolve through the driver, not the IStorage facade: the facade's
+        // GetFullPath is a LocalStorage-only escape hatch that throws on every
+        // remote backend, so a facade call here 500'd cover uploads for
+        // NFS / SMB / S3 / WebDAV libraries.
+        string libraryRootFolder = folderStorage.Driver.GetFullPath(artist.LibraryFolder.Path);
         if (string.IsNullOrEmpty(libraryRootFolder))
             return UnprocessableEntityResponse("Artist library folder not found");
 

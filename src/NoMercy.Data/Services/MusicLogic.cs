@@ -84,7 +84,11 @@ public partial class MusicLogic : IAsyncDisposable
                     folder.DriverId,
                     string.Empty
                 );
-                string driverRoot = folderStorage.GetFullPath(folder.Path);
+                // Resolve through the driver, not the IStorage facade: the facade's
+                // GetFullPath is a LocalStorage-only escape hatch that throws on every
+                // remote backend, so a facade call here killed folder matching for
+                // NFS / SMB / S3 / WebDAV music libraries.
+                string driverRoot = folderStorage.Driver.GetFullPath(folder.Path);
                 return listPath.Path.StartsWith(driverRoot, StringComparison.OrdinalIgnoreCase);
             });
 
@@ -106,9 +110,8 @@ public partial class MusicLogic : IAsyncDisposable
             SystemParallelism.Options,
             async (file, cancellationToken) =>
             {
-                await using MediaContext mediaContext = await _mediaContextFactory.CreateDbContextAsync(
-                    cancellationToken
-                );
+                await using MediaContext mediaContext =
+                    await _mediaContextFactory.CreateDbContextAsync(cancellationToken);
 
                 try
                 {
@@ -535,13 +538,14 @@ public partial class MusicLogic : IAsyncDisposable
         return musicBrainzRelease;
     }
 
-    private async Task StoreArtist(MediaContext mediaContext, MusicBrainzArtistDetails musicBrainzArtist)
+    private async Task StoreArtist(
+        MediaContext mediaContext,
+        MusicBrainzArtistDetails musicBrainzArtist
+    )
     {
         _logger.LogTrace("Processing Artist: {Name}", musicBrainzArtist.Name);
 
-        bool hasArtist = mediaContext
-            .Artists.AsNoTracking()
-            .Any(a => a.Id == musicBrainzArtist.Id);
+        bool hasArtist = mediaContext.Artists.AsNoTracking().Any(a => a.Id == musicBrainzArtist.Id);
 
         if (hasArtist)
             return;
@@ -1089,7 +1093,11 @@ public partial class MusicLogic : IAsyncDisposable
         if (Folder is null)
             return string.Empty;
         IStorage folderStorage = _storageFactory.For(Folder.Id, Folder.DriverId, string.Empty);
-        return folderStorage.GetFullPath(Folder.Path);
+        // Resolve through the driver, not the IStorage facade: the facade's
+        // GetFullPath is a LocalStorage-only escape hatch that throws on every
+        // remote backend, so a facade call here killed folder-path resolution
+        // for NFS / SMB / S3 / WebDAV music libraries.
+        return folderStorage.Driver.GetFullPath(Folder.Path);
     }
 
     [GeneratedRegex(

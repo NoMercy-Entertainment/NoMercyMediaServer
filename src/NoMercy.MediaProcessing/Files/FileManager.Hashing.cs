@@ -459,6 +459,34 @@ public partial class FileManager
             );
         }
 
+        return NormalizeChapters(chapters);
+    }
+
+    // A chapter list should span the whole item from 0. Some sources mark only
+    // a late chapter (e.g. a lone "Credits" cue starting at 29:58), which leaves
+    // the player with a single marker floating near the end and no way to seek
+    // the opening via chapters. When the first parsed chapter starts after 0,
+    // prepend an opening chapter covering 0 -> firstStart so the timeline is
+    // complete and every chapter set is usable. Ids are re-sequenced from 0.
+    private static List<IChapter> NormalizeChapters(List<IChapter> chapters)
+    {
+        if (chapters.Count == 0)
+            return chapters;
+
+        if (chapters[0].StartTime > 0)
+            chapters.Insert(
+                0,
+                new()
+                {
+                    StartTime = 0,
+                    EndTime = chapters[0].StartTime,
+                    Title = "Start",
+                }
+            );
+
+        for (int i = 0; i < chapters.Count; i++)
+            chapters[i].Id = i;
+
         return chapters;
     }
 

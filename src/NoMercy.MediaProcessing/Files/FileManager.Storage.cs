@@ -111,6 +111,14 @@ public partial class FileManager
             return;
         }
 
+        // MediaScan resolves every path through the driver, so item.Path is
+        // driver-absolute (e.g. "/mnt/vault/Media/Marvels/TV.Shows/..."). Every
+        // storage call below is on the IStorage facade, which rejects absolute
+        // keys on remote backends (StoragePathGuard). Rebase the path onto its
+        // scope-relative root — the folder's stored Path — so the facade, the
+        // stored HostFolder/Folder, and the served URLs are all backend-neutral.
+        itemPath = StoragePathHelpers.RebaseToFolderRoot(itemPath, folder.Path);
+
         IStorage storage = StorageFor(folder);
         string fileName = "/" + storage.GetName(itemPath);
         string hostFolder = itemPath.Replace(fileName, "");
@@ -147,7 +155,10 @@ public partial class FileManager
         if (episode is not null)
         {
             IReadOnlyList<int> covered = Parsing.EpisodeRangeParser.Expand(
-                fileName, episode.SeasonNumber, episode.EpisodeNumber);
+                fileName,
+                episode.SeasonNumber,
+                episode.EpisodeNumber
+            );
             if (covered.Count > 1)
                 lastEpisodeNumber = covered[^1];
         }

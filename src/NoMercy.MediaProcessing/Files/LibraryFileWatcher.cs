@@ -15,8 +15,8 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
 using NoMercy.Events.FileWatcher;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 using Serilog.Events;
@@ -78,11 +78,16 @@ public class LibraryFileWatcher
     // ReSharper disable once MemberCanBePrivate.Global
     public static Action AddLibraryWatcher(Library library)
     {
+        // Resolve through the driver, not the IStorage facade: the facade's
+        // GetFullPath is a LocalStorage-only escape hatch that throws on every
+        // remote backend. FolderWatcher.CreateWatcher supports network (UNC)
+        // paths via IsNetworkPath, so this must resolve for NFS / SMB backends
+        // too, not just LocalStorage.
         List<string> paths = library
             .FolderLibraries.Select(folderLibrary =>
                 StorageFactory
                     .For(folderLibrary.Folder.Id, folderLibrary.Folder.DriverId, string.Empty)
-                    .GetFullPath(folderLibrary.Folder.Path)
+                    .Driver.GetFullPath(folderLibrary.Folder.Path)
             )
             .ToList();
 
@@ -119,9 +124,13 @@ public class LibraryFileWatcher
         return _libraries.FirstOrDefault(library =>
             library.FolderLibraries.Any(folderLibrary =>
             {
+                // Resolve through the driver, not the IStorage facade: the
+                // facade's GetFullPath is a LocalStorage-only escape hatch that
+                // throws on every remote backend, so a facade call here killed
+                // folder matching for NFS / SMB libraries.
                 string driverRoot = StorageFactory
                     .For(folderLibrary.Folder.Id, folderLibrary.Folder.DriverId, string.Empty)
-                    .GetFullPath(folderLibrary.Folder.Path);
+                    .Driver.GetFullPath(folderLibrary.Folder.Path);
                 return path.StartsWith(driverRoot, StringComparison.OrdinalIgnoreCase);
             })
         );

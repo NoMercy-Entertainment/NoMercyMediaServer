@@ -21,7 +21,19 @@ public static class FfProbeThrottle
     public static int MaxConcurrentProbes { get; } =
         Math.Clamp(Environment.ProcessorCount / 2, 2, 8);
 
+    // Remote probes stream the file header over the network (NFS/SMB/S3/WebDAV)
+    // into ffprobe's stdin. Running the local core-count worth of them in
+    // parallel saturates the backend link, so every stream reads slower than
+    // the 30s probe timeout and the whole batch fails. Cap remote probes far
+    // below the local limit — the bottleneck is link bandwidth, not CPU.
+    public static int MaxConcurrentRemoteProbes { get; } = 2;
+
     private static readonly SemaphoreSlim Semaphore = new(MaxConcurrentProbes, MaxConcurrentProbes);
+
+    private static readonly SemaphoreSlim RemoteSemaphore = new(
+        MaxConcurrentRemoteProbes,
+        MaxConcurrentRemoteProbes
+    );
 
     /// <summary>
     /// Acquires a slot to run an ffprobe process. Blocks until a slot is available.
@@ -38,4 +50,17 @@ public static class FfProbeThrottle
     /// Releases a slot after an ffprobe process has completed.
     /// </summary>
     public static void Release() => Semaphore.Release();
+
+    /// <summary>
+    /// Acquires the tighter remote-probe slot (in addition to the general slot)
+    /// so concurrent network-streamed probes stay well below the backend's link
+    /// capacity. Returns true if acquired, false on timeout.
+    /// </summary>
+    public static Task<bool> WaitRemoteAsync(TimeSpan timeout, CancellationToken ct = default) =>
+        RemoteSemaphore.WaitAsync(timeout, ct);
+
+    /// <summary>
+    /// Releases the remote-probe slot after a network-streamed probe completes.
+    /// </summary>
+    public static void ReleaseRemote() => RemoteSemaphore.Release();
 }

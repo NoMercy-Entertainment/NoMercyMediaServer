@@ -15,13 +15,14 @@
 
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
-using Microsoft.Extensions.Logging;
-using NoMercy.Storage;
 using NoMercy.Providers.AcoustId;
+using NoMercy.Storage;
+
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -69,9 +70,14 @@ public class ReleaseImportJob : AbstractMusicFolderJob
                 .FolderLibraries.Select(folderLibrary => folderLibrary.Folder)
                 .First(f =>
                 {
+                    // Resolve through the driver, not the IStorage facade: the
+                    // facade's GetFullPath is a LocalStorage-only escape hatch
+                    // that throws on every remote backend, so a facade call
+                    // here killed folder matching for NFS / SMB / S3 / WebDAV
+                    // music libraries.
                     string driverRoot = StorageFactory
                         .For(f.Id, f.DriverId, string.Empty)
-                        .GetFullPath(f.Path);
+                        .Driver.GetFullPath(f.Path);
                     return InputFolder.StartsWith(driverRoot, StringComparison.OrdinalIgnoreCase);
                 });
 
@@ -89,9 +95,14 @@ public class ReleaseImportJob : AbstractMusicFolderJob
                     .FolderLibraries.Select(folderLibrary => folderLibrary.Folder)
                     .First(f =>
                     {
+                        // Resolve through the driver, not the IStorage facade: the
+                        // facade's GetFullPath is a LocalStorage-only escape hatch
+                        // that throws on every remote backend, so a facade call
+                        // here killed folder matching for NFS / SMB / S3 / WebDAV
+                        // music libraries.
                         string driverRoot = StorageFactory
                             .For(f.Id, f.DriverId, string.Empty)
-                            .GetFullPath(f.Path);
+                            .Driver.GetFullPath(f.Path);
                         return folder.Path.StartsWith(
                             driverRoot,
                             StringComparison.OrdinalIgnoreCase

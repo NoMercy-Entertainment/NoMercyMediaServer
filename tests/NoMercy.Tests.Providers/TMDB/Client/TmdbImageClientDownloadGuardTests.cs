@@ -24,6 +24,7 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// guard must short-circuit before any filesystem write.
 /// </summary>
 [Trait("Category", "Unit")]
+[Collection("TmdbImageClient")]
 public class TmdbImageClientDownloadGuardTests
 {
     [Theory]

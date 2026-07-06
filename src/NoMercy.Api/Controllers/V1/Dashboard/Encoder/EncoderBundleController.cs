@@ -41,14 +41,17 @@ public class EncoderBundleController(
     [HttpGet("bundle-orphans")]
     public async Task<IActionResult> BundleOrphans(CancellationToken ct)
     {
-
         List<Folder> folders = await folderRepository.GetAllFoldersAsync(ct);
 
         List<BundleOrphan> allOrphans = [];
         foreach (Folder folder in folders)
         {
             IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
-            string libraryRoot = folderStorage.GetFullPath(folder.Path);
+            // Resolve through the driver, not the IStorage facade: the facade's
+            // GetFullPath is a LocalStorage-only escape hatch that throws on every
+            // remote backend, so a facade call here killed the orphan sweep for
+            // NFS / SMB / S3 / WebDAV libraries.
+            string libraryRoot = folderStorage.Driver.GetFullPath(folder.Path);
             IReadOnlyList<BundleOrphan> orphans = await bundleGarbageCollector.SweepAsync(
                 libraryRoot,
                 ct

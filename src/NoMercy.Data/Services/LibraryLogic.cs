@@ -85,7 +85,12 @@ public class LibraryLogic(
     private async Task ScanAudioFolder(Folder folder)
     {
         IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
-        string scanRoot = folderStorage.GetFullPath(folder.Path);
+        // Resolve through the driver, not the IStorage facade: the facade's
+        // GetFullPath is a LocalStorage-only escape hatch that throws on every
+        // remote backend, so a facade call here killed every rescan of an
+        // NFS / SMB / S3 / WebDAV library. The driver resolves the path within
+        // its own backend, exactly as MediaScan.Process does internally.
+        string scanRoot = folderStorage.Driver.GetFullPath(folder.Path);
 
         await using MediaScan mediaScan = new(folderStorage.Driver);
         IEnumerable<MediaFolderExtend> rootFolders = (
