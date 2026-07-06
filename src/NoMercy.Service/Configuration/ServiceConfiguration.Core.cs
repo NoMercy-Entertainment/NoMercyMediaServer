@@ -221,7 +221,8 @@ public static partial class ServiceConfiguration
         {
             CertificateService certificateService = new(
                 sp.GetRequiredService<ILogger<CertificateService>>(),
-                sp.GetRequiredService<IHttpClientFactory>()
+                sp.GetRequiredService<IHttpClientFactory>(),
+                sp.GetRequiredService<INetworkDiscovery>()
             );
             Start.Certificate = certificateService;
             return certificateService;
@@ -484,6 +485,7 @@ public static partial class ServiceConfiguration
 
         // Add Managers
         // services.AddScoped<EncoderManager>();
+        services.AddScoped<IDefaultEncodingPresetLinker, DefaultEncodingPresetLinker>();
         services.AddScoped<LibraryManager>();
         services.AddScoped<MovieManager>();
         services.AddScoped<CollectionManager>();

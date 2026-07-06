@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NoMercy.Database;
 
@@ -10,9 +11,11 @@ using NoMercy.Database;
 namespace NoMercy.Database.Migrations.Queue
 {
     [DbContext(typeof(QueueContext))]
-    partial class QueueContextModelSnapshot : ModelSnapshot
+    [Migration("20260706010514_AddQueueJobSortIndex")]
+    partial class AddQueueJobSortIndex
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.7");
@@ -152,8 +155,6 @@ namespace NoMercy.Database.Migrations.Queue
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Payload");
 
                     b.HasIndex("Priority", "CreatedAt")
                         .IsDescending(true, false);

@@ -21,6 +21,7 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.Music;
 using NoMercy.Database.Models.TvShows;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Media;
@@ -48,7 +49,6 @@ public class SearchController : BaseController
         CancellationToken ct = default
     )
     {
-
         string country = Country();
         string normalizedQuery = request.Query.NormalizeSearch();
 
@@ -151,7 +151,6 @@ public class SearchController : BaseController
         CancellationToken ct = default
     )
     {
-
         string normalizedQuery = request.Query.NormalizeSearch();
 
         (List<Artist> artists, List<Album> albums, List<Playlist> _, List<Track> _) =
@@ -190,7 +189,6 @@ public class SearchController : BaseController
         CancellationToken ct = default
     )
     {
-
         string country = Country();
         string normalizedQuery = request.Query.NormalizeSearch();
 
@@ -205,7 +203,6 @@ public class SearchController : BaseController
         CancellationToken ct = default
     )
     {
-
         string country = Country();
         string normalizedQuery = request.Query.NormalizeSearch();
 
@@ -221,11 +218,24 @@ public class SearchController : BaseController
         List<Track> Songs
     )> FetchMusicSearchResultsAsync(string normalizedQuery, CancellationToken ct)
     {
-        // Step 1: Get IDs sequentially (MusicRepository uses a single scoped DbContext, not thread-safe)
-        List<Guid> artistIds = await _musicRepository.SearchArtistIdsAsync(normalizedQuery, ct);
-        List<Guid> albumIds = await _musicRepository.SearchAlbumIdsAsync(normalizedQuery, ct);
-        List<Guid> playlistIds = await _musicRepository.SearchPlaylistIdsAsync(normalizedQuery, ct);
-        List<Guid> trackIds = await _musicRepository.SearchTrackIdsAsync(normalizedQuery, ct);
+        // Step 1: Get IDs sequentially (MusicRepository uses a single scoped DbContext, not thread-safe).
+        // Cap each category: a broad query otherwise fans thousands of full entity graphs through
+        // SearchMusicFullDataAsync. Only the top result, six tracks, and the carousels render.
+        const int resultCap = UiLimits.SearchResultsPerCategory;
+        List<Guid> artistIds = (await _musicRepository.SearchArtistIdsAsync(normalizedQuery, ct))
+            .Take(resultCap)
+            .ToList();
+        List<Guid> albumIds = (await _musicRepository.SearchAlbumIdsAsync(normalizedQuery, ct))
+            .Take(resultCap)
+            .ToList();
+        List<Guid> playlistIds = (
+            await _musicRepository.SearchPlaylistIdsAsync(normalizedQuery, ct)
+        )
+            .Take(resultCap)
+            .ToList();
+        List<Guid> trackIds = (await _musicRepository.SearchTrackIdsAsync(normalizedQuery, ct))
+            .Take(resultCap)
+            .ToList();
 
         // Step 2: Query full data using the IDs in parallel (repository owns the fan-out)
         MusicSearchFullData fullData = await _musicRepository.SearchMusicFullDataAsync(

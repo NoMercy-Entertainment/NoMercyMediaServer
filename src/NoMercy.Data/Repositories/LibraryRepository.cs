@@ -58,8 +58,7 @@ public class TvCardDto
     public string? CertificationCountry { get; set; }
 }
 
-public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory)
-    : ILibraryRepository
+public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory) : ILibraryRepository
 {
     private static readonly string[] Letters =
     [
@@ -187,16 +186,20 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory)
             .Include(library =>
                 library
                     .LibraryTvs.Where(lt =>
-                        lt.Tv.Episodes.Any(e => (
-                            e.VideoFiles.Any(v => v.Folder != null)
-                            || e.Tv.Episodes.Any(o =>
-                                o.SeasonNumber == e.SeasonNumber
-                                && o.VideoFiles.Any(w =>
-                                    w.Folder != null
-                                    && w.LastEpisodeNumber != null
-                                    && o.EpisodeNumber <= e.EpisodeNumber
-                                    && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))
-                        ))
+                        lt.Tv.Episodes.Any(e =>
+                            (
+                                e.VideoFiles.Any(v => v.Folder != null)
+                                || e.Tv.Episodes.Any(o =>
+                                    o.SeasonNumber == e.SeasonNumber
+                                    && o.VideoFiles.Any(w =>
+                                        w.Folder != null
+                                        && w.LastEpisodeNumber != null
+                                        && o.EpisodeNumber <= e.EpisodeNumber
+                                        && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)
+                                    )
+                                )
+                            )
+                        )
                     )
                     .Take(take)
             )
@@ -206,7 +209,8 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory)
                 .ThenInclude(lt => lt.Tv)
                     .ThenInclude(tv =>
                         tv.Episodes.Where(e =>
-                            e.SeasonNumber > 0 && (
+                            e.SeasonNumber > 0
+                            && (
                                 e.VideoFiles.Any(v => v.Folder != null)
                                 || e.Tv.Episodes.Any(o =>
                                     o.SeasonNumber == e.SeasonNumber
@@ -214,7 +218,9 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory)
                                         w.Folder != null
                                         && w.LastEpisodeNumber != null
                                         && o.EpisodeNumber <= e.EpisodeNumber
-                                        && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))
+                                        && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)
+                                    )
+                                )
                             )
                         )
                     )
@@ -534,16 +540,11 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory)
             .Tvs.AsNoTracking()
             .Where(tv => tv.Library.Id == libraryId)
             .ForUser(userId)
-            .Where(tv => tv.Episodes.Any(e => (
-                e.VideoFiles.Any(v => v.Folder != null)
-                || e.Tv.Episodes.Any(o =>
-                    o.SeasonNumber == e.SeasonNumber
-                    && o.VideoFiles.Any(w =>
-                        w.Folder != null
-                        && w.LastEpisodeNumber != null
-                        && o.EpisodeNumber <= e.EpisodeNumber
-                        && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))
-            )))
+            // "TV has a playable episode": a multi-episode video file lives on its own
+            // episode, so that episode already passes the direct test. The nested
+            // LastEpisodeNumber self-join never changed this TV-level filter, so the
+            // direct check alone selects the identical set of shows.
+            .Where(tv => tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null)))
             .Include(tv => tv.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en"))
             .OrderByDescending(tv => tv.CreatedAt)
             .Skip(skip)
@@ -566,16 +567,20 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory)
                 NumberOfEpisodes = tv.NumberOfEpisodes,
                 EpisodesWithVideo = tv
                     .Episodes.Where(e => e.SeasonNumber > 0)
-                    .Count(e => (
-                        e.VideoFiles.Any(v => v.Folder != null)
-                        || e.Tv.Episodes.Any(o =>
-                            o.SeasonNumber == e.SeasonNumber
-                            && o.VideoFiles.Any(w =>
-                                w.Folder != null
-                                && w.LastEpisodeNumber != null
-                                && o.EpisodeNumber <= e.EpisodeNumber
-                                && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))
-                    )),
+                    .Count(e =>
+                        (
+                            e.VideoFiles.Any(v => v.Folder != null)
+                            || e.Tv.Episodes.Any(o =>
+                                o.SeasonNumber == e.SeasonNumber
+                                && o.VideoFiles.Any(w =>
+                                    w.Folder != null
+                                    && w.LastEpisodeNumber != null
+                                    && o.EpisodeNumber <= e.EpisodeNumber
+                                    && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)
+                                )
+                            )
+                        )
+                    ),
                 CertificationRating = tv
                     .CertificationTvs.Where(c =>
                         c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country
@@ -651,16 +656,22 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory)
             .Tvs.AsNoTracking()
             .Where(tv => tv.Library.Id == libraryId)
             .ForUser(userId)
-            .Where(tv => tv.Episodes.Any(e => (
-                e.VideoFiles.Any(v => v.Folder != null)
-                || e.Tv.Episodes.Any(o =>
-                    o.SeasonNumber == e.SeasonNumber
-                    && o.VideoFiles.Any(w =>
-                        w.Folder != null
-                        && w.LastEpisodeNumber != null
-                        && o.EpisodeNumber <= e.EpisodeNumber
-                        && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))
-            )))
+            .Where(tv =>
+                tv.Episodes.Any(e =>
+                    (
+                        e.VideoFiles.Any(v => v.Folder != null)
+                        || e.Tv.Episodes.Any(o =>
+                            o.SeasonNumber == e.SeasonNumber
+                            && o.VideoFiles.Any(w =>
+                                w.Folder != null
+                                && w.LastEpisodeNumber != null
+                                && o.EpisodeNumber <= e.EpisodeNumber
+                                && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)
+                            )
+                        )
+                    )
+                )
+            )
             .Where(tv =>
                 (letter == "_" || letter == "#")
                     ? Letters.Any(p => tv.TitleSort.StartsWith(p.ToLower()))
@@ -669,7 +680,8 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory)
             .Include(tv => tv.Translations.Where(t => t.Iso6391 == language))
             .Include(tv =>
                 tv.Episodes.Where(e =>
-                    e.SeasonNumber > 0 && (
+                    e.SeasonNumber > 0
+                    && (
                         e.VideoFiles.Any(v => v.Folder != null)
                         || e.Tv.Episodes.Any(o =>
                             o.SeasonNumber == e.SeasonNumber
@@ -677,7 +689,9 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory)
                                 w.Folder != null
                                 && w.LastEpisodeNumber != null
                                 && o.EpisodeNumber <= e.EpisodeNumber
-                                && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))
+                                && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)
+                            )
+                        )
                     )
                 )
             )
@@ -777,16 +791,22 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory)
             .Tvs.AsNoTracking()
             .Where(tv => tv.Library.Id == libraryId)
             .ForUser(userId)
-            .Where(tv => tv.Episodes.Any(e => (
-                e.VideoFiles.Any(v => v.Folder != null)
-                || e.Tv.Episodes.Any(o =>
-                    o.SeasonNumber == e.SeasonNumber
-                    && o.VideoFiles.Any(w =>
-                        w.Folder != null
-                        && w.LastEpisodeNumber != null
-                        && o.EpisodeNumber <= e.EpisodeNumber
-                        && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))
-            )))
+            .Where(tv =>
+                tv.Episodes.Any(e =>
+                    (
+                        e.VideoFiles.Any(v => v.Folder != null)
+                        || e.Tv.Episodes.Any(o =>
+                            o.SeasonNumber == e.SeasonNumber
+                            && o.VideoFiles.Any(w =>
+                                w.Folder != null
+                                && w.LastEpisodeNumber != null
+                                && o.EpisodeNumber <= e.EpisodeNumber
+                                && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)
+                            )
+                        )
+                    )
+                )
+            )
             .Where(tv =>
                 (letter == "_" || letter == "#")
                     ? Letters.Any(p => tv.TitleSort.StartsWith(p.ToLower()))
@@ -821,16 +841,20 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory)
                 NumberOfEpisodes = tv.NumberOfEpisodes,
                 EpisodesWithVideo = tv
                     .Episodes.Where(e => e.SeasonNumber > 0)
-                    .Count(e => (
-                        e.VideoFiles.Any(v => v.Folder != null)
-                        || e.Tv.Episodes.Any(o =>
-                            o.SeasonNumber == e.SeasonNumber
-                            && o.VideoFiles.Any(w =>
-                                w.Folder != null
-                                && w.LastEpisodeNumber != null
-                                && o.EpisodeNumber <= e.EpisodeNumber
-                                && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))
-                    )),
+                    .Count(e =>
+                        (
+                            e.VideoFiles.Any(v => v.Folder != null)
+                            || e.Tv.Episodes.Any(o =>
+                                o.SeasonNumber == e.SeasonNumber
+                                && o.VideoFiles.Any(w =>
+                                    w.Folder != null
+                                    && w.LastEpisodeNumber != null
+                                    && o.EpisodeNumber <= e.EpisodeNumber
+                                    && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)
+                                )
+                            )
+                        )
+                    ),
                 CertificationRating = tv
                     .CertificationTvs.Where(c =>
                         c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country
@@ -1024,16 +1048,10 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory)
         return await context
             .Tvs.AsNoTracking()
             .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(tv => tv.Episodes.Any(e => (
-                e.VideoFiles.Any(v => v.Folder != null)
-                || e.Tv.Episodes.Any(o =>
-                    o.SeasonNumber == e.SeasonNumber
-                    && o.VideoFiles.Any(w =>
-                        w.Folder != null
-                        && w.LastEpisodeNumber != null
-                        && o.EpisodeNumber <= e.EpisodeNumber
-                        && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))
-            )))
+            // A multi-episode file lives on its own episode, which already passes the
+            // direct test, so this TV-level "has a playable episode" filter needs only
+            // the direct check.
+            .Where(tv => tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null)))
             .OrderBy(tv => EF.Functions.Random())
             .Select(tv => new HomeTvCardDto
             {
@@ -1061,16 +1079,20 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory)
                 NumberOfEpisodes = tv.NumberOfEpisodes,
                 EpisodesWithVideo = tv
                     .Episodes.Where(e => e.SeasonNumber > 0)
-                    .Count(e => (
-                        e.VideoFiles.Any(v => v.Folder != null)
-                        || e.Tv.Episodes.Any(o =>
-                            o.SeasonNumber == e.SeasonNumber
-                            && o.VideoFiles.Any(w =>
-                                w.Folder != null
-                                && w.LastEpisodeNumber != null
-                                && o.EpisodeNumber <= e.EpisodeNumber
-                                && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))
-                    )),
+                    .Count(e =>
+                        (
+                            e.VideoFiles.Any(v => v.Folder != null)
+                            || e.Tv.Episodes.Any(o =>
+                                o.SeasonNumber == e.SeasonNumber
+                                && o.VideoFiles.Any(w =>
+                                    w.Folder != null
+                                    && w.LastEpisodeNumber != null
+                                    && o.EpisodeNumber <= e.EpisodeNumber
+                                    && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)
+                                )
+                            )
+                        )
+                    ),
                 CertificationRating = tv
                     .CertificationTvs.Where(c =>
                         c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country
@@ -1246,7 +1268,9 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory)
             .RunAsync();
     }
 
-    public async Task<int> AddEncoderProfileFolderAsync(List<EncoderProfileFolder> encoderProfileFolders)
+    public async Task<int> AddEncoderProfileFolderAsync(
+        List<EncoderProfileFolder> encoderProfileFolders
+    )
     {
         await using MediaContext context = await contextFactory.CreateDbContextAsync();
         return await context
@@ -1259,7 +1283,9 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory)
             .RunAsync();
     }
 
-    public async Task<int> AddEncoderProfileFolderAsync(EncoderProfileFolder[] encoderProfileFolders)
+    public async Task<int> AddEncoderProfileFolderAsync(
+        EncoderProfileFolder[] encoderProfileFolders
+    )
     {
         await using MediaContext context = await contextFactory.CreateDbContextAsync();
         return await context
@@ -1298,9 +1324,7 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory)
         try
         {
             await context
-                .EncoderProfileFolder.Where(epf =>
-                    folders.Select(f => f.Id).Contains(epf.FolderId)
-                )
+                .EncoderProfileFolder.Where(epf => folders.Select(f => f.Id).Contains(epf.FolderId))
                 .ExecuteDeleteAsync();
 
             int result = await context

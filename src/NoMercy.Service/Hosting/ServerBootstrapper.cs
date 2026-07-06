@@ -191,9 +191,14 @@ public sealed class ServerBootstrapper
         // (the has-token-no-cert first boot). Without this the server keeps serving
         // plain HTTP until a manual restart. Rebind to HTTPS now — the host has not
         // started yet, so this is a clean pre-start swap, not a live restart.
-        if (!needsSetupMode && !hasCert && Start.Certificate!.HasValidCertificate())
+        //
+        // EnsureHttpsCertificate() (not HasValidCertificate()) so an already-registered
+        // server whose real LE cert is still missing/slow/rate-limited gets the
+        // self-signed fallback instead of running HTTP-only indefinitely — the dashboard
+        // (HTTPS-only) can otherwise never reach this origin at all.
+        if (!needsSetupMode && !hasCert && Start.Certificate!.EnsureHttpsCertificate())
         {
-            Logger.App("Certificate acquired during boot — rebinding host to HTTPS");
+            Logger.App("Certificate ready — rebinding host to HTTPS");
             await app.DisposeAsync();
             app = WebHostFactory.Create(options);
             diStorage = app.Services.GetRequiredService<IStorage>();

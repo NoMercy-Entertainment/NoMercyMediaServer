@@ -33,6 +33,7 @@ using NoMercy.Encoder.Execution;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.Queue.MediaServer;
@@ -57,12 +58,15 @@ public class TasksController(
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
 
+        // Cap the load: the queue table retains history and grows unbounded, so
+        // materializing every row here was seconds of work for a monitor view that
+        // only shows the highest-priority pending tasks.
         List<QueueJob> jobs = await queueContext
             .QueueJobs.OrderByDescending(j => j.Priority)
             .ThenBy(j => j.CreatedAt)
+            .Take(UiLimits.MaximumTasksInList)
             .ToListAsync();
 
         List<TaskDto> list = jobs.Select(job => new TaskDto
@@ -99,21 +103,18 @@ public class TasksController(
     [HttpPost]
     public IActionResult Store()
     {
-
         return Ok(new PlaceholderResponse { Data = [] });
     }
 
     [HttpPatch]
     public IActionResult Update()
     {
-
         return Ok(new PlaceholderResponse { Data = [] });
     }
 
     [HttpDelete]
     public IActionResult Destroy()
     {
-
         return Ok(new PlaceholderResponse { Data = [] });
     }
 
@@ -121,7 +122,6 @@ public class TasksController(
     [Route("pause/{id:int}")]
     public IActionResult PauseTask(int id)
     {
-
         IReadOnlyCollection<int> pids = processRegistry.GetProcessIds(id);
         if (pids.Count == 0)
             return Ok(false);
@@ -136,7 +136,6 @@ public class TasksController(
     [Route("resume/{id:int}")]
     public IActionResult ResumeTask(int id)
     {
-
         IReadOnlyCollection<int> pids = processRegistry.GetProcessIds(id);
         if (pids.Count == 0)
             return Ok(false);
@@ -151,7 +150,6 @@ public class TasksController(
     [Route("runners")]
     public IActionResult RunningTaskWorkers()
     {
-
         return Ok(new PlaceholderResponse { Data = [] });
     }
 
@@ -159,7 +157,6 @@ public class TasksController(
     [Route("queue")]
     public async Task<IActionResult> EncoderQueue()
     {
-
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
 
         ImmutableList<QueueJob> jobs = queueContext
@@ -316,7 +313,6 @@ public class TasksController(
     [Route("queue/{id:int}")]
     public async Task<IActionResult> DeleteTask(int id)
     {
-
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
         QueueJob? job = queueContext.QueueJobs.FirstOrDefault(job => job.Id == id);
 
@@ -357,7 +353,6 @@ public class TasksController(
     [Route("queue/{id:int}")]
     public async Task<IActionResult> UpdateTask(int id, [FromBody] PatchQueueItemDto request)
     {
-
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
 
         QueueJob? job = queueContext.QueueJobs.FirstOrDefault(job => job.Id == id);
@@ -382,7 +377,6 @@ public class TasksController(
     [Route("pause-queue")]
     public async Task<IActionResult> PauseEncoderQueue()
     {
-
         if (QueueRunner.Current is null)
             return Ok(
                 new StatusResponseDto<string>
@@ -403,7 +397,6 @@ public class TasksController(
     [Route("resume-queue")]
     public async Task<IActionResult> ResumeEncoderQueue()
     {
-
         if (QueueRunner.Current is null)
             return Ok(
                 new StatusResponseDto<string>
@@ -428,7 +421,6 @@ public class TasksController(
     [Route("queue/status")]
     public IActionResult EncoderQueueStatus()
     {
-
         bool paused = QueueRunner.Current?.IsPaused("encoder") ?? false;
         return Ok(new { paused });
     }
@@ -443,7 +435,6 @@ public class TasksController(
     [Route("queue/eta")]
     public async Task<IActionResult> EncoderQueueEta()
     {
-
         List<EncodingHistory> recent = await historyRepository.GetRecentAsync(
             pageSize: 50,
             pageIndex: 0
@@ -489,7 +480,6 @@ public class TasksController(
     [Route("reorder")]
     public async Task<IActionResult> ReorderQueue([FromBody] ReorderQueueDto request)
     {
-
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
 
         bool queueExists = await queueContext.QueueJobs.AnyAsync(j => j.Queue == request.QueueName);
@@ -549,7 +539,6 @@ public class TasksController(
     [Route("failed/retry/{id:long?}")]
     public async Task<IActionResult> RetryFailedJobs(long? id = null)
     {
-
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
         using EfQueueContextAdapter adapter = new(queueContext);
         JobQueue jobQueue = new(adapter);
@@ -574,7 +563,6 @@ public class TasksController(
     [Route("failed")]
     public async Task<IActionResult> GetFailedJobs()
     {
-
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
 
         List<FailedJob> failedJobs = await queueContext
@@ -588,7 +576,6 @@ public class TasksController(
     [Route("queue/incomplete")]
     public async Task<IActionResult> IncompleteEncodes()
     {
-
         List<IncompleteEncodeDto> rows = await mediaContext
             .IncompleteEncodes.AsNoTracking()
             .OrderByDescending(r => r.LastSeenAt)
@@ -614,7 +601,6 @@ public class TasksController(
     [Route("queue/incomplete/{id:int}/retry")]
     public async Task<IActionResult> RetryIncompleteEncode(int id)
     {
-
         IncompleteEncode? row = await mediaContext.IncompleteEncodes.FindAsync(id);
         if (row is null)
             return NotFoundResponse("Incomplete encode record not found");

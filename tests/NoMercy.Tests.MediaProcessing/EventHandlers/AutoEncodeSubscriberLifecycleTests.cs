@@ -147,13 +147,16 @@ public class AutoEncodeSubscriberLifecycleTests
     }
 
     [Fact]
-    public async Task ScanEvent_ForProfileMappedFolderWithVideoFile_DispatchesVideoEncodeJob()
+    public async Task ScanEvent_ForV2PresetMappedFolderWithVideoFile_DispatchesVideoEncodeJob()
     {
+        // The dispatch gate reads the same V2 EncodingPresetFolders table
+        // VideoEncodeJob resolves its presets from — a folder with a V2 link
+        // must dispatch, regardless of whether a V1 link also exists.
         Ulid libraryId = Ulid.NewUlid();
         Ulid mediaId = Ulid.NewUlid();
 
         IDbContextFactory<MediaContext> factory = ContextFactory(out SqliteConnection connection);
-        int movieId = SeedProfileMappedMovie(factory, libraryId, mediaId);
+        int movieId = SeedPresetMappedMovie(factory, libraryId, mediaId, linkV1: false);
 
         Mock<JobDispatcher> dispatcher = new();
         InMemoryEventBus bus = new();
@@ -179,13 +182,55 @@ public class AutoEncodeSubscriberLifecycleTests
                     It.Is<string>(path => path.Contains("Movie.mkv"))
                 ),
             Times.Once,
-            "a scan for a profile-mapped folder must queue exactly one VideoEncodeJob"
+            "a scan for a V2-preset-mapped folder must queue exactly one VideoEncodeJob"
         );
         connection.Dispose();
     }
 
     [Fact]
-    public async Task ScanEvent_ForLibraryWithoutEncoderProfileFolder_DispatchesNothing()
+    public async Task ScanEvent_ForFolderWithOnlyLegacyV1Link_DispatchesNothing()
+    {
+        // Regression pin for the V1/V2 split-brain fix: a folder that only
+        // has a legacy EncoderProfileFolder (V1) link — no V2
+        // EncodingPresetFolder — must NOT dispatch. The live dispatch gate
+        // reads V2 exclusively now, matching what VideoEncodeJob executes.
+        Ulid libraryId = Ulid.NewUlid();
+        Ulid mediaId = Ulid.NewUlid();
+
+        IDbContextFactory<MediaContext> factory = ContextFactory(out SqliteConnection connection);
+        int movieId = SeedV1OnlyMappedMovie(factory, libraryId, mediaId);
+
+        Mock<JobDispatcher> dispatcher = new();
+        InMemoryEventBus bus = new();
+        AutoEncodeSubscriber subscriber = new(
+            bus,
+            NullLogger<AutoEncodeSubscriber>.Instance,
+            NoOpStorage(),
+            factory,
+            dispatcher.Object
+        );
+        await subscriber.StartAsync(CancellationToken.None);
+
+        await bus.PublishAsync(
+            new MediaFilesScannedEvent { MediaId = movieId, LibraryId = libraryId }
+        );
+
+        dispatcher.Verify(
+            d =>
+                d.DispatchJob<VideoEncodeJob>(
+                    It.IsAny<Ulid>(),
+                    It.IsAny<Ulid>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>()
+                ),
+            Times.Never,
+            "a V1-only link must not drive the V2 dispatch gate"
+        );
+        connection.Dispose();
+    }
+
+    [Fact]
+    public async Task ScanEvent_ForLibraryWithoutEncodingPresetFolder_DispatchesNothing()
     {
         Ulid libraryId = Ulid.NewUlid();
 
@@ -213,12 +258,81 @@ public class AutoEncodeSubscriberLifecycleTests
                     It.IsAny<string>()
                 ),
             Times.Never,
-            "no encoder-profile folder means no auto-encode"
+            "no encoding-preset folder link means no auto-encode"
         );
         connection.Dispose();
     }
 
-    private static int SeedProfileMappedMovie(
+    private static int SeedPresetMappedMovie(
+        IDbContextFactory<MediaContext> factory,
+        Ulid libraryId,
+        Ulid mediaId,
+        bool linkV1
+    )
+    {
+        using MediaContext context = factory.CreateDbContext();
+
+        Ulid driverId = Ulid.NewUlid();
+        Ulid folderId = Ulid.NewUlid();
+        const string folderPath = "/media/movies";
+
+        Library library = new() { Id = libraryId, Title = "Movies" };
+        context.Libraries.Add(library);
+
+        Folder folder = new()
+        {
+            Id = folderId,
+            Path = folderPath,
+            DriverId = driverId,
+        };
+        context.Folders.Add(folder);
+        context.FolderLibrary.Add(new FolderLibrary { FolderId = folderId, LibraryId = libraryId });
+
+        EncodingPreset preset = new()
+        {
+            Id = Ulid.NewUlid(),
+            Name = "Archive 1080p",
+            ProfileJson = "{}",
+            IsBuiltIn = false,
+        };
+        context.EncodingPresets.Add(preset);
+        context.EncodingPresetFolders.Add(
+            new EncodingPresetFolder
+            {
+                PresetId = preset.Id,
+                FolderId = folderId,
+                IsDefault = true,
+            }
+        );
+
+        if (linkV1)
+        {
+            EncoderProfile profile = new() { Id = Ulid.NewUlid(), Name = "Archive 1080p (v1)" };
+            context.EncoderProfiles.Add(profile);
+            context.EncoderProfileFolder.Add(
+                new EncoderProfileFolder { EncoderProfileId = profile.Id, FolderId = folderId }
+            );
+        }
+
+        int movieId = 4242;
+        context.VideoFiles.Add(
+            new VideoFile
+            {
+                Id = Ulid.NewUlid(),
+                MovieId = movieId,
+                HostFolder = folderPath,
+                Filename = "/Movie.mkv",
+                Quality = "1080p",
+                Share = "local",
+                Languages = "eng",
+            }
+        );
+
+        context.SaveChanges();
+        return movieId;
+    }
+
+    private static int SeedV1OnlyMappedMovie(
         IDbContextFactory<MediaContext> factory,
         Ulid libraryId,
         Ulid mediaId
@@ -248,7 +362,7 @@ public class AutoEncodeSubscriberLifecycleTests
             new EncoderProfileFolder { EncoderProfileId = profile.Id, FolderId = folderId }
         );
 
-        int movieId = 4242;
+        int movieId = 4343;
         context.VideoFiles.Add(
             new VideoFile
             {

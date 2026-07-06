@@ -9,10 +9,15 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.Json;
 using FluentAssertions;
+using NoMercy.Database;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Queue;
+using NoMercy.Database.Models.Storage;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 
@@ -273,5 +278,94 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
         );
 
         response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+    }
+
+    // Adding a brand-new folder full of pre-existing media must import that
+    // media automatically (critical-path #5) — the controller dispatches
+    // a LibraryScanJob for the library the folder was just attached to.
+    // Every assertion below targets a library seeded fresh inside the test
+    // (never one of the shared fixture libraries), so a stray scan dispatched
+    // by an unrelated test can't produce a false pass/fail here.
+    [Fact]
+    public async Task AddFolder_NewFolder_DispatchesLibraryScanJob()
+    {
+        Ulid libraryId = await SeedIsolatedLibraryAsync();
+        string path = $"/media/new-folder-scan-{Ulid.NewUlid()}";
+
+        HttpResponseMessage response = await PostJsonAsync(
+            _authed,
+            $"/api/v1/dashboard/libraries/{libraryId}/folders",
+            new { path, driver_id = Driver.SystemLocalDriverId.ToString() }
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        CountDispatchedLibraryScanJobs(libraryId)
+            .Should()
+            .Be(1, "a genuinely new folder must trigger exactly one scan of its library");
+    }
+
+    [Fact]
+    public async Task AddFolder_PreExistingFolder_DoesNotDispatchLibraryScanJob()
+    {
+        Ulid firstLibraryId = await SeedIsolatedLibraryAsync();
+        Ulid secondLibraryId = await SeedIsolatedLibraryAsync();
+        string sharedPath = $"/media/shared-folder-{Ulid.NewUlid()}";
+
+        // Arrange: attach the folder to the first library. It is genuinely
+        // new here, so this call is expected to dispatch a scan — that scan
+        // is the baseline proving the queue/DB plumbing works, not what this
+        // test is asserting on.
+        HttpResponseMessage firstResponse = await PostJsonAsync(
+            _authed,
+            $"/api/v1/dashboard/libraries/{firstLibraryId}/folders",
+            new { path = sharedPath, driver_id = Driver.SystemLocalDriverId.ToString() }
+        );
+        firstResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        CountDispatchedLibraryScanJobs(firstLibraryId).Should().Be(1);
+
+        // Act: attach the SAME driver+path (an already-known folder) to a
+        // second, never-touched library. The compat requirement is that
+        // re-attaching an existing folder must never trigger a scan.
+        HttpResponseMessage secondResponse = await PostJsonAsync(
+            _authed,
+            $"/api/v1/dashboard/libraries/{secondLibraryId}/folders",
+            new { path = sharedPath, driver_id = Driver.SystemLocalDriverId.ToString() }
+        );
+
+        secondResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        CountDispatchedLibraryScanJobs(secondLibraryId)
+            .Should()
+            .Be(0, "attaching an already-known folder must never dispatch a new scan");
+    }
+
+    private static async Task<Ulid> SeedIsolatedLibraryAsync()
+    {
+        Ulid libraryId = Ulid.NewUlid();
+
+        await using MediaContext mediaContext = new();
+        mediaContext.Libraries.Add(
+            new Library
+            {
+                Id = libraryId,
+                Title = $"Isolated Library {libraryId}",
+                Type = "movie",
+                Order = 99,
+            }
+        );
+        await mediaContext.SaveChangesAsync();
+
+        return libraryId;
+    }
+
+    private static int CountDispatchedLibraryScanJobs(Ulid libraryId)
+    {
+        using QueueContext queueContext = new();
+        return queueContext
+            .QueueJobs.AsEnumerable()
+            .Count(job =>
+                job.Payload.Contains("LibraryScanJob") && job.Payload.Contains(libraryId.ToString())
+            );
     }
 }

@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Music;
@@ -37,7 +38,7 @@ public class AlbumDto
     public Uri Link { get; set; }
 
     [JsonProperty("color_palette")]
-    public ColorPalette? ColorPalette { get; set; }
+    public JToken? ColorPalette { get; set; }
 
     [JsonProperty("description")]
     public string? Description { get; set; }
@@ -74,7 +75,7 @@ public class AlbumDto
             ? description
             : albumArtist.Album.Description;
         Type = "album";
-        ColorPalette = albumArtist.Album.ColorPalette;
+        ColorPalette = albumArtist.Album._colorPalette.ToRaw();
         // Tracks = albumArtist.Albums.AlbumTrack.Select(a => a.Track);
         Year = albumArtist.Album.Year;
 
@@ -104,7 +105,7 @@ public class AlbumDto
             ? description
             : albumTrack.Album.Description;
         Type = "album";
-        ColorPalette = albumTrack.Album.ColorPalette;
+        ColorPalette = albumTrack.Album._colorPalette.ToRaw();
         Year = albumTrack.Album.Year;
 
         AlbumArtist = albumTrack.Album.AlbumArtist.MaxBy(at => at.ArtistId)?.ArtistId;
@@ -131,7 +132,7 @@ public class AlbumDto
         Link = new($"/music/albums/{Id}", UriKind.Relative);
         Description = !string.IsNullOrEmpty(description) ? description : album.Description;
         Type = "album";
-        ColorPalette = album.ColorPalette;
+        ColorPalette = album._colorPalette.ToRaw();
         Disambiguation = album.Disambiguation;
         // Tracks = album.AlbumTrack.Select(a => a.Track);
         Year = album.Year;

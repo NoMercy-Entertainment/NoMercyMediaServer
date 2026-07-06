@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Music;
@@ -37,7 +38,7 @@ public class ArtistDto
     public string? Cover { get; set; }
 
     [JsonProperty("color_palette")]
-    public ColorPalette? ColorPalette { get; set; }
+    public JToken? ColorPalette { get; set; }
 
     [JsonProperty("link")]
     public Uri Link { get; set; }
@@ -71,7 +72,7 @@ public class ArtistDto
             ? description
             : albumArtist.Album.Description;
 
-        ColorPalette = albumArtist.Artist.ColorPalette;
+        ColorPalette = albumArtist.Artist._colorPalette.ToRaw();
     }
 
     public ArtistDto(ArtistTrack artistTrack, string country)
@@ -97,6 +98,6 @@ public class ArtistDto
         Description = artistTrack.Artist.Description;
         Type = "artist";
         Disambiguation = artistTrack.Artist.Disambiguation;
-        ColorPalette = artistTrack.Artist.ColorPalette;
+        ColorPalette = artistTrack.Artist._colorPalette.ToRaw();
     }
 }

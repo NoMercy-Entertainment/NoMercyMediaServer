@@ -16,6 +16,13 @@ public interface ICertificateService
 {
     void LoadFromDb();
     bool HasValidCertificate();
+
+    /// <summary>
+    /// True when a real Let's Encrypt cert exists, OR the self-signed fallback is
+    /// available/generated. Broader than <see cref="HasValidCertificate"/> — use that one
+    /// where "real cert" specifically means "registered" (BootOrchestrator, PortManager).
+    /// </summary>
+    bool EnsureHttpsCertificate();
     void KestrelConfig(KestrelServerOptions options);
     void ConfigureHttpsListener(ListenOptions listenOptions);
     Task RenewSslCertificate(string? accessToken, int maxRetries = 30);

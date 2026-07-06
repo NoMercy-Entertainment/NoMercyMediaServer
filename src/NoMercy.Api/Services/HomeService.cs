@@ -544,19 +544,37 @@ public class HomeService(
     {
         HashSet<Image> data = await homeRepository.GetScreensaverImagesAsync(userId);
 
-        IEnumerable<Image> logos = data.Where(image => image.Type == "logo");
+        // Logo lookups built once. The old per-backdrop FirstOrDefault over a lazy
+        // logo filter re-scanned every image for each backdrop (O(backdrops x images)),
+        // seconds of CPU on a large library. Index the logos by title id instead.
+        Dictionary<int, Image> logoByTv = data.Where(image =>
+                image is { Type: "logo", TvId: not null }
+            )
+            .GroupBy(image => image.TvId!.Value)
+            .ToDictionary(group => group.Key, group => group.First());
+        Dictionary<int, Image> logoByMovie = data.Where(image =>
+                image is { Type: "logo", MovieId: not null }
+            )
+            .GroupBy(image => image.MovieId!.Value)
+            .ToDictionary(group => group.Key, group => group.First());
 
         IEnumerable<ScreensaverDataDto> tvCollection = data.Where(image =>
                 image is { TvId: not null, Type: "backdrop" }
             )
             .DistinctBy(image => image.TvId)
-            .Select(image => new ScreensaverDataDto(image, logos, MediaTypes.TvMediaType));
+            .Select(image => new ScreensaverDataDto(
+                image,
+                logoByTv.GetValueOrDefault(image.TvId!.Value)
+            ));
 
         IEnumerable<ScreensaverDataDto> movieCollection = data.Where(image =>
                 image is { MovieId: not null, Type: "backdrop" }
             )
             .DistinctBy(image => image.MovieId)
-            .Select(image => new ScreensaverDataDto(image, logos, MediaTypes.MovieMediaType));
+            .Select(image => new ScreensaverDataDto(
+                image,
+                logoByMovie.GetValueOrDefault(image.MovieId!.Value)
+            ));
 
         return new()
         {

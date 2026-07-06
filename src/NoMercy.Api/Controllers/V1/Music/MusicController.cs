@@ -19,6 +19,7 @@ using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Music;
@@ -299,11 +300,25 @@ public class MusicController : BaseController
         string country = Country();
         string normalizedQuery = request.Query.NormalizeSearch();
 
+        // Bound every category. Without this a broad query fans thousands of matches
+        // through cross-reference and card projection into a multi-MB payload, while
+        // the view only renders the top result, six tracks, and the carousels. Capping
+        // the id lists keeps the rendered first-N identical and drops only the tail.
+        const int resultCap = UiLimits.SearchResultsPerCategory;
+
         // Step 1: Get IDs using search methods
-        List<Guid> artistIds = await _musicRepository.SearchArtistIdsAsync(normalizedQuery);
-        List<Guid> albumIds = await _musicRepository.SearchAlbumIdsAsync(normalizedQuery);
-        List<Guid> playlistIds = await _musicRepository.SearchPlaylistIdsAsync(normalizedQuery);
-        List<Guid> trackIds = await _musicRepository.SearchTrackIdsAsync(normalizedQuery);
+        List<Guid> artistIds = (await _musicRepository.SearchArtistIdsAsync(normalizedQuery))
+            .Take(resultCap)
+            .ToList();
+        List<Guid> albumIds = (await _musicRepository.SearchAlbumIdsAsync(normalizedQuery))
+            .Take(resultCap)
+            .ToList();
+        List<Guid> playlistIds = (await _musicRepository.SearchPlaylistIdsAsync(normalizedQuery))
+            .Take(resultCap)
+            .ToList();
+        List<Guid> trackIds = (await _musicRepository.SearchTrackIdsAsync(normalizedQuery))
+            .Take(resultCap)
+            .ToList();
 
         // Step 2: Cross-reference to find additional artists/albums
         List<Guid> additionalArtistIds = [];
@@ -320,7 +335,11 @@ public class MusicController : BaseController
                 await _musicRepository.GetArtistIdsFromTracksAsync(trackIds)
             );
 
-        List<Guid> allArtistIds = artistIds.Union(additionalArtistIds).Distinct().ToList();
+        List<Guid> allArtistIds = artistIds
+            .Union(additionalArtistIds)
+            .Distinct()
+            .Take(resultCap)
+            .ToList();
 
         List<Guid> additionalAlbumIds = [];
         if (trackIds.Count > 0)
@@ -328,7 +347,11 @@ public class MusicController : BaseController
                 await _musicRepository.GetAlbumIdsFromTracksAsync(trackIds)
             );
 
-        List<Guid> allAlbumIds = albumIds.Union(additionalAlbumIds).Distinct().ToList();
+        List<Guid> allAlbumIds = albumIds
+            .Union(additionalAlbumIds)
+            .Distinct()
+            .Take(resultCap)
+            .ToList();
 
         // Step 3: Get projection data
         List<ArtistCardDto> artists =

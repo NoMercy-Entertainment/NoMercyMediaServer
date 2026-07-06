@@ -25,12 +25,20 @@ namespace NoMercy.MediaProcessing.EventHandlers;
 
 /// <summary>
 /// Consumer video-archiver workflow: when a newly-scanned movie or episode
-/// lands in a library folder that has an <c>EncoderProfileFolder</c>
-/// assignment, automatically queue a <c>VideoEncodeJob</c> for each video
-/// file that hasn't been encoded yet.
+/// lands in a library folder that has an <c>EncodingPresetFolder</c> (V2)
+/// link, automatically queue a <c>VideoEncodeJob</c> for each video file
+/// that hasn't been encoded yet.
+///
+/// The dispatch gate reads the same V2 <c>EncodingPresetFolders</c> table
+/// <see cref="NoMercy.MediaProcessing.Jobs.MediaJobs.VideoEncodeJob"/> resolves
+/// its presets from, so a folder that VideoEncodeJob would actually encode is
+/// exactly the folder this subscriber dispatches for — no split-brain between
+/// the legacy V1 <c>EncoderProfileFolder</c> table and the V2 executor. V1
+/// stays around for the dashboard/backfill paths; it just no longer gates the
+/// live auto-encode decision.
 ///
 /// Skips files whose expected encoded output directory already exists so
-/// rescans don't re-encode. Folders without profile assignments are a no-op —
+/// rescans don't re-encode. Folders without a preset link are a no-op —
 /// users can still manage encoding by hand through the dashboard.
 /// </summary>
 public class AutoEncodeSubscriber(
@@ -75,21 +83,22 @@ public class AutoEncodeSubscriber(
         {
             await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
 
-            // All folders in this library that have an encoder profile attached.
+            // All folders in this library that have a V2 encoding preset
+            // attached — same table VideoEncodeJob reads its presets from.
             List<Folder> folders = await context
-                .Folders.Include(f => f.EncoderProfileFolder)
-                    .ThenInclude(epf => epf.EncoderProfile)
+                .Folders.Include(f => f.EncodingPresetFolders)
+                    .ThenInclude(link => link.Preset)
                 .Include(f => f.FolderLibraries)
                 .Where(f =>
                     f.FolderLibraries.Any(fl => fl.LibraryId == evt.LibraryId)
-                    && f.EncoderProfileFolder.Any()
+                    && f.EncodingPresetFolders.Any()
                 )
                 .ToListAsync(ct);
 
             if (folders.Count == 0)
             {
                 logger.LogDebug(
-                    "No folders with encoder profiles in library {LibraryId}; auto-encode skipped",
+                    "No folders with encoding presets in library {LibraryId}; auto-encode skipped",
                     evt.LibraryId
                 );
                 return;

@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using NoMercy.Database;
 using NoMercy.Database.Models.Music;
 using NoMercy.NmSystem.Extensions;
@@ -34,7 +35,7 @@ public class FavoriteTrackDto
     public Uri Link { get; set; }
 
     [JsonProperty("color_palette")]
-    public ColorPalette? ColorPalette { get; set; }
+    public JToken? ColorPalette { get; set; }
 
     [JsonProperty("description")]
     public string? Description { get; set; }
@@ -66,7 +67,7 @@ public class FavoriteTrackDto
             : null;
         Link = new($"/music/tracks/{Id}", UriKind.Relative);
         Type = "track";
-        ColorPalette = artistTrack.Track.ColorPalette;
+        ColorPalette = artistTrack.Track._colorPalette.ToRaw();
         Year = artistTrack.Track.Date.ParseYear();
 
         Albums = artistTrack.Track.AlbumTrack.Select(albumTrack => new AlbumDto(

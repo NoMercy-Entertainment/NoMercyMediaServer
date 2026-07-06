@@ -152,11 +152,15 @@ public class AlbumsController : BaseController
         if (album is null)
             return NotFoundResponse("Albums not found");
 
+        // Fire-and-forget: enqueue takes the queue's global write lock (held by the
+        // encoder workers), so dispatching inline blocked this read for seconds.
         if (string.IsNullOrEmpty(album._colorPalette) || album._colorPalette == "{}")
-            QueueRunner.Current?.Dispatcher.Dispatch(
-                new ColorPaletteJob("album", album.Id.ToString()),
-                "palette",
-                1
+            _ = Task.Run(() =>
+                QueueRunner.Current?.Dispatcher.Dispatch(
+                    new ColorPaletteJob("album", album.Id.ToString()),
+                    "palette",
+                    1
+                )
             );
 
         return Ok(new AlbumResponseDto { Data = new(album, language) });

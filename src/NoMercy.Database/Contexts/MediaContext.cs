@@ -307,6 +307,8 @@ public class MediaContext : DbContext
         modelBuilder.Entity<EncodeTaskOutcome>().Property(o => o.ErrorMessage).HasMaxLength(4096);
 
         ConfigureColorPaletteIndexes(modelBuilder);
+        ConfigureImageForeignKeyIndexes(modelBuilder);
+        ConfigureCreditForeignKeyIndexes(modelBuilder);
 
         modelBuilder.Entity<InboxItem>().Property(i => i.CandidatesJson).HasMaxLength(int.MaxValue);
         modelBuilder
@@ -421,6 +423,89 @@ public class MediaContext : DbContext
     public virtual DbSet<EncodeTaskOutcome> EncodeTaskOutcomes { get; init; }
     public virtual DbSet<IncompleteEncode> IncompleteEncodes { get; init; }
     public virtual DbSet<InboxItem> InboxItems { get; init; }
+
+    private static void ConfigureImageForeignKeyIndexes(ModelBuilder modelBuilder)
+    {
+        // Each image belongs to exactly one owner, so every owner-FK column is NULL on
+        // the vast majority of the 400k+ rows. A plain index over an all-or-mostly-NULL
+        // column is statistically non-selective: SQLite's planner sees a single huge
+        // bucket and falls back to a full table scan (loading one artist's album images
+        // took ~2.6s for zero matches). Filtering each index to its non-NULL rows keeps
+        // it small and selective, so these lookups stay index seeks no matter the mix of
+        // media (a movie-only library has all-NULL music FKs, and vice versa).
+        (string Column, string Name)[] foreignKeyIndexes =
+        [
+            (nameof(Image.TvId), "IX_Images_TvId"),
+            (nameof(Image.SeasonId), "IX_Images_SeasonId"),
+            (nameof(Image.EpisodeId), "IX_Images_EpisodeId"),
+            (nameof(Image.MovieId), "IX_Images_MovieId"),
+            (nameof(Image.CollectionId), "IX_Images_CollectionId"),
+            (nameof(Image.PersonId), "IX_Images_PersonId"),
+            (nameof(Image.CastCreditId), "IX_Images_CastCreditId"),
+            (nameof(Image.CrewCreditId), "IX_Images_CrewCreditId"),
+            (nameof(Image.ArtistId), "IX_Images_ArtistId"),
+            (nameof(Image.AlbumId), "IX_Images_AlbumId"),
+            (nameof(Image.TrackId), "IX_Images_TrackId"),
+            (nameof(Image.CastId), "IX_Images_CastId"),
+            (nameof(Image.CrewId), "IX_Images_CrewId"),
+        ];
+
+        foreach ((string column, string name) in foreignKeyIndexes)
+            modelBuilder
+                .Entity<Image>()
+                .HasIndex(column)
+                .HasDatabaseName(name)
+                .HasFilter($"{column} IS NOT NULL");
+    }
+
+    // Cast/Crew rows each belong to exactly one of Movie/Tv/Season/Episode, so those
+    // owner-FK columns are NULL on the vast majority of rows (same pathology as
+    // ConfigureImageForeignKeyIndexes above — a plain index over a mostly-NULL column
+    // is non-selective and SQLite's planner falls back to a full table scan, e.g. every
+    // TV show page load full-scanning 112k Casts rows for zero SeasonId/EpisodeId
+    // matches). Filtering each index to its non-NULL rows keeps it small and seekable
+    // regardless of library mix. Roles.GuestStarId is a genuine one-to-one FK (a Role
+    // either belongs to a Cast credit or a GuestStar, never both) so its uniqueness is
+    // preserved on the filtered index.
+    private static void ConfigureCreditForeignKeyIndexes(ModelBuilder modelBuilder)
+    {
+        (string Column, string Name)[] castIndexes =
+        [
+            (nameof(Cast.MovieId), "IX_Casts_MovieId"),
+            (nameof(Cast.TvId), "IX_Casts_TvId"),
+            (nameof(Cast.SeasonId), "IX_Casts_SeasonId"),
+            (nameof(Cast.EpisodeId), "IX_Casts_EpisodeId"),
+        ];
+
+        foreach ((string column, string name) in castIndexes)
+            modelBuilder
+                .Entity<Cast>()
+                .HasIndex(column)
+                .HasDatabaseName(name)
+                .HasFilter($"{column} IS NOT NULL");
+
+        (string Column, string Name)[] crewIndexes =
+        [
+            (nameof(Crew.MovieId), "IX_Crews_MovieId"),
+            (nameof(Crew.TvId), "IX_Crews_TvId"),
+            (nameof(Crew.SeasonId), "IX_Crews_SeasonId"),
+            (nameof(Crew.EpisodeId), "IX_Crews_EpisodeId"),
+        ];
+
+        foreach ((string column, string name) in crewIndexes)
+            modelBuilder
+                .Entity<Crew>()
+                .HasIndex(column)
+                .HasDatabaseName(name)
+                .HasFilter($"{column} IS NOT NULL");
+
+        modelBuilder
+            .Entity<Role>()
+            .HasIndex(nameof(Role.GuestStarId))
+            .HasDatabaseName("IX_Roles_GuestStarId")
+            .IsUnique()
+            .HasFilter("GuestStarId IS NOT NULL");
+    }
 
     private static void ConfigureColorPaletteIndexes(ModelBuilder modelBuilder)
     {

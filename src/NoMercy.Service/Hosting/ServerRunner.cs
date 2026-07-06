@@ -161,18 +161,22 @@ public class ServerRunner : IServerRunner
             return false;
         }
 
-        // Setup completed — certificate should now be available
-        if (!Start.Certificate!.HasValidCertificate())
+        // Setup completed — a certificate should now be usable. EnsureHttpsCertificate()
+        // accepts either the real Let's Encrypt cert or the self-signed fallback: when LE
+        // issuance is slow/rate-limited/unreachable (LAN-only box), the self-signed cert
+        // keeps the origin on HTTPS so an HTTPS-only dashboard can still reach it. Only
+        // when self-signed generation itself fails do we stay on plaintext HTTP.
+        if (!Start.Certificate!.EnsureHttpsCertificate())
         {
             _logger.LogInformation(
-                "Setup completed but certificate not found — continuing on HTTP"
+                "Setup completed but no usable certificate (including self-signed fallback) — continuing on HTTP"
             );
             await httpHost.WaitForShutdownAsync(shutdownCoordinator.Token);
             await httpHost.DisposeAsync();
             return false;
         }
 
-        _logger.LogInformation("Certificate acquired — restarting with HTTPS...");
+        _logger.LogInformation("Certificate ready — restarting with HTTPS...");
 
         // Give the SSO callback page time to deliver its response to the browser
         await Task.Delay(3000);

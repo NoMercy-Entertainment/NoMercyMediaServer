@@ -15,4 +15,6 @@ public static class UiLimits
 {
     public const int MaximumCardsInCarousel = 36;
     public const int MaximumItemsPerPage = 500;
+    public const int SearchResultsPerCategory = 50;
+    public const int MaximumTasksInList = 100;
 }

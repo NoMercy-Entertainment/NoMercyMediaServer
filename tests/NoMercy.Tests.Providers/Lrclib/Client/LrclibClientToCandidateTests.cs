@@ -281,6 +281,73 @@ public class LrclibClientToCandidateTests
     }
 
     [Fact]
+    public void ToCandidate_ParsesMillisecondPrecisionTimestamp()
+    {
+        // Lrclib serves plenty of LRC with 3-digit millisecond fractions
+        // ([mm:ss.mmm]). The parser must read those as milliseconds and strip the
+        // tag from the line, not fail to match and leave the raw "[00:01.900]" in
+        // the displayed text with a zero timestamp.
+        LrclibSongResult result = new()
+        {
+            TrackName = "Song",
+            ArtistName = "Artist",
+            Duration = 300,
+            Instrumental = false,
+            SyncedLyrics = "[00:00.000](Future)\n[00:01.900](Future nostalgia)",
+        };
+
+        LyricCandidate? candidate = LrclibClient.ToCandidate(result);
+
+        candidate!.Lines.Should().HaveCount(2);
+        candidate.Lines[0].Text.Should().Be("(Future)");
+        candidate.Lines[0].Time.Total.Should().Be(0);
+        candidate.Lines[1].Text.Should().Be("(Future nostalgia)");
+        candidate.Lines[1].Time.Total.Should().Be(1.9);
+        candidate.Lines[1].Time.Seconds.Should().Be(1);
+        candidate.Lines[1].Time.Hundredths.Should().Be(90);
+    }
+
+    [Fact]
+    public void ToCandidate_ParsesColonFractionSeparator()
+    {
+        // Some LRC uses a colon rather than a dot before the fraction
+        // ([mm:ss:cc]); it must parse, not be left in the text.
+        LrclibSongResult result = new()
+        {
+            TrackName = "Song",
+            ArtistName = "Artist",
+            Duration = 300,
+            Instrumental = false,
+            SyncedLyrics = "[00:00:00]Intro\n[01:05:50]Later line",
+        };
+
+        LyricCandidate? candidate = LrclibClient.ToCandidate(result);
+
+        candidate!.Lines[0].Text.Should().Be("Intro");
+        candidate.Lines[0].Time.Total.Should().Be(0);
+        candidate.Lines[1].Text.Should().Be("Later line");
+        candidate.Lines[1].Time.Total.Should().Be(65.5);
+    }
+
+    [Fact]
+    public void ToCandidate_ParsesTimestampWithoutFraction()
+    {
+        LrclibSongResult result = new()
+        {
+            TrackName = "Song",
+            ArtistName = "Artist",
+            Duration = 300,
+            Instrumental = false,
+            SyncedLyrics = "[01:05]No fraction",
+        };
+
+        LyricCandidate? candidate = LrclibClient.ToCandidate(result);
+
+        candidate!.Lines[0].Text.Should().Be("No fraction");
+        candidate.Lines[0].Time.Total.Should().Be(65);
+    }
+
+    [Fact]
     public void ToCandidate_StripsSurroundingWhitespace()
     {
         LrclibSongResult result = new()

@@ -23,11 +23,11 @@ namespace NoMercy.Database.Models.People;
 [Index(nameof(CreditId), nameof(EpisodeId), nameof(RoleId), IsUnique = true)]
 [Index(nameof(RoleId), IsUnique = false)]
 [Index(nameof(PersonId))]
-[Index(nameof(MovieId))]
-[Index(nameof(TvId))]
-[Index(nameof(SeasonId))]
-[Index(nameof(EpisodeId))]
 [Index(nameof(CreditId))]
+// The single-column owner-FK indexes (MovieId, TvId, SeasonId, EpisodeId) are declared
+// in MediaContext.ConfigureCreditForeignKeyIndexes as partial indexes (WHERE col IS NOT
+// NULL). Each cast credit belongs to exactly one owner, so every FK column is NULL on
+// almost every row; a plain index over it is non-selective and the planner full-scans.
 public class Cast
 {
     [Key]

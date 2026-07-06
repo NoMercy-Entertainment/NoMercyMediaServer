@@ -150,6 +150,7 @@ public static class DatabaseSeeder
             () => V1DriverBridgeSeed.RunAsync(mediaDbContext),
             () => LibrariesSeed.Init(mediaDbContext, storage, storageDriver),
             () => EncodingPresetsSeed.Init(mediaDbContext, storage),
+            () => EncodingPresetsSeed.MaterializePresetsAsync(mediaDbContext),
             () => EncodingPresetsSeed.SeedExamplesAsync(mediaDbContext),
             () => EncodingPresetsSeed.BackfillV1ToV2Async(mediaDbContext),
             () => LoadDiskOverlaysAsync(mediaDbContext),

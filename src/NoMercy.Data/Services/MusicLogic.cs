@@ -555,9 +555,11 @@ public partial class MusicLogic : IAsyncDisposable
                 ? null
                 : musicBrainzArtist.Disambiguation,
             Country = musicBrainzArtist.Country,
-            TitleSort = string.IsNullOrEmpty(musicBrainzArtist.SortName)
-                ? musicBrainzArtist.Name.TitleSort()
-                : musicBrainzArtist.SortName,
+            // Use the same display-order sort title as TMDB titles: strip a leading
+            // article and keep first-name-first. MusicBrainz's SortName inverts people
+            // to surname-first ("Belle, Tony"), which files them under the wrong letter
+            // in the A-Z index versus the name shown on the card.
+            TitleSort = musicBrainzArtist.Name.TitleSort(),
 
             Folder = artistFolder,
             HostFolder = Path.Join(ResolveLibraryRoot(), artistFolder).PathName(),

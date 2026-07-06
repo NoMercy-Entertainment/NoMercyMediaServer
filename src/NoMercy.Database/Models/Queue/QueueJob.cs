@@ -16,6 +16,13 @@ using Microsoft.EntityFrameworkCore;
 namespace NoMercy.Database.Models.Queue;
 
 [PrimaryKey(nameof(Id))]
+// Matches the task-list sort (Priority desc, CreatedAt asc) so SQLite serves it
+// from the index instead of sorting the whole growing queue table.
+[Index(nameof(Priority), nameof(CreatedAt), IsDescending = new[] { true, false })]
+// Every Dispatch dedups via QueueJobs.Any(j => j.Payload == x). Without this index
+// that is a full scan of the (large, history-retaining) queue table — seconds per
+// enqueue, which surfaced as multi-second endpoints that dispatch a job inline.
+[Index(nameof(Payload))]
 public class QueueJob
 {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

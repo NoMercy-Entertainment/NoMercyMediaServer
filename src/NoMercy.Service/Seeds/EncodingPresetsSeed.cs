@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
+using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Profiles;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Service.Seeds.Data;
@@ -25,7 +26,7 @@ namespace NoMercy.Service.Seeds;
 /// <summary>
 /// Seeds the V2 built-in preset library and (when --seed is passed) a small
 /// set of user-editable example presets that inherit from built-ins via
-/// ParentPresetId. Materialization of V3 EncodingPresets into V1 EncoderProfile
+/// ParentPresetId. Materialization of V2 EncodingPresets into V1 EncoderProfile
 /// rows happens immediately after in DatabaseSeeder.SeedOfflineData via
 /// MaterializePresetsAsync.
 /// </summary>
@@ -92,6 +93,287 @@ public static class EncodingPresetsSeed
 
         await context.SaveChangesAsync(ct);
     }
+
+    /// <summary>
+    /// Reverse migration from V2 EncodingPresets to V1 EncoderProfiles: the
+    /// bridge the "Effortless Encoder" needs on a fresh install, since the V1
+    /// <c>EncoderProfile</c> table is never seeded on its own (there are no
+    /// production callers of <see cref="NoMercy.Data.Repositories.EncoderRepository.AddEncoderProfileAsync"/>).
+    /// Without this, <c>BackfillV1ToV2Async</c> below has nothing to read and
+    /// <c>context.EncoderProfiles.Any()</c> stays false forever, so the legacy
+    /// auto-encode subscriber never dispatches.
+    ///
+    /// Projects every built-in V2 <see cref="EncodingPreset"/> (<c>IsBuiltIn</c>)
+    /// into a matching V1 <see cref="EncoderProfile"/> row, reusing the preset's
+    /// Ulid so the mapping is stable and idempotent — re-running only refreshes
+    /// the same rows, never duplicates them. Only built-ins are materialized:
+    /// user-authored presets that inherit via <c>ParentPresetId</c> with an
+    /// empty <c>ProfileJson</c> would need full parent-chain resolution first,
+    /// which is out of scope here.
+    ///
+    /// Known lossy edges (V1 has no vocabulary for them): auto-ladder rungs
+    /// (<see cref="LadderMode.Auto"/>) aren't enumerable, so only the preset's
+    /// base <c>Video</c> is materialized — the ladder itself stays V2-only;
+    /// <see cref="SubtitleCodecType.Pgs"/> falls back to "copy" (there's no V1
+    /// PGS token, and forcing WebVTT would silently transcode an image subtitle).
+    /// </summary>
+    public static async Task MaterializePresetsAsync(
+        MediaContext context,
+        CancellationToken ct = default
+    )
+    {
+        List<EncodingPreset> builtinPresets = await context
+            .EncodingPresets.AsNoTracking()
+            .Where(p => p.IsBuiltIn)
+            .ToListAsync(ct);
+
+        if (builtinPresets.Count == 0)
+            return;
+
+        Dictionary<Ulid, EncoderProfile> existingByIdTracked =
+            await context.EncoderProfiles.ToDictionaryAsync(p => p.Id, ct);
+
+        int insertedProfiles = 0;
+        int refreshedProfiles = 0;
+        foreach (EncodingPreset preset in builtinPresets)
+        {
+            EncodingProfile v2Profile;
+            try
+            {
+                v2Profile =
+                    JsonConvert.DeserializeObject<EncodingProfile>(preset.ProfileJson)
+                    ?? throw new InvalidOperationException("Deserialized to null.");
+            }
+            catch (Exception ex)
+            {
+                Logger.Setup(
+                    $"MaterializePresets: skipping built-in preset '{preset.Name}' ({preset.Id}) — deserialize failed: {ex.Message}",
+                    LogEventLevel.Warning
+                );
+                continue;
+            }
+
+            VideoProfile[] videoProfiles = BuildV1VideoProfiles(v2Profile);
+            AudioProfile[] audioProfiles = v2Profile.Audio.Select(MapV2AudioToV1).ToArray();
+            SubtitleProfile[] subtitleProfiles = v2Profile
+                .Subtitles.Select(MapV2SubtitleToV1)
+                .ToArray();
+            ThumbnailProfile? thumbnails = v2Profile.Thumbnails is not null
+                ? new()
+                {
+                    Width = v2Profile.Thumbnails.Width,
+                    IntervalSeconds = v2Profile.Thumbnails.IntervalSeconds,
+                }
+                : null;
+            string container = MapV2ContainerToV1(v2Profile.Container);
+
+            if (existingByIdTracked.TryGetValue(preset.Id, out EncoderProfile? existing))
+            {
+                existing.Name = preset.Name;
+                existing.Container = container;
+                existing.VideoProfiles = videoProfiles;
+                existing.AudioProfiles = audioProfiles;
+                existing.SubtitleProfiles = subtitleProfiles;
+                existing.Thumbnails = thumbnails;
+                refreshedProfiles++;
+            }
+            else
+            {
+                context.EncoderProfiles.Add(
+                    new()
+                    {
+                        Id = preset.Id,
+                        Name = preset.Name,
+                        Container = container,
+                        VideoProfiles = videoProfiles,
+                        AudioProfiles = audioProfiles,
+                        SubtitleProfiles = subtitleProfiles,
+                        Thumbnails = thumbnails,
+                    }
+                );
+                insertedProfiles++;
+            }
+        }
+
+        if (insertedProfiles > 0 || refreshedProfiles > 0)
+        {
+            await context.SaveChangesAsync(ct);
+            Logger.Setup(
+                $"MaterializePresets: inserted {insertedProfiles}, refreshed {refreshedProfiles} V1 EncoderProfile row(s) from built-in V2 presets",
+                LogEventLevel.Information
+            );
+        }
+    }
+
+    private static VideoProfile[] BuildV1VideoProfiles(EncodingProfile profile)
+    {
+        if (profile.Video is null)
+            return [];
+
+        List<VideoProfile> profiles = [MapV2VideoToV1(profile.Video)];
+
+        if (profile.Ladder is { Mode: LadderMode.Manual, Rungs.Length: > 0 })
+        {
+            profiles.AddRange(
+                profile.Ladder.Rungs.Select(rung => MapV2LadderRungToV1(rung, profile.Video))
+            );
+        }
+
+        return profiles.ToArray();
+    }
+
+    private static VideoProfile MapV2VideoToV1(VideoOutput v) =>
+        new()
+        {
+            Codec = MapV2VideoCodecToV1(v.Codec),
+            Bitrate = v.BitrateKbps,
+            Width = v.Width,
+            Height = v.Height ?? 0,
+            Preset = v.Preset ?? string.Empty,
+            Profile = MapV2CodecProfileToV1(v.CodecProfile),
+            Tune = v.Tune ?? string.Empty,
+            Level = v.Level ?? string.Empty,
+            SegmentName = v.SegmentNameTemplate,
+            PlaylistName = v.PlaylistNameTemplate,
+            ColorSpace = v.PixelFormat ?? string.Empty,
+            Crf = v.Crf,
+            KeyInt = v.KeyframeIntervalSeconds,
+            ConvertHdrToSdr = v.ConvertHdrToSdr,
+            CustomArguments = v.CustomArguments?.Select(kv => (kv.Key, kv.Value)).ToArray() ?? [],
+        };
+
+    private static VideoProfile MapV2LadderRungToV1(LadderRung rung, VideoOutput baseVideo) =>
+        new()
+        {
+            Codec = MapV2VideoCodecToV1(rung.Codec),
+            Bitrate = rung.BitrateKbps,
+            Width = rung.Width,
+            Height = rung.Height,
+            Preset = rung.Preset ?? baseVideo.Preset ?? string.Empty,
+            Profile = MapV2CodecProfileToV1(rung.CodecProfile),
+            Tune = baseVideo.Tune ?? string.Empty,
+            Level = baseVideo.Level ?? string.Empty,
+            SegmentName = baseVideo.SegmentNameTemplate,
+            PlaylistName = baseVideo.PlaylistNameTemplate,
+            ColorSpace = rung.PixelFormat ?? string.Empty,
+            Crf = 0,
+            KeyInt = baseVideo.KeyframeIntervalSeconds,
+            ConvertHdrToSdr = baseVideo.ConvertHdrToSdr,
+            CustomArguments = [],
+        };
+
+    private static AudioProfile MapV2AudioToV1(AudioOutput a) =>
+        new()
+        {
+            Codec = MapV2AudioCodecToV1(a.Codec),
+            Channels = a.Channels,
+            SampleRate = a.SampleRateHz,
+            SegmentName = a.SegmentNameTemplate,
+            PlaylistName = a.PlaylistNameTemplate,
+            AllowedLanguages = a.AllowedLanguages,
+            CustomArguments = a.CustomArguments?.Select(kv => (kv.Key, kv.Value)).ToArray() ?? [],
+            Loudness = MapV2LoudnessToV1(a.Loudness),
+            Downmix = MapV2DownmixToV1(a.Downmix),
+            CustomPanMatrix = a.Downmix?.CustomPanMatrix,
+        };
+
+    private static SubtitleProfile MapV2SubtitleToV1(SubtitleOutput s) =>
+        new()
+        {
+            Codec = MapV2SubtitleCodecToV1(s.Codec),
+            PlaylistName = s.PlaylistNameTemplate,
+            AllowedLanguages = s.AllowedLanguages,
+            CustomArguments = s.CustomArguments?.Select(kv => (kv.Key, kv.Value)).ToArray() ?? [],
+        };
+
+    private static string MapV2ContainerToV1(Container container) =>
+        container switch
+        {
+            Container.HlsTs => "hls_ts",
+            Container.HlsFmp4 => "m3u8",
+            Container.AudioHlsTs => "hls_ts",
+            Container.AudioHlsFmp4 => "m3u8",
+            Container.Mkv => "mkv",
+            Container.Mp4 => "mp4",
+            Container.Dash => "dash",
+            Container.Mp3 => "mp3",
+            Container.Aac => "aac",
+            Container.Flac => "flac",
+            Container.Ogg => "ogg",
+            Container.Mka => "mka",
+            Container.Mks => "mks",
+            _ => "m3u8",
+        };
+
+    private static string MapV2VideoCodecToV1(VideoCodecType codec) =>
+        codec switch
+        {
+            VideoCodecType.H264 => "h264",
+            VideoCodecType.H265 => "hevc",
+            VideoCodecType.Av1 => "av1",
+            VideoCodecType.Vp9 => "vp9",
+            VideoCodecType.Copy => "copy",
+            _ => "h264",
+        };
+
+    private static string MapV2AudioCodecToV1(AudioCodecType codec) =>
+        codec switch
+        {
+            AudioCodecType.Aac => "aac",
+            AudioCodecType.Flac => "flac",
+            AudioCodecType.Opus => "opus",
+            AudioCodecType.Ac3 => "ac3",
+            AudioCodecType.Eac3 => "eac3",
+            AudioCodecType.Mp3 => "mp3",
+            AudioCodecType.Vorbis => "vorbis",
+            AudioCodecType.TrueHd => "truehd",
+            AudioCodecType.Dts => "dts",
+            AudioCodecType.Copy => "copy",
+            _ => "aac",
+        };
+
+    // No V1 token exists for PGS image subtitles — falling back to WebVtt would
+    // silently transcode them, so this maps to "copy" (stream copy) instead,
+    // matching the safer of the two lossy options.
+    private static string MapV2SubtitleCodecToV1(SubtitleCodecType codec) =>
+        codec switch
+        {
+            SubtitleCodecType.WebVtt => "webvtt",
+            SubtitleCodecType.Srt => "srt",
+            SubtitleCodecType.Ass => "ass",
+            SubtitleCodecType.Copy => "copy",
+            SubtitleCodecType.Pgs => "copy",
+            _ => "webvtt",
+        };
+
+    private static string MapV2CodecProfileToV1(CodecProfile profile) =>
+        profile switch
+        {
+            CodecProfile.Baseline => "baseline",
+            CodecProfile.Main => "main",
+            CodecProfile.Main10 => "main10",
+            CodecProfile.High => "high",
+            CodecProfile.High10 => "high10",
+            _ => string.Empty,
+        };
+
+    private static string? MapV2LoudnessToV1(LoudnessConfig? loudness) =>
+        loudness?.Mode switch
+        {
+            LoudnessMode.EbuR128 => "ebu_r128",
+            LoudnessMode.ReplayGain => "replaygain",
+            LoudnessMode.Custom => "custom",
+            _ => null,
+        };
+
+    private static string? MapV2DownmixToV1(DownmixConfig? downmix) =>
+        downmix?.Mode switch
+        {
+            DownmixMode.StereoItuR128 => "stereo",
+            DownmixMode.Mono => "mono",
+            DownmixMode.Custom => "custom",
+            _ => null,
+        };
 
     /// <summary>
     /// Forward migration from V1 EncoderProfiles to V2 EncodingPresets:

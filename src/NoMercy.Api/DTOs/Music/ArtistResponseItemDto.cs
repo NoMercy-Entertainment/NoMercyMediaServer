@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Database;
@@ -22,7 +23,7 @@ namespace NoMercy.Api.DTOs.Music;
 public record ArtistResponseItemDto
 {
     [JsonProperty("color_palette")]
-    public ColorPalette? ColorPalette { get; set; }
+    public JToken? ColorPalette { get; set; }
 
     [JsonProperty("country")]
     public string? Country { get; set; }
@@ -101,7 +102,7 @@ public record ArtistResponseItemDto
             ? new Uri($"/images/music{background.FilePath}", UriKind.Relative).ToString()
             : null;
 
-        ColorPalette? palette = artist.ColorPalette ?? thumb?.ColorPalette;
+        JToken? palette = artist._colorPalette.ToRaw() ?? thumb?._colorPalette.ToRaw();
 
         Cover = artist.Cover ?? thumb?.FilePath;
         Cover = Cover is not null
@@ -119,15 +120,21 @@ public record ArtistResponseItemDto
         Type = "artist";
         Link = new($"/music/artists/{Id}", UriKind.Relative);
 
-        Genres = artist.ArtistMusicGenre.Select(artistMusicGenre => new GenreDto(artistMusicGenre));
+        Genres = artist
+            .ArtistMusicGenre.Select(artistMusicGenre => new GenreDto(artistMusicGenre))
+            .ToList();
 
-        Images = artist.Images.Select(image => new ImageDto(image));
+        Images = artist.Images.Select(image => new ImageDto(image)).ToList();
 
+        // Materialized: Featured below calls Albums.All(...) per candidate. Left lazy,
+        // that re-ran this whole AlbumArtist projection for every featured album, which
+        // for an artist with many track-albums was tens of seconds of recomputation.
         Albums = artist
             .AlbumArtist.Select(album => new AlbumDto(album, country!))
             .GroupBy(album => album.Id)
             .Select(album => album.First())
-            .OrderBy(artistTrack => artistTrack.Year);
+            .OrderBy(artistTrack => artistTrack.Year)
+            .ToList();
 
         Featured = artist
             .ArtistTrack.Select(artistTrack => artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album)
@@ -144,16 +151,16 @@ public record ArtistResponseItemDto
             .AlbumArtist.DistinctBy(albumArtist => albumArtist.AlbumId)
             .Where(album => album.Album.AlbumUser.Any(user => user.UserId.Equals(userId)))
             .Select(trackAlbum => new AlbumDto(trackAlbum, country!))
-            .OrderBy(album => album.Year);
+            .OrderBy(album => album.Year)
+            .ToList();
 
         Tracks = artist
             .ArtistTrack.Select(artistTrack => new ArtistTrackDto(artistTrack, country!))
-            // .GroupBy(artistTrack => artistTrack.AlbumName + artistTrack.Name)
-            // .Select(artistTrack => artistTrack.First())
             .DistinctBy(artistTrack => artistTrack.Id)
             .OrderBy(artistTrack => artistTrack.AlbumName)
             .ThenBy(artistTrack => artistTrack.Disc)
-            .ThenBy(artistTrack => artistTrack.Track);
+            .ThenBy(artistTrack => artistTrack.Track)
+            .ToList();
 
         // Use the per-user TrackUser "liked" relation instead of MusicPlays.
         // TrackUser is already included (filtered by userId) in the repo query,

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NoMercy.Database;
 
@@ -10,9 +11,11 @@ using NoMercy.Database;
 namespace NoMercy.Database.Migrations
 {
     [DbContext(typeof(MediaContext))]
-    partial class MediaContextModelSnapshot : ModelSnapshot
+    [Migration("20260706082257_AddImageForeignKeyPartialIndexes")]
+    partial class AddImageForeignKeyPartialIndexes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.7");
@@ -1008,9 +1011,7 @@ namespace NoMercy.Database.Migrations
                         .HasDatabaseName("IX_Images_CastCreditId")
                         .HasFilter("CastCreditId IS NOT NULL");
 
-                    b.HasIndex("CastId")
-                        .HasDatabaseName("IX_Images_CastId")
-                        .HasFilter("CastId IS NOT NULL");
+                    b.HasIndex("CastId");
 
                     b.HasIndex("CollectionId")
                         .HasDatabaseName("IX_Images_CollectionId")
@@ -1020,9 +1021,7 @@ namespace NoMercy.Database.Migrations
                         .HasDatabaseName("IX_Images_CrewCreditId")
                         .HasFilter("CrewCreditId IS NOT NULL");
 
-                    b.HasIndex("CrewId")
-                        .HasDatabaseName("IX_Images_CrewId")
-                        .HasFilter("CrewId IS NOT NULL");
+                    b.HasIndex("CrewId");
 
                     b.HasIndex("EpisodeId")
                         .HasDatabaseName("IX_Images_EpisodeId")
@@ -3004,25 +3003,17 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("CreditId");
 
-                    b.HasIndex("EpisodeId")
-                        .HasDatabaseName("IX_Casts_EpisodeId")
-                        .HasFilter("EpisodeId IS NOT NULL");
+                    b.HasIndex("EpisodeId");
 
-                    b.HasIndex("MovieId")
-                        .HasDatabaseName("IX_Casts_MovieId")
-                        .HasFilter("MovieId IS NOT NULL");
+                    b.HasIndex("MovieId");
 
                     b.HasIndex("PersonId");
 
                     b.HasIndex("RoleId");
 
-                    b.HasIndex("SeasonId")
-                        .HasDatabaseName("IX_Casts_SeasonId")
-                        .HasFilter("SeasonId IS NOT NULL");
+                    b.HasIndex("SeasonId");
 
-                    b.HasIndex("TvId")
-                        .HasDatabaseName("IX_Casts_TvId")
-                        .HasFilter("TvId IS NOT NULL");
+                    b.HasIndex("TvId");
 
                     b.HasIndex("CreditId", "EpisodeId", "RoleId")
                         .IsUnique();
@@ -3071,25 +3062,17 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("CreditId");
 
-                    b.HasIndex("EpisodeId")
-                        .HasDatabaseName("IX_Crews_EpisodeId")
-                        .HasFilter("EpisodeId IS NOT NULL");
+                    b.HasIndex("EpisodeId");
 
                     b.HasIndex("JobId");
 
-                    b.HasIndex("MovieId")
-                        .HasDatabaseName("IX_Crews_MovieId")
-                        .HasFilter("MovieId IS NOT NULL");
+                    b.HasIndex("MovieId");
 
                     b.HasIndex("PersonId");
 
-                    b.HasIndex("SeasonId")
-                        .HasDatabaseName("IX_Crews_SeasonId")
-                        .HasFilter("SeasonId IS NOT NULL");
+                    b.HasIndex("SeasonId");
 
-                    b.HasIndex("TvId")
-                        .HasDatabaseName("IX_Crews_TvId")
-                        .HasFilter("TvId IS NOT NULL");
+                    b.HasIndex("TvId");
 
                     b.HasIndex("CreditId", "EpisodeId", "JobId")
                         .IsUnique();
@@ -3267,9 +3250,7 @@ namespace NoMercy.Database.Migrations
                         .IsUnique();
 
                     b.HasIndex("GuestStarId")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Roles_GuestStarId")
-                        .HasFilter("GuestStarId IS NOT NULL");
+                        .IsUnique();
 
                     b.ToTable("Roles");
                 });

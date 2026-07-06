@@ -28,6 +28,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
@@ -117,7 +118,7 @@ public partial class HomeController : BaseController
                         userId,
                         library.Id,
                         language,
-                        request.Take,
+                        UiLimits.MaximumCardsInCarousel,
                         request.Page,
                         m => m.CreatedAt,
                         "desc"
@@ -134,7 +135,7 @@ public partial class HomeController : BaseController
                         userId,
                         library.Id,
                         language,
-                        request.Take,
+                        UiLimits.MaximumCardsInCarousel,
                         request.Page,
                         m => m.CreatedAt,
                         "desc"

@@ -148,11 +148,16 @@ public class ArtistsController : BaseController
         if (artist is null)
             return NotFoundResponse("Artist not found");
 
+        // Fire-and-forget: enqueue serializes on the queue's global write lock, which
+        // the busy encoder workers hold while touching the large queue DB. Awaiting it
+        // inline made this read block for seconds. The palette is a background enrichment.
         if (string.IsNullOrEmpty(artist._colorPalette) || artist._colorPalette == "{}")
-            QueueRunner.Current?.Dispatcher.Dispatch(
-                new ColorPaletteJob("artist", artist.Id.ToString()),
-                "palette",
-                1
+            _ = Task.Run(() =>
+                QueueRunner.Current?.Dispatcher.Dispatch(
+                    new ColorPaletteJob("artist", artist.Id.ToString()),
+                    "palette",
+                    1
+                )
             );
 
         return Ok(new ArtistResponseDto { Data = new(artist, userId, country) });

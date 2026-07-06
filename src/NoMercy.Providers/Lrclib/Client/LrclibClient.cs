@@ -145,9 +145,19 @@ public partial class LrclibClient : LrclibBaseClient
 
         int minutes = int.Parse(match.Groups[1].Value);
         int seconds = int.Parse(match.Groups[2].Value);
-        int hundredths = int.Parse(match.Groups[3].Value);
+        // LRC fractions come in both hundredths ([mm:ss.xx]) and milliseconds
+        // ([mm:ss.xxx]) precision. Scale by the digit count so a 3-digit tag is
+        // read as milliseconds, not as an out-of-range hundredths value — and so
+        // the timestamp is stripped from the text instead of being left in it.
+        string fraction = match.Groups[3].Value;
+        double fractionalSeconds = fraction.Length switch
+        {
+            3 => int.Parse(fraction) / 1000.0,
+            2 => int.Parse(fraction) / 100.0,
+            _ => 0,
+        };
         string text = match.Groups[4].Value.Trim();
-        double total = (minutes * 60) + seconds + (hundredths / 100.0);
+        double total = (minutes * 60) + seconds + fractionalSeconds;
 
         return new()
         {
@@ -157,11 +167,11 @@ public partial class LrclibClient : LrclibBaseClient
                 Total = total,
                 Minutes = minutes,
                 Seconds = seconds,
-                Hundredths = hundredths,
+                Hundredths = (int)Math.Round(fractionalSeconds * 100),
             },
         };
     }
 
-    [GeneratedRegex(@"\[(\d{2}):(\d{2})\.(\d{2})\](.*)$")]
+    [GeneratedRegex(@"^\[(\d{1,2}):(\d{2})(?:[.:](\d{2,3}))?\](.*)$")]
     private static partial Regex TimeStamped();
 }

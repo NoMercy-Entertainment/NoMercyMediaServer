@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using NoMercy.Database;
 using NoMercy.Database.Models.Music;
 
@@ -33,7 +34,7 @@ public record ArtistTrackDto
     public Uri Link { get; set; }
 
     [JsonProperty("color_palette")]
-    public ColorPalette? ColorPalette { get; set; }
+    public JToken? ColorPalette { get; set; }
 
     [JsonProperty("date")]
     public DateTime? Date { get; set; }
@@ -87,7 +88,7 @@ public record ArtistTrackDto
             UriKind.Relative
         ).ToString();
         Type = "track";
-        ColorPalette = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.ColorPalette;
+        ColorPalette = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album._colorPalette.ToRaw();
         Date = artistTrack.Track.Date;
         Disc = artistTrack.Track.DiscNumber;
         Track = artistTrack.Track.TrackNumber;
@@ -115,8 +116,8 @@ public record ArtistTrackDto
         Id = track.Id;
         Name = track.Name;
         ColorPalette =
-            track.AlbumTrack.FirstOrDefault()?.Album.ColorPalette
-            ?? track.ArtistTrack.FirstOrDefault()?.Artist.ColorPalette;
+            track.AlbumTrack.FirstOrDefault()?.Album._colorPalette.ToRaw()
+            ?? track.ArtistTrack.FirstOrDefault()?.Artist._colorPalette.ToRaw();
         Cover =
             track.AlbumTrack.FirstOrDefault()?.Album.Cover
             ?? track.ArtistTrack.FirstOrDefault()?.Artist.Cover;

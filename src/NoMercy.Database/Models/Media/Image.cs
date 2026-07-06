@@ -28,17 +28,12 @@ namespace NoMercy.Database.Models.Media;
 [Index(nameof(FilePath), nameof(AlbumId), IsUnique = true)]
 [Index(nameof(FilePath), nameof(TrackId), IsUnique = true)]
 [Index(nameof(FilePath))]
-[Index(nameof(TvId))]
-[Index(nameof(SeasonId))]
-[Index(nameof(EpisodeId))]
-[Index(nameof(MovieId))]
-[Index(nameof(CollectionId))]
-[Index(nameof(PersonId))]
-[Index(nameof(CastCreditId))]
-[Index(nameof(CrewCreditId))]
-[Index(nameof(ArtistId))]
-[Index(nameof(AlbumId))]
-[Index(nameof(TrackId))]
+// The single-column owner-FK indexes (TvId, SeasonId, EpisodeId, MovieId,
+// CollectionId, PersonId, CastCreditId, CrewCreditId, ArtistId, AlbumId, TrackId)
+// are declared in MediaContext.ConfigureImageForeignKeyIndexes as partial indexes
+// (WHERE col IS NOT NULL). Each image has exactly one owner, so every FK column is
+// NULL on almost every row; a plain index over it is non-selective and the planner
+// full-scans. Filtering to non-NULL rows keeps each index small and seekable.
 [Index(nameof(Type), nameof(Iso6391))]
 [Index(nameof(MovieId), nameof(Type))]
 [Index(nameof(TvId), nameof(Type))]
@@ -84,10 +79,16 @@ public class Image : ColorPaletteTimeStamps
 
     [JsonProperty("cast_credit_id")]
     public string? CastCreditId { get; set; }
+
+    [JsonIgnore]
+    public int? CastId { get; set; }
     public virtual Cast? Cast { get; set; }
 
     [JsonProperty("crew_credit_id")]
     public string? CrewCreditId { get; set; }
+
+    [JsonIgnore]
+    public int? CrewId { get; set; }
     public virtual Crew? Crew { get; set; }
 
     [JsonProperty("person_id")]

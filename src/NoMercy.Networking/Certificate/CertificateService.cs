@@ -10,7 +10,10 @@
 // -----------------------------------------------------------------------------
 
 using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Security.Authentication;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Microsoft.AspNetCore.Hosting;
@@ -20,6 +23,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
+using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
@@ -34,13 +38,20 @@ public class CertificateService : ICertificateService
 
     private readonly ILogger<CertificateService> _logger;
 
+    // Optional: absent in the throwaway pre-DI presence-check instance built by
+    // ServerBootstrapper before the real DI container exists. Self-signed SANs
+    // degrade gracefully (localhost/loopback/LAN-IP only) when this is null.
+    private readonly INetworkDiscovery? _networkDiscovery;
+
     public CertificateService(
         ILogger<CertificateService> logger,
-        IHttpClientFactory httpClientFactory
+        IHttpClientFactory httpClientFactory,
+        INetworkDiscovery? networkDiscovery = null
     )
     {
         _logger = logger;
         _httpClientFactory = httpClientFactory;
+        _networkDiscovery = networkDiscovery;
     }
 
     // LOCAL-ONLY: Certificate runs before StorageProvider is initialized (startup phase 1-3).
@@ -48,6 +59,7 @@ public class CertificateService : ICertificateService
     // through every startup call site including Program.cs and BootOrchestrator.
     private readonly IStorageDriver _driver = new LocalStorageDriver();
     private X509Certificate2? _cachedCertificate;
+    private X509Certificate2? _selfSignedCertificate;
     private readonly object _certLock = new();
 
     public void LoadFromDb()
@@ -168,9 +180,16 @@ public class CertificateService : ICertificateService
         options.Limits.MaxConcurrentUpgradedConnections = 500; // WebSocket/SignalR
     }
 
+    /// <summary>
+    /// Selection order: a valid Let's Encrypt cert (unchanged happy path), else the
+    /// cached self-signed fallback (generated/persisted on demand), else — only when
+    /// self-signed generation itself fails — plaintext HTTP/1.1. Keeping the origin on
+    /// HTTPS (even with a self-signed cert) is what lets an HTTPS dashboard reach a
+    /// LAN-only or pre-LE server at all; plaintext is a last resort, not a normal state.
+    /// </summary>
     public void ConfigureHttpsListener(ListenOptions listenOptions)
     {
-        if (HasValidCertificate())
+        if (EnsureHttpsCertificate())
         {
             listenOptions.UseHttps(HttpsConnectionAdapterOptions());
         }
@@ -182,6 +201,21 @@ public class CertificateService : ICertificateService
         }
     }
 
+    /// <summary>
+    /// Returns true when a certificate is ready for TLS — either the real Let's Encrypt
+    /// cert, or the self-signed fallback (loaded from cache/DB, generating a new one only
+    /// if neither exists). This is deliberately broader than <see cref="HasValidCertificate"/>,
+    /// which callers (BootOrchestrator's "is this server registered" check, PortManager)
+    /// rely on meaning "a real LE cert exists" — that meaning is unchanged.
+    /// </summary>
+    public bool EnsureHttpsCertificate()
+    {
+        if (HasValidCertificate())
+            return true;
+
+        return TryEnsureSelfSignedCertificate();
+    }
+
     private HttpsConnectionAdapterOptions HttpsConnectionAdapterOptions()
     {
         return new()
@@ -191,11 +225,261 @@ public class CertificateService : ICertificateService
             {
                 lock (_certLock)
                 {
-                    return _cachedCertificate
-                        ?? throw new InvalidOperationException("No SSL certificate loaded");
+                    if (_cachedCertificate is not null && _cachedCertificate.NotAfter > DateTime.Now)
+                        return _cachedCertificate;
+
+                    if (
+                        _selfSignedCertificate is not null
+                        && _selfSignedCertificate.NotAfter > DateTime.Now
+                    )
+                        return _selfSignedCertificate;
                 }
+
+                throw new InvalidOperationException("No SSL certificate loaded");
             },
         };
+    }
+
+    private const string SelfSignedCertConfigKey = "ssl_selfsigned_certificate";
+    private const string SelfSignedKeyConfigKey = "ssl_selfsigned_private_key";
+
+    // Self-signed certs carry no CA trust, so the 398-day CA/Browser Forum leaf-validity
+    // cap doesn't legally apply — but browsers increasingly enforce it for ANY TLS leaf
+    // cert regardless of trust chain, and this is meant to double as the base for a future
+    // OS-trust-store install. Stay inside that ceiling so it doesn't need special-casing later.
+    private const int SelfSignedValidityDays = 397;
+
+    /// <summary>
+    /// Ensures a self-signed fallback certificate is cached in memory, loading the
+    /// persisted one from the DB or generating (and persisting) a new one if needed.
+    /// Never mints a new certificate when a cached/persisted one is still valid — the
+    /// fallback must be stable across restarts, not a new identity every boot.
+    /// </summary>
+    private bool TryEnsureSelfSignedCertificate()
+    {
+        lock (_certLock)
+        {
+            if (_selfSignedCertificate is not null && _selfSignedCertificate.NotAfter > DateTime.Now)
+                return true;
+        }
+
+        try
+        {
+            if (LoadSelfSignedFromDb())
+                return true;
+
+            GenerateAndPersistSelfSignedCertificate();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to generate self-signed fallback certificate — falling back to plaintext HTTP: {Message}",
+                ex.Message
+            );
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Loads a previously-persisted self-signed cert from the DB. Returns false (not an
+    /// error) when none exists yet, or the persisted one has expired — the caller
+    /// regenerates in that case.
+    /// </summary>
+    private bool LoadSelfSignedFromDb()
+    {
+        using AppDbContext db = new();
+        string? certPem = db
+            .Configuration.Where(c => c.Key == SelfSignedCertConfigKey)
+            .Select(c => c.SecureValue)
+            .FirstOrDefault();
+        string? keyPem = db
+            .Configuration.Where(c => c.Key == SelfSignedKeyConfigKey)
+            .Select(c => c.SecureValue)
+            .FirstOrDefault();
+
+        if (string.IsNullOrEmpty(certPem) || string.IsNullOrEmpty(keyPem))
+            return false;
+
+        using X509Certificate2 tempCert = X509Certificate2.CreateFromPem(certPem, keyPem);
+        if (tempCert.NotAfter <= DateTime.Now)
+            return false;
+
+        lock (_certLock)
+        {
+            byte[] pkcs12Data = tempCert.Export(X509ContentType.Pkcs12);
+            _selfSignedCertificate = X509CertificateLoader.LoadPkcs12(pkcs12Data, null);
+        }
+
+        _logger.LogInformation("Loaded self-signed fallback certificate from cache");
+        return true;
+    }
+
+    /// <summary>
+    /// Generates a fresh self-signed certificate, persists it as DB SecureValue rows
+    /// (same protection mechanism as the real LE cert/key — never plaintext, never a
+    /// separate on-disk store), and loads it into the in-memory cache.
+    /// </summary>
+    private void GenerateAndPersistSelfSignedCertificate()
+    {
+        using X509Certificate2 generated = BuildSelfSignedCertificate();
+
+        string certPem = generated.ExportCertificatePem();
+        using RSA? rsa = generated.GetRSAPrivateKey();
+        string keyPem =
+            rsa?.ExportRSAPrivateKeyPem()
+            ?? throw new InvalidOperationException(
+                "Generated self-signed certificate has no exportable RSA private key"
+            );
+
+        using (AppDbContext db = new())
+        {
+            UpsertConfig(db, SelfSignedCertConfigKey, certPem);
+            UpsertConfig(db, SelfSignedKeyConfigKey, keyPem);
+            db.SaveChanges();
+        }
+
+        lock (_certLock)
+        {
+            byte[] pkcs12Data = generated.Export(X509ContentType.Pkcs12);
+            _selfSignedCertificate = X509CertificateLoader.LoadPkcs12(pkcs12Data, null);
+        }
+
+        // Never log PEM/key material — only the non-secret expiry.
+        _logger.LogInformation(
+            "Generated self-signed fallback certificate (expires {NotAfter:yyyy-MM-dd}) so HTTPS "
+                + "stays reachable without a Let's Encrypt cert. Direct browser access will show a "
+                + "trust warning until a real certificate is acquired.",
+            generated.NotAfter
+        );
+    }
+
+    /// <summary>
+    /// Builds the self-signed certificate covering localhost, loopback, discoverable LAN
+    /// IPs, and (when <see cref="INetworkDiscovery"/> is available) the server's
+    /// InternalDomain/ExternalDomain. RSA 2048/SHA-256, ~13 months validity.
+    /// </summary>
+    private X509Certificate2 BuildSelfSignedCertificate()
+    {
+        using RSA rsa = RSA.Create(2048);
+        CertificateRequest request = new(
+            $"CN=NoMercy MediaServer {Info.DeviceId}",
+            rsa,
+            HashAlgorithmName.SHA256,
+            RSASignaturePadding.Pkcs1
+        );
+
+        request.CertificateExtensions.Add(
+            new X509BasicConstraintsExtension(false, false, 0, false)
+        );
+        request.CertificateExtensions.Add(
+            new X509KeyUsageExtension(
+                X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment,
+                false
+            )
+        );
+        request.CertificateExtensions.Add(
+            new X509EnhancedKeyUsageExtension([new("1.3.6.1.5.5.7.3.1")], false)
+        );
+
+        SubjectAlternativeNameBuilder sanBuilder = new();
+        sanBuilder.AddDnsName("localhost");
+        sanBuilder.AddIpAddress(IPAddress.Loopback);
+        sanBuilder.AddIpAddress(IPAddress.IPv6Loopback);
+
+        foreach (IPAddress address in CollectLocalIpAddresses(_networkDiscovery))
+            sanBuilder.AddIpAddress(address);
+
+        if (_networkDiscovery is not null)
+        {
+            AddDnsNameIfValid(sanBuilder, _networkDiscovery.InternalDomain);
+
+            if (
+                !string.IsNullOrEmpty(_networkDiscovery.ExternalIp)
+                && _networkDiscovery.ExternalIp != "0.0.0.0"
+            )
+                AddDnsNameIfValid(sanBuilder, _networkDiscovery.ExternalDomain);
+        }
+
+        request.CertificateExtensions.Add(sanBuilder.Build());
+
+        DateTimeOffset notBefore = DateTimeOffset.UtcNow.AddDays(-1);
+        DateTimeOffset notAfter = DateTimeOffset.UtcNow.AddDays(SelfSignedValidityDays);
+
+        return request.CreateSelfSigned(notBefore, notAfter);
+    }
+
+    private void AddDnsNameIfValid(SubjectAlternativeNameBuilder sanBuilder, string? dnsName)
+    {
+        if (string.IsNullOrWhiteSpace(dnsName))
+            return;
+
+        try
+        {
+            sanBuilder.AddDnsName(dnsName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(
+                "Skipping invalid SAN DNS name {DnsName} for self-signed cert: {Message}",
+                dnsName,
+                ex.Message
+            );
+        }
+    }
+
+    /// <summary>
+    /// Best-effort LAN IP enumeration for self-signed SANs. Duplicates
+    /// <c>NetworkDiscovery.GetInternalIp</c>'s NIC-walk rather than depending on it —
+    /// this must degrade to "just localhost/loopback" instead of throwing when no NIC
+    /// is up (e.g. inside a locked-down container).
+    /// </summary>
+    private static IEnumerable<IPAddress> CollectLocalIpAddresses(
+        INetworkDiscovery? networkDiscovery
+    )
+    {
+        HashSet<IPAddress> addresses = [];
+
+        if (
+            networkDiscovery is not null
+            && IPAddress.TryParse(networkDiscovery.InternalIp, out IPAddress? discovered)
+            && !IPAddress.IsLoopback(discovered)
+        )
+            addresses.Add(discovered);
+
+        try
+        {
+            foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                if (nic.OperationalStatus != OperationalStatus.Up)
+                    continue;
+                if (
+                    nic.NetworkInterfaceType
+                    is NetworkInterfaceType.Loopback
+                        or NetworkInterfaceType.Tunnel
+                )
+                    continue;
+
+                foreach (
+                    UnicastIPAddressInformation addr in nic.GetIPProperties().UnicastAddresses
+                )
+                {
+                    if (addr.Address.AddressFamily != AddressFamily.InterNetwork)
+                        continue;
+                    if (IPAddress.IsLoopback(addr.Address))
+                        continue;
+
+                    addresses.Add(addr.Address);
+                }
+            }
+        }
+        catch
+        {
+            // Best effort only — the fallback cert still works with localhost/loopback SANs.
+        }
+
+        return addresses;
     }
 
     // Kept as fallback — Task 17 will remove this once DB-only path is stable.

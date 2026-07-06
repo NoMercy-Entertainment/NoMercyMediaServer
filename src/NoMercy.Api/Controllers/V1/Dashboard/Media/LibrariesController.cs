@@ -35,6 +35,7 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Domain;
 using NoMercy.Storage;
 using EncoderProfileDto = NoMercy.Data.DTOs.Encoder.EncoderProfileDto;
+using IDefaultEncodingPresetLinker = NoMercy.MediaProcessing.Libraries.IDefaultEncodingPresetLinker;
 using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
@@ -54,6 +55,7 @@ public class LibrariesController(
     IActivityLogger activityLogger,
     IStorageDriver storageDriver,
     IStorageFactory storageFactory,
+    IDefaultEncodingPresetLinker defaultEncodingPresetLinker,
     ILogger<LibrariesController> logger
 ) : BaseController
 {
@@ -579,6 +581,16 @@ public class LibrariesController(
         if (request.DriverId == default)
             return BadRequestResponse("driver_id is required. Every folder must have a driver.");
 
+        // Captured before the upsert so we can tell a brand-new folder from
+        // one that already existed (e.g. attaching the same NFS path to a
+        // second library). Only a genuinely new folder gets the default
+        // auto-encode preset link — never an existing/pre-slice folder.
+        Folder? preExistingFolder = await folderRepository.GetFolderByDriverAndPathAsync(
+            request.DriverId,
+            request.Path
+        );
+        bool isNewFolder = preExistingFolder is null;
+
         try
         {
             Folder folder = new()
@@ -616,6 +628,21 @@ public class LibrariesController(
         FolderLibrary folderLibrary = new() { LibraryId = library.Id, FolderId = pathAsync.Id };
 
         await folderRepository.AddFolderLibraryAsync(folderLibrary);
+
+        if (isNewFolder)
+        {
+            await defaultEncodingPresetLinker.AttachDefaultIfMissingAsync(pathAsync.Id);
+
+            // A brand-new folder can already contain media on disk (the
+            // common "point me at my existing library" flow). Dispatch the
+            // same scan-new job the scan-new endpoint uses so pre-existing
+            // files get imported without the user having to hit that
+            // endpoint manually. Never runs for a pre-existing folder being
+            // attached to another library — isNewFolder guards that — so
+            // upgrades never trigger a scan for folders that were already
+            // known before this slice shipped.
+            jobDispatcher.DispatchJob<LibraryScanJob>(library.Id);
+        }
 
         // Register the folder with the middleware directly so it can serve files immediately
         DynamicStaticFilesMiddleware.AddFolder(pathAsync.Id, pathAsync.DriverId, pathAsync.Path);

@@ -17,7 +17,10 @@ namespace NoMercy.Database.Models.People;
 
 [PrimaryKey(nameof(Id))]
 [Index(nameof(CreditId), IsUnique = true)]
-[Index(nameof(GuestStarId), IsUnique = true)]
+// GuestStarId's unique index is declared in MediaContext.ConfigureCreditForeignKeyIndexes
+// as a partial index (WHERE GuestStarId IS NOT NULL). A Role belongs to either a Cast
+// credit or a GuestStar, never both, so GuestStarId is NULL on most rows; a plain index
+// over it is non-selective and the planner full-scans.
 public class Role
 {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

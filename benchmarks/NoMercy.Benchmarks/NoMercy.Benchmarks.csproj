@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>NoMercy.Benchmarks</RootNamespace>
+    <AssemblyName>NoMercy.Benchmarks</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\NoMercy.Api\NoMercy.Api.csproj" />
+    <ProjectReference Include="..\..\src\NoMercy.Data\NoMercy.Data.csproj" />
+    <ProjectReference Include="..\..\src\NoMercy.Database\NoMercy.Database.csproj" />
+    <ProjectReference Include="..\..\src\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
+  </ItemGroup>
+
+</Project>
