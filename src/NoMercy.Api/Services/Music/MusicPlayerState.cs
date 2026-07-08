@@ -89,6 +89,17 @@ public class MusicPlayerState
     [JsonProperty("position_captured_at_ms")]
     public long PositionCapturedAtMs { get; set; }
 
+    // Per-user monotonic, clock-anchored broadcast sequence — assigned once per
+    // emit by MusicPlaybackService.UpdatePlaybackState via
+    // MusicPlayerStateManager.NextSeq, never authored here. Lets a client that
+    // receives broadcasts out of order (many ungated call sites can all fire
+    // within milliseconds of each other) drop any state whose Seq is not
+    // greater than the last one it applied, instead of racing position/
+    // play-state fields against each other. New additive field: old clients
+    // that don't read it are unaffected.
+    [JsonProperty("seq")]
+    public long Seq { get; set; }
+
     [JsonProperty("volume_percentage")]
     public int VolumePercentage { get; set; }
 
