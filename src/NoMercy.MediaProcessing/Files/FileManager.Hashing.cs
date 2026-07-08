@@ -290,15 +290,6 @@ public partial class FileManager
         return chapters;
     }
 
-    private long GetDirectorySize(IStorage storage, string folder)
-    {
-        if (!storage.Exists(folder))
-            return 0;
-
-        IReadOnlyList<StorageEntry> entries = storage.List(folder, null, recursive: true);
-        return entries.Where(e => !e.IsDirectory).Sum(e => e.SizeBytes);
-    }
-
     private static async Task MoveFolderAsync(
         string sourceFolder,
         string destinationFolder,

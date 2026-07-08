@@ -184,12 +184,29 @@ public partial class FileManager
         }
     }
 
+    // A scan verifies completeness, not integrity, so it must not stream every
+    // file's bytes over the network to hash them — that turned each rescan into a
+    // full re-read of every playlist, subtitle, font, and (multi-megabyte) preview
+    // sprite. Fingerprint the file by size + last-write time instead: two cheap
+    // stats, no content read. The value still changes whenever the file changes,
+    // which is all any consumer needs (only fonts.FileHash is read downstream, for
+    // cache-busting), while a several-second sprite read collapses to a stat.
     private static string ComputeFileHash(IStorage storage, string filePath)
     {
-        using SHA256 sha256 = SHA256.Create();
-        using Stream fileStream = storage.OpenRead(filePath);
+        long size = storage.SizeOrZero(filePath);
 
-        byte[] hashBytes = sha256.ComputeHash(fileStream);
+        long modifiedTicks;
+        try
+        {
+            modifiedTicks = storage.LastModified(filePath).UtcTicks;
+        }
+        catch
+        {
+            modifiedTicks = 0;
+        }
+
+        using SHA256 sha256 = SHA256.Create();
+        byte[] hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes($"{size}:{modifiedTicks}"));
 
         StringBuilder hashStringBuilder = new(64);
 

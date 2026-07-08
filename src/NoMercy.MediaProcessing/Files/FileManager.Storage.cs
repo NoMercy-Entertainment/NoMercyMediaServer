@@ -252,7 +252,19 @@ public partial class FileManager
             Duration = (item.FFprobe?.Duration.ToString()).OrEmpty(),
             Folder = baseFolder.Replace("\\", "/"),
             HostFolder = hostFolder.Replace("\\", "/"),
-            FolderSize = GetDirectorySize(storage, hostFolder),
+            // Sum the sizes already gathered while building the hash lists rather
+            // than walking every segment again: a rescan verifies completeness and
+            // must not deep-dive the whole output tree over the network just to set
+            // a storage-accounting stat. Covers every catalogued asset (video and
+            // audio variants, subtitles, fonts, previews, chapters).
+            FolderSize =
+                video.Sum(entry => entry.FileSize ?? 0)
+                + audio.Sum(entry => entry.FileSize ?? 0)
+                + subtitles.Sum(entry => entry.FileSize ?? 0)
+                + fonts.Sum(entry => entry.FileSize ?? 0)
+                + previews.Sum(entry => entry.ImageFileSize + entry.TimeFileSize)
+                + (chaptersFileHashMap?.FileSize ?? 0)
+                + (fontsFileHashMap?.FileSize ?? 0),
 
             Type = Movie?.Id is not null
                 ? Database.Models.Media.MediaType.Movie
