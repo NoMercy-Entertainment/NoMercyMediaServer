@@ -259,8 +259,8 @@ public class LocalStorageUnitTests
                 )
                 .Returns(
                     [
-                        new StorageEntryInfo(fileA, false, 99, DateTime.UtcNow),
-                        new StorageEntryInfo(subDir, true, 0, DateTime.UtcNow),
+                        new(fileA, false, 99, DateTime.UtcNow),
+                        new(subDir, true, 0, DateTime.UtcNow),
                     ]
                 );
 

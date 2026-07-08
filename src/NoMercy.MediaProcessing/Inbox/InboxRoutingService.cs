@@ -70,7 +70,7 @@ public class InboxRoutingService
                 continue;
 
             destinations.Add(
-                new InboxDestination
+                new()
                 {
                     LibraryId = folderLibrary.LibraryId,
                     FolderId = folder.Id,
@@ -120,7 +120,7 @@ public class InboxRoutingService
         if (isHighConfidence && hasSingleCandidate && hasSingleDestination)
         {
             item.Status = "Routing";
-            return new RouteOutcome
+            return new()
             {
                 Mode = "auto",
                 Destination = destinations[0],
@@ -129,7 +129,7 @@ public class InboxRoutingService
         }
 
         item.Status = "NeedsReview";
-        return new RouteOutcome
+        return new()
         {
             Mode = "review",
             Destination = null,

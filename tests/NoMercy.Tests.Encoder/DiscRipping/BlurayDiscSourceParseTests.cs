@@ -69,7 +69,7 @@ src/libbluray/disc/aacs.c:306: Unable to decrypt unit (AACS)!";
             .OrderByDescending(p => p.Duration)
             .First();
         longest.Index.Should().Be(600);
-        longest.Duration.Should().Be(new TimeSpan(3, 7, 12));
+        longest.Duration.Should().Be(new(3, 7, 12));
     }
 
     [Fact]
@@ -100,13 +100,13 @@ src/libbluray/disc/aacs.c:306: Unable to decrypt unit (AACS)!";
         );
 
         (int Index, TimeSpan Duration) intro252 = playlists.First(p => p.Index == 252);
-        intro252.Duration.Should().Be(new TimeSpan(0, 3, 59));
+        intro252.Duration.Should().Be(new(0, 3, 59));
 
         (int Index, TimeSpan Duration) intro250 = playlists.First(p => p.Index == 250);
-        intro250.Duration.Should().Be(new TimeSpan(0, 4, 38));
+        intro250.Duration.Should().Be(new(0, 4, 38));
 
         (int Index, TimeSpan Duration) episode01601 = playlists.First(p => p.Index == 1601);
-        episode01601.Duration.Should().Be(new TimeSpan(0, 23, 39));
+        episode01601.Duration.Should().Be(new(0, 23, 39));
     }
 
     [Fact]

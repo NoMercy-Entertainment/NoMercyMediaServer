@@ -37,7 +37,7 @@ public class LicenseTokenClientTests
             }
         );
 
-        ILicenseTokenClient sut = MakeClient(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        ILicenseTokenClient sut = MakeClient(_ => new(HttpStatusCode.OK)
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json"),
         });
@@ -54,7 +54,7 @@ public class LicenseTokenClientTests
     [Fact]
     public async Task RequestAsync_401Response_ReturnsUnauthenticated()
     {
-        ILicenseTokenClient sut = MakeClient(_ => new HttpResponseMessage(
+        ILicenseTokenClient sut = MakeClient(_ => new(
             HttpStatusCode.Unauthorized
         ));
 
@@ -68,7 +68,7 @@ public class LicenseTokenClientTests
     [Fact]
     public async Task RequestAsync_403Response_ReturnsEntitlementRevoked()
     {
-        ILicenseTokenClient sut = MakeClient(_ => new HttpResponseMessage(
+        ILicenseTokenClient sut = MakeClient(_ => new(
             HttpStatusCode.Forbidden
         ));
 
@@ -108,7 +108,7 @@ public class LicenseTokenClientTests
             req =>
             {
                 capturedAuth = req.Headers.Authorization?.ToString();
-                return new HttpResponseMessage(HttpStatusCode.OK)
+                return new(HttpStatusCode.OK)
                 {
                     Content = new StringContent(body, Encoding.UTF8, "application/json"),
                 };
@@ -130,7 +130,7 @@ public class LicenseTokenClientTests
             new { active = true, scopes = new[] { "distributed_encoding" } }
         );
 
-        ILicenseTokenClient sut = MakeClient(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        ILicenseTokenClient sut = MakeClient(_ => new(HttpStatusCode.OK)
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json"),
         });
@@ -148,7 +148,7 @@ public class LicenseTokenClientTests
             new { active = false, scopes = Array.Empty<string>() }
         );
 
-        ILicenseTokenClient sut = MakeClient(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        ILicenseTokenClient sut = MakeClient(_ => new(HttpStatusCode.OK)
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json"),
         });
@@ -172,7 +172,7 @@ public class LicenseTokenClientTests
         ILicenseTokenClient sut = MakeClient(_ =>
         {
             Interlocked.Increment(ref callCount);
-            return new HttpResponseMessage(HttpStatusCode.OK)
+            return new(HttpStatusCode.OK)
             {
                 Content = new StringContent(body, Encoding.UTF8, "application/json"),
             };
@@ -194,7 +194,7 @@ public class LicenseTokenClientTests
     )
     {
         FakeHandler fake = new(handler);
-        HttpClient http = new(fake) { BaseAddress = new Uri("https://api.nomercy.tv/") };
+        HttpClient http = new(fake) { BaseAddress = new("https://api.nomercy.tv/") };
         return new LicenseTokenClient(http, () => accessToken);
     }
 

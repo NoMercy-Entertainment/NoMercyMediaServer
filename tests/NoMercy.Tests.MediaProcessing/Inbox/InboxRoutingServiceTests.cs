@@ -44,13 +44,13 @@ public class InboxRoutingServiceTests : IDisposable
         _context.Database.EnsureCreated();
         _context.Database.ExecuteSqlRaw("PRAGMA foreign_keys = OFF;");
 
-        _driverMock = new Mock<IStorageDriver>();
+        _driverMock = new();
         _driverMock.Setup(d => d.GetFullPath(It.IsAny<string>())).Returns<string>(p => p);
         _driverMock.Setup(d => d.MoveFile(It.IsAny<string>(), It.IsAny<string>()));
         _driverMock.Setup(d => d.CreateDirectory(It.IsAny<string>()));
         _driverMock.Setup(d => d.DirectoryExists(It.IsAny<string>())).Returns(true);
 
-        _storageMock = new Mock<IStorage>();
+        _storageMock = new();
         _storageMock.Setup(s => s.Driver).Returns(_driverMock.Object);
         _storageMock.Setup(s => s.GetFullPath(It.IsAny<string>())).Returns<string>(p => p);
         _storageMock
@@ -68,12 +68,12 @@ public class InboxRoutingServiceTests : IDisposable
             .Setup(s => s.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        _storageFactoryMock = new Mock<IStorageFactory>();
+        _storageFactoryMock = new();
         _storageFactoryMock
             .Setup(f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
             .Returns(_storageMock.Object);
 
-        _dispatcherMock = new Mock<JobDispatcher>();
+        _dispatcherMock = new();
     }
 
     public void Dispose()

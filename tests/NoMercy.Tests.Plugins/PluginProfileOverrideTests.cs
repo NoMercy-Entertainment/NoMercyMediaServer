@@ -35,7 +35,7 @@ public class PluginProfileOverrideTests
         PluginProfileOverride sut = new(
             new FakePluginManager(
                 new FakePlugin(
-                    new PluginProfile
+                    new()
                     {
                         Name = "Anime HEVC",
                         VideoCodec = "hevc",
@@ -105,7 +105,7 @@ public class PluginProfileOverrideTests
             FileSizeBytes: 10_000_000_000,
             VideoStreams:
             [
-                new VideoStreamInfo(
+                new(
                     Index: 0,
                     Codec: "hevc",
                     Width: 3840,

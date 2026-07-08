@@ -101,7 +101,7 @@ public class NoMercyLoggerSinkTests
             using (NoMercyLoggerProvider provider = new(options, new StringWriter()))
             {
                 provider.WriteEntry(
-                    new NoMercy.NmSystem.Dto.LogEntry
+                    new()
                     {
                         Type = "queue",
                         Message = "legacy line",

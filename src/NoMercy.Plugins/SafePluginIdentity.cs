@@ -35,7 +35,7 @@ internal readonly record struct SafePluginIdentity(
 
         if (instance is null)
         {
-            return new SafePluginIdentity(Guid.Empty, name, string.Empty, UnknownVersion);
+            return new(Guid.Empty, name, string.Empty, UnknownVersion);
         }
 
         Guid id = Guid.Empty;
@@ -81,6 +81,6 @@ internal readonly record struct SafePluginIdentity(
             // Faulty Version getter — fall back to 0.0.0.
         }
 
-        return new SafePluginIdentity(id, name, description, version);
+        return new(id, name, description, version);
     }
 }

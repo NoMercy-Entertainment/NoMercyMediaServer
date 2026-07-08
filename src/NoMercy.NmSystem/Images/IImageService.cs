@@ -19,7 +19,8 @@ public interface IImageService
         string image,
         int? width,
         double? aspectRatio,
-        string? type
+        string? type,
+        int? quality
     );
 
     IImageFormat Parse(string format);

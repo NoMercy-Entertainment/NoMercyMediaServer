@@ -132,7 +132,7 @@ public class CertificateService : ICertificateService
             string? certPem = ReadCertificatePemFromDb();
             if (!string.IsNullOrEmpty(certPem))
             {
-                using X509Certificate2 dbCert = new(Encoding.UTF8.GetBytes(certPem));
+                using X509Certificate2 dbCert = X509Certificate2.CreateFromPem(certPem);
                 return dbCert.NotAfter > DateTime.Now;
             }
         }
@@ -225,7 +225,10 @@ public class CertificateService : ICertificateService
             {
                 lock (_certLock)
                 {
-                    if (_cachedCertificate is not null && _cachedCertificate.NotAfter > DateTime.Now)
+                    if (
+                        _cachedCertificate is not null
+                        && _cachedCertificate.NotAfter > DateTime.Now
+                    )
                         return _cachedCertificate;
 
                     if (
@@ -259,7 +262,10 @@ public class CertificateService : ICertificateService
     {
         lock (_certLock)
         {
-            if (_selfSignedCertificate is not null && _selfSignedCertificate.NotAfter > DateTime.Now)
+            if (
+                _selfSignedCertificate is not null
+                && _selfSignedCertificate.NotAfter > DateTime.Now
+            )
                 return true;
         }
 
@@ -461,9 +467,7 @@ public class CertificateService : ICertificateService
                 )
                     continue;
 
-                foreach (
-                    UnicastIPAddressInformation addr in nic.GetIPProperties().UnicastAddresses
-                )
+                foreach (UnicastIPAddressInformation addr in nic.GetIPProperties().UnicastAddresses)
                 {
                     if (addr.Address.AddressFamily != AddressFamily.InterNetwork)
                         continue;

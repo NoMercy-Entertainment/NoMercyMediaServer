@@ -178,7 +178,7 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            new EncoderRule(
+            new(
                 Id: EncoderRuleId.ProfileNameMissing,
                 Severity: EncoderRuleSeverity.Error,
                 Field: "name",
@@ -201,7 +201,7 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            new EncoderRule(
+            new(
                 Id: EncoderRuleId.ProfileNoOutputs,
                 Severity: EncoderRuleSeverity.Error,
                 Field: "outputs",
@@ -218,7 +218,7 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            new EncoderRule(
+            new(
                 Id: EncoderRuleId.VideoWidthInvalid,
                 Severity: EncoderRuleSeverity.Error,
                 Field: "video.width",
@@ -238,7 +238,7 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            new EncoderRule(
+            new(
                 Id: EncoderRuleId.VideoHeightInvalid,
                 Severity: EncoderRuleSeverity.Error,
                 Field: "video.height",
@@ -275,7 +275,7 @@ public static class ProfileRuleValidator
         string mode = isCrfMode ? "Crf" : video.RateControl.ToString();
 
         rules.Add(
-            new EncoderRule(
+            new(
                 Id: EncoderRuleId.VideoRateControlMissing,
                 Severity: EncoderRuleSeverity.Error,
                 Field: field,
@@ -305,7 +305,7 @@ public static class ProfileRuleValidator
         if (isBitrateMode && hasCrf && !hasBitrate)
         {
             rules.Add(
-                new EncoderRule(
+                new(
                     Id: EncoderRuleId.VideoRateControlConflict,
                     Severity: EncoderRuleSeverity.Error,
                     Field: "video.rate_control",
@@ -327,7 +327,7 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            new EncoderRule(
+            new(
                 Id: EncoderRuleId.CodecContainerMismatch,
                 Severity: EncoderRuleSeverity.Error,
                 Field: "video.codec",
@@ -354,7 +354,7 @@ public static class ProfileRuleValidator
                 continue;
 
             rules.Add(
-                new EncoderRule(
+                new(
                     Id: EncoderRuleId.AudioCodecContainerMismatch,
                     Severity: EncoderRuleSeverity.Error,
                     Field: "audio.codec",
@@ -381,7 +381,7 @@ public static class ProfileRuleValidator
                 continue;
 
             rules.Add(
-                new EncoderRule(
+                new(
                     Id: EncoderRuleId.AudioBitrateMissing,
                     Severity: EncoderRuleSeverity.Error,
                     Field: "audio.bitrate_kbps",
@@ -402,7 +402,7 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            new EncoderRule(
+            new(
                 Id: EncoderRuleId.LadderManualEmpty,
                 Severity: EncoderRuleSeverity.Error,
                 Field: "ladder.rungs",
@@ -425,7 +425,7 @@ public static class ProfileRuleValidator
                 continue;
 
             rules.Add(
-                new EncoderRule(
+                new(
                     Id: EncoderRuleId.LadderManualUnsorted,
                     Severity: EncoderRuleSeverity.Error,
                     Field: "ladder.rungs",
@@ -453,7 +453,7 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            new EncoderRule(
+            new(
                 Id: EncoderRuleId.HlsFmp4CodecMismatch,
                 Severity: EncoderRuleSeverity.Error,
                 Field: "container",
@@ -478,7 +478,7 @@ public static class ProfileRuleValidator
                 continue;
 
             rules.Add(
-                new EncoderRule(
+                new(
                     Id: EncoderRuleId.LadderDuplicateVariant,
                     Severity: EncoderRuleSeverity.Warning,
                     Field: $"ladder.rungs[{i}]",
@@ -518,7 +518,7 @@ public static class ProfileRuleValidator
                 continue;
 
             rules.Add(
-                new EncoderRule(
+                new(
                     Id: EncoderRuleId.SubtitlesAssNeedsCapableClient,
                     Severity: EncoderRuleSeverity.Info,
                     Field: "subtitles.codec",
@@ -595,7 +595,7 @@ public static class ProfileRuleValidator
             if (value.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
             {
                 rules.Add(
-                    new EncoderRule(
+                    new(
                         Id: EncoderRuleId.DrmHttpNotHttps,
                         Severity: EncoderRuleSeverity.Error,
                         Field: $"drm.parameters[{key}]",
@@ -625,7 +625,7 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            new EncoderRule(
+            new(
                 Id: EncoderRuleId.SourceVariableFrameRate,
                 Severity: EncoderRuleSeverity.Warning,
                 Field: "source.frame_rate",
@@ -657,7 +657,7 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            new EncoderRule(
+            new(
                 Id: EncoderRuleId.SourceUpscalingDetected,
                 Severity: EncoderRuleSeverity.Warning,
                 Field: "video.width",
@@ -683,7 +683,7 @@ public static class ProfileRuleValidator
         // Dolby Vision RPU survives only when the encoder + container combo preserves it. Without
         // a DV-capable path the RPU is stripped and the output becomes HDR10 (BL only).
         rules.Add(
-            new EncoderRule(
+            new(
                 Id: EncoderRuleId.SourceDolbyVisionWillBeStripped,
                 Severity: EncoderRuleSeverity.Warning,
                 Field: "source.dolby_vision",
@@ -706,7 +706,7 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            new EncoderRule(
+            new(
                 Id: EncoderRuleId.StereoscopicSourceUnsupported,
                 Severity: EncoderRuleSeverity.Error,
                 Field: "source.stereo_mode",
@@ -729,7 +729,7 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            new EncoderRule(
+            new(
                 Id: EncoderRuleId.SphericalMetadataWillBeStripped,
                 Severity: EncoderRuleSeverity.Warning,
                 Field: "source.spherical_projection",
@@ -754,7 +754,7 @@ public static class ProfileRuleValidator
         )
         {
             rules.Add(
-                new EncoderRule(
+                new(
                     Id: EncoderRuleId.SubtitlesBurnInPermanent,
                     Severity: EncoderRuleSeverity.Info,
                     Field: "subtitles.policy",
@@ -804,7 +804,7 @@ public static class ProfileRuleValidator
             : "No standard level supports this resolution at 30 fps.";
 
         rules.Add(
-            new EncoderRule(
+            new(
                 Id: EncoderRuleId.LevelResolutionMismatch,
                 Severity: EncoderRuleSeverity.Error,
                 Field: "video.level",
@@ -836,7 +836,7 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            new EncoderRule(
+            new(
                 Id: EncoderRuleId.LevelInvalid,
                 Severity: EncoderRuleSeverity.Error,
                 Field: "video.level",
@@ -869,7 +869,7 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            new EncoderRule(
+            new(
                 Id: EncoderRuleId.BitrateTooLowForResolution,
                 Severity: EncoderRuleSeverity.Warning,
                 Field: "video.bitrate_kbps",
@@ -917,7 +917,7 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            new EncoderRule(
+            new(
                 Id: EncoderRuleId.CrfOutOfTypicalRange,
                 Severity: EncoderRuleSeverity.Warning,
                 Field: "video.crf",
@@ -959,7 +959,7 @@ public static class ProfileRuleValidator
             return;
 
         rules.Add(
-            new EncoderRule(
+            new(
                 Id: EncoderRuleId.HlsKeyframeSegmentMisalignment,
                 Severity: EncoderRuleSeverity.Warning,
                 Field: "video.keyframe_interval_seconds",
@@ -988,7 +988,7 @@ public static class ProfileRuleValidator
                 continue;
 
             rules.Add(
-                new EncoderRule(
+                new(
                     Id: EncoderRuleId.LadderInverted,
                     Severity: EncoderRuleSeverity.Error,
                     Field: $"ladder.rungs[{i}]",
@@ -1029,7 +1029,7 @@ public static class ProfileRuleValidator
 
             int nearest = ladder.OrderBy(b => Math.Abs(b - audio.BitrateKbps)).First();
             rules.Add(
-                new EncoderRule(
+                new(
                     Id: audio.Codec == AudioCodecType.Ac3
                         ? EncoderRuleId.AudioAc3OffLadderBitrate
                         : EncoderRuleId.AudioEac3OffLadderBitrate,
@@ -1153,7 +1153,7 @@ public static class ProfileRuleValidator
                 continue;
 
             rules.Add(
-                new EncoderRule(
+                new(
                     Id: EncoderRuleId.SubtitlesContainerIncompatible,
                     Severity: EncoderRuleSeverity.Error,
                     Field: "subtitles.codec",
@@ -1184,7 +1184,7 @@ public static class ProfileRuleValidator
             return; // request is consistent — preserve HDR from a 10-bit source.
 
         rules.Add(
-            new EncoderRule(
+            new(
                 Id: EncoderRuleId.HdrInverseTonemapUnsupported,
                 Severity: EncoderRuleSeverity.Error,
                 Field: "hdr_policy",
@@ -1229,7 +1229,7 @@ public static class ProfileRuleValidator
             : $"Either set video.bit_depth to 8 (matching the 8-bit profile), or change video.codec_profile to Main10 or High10 (VP9 profile2/3 for 10-bit).";
 
         rules.Add(
-            new EncoderRule(
+            new(
                 Id: EncoderRuleId.BitDepthVp9ProfileMismatch,
                 Severity: EncoderRuleSeverity.Error,
                 Field: "video.codec_profile",
@@ -1268,7 +1268,7 @@ public static class ProfileRuleValidator
         string promoted = video.CodecProfile == CodecProfile.High ? "High10" : "Main10";
 
         rules.Add(
-            new EncoderRule(
+            new(
                 Id: EncoderRuleId.BitDepthH26xProfilePromoted,
                 Severity: EncoderRuleSeverity.Warning,
                 Field: "video.codec_profile",
@@ -1322,7 +1322,7 @@ public static class ProfileRuleValidator
                 continue;
 
             rules.Add(
-                new EncoderRule(
+                new(
                     Id: EncoderRuleId.CustomArgsReservedFlag,
                     Severity: EncoderRuleSeverity.Error,
                     Field: $"{fieldPrefix}[{key}]",
@@ -1374,7 +1374,7 @@ public static class ProfileRuleValidator
             : "No standard level supports this resolution × frame rate.";
 
         rules.Add(
-            new EncoderRule(
+            new(
                 Id: EncoderRuleId.LevelFrameRateCapExceeded,
                 Severity: EncoderRuleSeverity.Error,
                 Field: "video.level",

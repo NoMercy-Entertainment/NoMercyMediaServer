@@ -27,18 +27,18 @@ public sealed class IncompleteEncodeRecorderTests : IDisposable
     public IncompleteEncodeRecorderTests()
     {
         string dbName = Guid.NewGuid().ToString();
-        _connection = new SqliteConnection($"DataSource={dbName};Mode=Memory;Cache=Shared");
+        _connection = new($"DataSource={dbName};Mode=Memory;Cache=Shared");
         _connection.Open();
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(_connection)
             .Options;
 
-        _context = new MediaContext(options);
+        _context = new(options);
         _context.Database.EnsureCreated();
         _context.Database.ExecuteSqlRaw("PRAGMA foreign_keys = OFF;");
 
-        _recorder = new IncompleteEncodeRecorder();
+        _recorder = new();
     }
 
     public void Dispose()

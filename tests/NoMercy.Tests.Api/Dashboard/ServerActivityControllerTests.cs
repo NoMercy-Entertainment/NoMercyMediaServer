@@ -44,7 +44,7 @@ public class ServerActivityControllerTests : IClassFixture<NoMercyApiFactory>, I
         if (!deviceExists)
         {
             ctx.Devices.Add(
-                new Device
+                new()
                 {
                     Id = TestDeviceId,
                     DeviceId = TestDeviceId.ToString(),
@@ -67,7 +67,7 @@ public class ServerActivityControllerTests : IClassFixture<NoMercyApiFactory>, I
         for (int i = 0; i < 5; i++)
         {
             rows.Add(
-                new ActivityLog
+                new()
                 {
                     Category = ActivityCategory.Auth,
                     Type = "login",
@@ -82,7 +82,7 @@ public class ServerActivityControllerTests : IClassFixture<NoMercyApiFactory>, I
         for (int i = 0; i < 5; i++)
         {
             rows.Add(
-                new ActivityLog
+                new()
                 {
                     Category = ActivityCategory.Connection,
                     Type = "connect",
@@ -97,7 +97,7 @@ public class ServerActivityControllerTests : IClassFixture<NoMercyApiFactory>, I
         for (int i = 0; i < 20; i++)
         {
             rows.Add(
-                new ActivityLog
+                new()
                 {
                     Category = ActivityCategory.Playback,
                     Type = "play",

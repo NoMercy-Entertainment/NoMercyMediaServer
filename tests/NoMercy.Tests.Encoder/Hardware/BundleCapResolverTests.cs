@@ -48,7 +48,7 @@ public class BundleCapResolverTests
             t => t.key,
             t => new SpeedMeasurement(t.speed * 30, t.speed, DateTime.UtcNow)
         );
-        return new SpeedIndex(dict);
+        return new(dict);
     }
 
     // ── Fallbacks when no benchmark or hardware available ───────────────────
@@ -81,7 +81,7 @@ public class BundleCapResolverTests
     {
         // Benchmark has data for a different codec/width than what's in the plan.
         SpeedIndex index = IndexWith(
-            (new SpeedKey(VideoCodecType.H264, "h264_nvenc", 1280, "RTX 4080"), 10.0)
+            (new(VideoCodecType.H264, "h264_nvenc", 1280, "RTX 4080"), 10.0)
         );
         IHardwareBenchmark benchmark = MakeBenchmark(index);
         IHardwareCapabilities hw = MakeHardware(MakeGpu());
@@ -99,7 +99,7 @@ public class BundleCapResolverTests
     {
         // 12× realtime / 1.5× target = 8 streams per bundle.
         SpeedIndex index = IndexWith(
-            (new SpeedKey(VideoCodecType.H265, "hevc_nvenc", 1920, "RTX 4080"), 12.0)
+            (new(VideoCodecType.H265, "hevc_nvenc", 1920, "RTX 4080"), 12.0)
         );
         IHardwareBenchmark benchmark = MakeBenchmark(index);
         IHardwareCapabilities hw = MakeHardware(MakeGpu());
@@ -115,7 +115,7 @@ public class BundleCapResolverTests
     {
         // 1× realtime / 1.5× target = 0 → floor at 1.
         SpeedIndex index = IndexWith(
-            (new SpeedKey(VideoCodecType.H265, "hevc_nvenc", 1920, "RTX 4080"), 1.0)
+            (new(VideoCodecType.H265, "hevc_nvenc", 1920, "RTX 4080"), 1.0)
         );
         IHardwareBenchmark benchmark = MakeBenchmark(index);
         IHardwareCapabilities hw = MakeHardware(MakeGpu());
@@ -131,8 +131,8 @@ public class BundleCapResolverTests
     {
         // 4K HEVC (slow) + 1080p HEVC (fast) — slowest sets the cap.
         SpeedIndex index = IndexWith(
-            (new SpeedKey(VideoCodecType.H265, "hevc_nvenc", 3840, "RTX 4080"), 3.0),
-            (new SpeedKey(VideoCodecType.H265, "hevc_nvenc", 1920, "RTX 4080"), 12.0)
+            (new(VideoCodecType.H265, "hevc_nvenc", 3840, "RTX 4080"), 3.0),
+            (new(VideoCodecType.H265, "hevc_nvenc", 1920, "RTX 4080"), 12.0)
         );
         IHardwareBenchmark benchmark = MakeBenchmark(index);
         IHardwareCapabilities hw = MakeHardware(MakeGpu());
@@ -152,7 +152,7 @@ public class BundleCapResolverTests
     {
         // Benchmark says 12 / 1.5 = 8 but driver caps at 5 → 5.
         SpeedIndex index = IndexWith(
-            (new SpeedKey(VideoCodecType.H265, "hevc_nvenc", 1920, "RTX 4080"), 12.0)
+            (new(VideoCodecType.H265, "hevc_nvenc", 1920, "RTX 4080"), 12.0)
         );
         IHardwareBenchmark benchmark = MakeBenchmark(index);
         IHardwareCapabilities hw = MakeHardware(MakeGpu(maxSessions: 5));
@@ -168,7 +168,7 @@ public class BundleCapResolverTests
     {
         // Professional/datacenter cards report MaxEncoderSessions = int.MaxValue.
         SpeedIndex index = IndexWith(
-            (new SpeedKey(VideoCodecType.H265, "hevc_nvenc", 1920, "L40"), 30.0)
+            (new(VideoCodecType.H265, "hevc_nvenc", 1920, "L40"), 30.0)
         );
         IHardwareBenchmark benchmark = MakeBenchmark(index);
         IHardwareCapabilities hw = MakeHardware(MakeGpu("L40", maxSessions: int.MaxValue));
@@ -183,7 +183,7 @@ public class BundleCapResolverTests
     public void Resolve_CpuRungsScoredSeparately()
     {
         SpeedIndex index = IndexWith(
-            (new SpeedKey(VideoCodecType.H265, "libx265", 1920, null), 6.0)
+            (new(VideoCodecType.H265, "libx265", 1920, null), 6.0)
         );
         IHardwareBenchmark benchmark = MakeBenchmark(index);
         IHardwareCapabilities hw = MakeHardware(MakeGpu());
@@ -200,7 +200,7 @@ public class BundleCapResolverTests
         // CPU plan has nothing — should hit the CPU fallback (1) regardless
         // of how good the GPU benchmark looks.
         SpeedIndex index = IndexWith(
-            (new SpeedKey(VideoCodecType.H265, "hevc_nvenc", 1920, "RTX 4080"), 12.0)
+            (new(VideoCodecType.H265, "hevc_nvenc", 1920, "RTX 4080"), 12.0)
         );
         IHardwareBenchmark benchmark = MakeBenchmark(index);
         IHardwareCapabilities hw = MakeHardware(MakeGpu());

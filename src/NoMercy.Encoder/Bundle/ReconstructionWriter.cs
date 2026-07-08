@@ -43,7 +43,7 @@ public class ReconstructionWriter : IReconstructionWriter
         string commandTemplate = BuildCommandTemplate(layout, tracks);
         List<string> warnings = BuildWarnings(tracks);
 
-        return new Reconstruction(
+        return new(
             Version: 1,
             TargetContainer: layout.ContainerString,
             Source: source,
@@ -90,7 +90,7 @@ public class ReconstructionWriter : IReconstructionWriter
     {
         string filename = Path.GetFileName(mediaInfo.FilePath);
 
-        return new ReconstructionSource(
+        return new(
             OriginalPath: mediaInfo.FilePath,
             OriginalFilename: filename,
             SizeBytes: mediaInfo.FileSizeBytes,
@@ -154,7 +154,7 @@ public class ReconstructionWriter : IReconstructionWriter
                 : $"video re-encoded: {sourceCodec} → {output.EncoderName}";
 
             tracks.Add(
-                new ReconstructionTrack(
+                new(
                     Kind: "video",
                     SourceStreamIndex: source?.Index ?? i,
                     SourceCodec: sourceCodec,
@@ -216,7 +216,7 @@ public class ReconstructionWriter : IReconstructionWriter
             }
 
             tracks.Add(
-                new ReconstructionTrack(
+                new(
                     Kind: "audio",
                     SourceStreamIndex: source?.Index ?? -1,
                     SourceCodec: sourceCodec,
@@ -247,7 +247,7 @@ public class ReconstructionWriter : IReconstructionWriter
             if (isAcquired)
             {
                 tracks.Add(
-                    new ReconstructionTrack(
+                    new(
                         Kind: "subtitle",
                         SourceStreamIndex: output.SourceIndex,
                         SourceCodec: "n/a",
@@ -314,7 +314,7 @@ public class ReconstructionWriter : IReconstructionWriter
             }
 
             tracks.Add(
-                new ReconstructionTrack(
+                new(
                     Kind: "subtitle",
                     SourceStreamIndex: output.SourceIndex,
                     SourceCodec: sourceCodec,
@@ -362,7 +362,7 @@ public class ReconstructionWriter : IReconstructionWriter
         foreach (ChapterInfo ch in mediaInfo.Chapters)
         {
             chapters.Add(
-                new ReconstructionChapter(
+                new(
                     Start: ch.Start.TotalSeconds,
                     End: ch.End.TotalSeconds,
                     Title: ch.Title
@@ -370,7 +370,7 @@ public class ReconstructionWriter : IReconstructionWriter
             );
         }
 
-        return new ReconstructionAssets(
+        return new(
             Fonts: fonts,
             CoverArt: [],
             Chapters: chapters,

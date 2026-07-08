@@ -23,12 +23,12 @@ public sealed class NetworkDiscoveryPropertyTests
 {
     private static NetworkDiscovery BuildDiscovery()
     {
-        return new NetworkDiscovery(
+        return new(
             NullLogger<NetworkDiscovery>.Instance,
             new LocalStorageDriver(),
             new AuthTokenStore(),
             new ConnectivityStatus(),
-            new NetworkProbeConfig()
+            new()
         );
     }
 

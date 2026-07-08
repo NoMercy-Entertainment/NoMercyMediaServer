@@ -207,7 +207,7 @@ public sealed class WindowsTocReader : ITocReader
             );
         }
 
-        return new DiscToc(firstTrack, lastTrack, leadOutAbsolute.Value, trackOffsets);
+        return new(firstTrack, lastTrack, leadOutAbsolute.Value, trackOffsets);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

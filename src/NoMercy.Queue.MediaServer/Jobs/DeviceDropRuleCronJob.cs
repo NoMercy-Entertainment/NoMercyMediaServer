@@ -147,7 +147,7 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
         foreach ((Ulid _, Guid userId, string name, string reason) in notices)
         {
             context.DeviceDropNotices.Add(
-                new DeviceDropNotice
+                new()
                 {
                     UserId = userId,
                     DeviceName = name,

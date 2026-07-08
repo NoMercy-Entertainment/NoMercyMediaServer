@@ -89,7 +89,7 @@ public sealed class UserCacheTests
     {
         UserCache cache = new();
         cache.AddUser(
-            new User
+            new()
             {
                 Id = Guid.NewGuid(),
                 Name = "Dave",
@@ -144,7 +144,7 @@ public sealed class UserCacheTests
         Guid idA = Guid.NewGuid();
         Guid idB = Guid.NewGuid();
         cache.AddUser(
-            new User
+            new()
             {
                 Id = idA,
                 Name = "A",

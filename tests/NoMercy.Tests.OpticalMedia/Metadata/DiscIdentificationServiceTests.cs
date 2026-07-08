@@ -39,7 +39,7 @@ public class DiscIdentificationServiceTests
                 ? []
                 :
                 [
-                    new DiscCandidate(
+                    new(
                         Source: "tmdb",
                         StableId: "12345",
                         Title: "Test",

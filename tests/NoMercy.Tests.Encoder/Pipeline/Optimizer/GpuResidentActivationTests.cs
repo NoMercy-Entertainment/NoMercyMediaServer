@@ -55,7 +55,7 @@ public class GpuResidentActivationTests
     {
         OutputPlan withThumbs = EligiblePlan() with
         {
-            Thumbnails = new ThumbnailOutputPlan(320, 180, 10),
+            Thumbnails = new(320, 180, 10),
         };
         GpuResidentActivation
             .Resolve(true, true, GpuVendor.Nvidia, withThumbs, HasCuda)

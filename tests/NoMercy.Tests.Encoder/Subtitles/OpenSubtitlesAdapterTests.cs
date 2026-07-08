@@ -74,7 +74,7 @@ public class OpenSubtitlesAdapterTests
 
     public OpenSubtitlesAdapterTests()
     {
-        _adapter = new OpenSubtitlesAdapter(_provider.Object);
+        _adapter = new(_provider.Object);
     }
 
     [Fact]
@@ -82,7 +82,7 @@ public class OpenSubtitlesAdapterTests
     {
         List<OpenSubtitlesSearchResult> providerResults =
         [
-            new OpenSubtitlesSearchResult(
+            new(
                 Language: "en",
                 SubRating: "8.5",
                 SubDownloadsCnt: "1234",
@@ -130,7 +130,7 @@ public class OpenSubtitlesAdapterTests
     {
         List<OpenSubtitlesSearchResult> providerResults =
         [
-            new OpenSubtitlesSearchResult(
+            new(
                 Language: "en",
                 SubRating: "7.0",
                 SubDownloadsCnt: "500",
@@ -140,7 +140,7 @@ public class OpenSubtitlesAdapterTests
                 SubFormat: "srt",
                 MatchedBy: "moviehash"
             ),
-            new OpenSubtitlesSearchResult(
+            new(
                 Language: "en",
                 SubRating: "6.0",
                 SubDownloadsCnt: "200",
@@ -206,7 +206,7 @@ public class OpenSubtitlesAdapterTests
     {
         List<OpenSubtitlesSearchResult> providerResults =
         [
-            new OpenSubtitlesSearchResult(
+            new(
                 Language: "nl",
                 SubRating: "5.0",
                 SubDownloadsCnt: "99",

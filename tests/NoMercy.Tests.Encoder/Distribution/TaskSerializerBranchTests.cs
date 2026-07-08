@@ -217,7 +217,7 @@ public class TaskSerializerBranchTests
     private static EncodeTask MakeTask(string id = "task-1") =>
         new(
             TaskId: id,
-            Command: new FfmpegCommand("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
             OutputPath: $"/out/{id}",
             Type: EncodeTaskType.QualityVariant
         );

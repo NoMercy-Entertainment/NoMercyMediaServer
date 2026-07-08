@@ -40,7 +40,7 @@ public sealed class StorageAudioTagReader : IInboxAudioTagReader
             if (Guid.TryParse(tag.MusicBrainzReleaseId, out Guid parsedId))
                 releaseId = parsedId;
 
-            return new InboxAudioTags
+            return new()
             {
                 MusicBrainzReleaseId = releaseId == Guid.Empty ? null : releaseId,
                 Album = string.IsNullOrWhiteSpace(tag.Album) ? null : tag.Album,

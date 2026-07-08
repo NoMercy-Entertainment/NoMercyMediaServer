@@ -18,7 +18,7 @@ using Newtonsoft.Json.Serialization;
 public static class ProfileDiffer
 {
     private static readonly JsonSerializer CamelSerializer = JsonSerializer.Create(
-        new JsonSerializerSettings
+        new()
         {
             ContractResolver = new CamelCasePropertyNamesContractResolver(),
         }

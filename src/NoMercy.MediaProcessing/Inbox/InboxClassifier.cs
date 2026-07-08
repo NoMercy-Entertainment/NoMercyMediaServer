@@ -134,7 +134,7 @@ public sealed class InboxClassifier
         if (family == "video")
             return await ClassifyVideoAsync(path, ct);
 
-        return new ClassificationResult
+        return new()
         {
             DetectedType = "unknown",
             Confidence = "low",
@@ -156,7 +156,7 @@ public sealed class InboxClassifier
 
         if (tags is null)
         {
-            return new ClassificationResult
+            return new()
             {
                 DetectedType = "music",
                 Confidence = "low",
@@ -173,7 +173,7 @@ public sealed class InboxClassifier
 
             if (candidate is not null)
             {
-                return new ClassificationResult
+                return new()
                 {
                     DetectedType = "music",
                     Confidence = "high",
@@ -183,7 +183,7 @@ public sealed class InboxClassifier
         }
 
         // Tags present but no resolvable release id
-        return new ClassificationResult
+        return new()
         {
             DetectedType = "music",
             Confidence = "medium",
@@ -206,7 +206,7 @@ public sealed class InboxClassifier
 
         if (string.IsNullOrWhiteSpace(title))
         {
-            return new ClassificationResult
+            return new()
             {
                 DetectedType = structuralType == "unknown" ? "unknown" : structuralType,
                 Confidence = "low",
@@ -237,7 +237,7 @@ public sealed class InboxClassifier
         if (hasStrongMovieHit && hasStrongTvHit)
         {
             CandidateMatch[] combined = [.. movieHits.Take(3), .. tvHits.Take(3)];
-            return new ClassificationResult
+            return new()
             {
                 DetectedType = structuralType == "unknown" ? "unknown" : structuralType,
                 Confidence = "low",
@@ -251,7 +251,7 @@ public sealed class InboxClassifier
         {
             if (hasStrongTvHit && !hasStrongMovieHit)
             {
-                return new ClassificationResult
+                return new()
                 {
                     DetectedType = "anime",
                     Confidence = "medium",
@@ -259,7 +259,7 @@ public sealed class InboxClassifier
                 };
             }
 
-            return new ClassificationResult
+            return new()
             {
                 DetectedType = "anime",
                 Confidence = "low",
@@ -271,7 +271,7 @@ public sealed class InboxClassifier
         {
             if (hasStrongMovieHit)
             {
-                return new ClassificationResult
+                return new()
                 {
                     DetectedType = "movie",
                     Confidence = "high",
@@ -281,7 +281,7 @@ public sealed class InboxClassifier
 
             if (movieHits.Length > 0)
             {
-                return new ClassificationResult
+                return new()
                 {
                     DetectedType = "movie",
                     Confidence = "medium",
@@ -289,7 +289,7 @@ public sealed class InboxClassifier
                 };
             }
 
-            return new ClassificationResult
+            return new()
             {
                 DetectedType = "movie",
                 Confidence = "low",
@@ -301,7 +301,7 @@ public sealed class InboxClassifier
         {
             if (hasStrongTvHit)
             {
-                return new ClassificationResult
+                return new()
                 {
                     DetectedType = "tv",
                     Confidence = "high",
@@ -311,7 +311,7 @@ public sealed class InboxClassifier
 
             if (tvHits.Length > 0)
             {
-                return new ClassificationResult
+                return new()
                 {
                     DetectedType = "tv",
                     Confidence = "medium",
@@ -319,7 +319,7 @@ public sealed class InboxClassifier
                 };
             }
 
-            return new ClassificationResult
+            return new()
             {
                 DetectedType = "tv",
                 Confidence = "low",
@@ -330,7 +330,7 @@ public sealed class InboxClassifier
         // structuralType == "unknown"
         if (hasStrongMovieHit && !hasStrongTvHit)
         {
-            return new ClassificationResult
+            return new()
             {
                 DetectedType = "movie",
                 Confidence = "medium",
@@ -340,7 +340,7 @@ public sealed class InboxClassifier
 
         if (hasStrongTvHit && !hasStrongMovieHit)
         {
-            return new ClassificationResult
+            return new()
             {
                 DetectedType = "tv",
                 Confidence = "medium",
@@ -349,7 +349,7 @@ public sealed class InboxClassifier
         }
 
         CandidateMatch[] allHits = [.. movieHits.Take(3), .. tvHits.Take(3)];
-        return new ClassificationResult
+        return new()
         {
             DetectedType = "unknown",
             Confidence = "low",

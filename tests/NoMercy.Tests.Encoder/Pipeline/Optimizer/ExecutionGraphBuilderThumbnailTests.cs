@@ -117,7 +117,7 @@ public class ExecutionGraphBuilderThumbnailTests
             ),
             Audio: [],
             Subtitles: [],
-            Thumbnails: new ThumbnailOutput(320, 10)
+            Thumbnails: new(320, 10)
         );
 
     private static ResolvedCodec[] ResolveSingle() =>

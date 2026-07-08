@@ -57,7 +57,7 @@ public sealed class ClusterTokenHolder
     public void Update(ClusterToken token)
     {
         _current = token;
-        _activeSigner = new HmacSigner(token.Secret);
+        _activeSigner = new(token.Secret);
     }
 
     private volatile HmacSigner? _activeSigner;

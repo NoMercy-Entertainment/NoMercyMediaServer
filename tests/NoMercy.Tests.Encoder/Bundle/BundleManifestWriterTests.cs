@@ -66,7 +66,7 @@ internal sealed class TestStorage : IStorage
             if (!recursive && rel.Contains('/'))
                 continue;
             entries.Add(
-                new StorageEntry(
+                new(
                     key,
                     IsDirectory: false,
                     SizeBytes: _files[key].Length,
@@ -186,7 +186,7 @@ public class BundleManifestWriterTests
             MediaExternalId: null,
             MediaFolder: "/media/movies/Fight Club (1999)",
             Container: "hls-fmp4",
-            CreatedAt: new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            CreatedAt: new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             CompletedAt: new DateTime(2026, 1, 1, 1, 0, 0, DateTimeKind.Utc),
             MediaKey: "mfa",
             Files:

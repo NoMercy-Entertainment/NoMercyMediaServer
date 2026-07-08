@@ -35,6 +35,17 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     // harmless GETATTR there.
     private static readonly TimeSpan KeepAliveInterval = TimeSpan.FromSeconds(30);
 
+    // libnfs's mount RPC can transiently time out ("command timed out") when the
+    // NFS server is momentarily busy — e.g. mid-encode — even though it is
+    // healthy and answering on 2049. Since the driver is constructed lazily the
+    // first time an operation touches a folder, a single blip otherwise aborts
+    // whatever triggered construction: a rescan lands in FailedJobs and the user
+    // sees "nothing happened". Every other libnfs call in this driver already
+    // retries on transient failure; the initial mount was the one gap. Rebuild a
+    // fresh context per attempt (a failed v4 mount can leave partial client
+    // state) with a short escalating backoff.
+    private const int MountAttempts = 3;
+
     private readonly NfsDriverConfig _config;
     private IntPtr _nfs;
     private readonly SemaphoreSlim _lock = new(1, 1);
@@ -100,47 +111,14 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         // Guarantee Winsock is up before libnfs resolves the server (Windows).
         EnsureWinsockInitialized();
 
-        _nfs = _libNfs.InitContext();
-        if (_nfs == IntPtr.Zero)
-            throw new InvalidOperationException(
-                "nfs_init_context returned null — libnfs not available."
-            );
-
-        // Set NFS protocol version BEFORE mount. libnfs defaults to NFSv3
-        // when not set; we call this even for v3 so the value is explicit
-        // and surfaces a clear error if the server doesn't speak that version.
-        int versionRc = _libNfs.SetVersion(_nfs, config.Version);
-        if (versionRc != 0)
-        {
-            string err = _libNfs.GetError(_nfs);
-            _libNfs.DestroyContext(_nfs);
-            _nfs = IntPtr.Zero;
-            throw new IOException($"nfs_set_version({config.Version}) failed — {err}");
-        }
-
-        if (config.Uid.HasValue)
-            _libNfs.SetUid(_nfs, config.Uid.Value);
-        if (config.Gid.HasValue)
-            _libNfs.SetGid(_nfs, config.Gid.Value);
-
-        ApplyClientIdentity();
-
-        int rc = _libNfs.Mount(_nfs, config.Server, config.Export);
-        if (rc != 0)
-        {
-            string err = _libNfs.GetError(_nfs);
-            _libNfs.DestroyContext(_nfs);
-            _nfs = IntPtr.Zero;
-            throw new IOException(
-                $"NFS{config.Version} mount failed for {config.Server}:{config.Export} — {err}"
-            );
-        }
+        InitAndConfigureContext();
+        MountWithRetry();
 
         // Idle client state on NFS4 expires after ~90s, after which any open
         // returns NFS4ERR_EXPIRED. Stat the export root every 30s so the
         // server treats us as alive even when no streaming reads are in
         // flight (typical between user sessions).
-        _keepAlive = new Timer(KeepAliveTick, null, KeepAliveInterval, KeepAliveInterval);
+        _keepAlive = new(KeepAliveTick, null, KeepAliveInterval, KeepAliveInterval);
     }
 
     private void KeepAliveTick(object? _)
@@ -225,6 +203,74 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             || err.Contains("NFS4ERR_BAD_STATEID", StringComparison.OrdinalIgnoreCase)
             || err.Contains("NFS4ERR_STALE_CLIENTID", StringComparison.OrdinalIgnoreCase)
             || err.Contains("NFS4ERR_BAD_SEQID", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Init a fresh libnfs context and apply protocol version, credentials, and
+    // NFSv4 client identity — everything the mount needs, short of the mount
+    // itself. Shared by construction and by the per-attempt rebuild in
+    // MountWithRetry. Throws if libnfs is unavailable or rejects the version.
+    private void InitAndConfigureContext()
+    {
+        _nfs = _libNfs.InitContext();
+        if (_nfs == IntPtr.Zero)
+            throw new InvalidOperationException(
+                "nfs_init_context returned null — libnfs not available."
+            );
+
+        // Set NFS protocol version BEFORE mount. libnfs defaults to NFSv3
+        // when not set; we call this even for v3 so the value is explicit
+        // and surfaces a clear error if the server doesn't speak that version.
+        int versionRc = _libNfs.SetVersion(_nfs, _config.Version);
+        if (versionRc != 0)
+        {
+            string err = _libNfs.GetError(_nfs);
+            _libNfs.DestroyContext(_nfs);
+            _nfs = IntPtr.Zero;
+            throw new IOException($"nfs_set_version({_config.Version}) failed — {err}");
+        }
+
+        if (_config.Uid.HasValue)
+            _libNfs.SetUid(_nfs, _config.Uid.Value);
+        if (_config.Gid.HasValue)
+            _libNfs.SetGid(_nfs, _config.Gid.Value);
+
+        ApplyClientIdentity();
+    }
+
+    // Mount the configured context, retrying transient failures on a fresh
+    // context each time. Assumes InitAndConfigureContext() has already run.
+    // Throws once the attempt budget is exhausted — a persistently unreachable
+    // server is a real error, not something to swallow.
+    private void MountWithRetry()
+    {
+        for (int attempt = 1; ; attempt++)
+        {
+            int rc = _libNfs.Mount(_nfs, _config.Server, _config.Export);
+            if (rc == 0)
+                return;
+
+            string err = _libNfs.GetError(_nfs);
+            _libNfs.DestroyContext(_nfs);
+            _nfs = IntPtr.Zero;
+
+            if (attempt >= MountAttempts)
+                throw new IOException(
+                    $"NFS{_config.Version} mount failed for {_config.Server}:{_config.Export} after {attempt} attempts — {err}"
+                );
+
+            _log.LogWarning(
+                "NFS{Version} mount attempt {Attempt}/{Max} failed for {Server}:{Export} — {Error}; retrying",
+                _config.Version,
+                attempt,
+                MountAttempts,
+                _config.Server,
+                _config.Export,
+                err
+            );
+
+            Thread.Sleep(TimeSpan.FromMilliseconds(250 * attempt));
+            InitAndConfigureContext();
+        }
     }
 
     // Caller MUST hold _lock. Disposes the existing context and re-runs the

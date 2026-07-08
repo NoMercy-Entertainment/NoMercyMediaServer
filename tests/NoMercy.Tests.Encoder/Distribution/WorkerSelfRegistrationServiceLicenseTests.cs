@@ -240,7 +240,7 @@ public class WorkerSelfRegistrationServiceLicenseTests
 
         public RecordingHandler(Func<HttpRequestMessage, HttpResponseMessage>? respond = null)
         {
-            _respond = respond ?? (_ => new HttpResponseMessage(HttpStatusCode.OK));
+            _respond = respond ?? (_ => new(HttpStatusCode.OK));
         }
 
         protected override Task<HttpResponseMessage> SendAsync(

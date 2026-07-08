@@ -35,7 +35,7 @@ internal static class TestApiKeyStore
                 }
                 catch (InvalidOperationException)
                 {
-                    return new ApiKeyStore();
+                    return new();
                 }
             }
         }

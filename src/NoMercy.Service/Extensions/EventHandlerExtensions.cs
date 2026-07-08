@@ -135,12 +135,12 @@ public static class EventHandlerExtensions
         {
             IInboxMetadataProbe probe = sp.GetRequiredService<IInboxMetadataProbe>();
             IInboxAudioTagReader tagReader = sp.GetRequiredService<IInboxAudioTagReader>();
-            return new InboxClassifier(probe, tagReader);
+            return new(probe, tagReader);
         });
         services.AddSingleton<InboxRoutingService>(sp =>
         {
             IStorageFactory storageFactory = sp.GetRequiredService<IStorageFactory>();
-            return new InboxRoutingService(storageFactory, new JobDispatcher());
+            return new(storageFactory, new());
         });
         services.AddSingleton<InboxClassifierEventHandler>(sp =>
         {
@@ -148,7 +148,7 @@ public static class EventHandlerExtensions
             InboxClassifier classifier = sp.GetRequiredService<InboxClassifier>();
             InboxRoutingService routing = sp.GetRequiredService<InboxRoutingService>();
             IStorageFactory storageFactory = sp.GetRequiredService<IStorageFactory>();
-            return new InboxClassifierEventHandler(
+            return new(
                 sp.GetRequiredService<ILogger<InboxClassifierEventHandler>>(),
                 eventBus,
                 classifier,
@@ -161,7 +161,7 @@ public static class EventHandlerExtensions
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
-            return new SignalRInboxEventHandler(
+            return new(
                 sp.GetRequiredService<ILogger<SignalRInboxEventHandler>>(),
                 eventBus,
                 clientMessenger

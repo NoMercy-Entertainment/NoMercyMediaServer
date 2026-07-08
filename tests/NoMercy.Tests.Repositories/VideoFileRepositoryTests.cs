@@ -176,7 +176,7 @@ public class VideoFileRepositoryTests : IDisposable
         foreach (Episode ep in new[] { episode1, episode2, episode3 })
         {
             context.VideoFiles.Add(
-                new VideoFile
+                new()
                 {
                     Id = Ulid.NewUlid(),
                     Filename = $"ep{ep.EpisodeNumber}.mkv",

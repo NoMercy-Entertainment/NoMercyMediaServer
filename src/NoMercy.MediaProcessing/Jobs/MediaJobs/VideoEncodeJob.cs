@@ -808,7 +808,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             Log.LogInformation("[VideoEncodeJob] Dispatched {Length} Pass1 tasks. Transitioning to WaitPass1.", pass1Tasks.Length);
 
             ReEnqueueSelf(
-                new CoordinatorState(
+                new(
                     GroupTag: groupTag,
                     TaskIds: allTaskIds,
                     Phase: CoordinatorPhase.WaitPass1,
@@ -849,7 +849,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             Log.LogInformation("[VideoEncodeJob] Dispatched bundle 1/{Length} covering {Length2} streams. Sequential dispatch — bundle N+1 fires on bundle N completion. Transitioning to WaitChildren.", bundles.Length, tasks.Length);
 
             ReEnqueueSelf(
-                new CoordinatorState(
+                new(
                     GroupTag: groupTag,
                     TaskIds: allTaskIds,
                     Phase: CoordinatorPhase.WaitChildren,
@@ -936,7 +936,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         // The different Coordinator payload means deduplication won't block it.
         TimeSpan delay = availableAfter ?? NextPollDelay();
         queue.Enqueue(
-            new NoMercyQueue.Core.Models.QueueJobModel
+            new()
             {
                 Queue = QueueName,
                 Payload = SerializationHelper.Serialize(continueJob),
@@ -1222,7 +1222,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
 
         DecomposedTask[] bundleTasks = containedTaskIndexes.Select(idx => allTasks[idx]).ToArray();
 
-        return new DecomposedTask(
+        return new(
             TaskId: $"{groupTag}-bundle-{bundleIndex}",
             ParentJobId: parentJobId,
             GroupTag: groupTag,
@@ -1273,7 +1273,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         if (gpuKey is null && gpuSlots == 0 && summedCpuThreads == 0)
             return null;
 
-        return new ResourceRequirement(gpuKey, gpuSlots, cpuThreads);
+        return new(gpuKey, gpuSlots, cpuThreads);
     }
 
     // ------------------------------------------------------------------

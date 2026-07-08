@@ -142,7 +142,7 @@ public class DispatchResultExtensionsTests
             Success: false,
             OutputPath: "",
             Duration: TimeSpan.Zero,
-            Error: new EncodingError(
+            Error: new(
                 Kind: EncodingErrorKind.Unknown,
                 Message: "legacy error",
                 FfmpegStderr: null,
@@ -152,7 +152,7 @@ public class DispatchResultExtensionsTests
             Metrics: null
         )
         {
-            EnrichedError = new EncoderErrorShape(
+            EnrichedError = new(
                 Id: EncoderRuleId.EncoderInitFailed,
                 Message: "enriched error wins",
                 Suggestion: null,
@@ -173,7 +173,7 @@ public class DispatchResultExtensionsTests
             Success: false,
             OutputPath: "",
             Duration: TimeSpan.Zero,
-            Error: new EncodingError(
+            Error: new(
                 Kind: EncodingErrorKind.Unknown,
                 Message: "legacy only",
                 FfmpegStderr: null,

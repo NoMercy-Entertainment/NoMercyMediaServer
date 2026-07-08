@@ -239,7 +239,7 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
                     ?? members.GetValueOrDefault("ISO639")
                     ?? "und";
 
-                yield return new OpenSubtitlesSearchResult(
+                yield return new(
                     Language: language,
                     SubRating: members.GetValueOrDefault("SubRating"),
                     SubDownloadsCnt: members.GetValueOrDefault("SubDownloadsCnt"),

@@ -65,7 +65,7 @@ public class BinaryDownloaderTests : IDisposable
             includeManifest: false
         );
 
-        FakeHttpHandler handler = new FakeHttpHandler();
+        FakeHttpHandler handler = new();
         handler.Register(assetUrl, payload);
         handler.RegisterRelease(release);
 
@@ -74,7 +74,7 @@ public class BinaryDownloaderTests : IDisposable
         string result = await binaries.DownloadWithVerificationAsync(
             "https://api.github.com/test",
             "asset",
-            new Uri(assetUrl),
+            new(assetUrl),
             destPath,
             release,
             "asset.bin",
@@ -107,7 +107,7 @@ public class BinaryDownloaderTests : IDisposable
             includeManifest: false
         );
 
-        FakeHttpHandler handler = new FakeHttpHandler();
+        FakeHttpHandler handler = new();
         handler.Register(assetUrl, payload);
         handler.Register(sha256Url, Encoding.ASCII.GetBytes(sha256));
         handler.RegisterRelease(release);
@@ -117,7 +117,7 @@ public class BinaryDownloaderTests : IDisposable
         string result = await binaries.DownloadWithVerificationAsync(
             "https://api.github.com/test",
             "asset",
-            new Uri(assetUrl),
+            new(assetUrl),
             destPath,
             release,
             "asset.bin",
@@ -149,7 +149,7 @@ public class BinaryDownloaderTests : IDisposable
             includeManifest: false
         );
 
-        FakeHttpHandler handler = new FakeHttpHandler();
+        FakeHttpHandler handler = new();
         handler.Register(assetUrl, payload);
         handler.Register(sha256Url, Encoding.ASCII.GetBytes(wrongHash));
         handler.RegisterRelease(release);
@@ -160,7 +160,7 @@ public class BinaryDownloaderTests : IDisposable
             binaries.DownloadWithVerificationAsync(
                 "https://api.github.com/test",
                 "asset",
-                new Uri(assetUrl),
+                new(assetUrl),
                 destPath,
                 release,
                 "asset.bin",
@@ -193,7 +193,7 @@ public class BinaryDownloaderTests : IDisposable
             BuildTimestamp = "2025-01-01T00:00:00Z",
             Assets =
             [
-                new ManifestAsset
+                new()
                 {
                     Name = "asset.bin",
                     Sha256 = sha256,
@@ -211,7 +211,7 @@ public class BinaryDownloaderTests : IDisposable
             manifestUrl: manifestUrl
         );
 
-        FakeHttpHandler handler = new FakeHttpHandler();
+        FakeHttpHandler handler = new();
         handler.Register(assetUrl, payload);
         handler.Register(manifestUrl, Encoding.UTF8.GetBytes(manifestJson));
         handler.RegisterRelease(release);
@@ -221,7 +221,7 @@ public class BinaryDownloaderTests : IDisposable
         string result = await binaries.DownloadWithVerificationAsync(
             "https://api.github.com/test",
             "asset",
-            new Uri(assetUrl),
+            new(assetUrl),
             destPath,
             release,
             "asset.bin",
@@ -256,7 +256,7 @@ public class BinaryDownloaderTests : IDisposable
             includeManifest: false
         );
 
-        FakeHttpHandler handler = new FakeHttpHandler();
+        FakeHttpHandler handler = new();
         handler.Register(assetUrl, newPayload);
         handler.Register(sha256Url, Encoding.ASCII.GetBytes(wrongHash));
         handler.RegisterRelease(release);
@@ -267,7 +267,7 @@ public class BinaryDownloaderTests : IDisposable
             binaries.DownloadWithVerificationAsync(
                 "https://api.github.com/test",
                 "asset",
-                new Uri(assetUrl),
+                new(assetUrl),
                 destPath,
                 release,
                 "asset.bin",
@@ -307,10 +307,10 @@ public class BinaryDownloaderTests : IDisposable
             Version = "1.0",
             Assets =
             [
-                new ManifestAsset
+                new()
                 {
                     Name = "asset.bin",
-                    Sha256 = new string('e', 64),
+                    Sha256 = new('e', 64),
                     Size = payload.Length,
                 },
             ],
@@ -344,7 +344,7 @@ public class BinaryDownloaderTests : IDisposable
         string result = await binaries.DownloadWithVerificationAsync(
             "https://api.github.com/test",
             "asset",
-            new Uri(assetUrl),
+            new(assetUrl),
             destPath,
             release,
             "asset.bin",
@@ -373,7 +373,7 @@ public class BinaryDownloaderTests : IDisposable
             Version = "1.0",
             Assets =
             [
-                new ManifestAsset
+                new()
                 {
                     Name = "asset.bin",
                     Sha256 = Convert.ToHexString(SHA256.HashData(payload)),
@@ -411,7 +411,7 @@ public class BinaryDownloaderTests : IDisposable
             binaries.DownloadWithVerificationAsync(
                 "https://api.github.com/test",
                 "asset",
-                new Uri(assetUrl),
+                new(assetUrl),
                 destPath,
                 release,
                 "asset.bin",
@@ -447,7 +447,7 @@ public class BinaryDownloaderTests : IDisposable
         string result = await binaries.DownloadWithVerificationAsync(
             "https://api.github.com/test",
             "asset",
-            new Uri(assetUrl),
+            new(assetUrl),
             destPath,
             release,
             "asset.bin",
@@ -484,7 +484,7 @@ public class BinaryDownloaderTests : IDisposable
             binaries.DownloadWithVerificationAsync(
                 "https://api.github.com/test",
                 "asset",
-                new Uri(assetUrl),
+                new(assetUrl),
                 destPath,
                 release,
                 "asset.bin",
@@ -513,7 +513,7 @@ public class BinaryDownloaderTests : IDisposable
         string result = await binaries.DownloadWithVerificationAsync(
             "https://api.github.com/test",
             "yt-dlp",
-            new Uri(assetUrl),
+            new(assetUrl),
             destPath,
             release,
             "asset.bin",
@@ -543,7 +543,7 @@ public class BinaryDownloaderTests : IDisposable
             binaries.DownloadWithVerificationAsync(
                 "https://api.github.com/test",
                 "yt-dlp",
-                new Uri(assetUrl),
+                new(assetUrl),
                 destPath,
                 release,
                 "asset.bin",
@@ -612,7 +612,7 @@ public class BinaryDownloaderTests : IDisposable
     private static (string ArmoredPublicKey, PgpSecretKey SecretKey) GeneratePgpKeyPair()
     {
         RsaKeyPairGenerator generator = new();
-        generator.Init(new KeyGenerationParameters(new SecureRandom(), 2048));
+        generator.Init(new(new(), 2048));
         AsymmetricCipherKeyPair keyPair = generator.GenerateKeyPair();
 
         PgpSecretKey secretKey = new(
@@ -626,7 +626,7 @@ public class BinaryDownloaderTests : IDisposable
             "test-passphrase".ToCharArray(),
             null,
             null,
-            new SecureRandom()
+            new()
         );
 
         using MemoryStream publicKeyOut = new();
@@ -670,7 +670,7 @@ public class BinaryDownloaderTests : IDisposable
         StoragePathGuard guard = new([], driver);
         LocalStorage storage = new(driver, guard);
         HttpClient http = new(handler);
-        return new Binaries(driver, storage, http);
+        return new(driver, storage, http);
     }
 
     private static GithubReleaseResponse BuildRelease(
@@ -686,10 +686,10 @@ public class BinaryDownloaderTests : IDisposable
     {
         List<Asset> assets =
         [
-            new Asset
+            new()
             {
                 Name = assetName,
-                BrowserDownloadUrl = new Uri(assetUrl),
+                BrowserDownloadUrl = new(assetUrl),
                 Size = 1,
                 Digest = digest ?? string.Empty,
             },
@@ -698,10 +698,10 @@ public class BinaryDownloaderTests : IDisposable
         if (sha256 is not null && sha256Url is not null)
         {
             assets.Add(
-                new Asset
+                new()
                 {
                     Name = assetName + ".sha256",
-                    BrowserDownloadUrl = new Uri(sha256Url),
+                    BrowserDownloadUrl = new(sha256Url),
                     Size = 64,
                 }
             );
@@ -710,10 +710,10 @@ public class BinaryDownloaderTests : IDisposable
         if (includeManifest && manifestUrl is not null)
         {
             assets.Add(
-                new Asset
+                new()
                 {
                     Name = "manifest.json",
-                    BrowserDownloadUrl = new Uri(manifestUrl),
+                    BrowserDownloadUrl = new(manifestUrl),
                     Size = 100,
                 }
             );
@@ -722,16 +722,16 @@ public class BinaryDownloaderTests : IDisposable
         if (manifestSigUrl is not null)
         {
             assets.Add(
-                new Asset
+                new()
                 {
                     Name = "manifest.json.sig",
-                    BrowserDownloadUrl = new Uri(manifestSigUrl),
+                    BrowserDownloadUrl = new(manifestSigUrl),
                     Size = 100,
                 }
             );
         }
 
-        return new GithubReleaseResponse
+        return new()
         {
             TagName = "v1.0.0",
             PublishedAt = DateTimeOffset.UtcNow.AddDays(-1),

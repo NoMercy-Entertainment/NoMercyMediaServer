@@ -85,7 +85,7 @@ public sealed class TmdbMusicBrainzMetadataProbe : IInboxMetadataProbe
             .Select(y => y!.Value)
             .FirstOrDefault();
 
-        return new CandidateMatch
+        return new()
         {
             Provider = "musicbrainz",
             ExternalId = releaseId.ToString(),

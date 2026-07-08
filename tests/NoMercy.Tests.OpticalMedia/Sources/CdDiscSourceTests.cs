@@ -32,7 +32,7 @@ public class CdDiscSourceTests
         EncoderOptions options = new() { FfprobePathOverride = "ffprobe" };
         IProcessRunner runner = processRunner ?? Mock.Of<IProcessRunner>();
         IStorageDriver driver = storageDriver ?? Mock.Of<IStorageDriver>();
-        return new CdDiscSource(options, runner, driver, NullLogger<CdDiscSource>.Instance);
+        return new(options, runner, driver, NullLogger<CdDiscSource>.Instance);
     }
 
     // ── ParseTracks (static, internal — accessible via InternalsVisibleTo) ─

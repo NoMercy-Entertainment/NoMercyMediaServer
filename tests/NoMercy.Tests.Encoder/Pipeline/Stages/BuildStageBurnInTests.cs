@@ -41,8 +41,8 @@ public class BuildStageBurnInTests
             [],
             NullLogger<BuildStage>.Instance,
             TestStorageFactory.CreateLocal(),
-            new AssBurnInFilterBuilder(),
-            new PgsBurnInFilterBuilder()
+            new(),
+            new()
         );
     }
 

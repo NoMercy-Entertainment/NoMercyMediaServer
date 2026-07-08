@@ -32,13 +32,13 @@ public class HardwarePreferenceResolverTests
         foreach ((VideoCodecType codec, string encoder, double fps) in entries)
         {
             SpeedKey key = new(codec, encoder, 1920, null);
-            dict[key] = new SpeedMeasurement(fps, 1.0, DateTime.UtcNow);
+            dict[key] = new(fps, 1.0, DateTime.UtcNow);
         }
 
-        return new SpeedIndex(dict);
+        return new(dict);
     }
 
-    private static SpeedIndex EmptyIndex() => new(new Dictionary<SpeedKey, SpeedMeasurement>());
+    private static SpeedIndex EmptyIndex() => new(new());
 
     private static List<string> NoHwEncoders() => ["libx264", "libx265", "libsvtav1"];
 

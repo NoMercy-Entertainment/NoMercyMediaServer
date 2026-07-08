@@ -61,9 +61,9 @@ public class WorkersController_RegisterHttpsTests
         // against the seeded static _users list.
         DefaultHttpContext httpContext = new()
         {
-            User = new ClaimsPrincipal(
+            User = new(
                 new ClaimsIdentity(
-                    [new Claim(ClaimTypes.NameIdentifier, OwnerUserId.ToString())],
+                    [new(ClaimTypes.NameIdentifier, OwnerUserId.ToString())],
                     "test"
                 )
             ),
@@ -105,7 +105,7 @@ public class WorkersController_RegisterHttpsTests
         WorkersController controller = BuildController();
 
         IActionResult result = controller.Register(
-            new RegisterWorkerRequest(
+            new(
                 WorkerId: "w-1",
                 BaseUrl: baseUrl,
                 CpuCores: 8,
@@ -130,7 +130,7 @@ public class WorkersController_RegisterHttpsTests
         WorkersController controller = BuildController();
 
         IActionResult result = controller.Register(
-            new RegisterWorkerRequest(
+            new(
                 WorkerId: "w-1",
                 BaseUrl: baseUrl,
                 CpuCores: 8,

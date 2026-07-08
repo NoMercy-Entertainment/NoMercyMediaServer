@@ -28,7 +28,7 @@ public class XmlHelperTests
 
         public TestObject() { }
 
-        public TestObject(string name, int value)
+        public TestObject(string? name, int value)
         {
             Name = name;
             Value = value;

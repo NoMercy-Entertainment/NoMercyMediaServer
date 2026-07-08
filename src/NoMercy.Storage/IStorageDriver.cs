@@ -73,7 +73,7 @@ public interface IStorageDriver
             bool isDir = DirectoryExists(entry);
             long size = isDir ? 0L : GetFileSize(entry);
             DateTime utc = GetLastWriteTimeUtc(entry);
-            yield return new StorageEntryInfo(entry, isDir, size, utc);
+            yield return new(entry, isDir, size, utc);
         }
     }
 
@@ -126,7 +126,7 @@ public interface IStorageDriver
         await using (FileStream dst = new(tmp, FileMode.Create, FileAccess.Write, FileShare.None))
             await src.CopyToAsync(dst, ct);
 
-        return new LocalPathLease(
+        return new(
             tmp,
             () =>
             {

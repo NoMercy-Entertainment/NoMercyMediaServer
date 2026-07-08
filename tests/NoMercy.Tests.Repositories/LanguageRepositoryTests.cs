@@ -31,7 +31,7 @@ public class LanguageRepositoryTests : IDisposable
     {
         _context = TestMediaContextFactory.CreateSeededContext();
         _repository = new(_context);
-        _connection = new SqliteConnection("Data Source=:memory:");
+        _connection = new("Data Source=:memory:");
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public class LanguageRepositoryTests : IDisposable
     public async Task GetLanguagesAsync_ReturnsMultipleLanguages()
     {
         _context.Languages.Add(
-            new Language
+            new()
             {
                 Id = 2,
                 Iso6391 = "fr",
@@ -66,7 +66,7 @@ public class LanguageRepositoryTests : IDisposable
             }
         );
         _context.Languages.Add(
-            new Language
+            new()
             {
                 Id = 3,
                 Iso6391 = "es",
@@ -136,8 +136,8 @@ public class LanguageRepositoryTests : IDisposable
         _context.Languages.AddRange(french, spanish, german);
 
         Ulid libraryId = SeedConstants.MovieLibraryId;
-        _context.LanguageLibrary.Add(new LanguageLibrary(french.Id, libraryId));
-        _context.LanguageLibrary.Add(new LanguageLibrary(spanish.Id, libraryId));
+        _context.LanguageLibrary.Add(new(french.Id, libraryId));
+        _context.LanguageLibrary.Add(new(spanish.Id, libraryId));
         await _context.SaveChangesAsync();
 
         List<LanguageLibrary> result = await _repository.GetLanguagesAsync(new[] { "fr", "es" });
@@ -169,7 +169,7 @@ public class LanguageRepositoryTests : IDisposable
         _context.Languages.Add(korean);
 
         Ulid libraryId = SeedConstants.MovieLibraryId;
-        _context.LanguageLibrary.Add(new LanguageLibrary(korean.Id, libraryId));
+        _context.LanguageLibrary.Add(new(korean.Id, libraryId));
         await _context.SaveChangesAsync();
 
         List<LanguageLibrary> result = await _repository.GetLanguagesAsync(new[] { "ko" });

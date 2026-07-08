@@ -35,6 +35,6 @@ public static class DrmConfigConverter
 
         string keyUri = v2Drm.Parameters?.GetValueOrDefault("key_uri") ?? string.Empty;
 
-        return new LegacyDrmConfig(Method: method, KeyUri: keyUri);
+        return new(Method: method, KeyUri: keyUri);
     }
 }

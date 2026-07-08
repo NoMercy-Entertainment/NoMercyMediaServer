@@ -19,9 +19,9 @@ public class ScopedDecisionLogTests
     public void Snapshot_returns_entries_in_insertion_order()
     {
         ScopedDecisionLog log = new();
-        log.Add(new DecisionLog("analyze", "analyze.dv_present", "msg-1"));
+        log.Add(new("analyze", "analyze.dv_present", "msg-1"));
         log.Add(
-            new DecisionLog(
+            new(
                 "plan",
                 "plan.encoder_resolved",
                 "msg-2",
@@ -42,10 +42,10 @@ public class ScopedDecisionLogTests
     public void Snapshot_returns_independent_copy_safe_to_iterate_during_concurrent_add()
     {
         ScopedDecisionLog log = new();
-        log.Add(new DecisionLog("analyze", "analyze.first", "first"));
+        log.Add(new("analyze", "analyze.first", "first"));
 
         IReadOnlyList<DecisionLog> snap = log.Snapshot();
-        log.Add(new DecisionLog("analyze", "analyze.second", "second"));
+        log.Add(new("analyze", "analyze.second", "second"));
 
         snap.Should().ContainSingle();
     }
@@ -55,7 +55,7 @@ public class ScopedDecisionLogTests
     {
         ScopedDecisionLog log = new();
 
-        Parallel.For(0, 1000, i => log.Add(new DecisionLog("test", $"test.{i}", $"entry-{i}")));
+        Parallel.For(0, 1000, i => log.Add(new("test", $"test.{i}", $"entry-{i}")));
 
         log.Snapshot().Should().HaveCount(1000);
     }
@@ -67,7 +67,7 @@ public class ScopedDecisionLogTests
 
         ctx.DecisionsOrNoOp.Should().NotBeNull();
         // No-op sink swallows entries silently.
-        ctx.DecisionsOrNoOp.Add(new DecisionLog("test", "test.x", "ignored"));
+        ctx.DecisionsOrNoOp.Add(new("test", "test.x", "ignored"));
         ctx.DecisionsOrNoOp.Snapshot().Should().BeEmpty();
     }
 

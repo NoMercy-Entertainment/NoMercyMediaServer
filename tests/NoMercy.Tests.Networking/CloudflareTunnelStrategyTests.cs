@@ -26,7 +26,7 @@ public sealed class CloudflareTunnelStrategyTests
         Func<Task>? checkAvailability = null
     )
     {
-        return new CloudflareTunnelStrategy(
+        return new(
             NullLogger<CloudflareTunnelStrategy>.Instance,
             status,
             checkAvailability
@@ -118,7 +118,7 @@ public sealed class CloudflareTunnelStrategyTests
     [Fact]
     public void Priority_IsThree()
     {
-        CloudflareTunnelStrategy strategy = BuildStrategy(new ConnectivityStatus());
+        CloudflareTunnelStrategy strategy = BuildStrategy(new());
 
         Assert.Equal(3, strategy.Priority);
     }
@@ -126,7 +126,7 @@ public sealed class CloudflareTunnelStrategyTests
     [Fact]
     public void Type_IsCloudflareTunnel()
     {
-        CloudflareTunnelStrategy strategy = BuildStrategy(new ConnectivityStatus());
+        CloudflareTunnelStrategy strategy = BuildStrategy(new());
 
         Assert.Equal(ConnectivityType.CloudflareTunnel, strategy.Type);
     }

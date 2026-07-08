@@ -312,7 +312,7 @@ public class TwoPassStrategyBaseDecomposeTests
             VideoOutputs: [],
             AudioOutputs: [],
             SubtitleOutputs: [],
-            Thumbnails: new ThumbnailOutputPlan(160, 90, 10)
+            Thumbnails: new(160, 90, 10)
         );
 
         DecomposedTask[] thumbs = Build()
@@ -449,7 +449,7 @@ public class TwoPassStrategyBaseDecomposeTests
                 ),
             ],
             SubtitleOutputs: [Subtitle("eng", 0)],
-            Thumbnails: new ThumbnailOutputPlan(160, 90, 10),
+            Thumbnails: new(160, 90, 10),
             Chapters: [new(TimeSpan.Zero, TimeSpan.FromMinutes(10), "Intro")],
             GenerateChapterThumbs: true
         );

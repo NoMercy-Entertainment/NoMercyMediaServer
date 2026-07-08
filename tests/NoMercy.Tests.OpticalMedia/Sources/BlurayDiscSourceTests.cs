@@ -167,7 +167,7 @@ public class BlurayDiscSourceTests
             BlurayDiscSource.ParsePlaylists(stderr);
 
         result.Should().HaveCount(1);
-        result[0].Duration.Should().Be(new TimeSpan(1, 2, 3));
+        result[0].Duration.Should().Be(new(1, 2, 3));
     }
 
     [Fact]

@@ -25,7 +25,7 @@ public class DiscScannerTests
     {
         EncoderOptions options = new() { FfprobePathOverride = "ffprobe" };
         IProcessRunner processRunner = runner ?? Moq.Mock.Of<IProcessRunner>();
-        return new DiscScanner(options, processRunner, NullLogger<DiscScanner>.Instance);
+        return new(options, processRunner, NullLogger<DiscScanner>.Instance);
     }
 
     [Fact]

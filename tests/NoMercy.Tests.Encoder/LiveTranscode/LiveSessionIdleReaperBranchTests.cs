@@ -52,7 +52,7 @@ public class LiveSessionIdleReaperBranchTests
         new(
             streamingService,
             sessionManager,
-            new LiveSessionLimits { IdleTimeoutMinutes = idleTimeoutMinutes },
+            new() { IdleTimeoutMinutes = idleTimeoutMinutes },
             NullLogger<LiveSessionIdleReaper>.Instance
         );
 

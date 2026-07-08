@@ -153,7 +153,7 @@ public class AudioImportJob : AbstractMusicFolderJob
                     if (discoveredReleaseId is null)
                         continue;
 
-                    audioTag.MusicBrainz ??= new AudioTagModel.MusicBrainzDto();
+                    audioTag.MusicBrainz ??= new();
                     audioTag.MusicBrainz.ReleaseId = discoveredReleaseId.Value;
                 }
 
@@ -590,7 +590,7 @@ public class AudioImportJob : AbstractMusicFolderJob
         Func<IAsyncEnumerable<(MediaFile MediaFile, AudioTagModel AudioTag)>> audioFilesFactory =
             GetAudioFiles;
 
-        return new AudioImportContext(
+        return new(
             musicBrainzReleaseClient,
             musicBrainzArtistClient,
             musicBrainzRecordingClient,

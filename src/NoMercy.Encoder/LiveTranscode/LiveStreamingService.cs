@@ -84,7 +84,7 @@ public class LiveStreamingService(
         {
             ILiveSession session = kv.Value.Session;
             snapshots.Add(
-                new LiveSessionSnapshot(
+                new(
                     SessionId: session.SessionId,
                     State: session.State,
                     QualityId: session.CurrentQuality.Id,

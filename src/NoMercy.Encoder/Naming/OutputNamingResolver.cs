@@ -42,7 +42,7 @@ public class OutputNamingResolver(IMediaKeyResolver mediaKeys) : IOutputNamingRe
             ? $"{TrimExt(singleName)}.reconstruction.json"
             : $"{bundleDir}/reconstruction.json";
 
-        return new BundleLayout(
+        return new(
             mediaKey,
             slug,
             single,

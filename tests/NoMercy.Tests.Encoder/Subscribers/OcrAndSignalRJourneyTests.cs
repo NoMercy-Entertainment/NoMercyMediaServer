@@ -40,7 +40,7 @@ public class OcrAndSignalRJourneyTests
             )
             .ToList();
 
-        return new MediaInfo(
+        return new(
             FilePath: "/out/master.m3u8",
             Format: "mpegts",
             Duration: TimeSpan.FromMinutes(60),
@@ -83,7 +83,7 @@ public class OcrAndSignalRJourneyTests
         using OcrPostEncodeSubscriber ocrSubscriber = new(
             bus,
             analyzer.Object,
-            new EncoderOptions(),
+            new(),
             NullLogger<OcrPostEncodeSubscriber>.Instance,
             ocr.Object
         );
@@ -137,7 +137,7 @@ public class OcrAndSignalRJourneyTests
         using OcrPostEncodeSubscriber ocrSubscriber = new(
             bus,
             analyzer.Object,
-            new EncoderOptions(),
+            new(),
             NullLogger<OcrPostEncodeSubscriber>.Instance,
             ocr.Object
         );
@@ -186,7 +186,7 @@ public class OcrAndSignalRJourneyTests
         using OcrPostEncodeSubscriber ocrSubscriber = new(
             bus,
             analyzer.Object,
-            new EncoderOptions(),
+            new(),
             NullLogger<OcrPostEncodeSubscriber>.Instance,
             ocr.Object
         );
@@ -255,7 +255,7 @@ public class OcrAndSignalRJourneyTests
         using OcrPostEncodeSubscriber ocrSubscriber = new(
             bus,
             analyzer.Object,
-            new EncoderOptions(),
+            new(),
             NullLogger<OcrPostEncodeSubscriber>.Instance,
             ocr.Object
         );
@@ -297,7 +297,7 @@ public class OcrAndSignalRJourneyTests
         OcrPostEncodeSubscriber ocrSubscriber = new(
             bus,
             analyzer.Object,
-            new EncoderOptions(),
+            new(),
             NullLogger<OcrPostEncodeSubscriber>.Instance,
             ocr.Object
         );
@@ -350,7 +350,7 @@ public class OcrAndSignalRJourneyTests
         using OcrPostEncodeSubscriber ocrSubscriber = new(
             bus,
             analyzer.Object,
-            new EncoderOptions(),
+            new(),
             NullLogger<OcrPostEncodeSubscriber>.Instance,
             ocr.Object
         );

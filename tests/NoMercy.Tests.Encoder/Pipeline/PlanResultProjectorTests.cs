@@ -41,7 +41,7 @@ public class PlanResultProjectorTests
             SegmentDurationSeconds: segmentDuration
         );
 
-        return new ExecutionPlan(
+        return new(
             Groups: [],
             EstimatedTotalDuration: TimeSpan.FromMinutes(10),
             OutputPlan: output
@@ -61,7 +61,7 @@ public class PlanResultProjectorTests
             TenBit: false,
             PixelFormat: "yuv420p",
             MapLabel: "[v0]",
-            ExtraFlags: new Dictionary<string, string>()
+            ExtraFlags: new()
         );
 
     private static AudioOutputPlan BuildAudioOutput(string lang = "en") =>
@@ -219,7 +219,7 @@ public class PlanResultProjectorTests
             videoOutputs:
             [
                 BuildVideoOutput(crf: 23, bitrateKbps: 0),
-                new VideoOutputPlan(
+                new(
                     Width: 1280,
                     Height: 720,
                     EncoderName: "libx264",
@@ -231,7 +231,7 @@ public class PlanResultProjectorTests
                     TenBit: false,
                     PixelFormat: "yuv420p",
                     MapLabel: "[v1]",
-                    ExtraFlags: new Dictionary<string, string>()
+                    ExtraFlags: new()
                 ),
             ],
             audioOutputs: [BuildAudioOutput(), BuildAudioOutput("fr")]

@@ -32,7 +32,7 @@ public class DeviceRepositoryTests : IDisposable
 
     public DeviceRepositoryTests()
     {
-        _connection = new SqliteConnection("Data Source=:memory:");
+        _connection = new("Data Source=:memory:");
         _connection.Open();
 
         // Foreign keys must be ON so the cascade behaviour configured in
@@ -73,17 +73,17 @@ public class DeviceRepositoryTests : IDisposable
 
     private MediaContext OpenContext()
     {
-        return new MediaContext(_options);
+        return new(_options);
     }
 
     private DeviceRepository BuildRepo(MediaContext ctx)
     {
-        return new DeviceRepository(ctx);
+        return new(ctx);
     }
 
     private static Device MakeDevice(Guid ownerUserId, string suffix = "A")
     {
-        return new Device
+        return new()
         {
             Id = Ulid.NewUlid(),
             DeviceId = $"device-{suffix}-{Guid.NewGuid()}",
@@ -216,7 +216,7 @@ public class DeviceRepositoryTests : IDisposable
         Mock<IDbContextFactory<MediaContext>> factoryMock = new();
         factoryMock
             .Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => new MediaContext(_options));
+            .ReturnsAsync(() => new(_options));
 
         Mock<IHubContext<DeviceHub>> hubMock = new();
         Mock<IHubClients> clientsMock = new();
@@ -254,7 +254,7 @@ public class DeviceRepositoryTests : IDisposable
         Mock<IDbContextFactory<MediaContext>> factoryMock = new();
         factoryMock
             .Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => new MediaContext(_options));
+            .ReturnsAsync(() => new(_options));
 
         Mock<IHubContext<DeviceHub>> hubMock = new();
         Mock<IHubClients> clientsMock = new();

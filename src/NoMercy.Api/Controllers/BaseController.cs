@@ -65,9 +65,9 @@ public class BaseController : Controller
             Type = type,
             Title = title.Localize(),
             Detail = detail.Localize(),
-            Instance = HttpContext.Request.Path,
+            Instance = HttpContext?.Request.Path.Value,
             Status = statusCode,
-            Extensions = { { "traceId", HttpContext.TraceIdentifier } },
+            Extensions = { { "traceId", HttpContext?.TraceIdentifier } },
         };
 
         return StatusCode(statusCode, problemDetails);

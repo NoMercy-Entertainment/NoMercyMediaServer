@@ -29,7 +29,7 @@ public class AutoLadderValidatorTests
             Video: null,
             Audio: [],
             Subtitles: [],
-            Ladder: new LadderConfig { Mode = LadderMode.Auto, AutoConfig = config }
+            Ladder: new() { Mode = LadderMode.Auto, AutoConfig = config }
         );
 
     // ── Rule 1 — MinRungs > MaxRungs ─────────────────────────────────────────
@@ -38,7 +38,7 @@ public class AutoLadderValidatorTests
     public void Rule1_MinRungs_exceeds_MaxRungs_rejects()
     {
         EncodingProfile profile = ProfileWithAutoLadder(
-            new AutoLadderConfig { MinRungs = 5, MaxRungs = 3 }
+            new() { MinRungs = 5, MaxRungs = 3 }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -51,7 +51,7 @@ public class AutoLadderValidatorTests
     public void Rule1_MinRungs_equal_to_MaxRungs_passes()
     {
         EncodingProfile profile = ProfileWithAutoLadder(
-            new AutoLadderConfig
+            new()
             {
                 MinRungs = 3,
                 MaxRungs = 3,
@@ -71,7 +71,7 @@ public class AutoLadderValidatorTests
     {
         LadderTier[] tiers = [new(1920, 1080, "1080p", null, null, null)];
         EncodingProfile profile = ProfileWithAutoLadder(
-            new AutoLadderConfig
+            new()
             {
                 Tiers = tiers,
                 BitrateStrategy = BitrateStrategy.AppleHlsRecommended,
@@ -91,7 +91,7 @@ public class AutoLadderValidatorTests
     {
         LadderTier[] tiers = [new(1920, 1080, "1080p", null, null, null)];
         EncodingProfile profile = ProfileWithAutoLadder(
-            new AutoLadderConfig
+            new()
             {
                 Tiers = tiers,
                 BitrateStrategy = BitrateStrategy.PercentOfSource,
@@ -111,7 +111,7 @@ public class AutoLadderValidatorTests
     public void Rule3_CrfBased_OutOfRange_rejects(int crf)
     {
         EncodingProfile profile = ProfileWithAutoLadder(
-            new AutoLadderConfig
+            new()
             {
                 Tiers = LadderTiers.AppleHlsRecommended,
                 BitrateStrategy = BitrateStrategy.CrfBased,
@@ -132,7 +132,7 @@ public class AutoLadderValidatorTests
     public void Rule3_CrfBased_InRange_passes(int crf)
     {
         EncodingProfile profile = ProfileWithAutoLadder(
-            new AutoLadderConfig
+            new()
             {
                 Tiers = LadderTiers.AppleHlsRecommended,
                 BitrateStrategy = BitrateStrategy.CrfBased,
@@ -154,7 +154,7 @@ public class AutoLadderValidatorTests
     public void Rule4_PercentOfSource_OutOfRange_rejects(double pct)
     {
         EncodingProfile profile = ProfileWithAutoLadder(
-            new AutoLadderConfig
+            new()
             {
                 Tiers = LadderTiers.AppleHlsRecommended,
                 BitrateStrategy = BitrateStrategy.PercentOfSource,
@@ -177,7 +177,7 @@ public class AutoLadderValidatorTests
     public void Rule4_PercentOfSource_InRange_passes(double pct)
     {
         EncodingProfile profile = ProfileWithAutoLadder(
-            new AutoLadderConfig
+            new()
             {
                 Tiers = LadderTiers.AppleHlsRecommended,
                 BitrateStrategy = BitrateStrategy.PercentOfSource,
@@ -198,7 +198,7 @@ public class AutoLadderValidatorTests
     public void Rule5_MixedPolicy_NullLowTierCodec_rejects()
     {
         EncodingProfile profile = ProfileWithAutoLadder(
-            new AutoLadderConfig
+            new()
             {
                 Tiers = LadderTiers.AppleHlsRecommended,
                 CodecPolicy = LadderCodecPolicy.Mixed,
@@ -221,7 +221,7 @@ public class AutoLadderValidatorTests
     public void Rule5_MixedPolicy_NullHighTierCodec_rejects()
     {
         EncodingProfile profile = ProfileWithAutoLadder(
-            new AutoLadderConfig
+            new()
             {
                 Tiers = LadderTiers.AppleHlsRecommended,
                 CodecPolicy = LadderCodecPolicy.Mixed,
@@ -244,7 +244,7 @@ public class AutoLadderValidatorTests
     public void Rule5_MixedPolicy_BothCodecsSet_passes()
     {
         EncodingProfile profile = ProfileWithAutoLadder(
-            new AutoLadderConfig
+            new()
             {
                 Tiers = LadderTiers.AppleHlsRecommended,
                 CodecPolicy = LadderCodecPolicy.Mixed,
@@ -267,7 +267,7 @@ public class AutoLadderValidatorTests
     [Fact]
     public void Rule6_EmptyTiers_rejects()
     {
-        EncodingProfile profile = ProfileWithAutoLadder(new AutoLadderConfig { Tiers = [] });
+        EncodingProfile profile = ProfileWithAutoLadder(new() { Tiers = [] });
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
 
@@ -279,7 +279,7 @@ public class AutoLadderValidatorTests
     public void Rule6_NonEmptyTiers_passes()
     {
         EncodingProfile profile = ProfileWithAutoLadder(
-            new AutoLadderConfig { Tiers = LadderTiers.Standard }
+            new() { Tiers = LadderTiers.Standard }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -298,7 +298,7 @@ public class AutoLadderValidatorTests
     public void Rule7_LowTierFramerateMultiplier_OutOfRange_rejects(double multiplier)
     {
         EncodingProfile profile = ProfileWithAutoLadder(
-            new AutoLadderConfig
+            new()
             {
                 Tiers = LadderTiers.AppleHlsRecommended,
                 LowTierFramerateMultiplier = multiplier,
@@ -320,7 +320,7 @@ public class AutoLadderValidatorTests
     public void Rule7_LowTierFramerateMultiplier_InRange_passes(double multiplier)
     {
         EncodingProfile profile = ProfileWithAutoLadder(
-            new AutoLadderConfig
+            new()
             {
                 Tiers = LadderTiers.AppleHlsRecommended,
                 LowTierFramerateMultiplier = multiplier,

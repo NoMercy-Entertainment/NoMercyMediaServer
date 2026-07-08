@@ -35,7 +35,7 @@ public class S3WriteStreamMultipartTests
             Calls.Add((request.Method.Method, query, body.LongLength));
 
             if (request.Method == HttpMethod.Post && query.Contains("uploads="))
-                return new HttpResponseMessage(HttpStatusCode.OK)
+                return new(HttpStatusCode.OK)
                 {
                     Content = new StringContent(
                         "<InitiateMultipartUploadResult><UploadId>UP-123</UploadId></InitiateMultipartUploadResult>"
@@ -50,14 +50,14 @@ public class S3WriteStreamMultipartTests
             }
 
             if (request.Method == HttpMethod.Post && query.Contains("uploadId="))
-                return new HttpResponseMessage(HttpStatusCode.OK)
+                return new(HttpStatusCode.OK)
                 {
                     Content = new StringContent(
                         "<CompleteMultipartUploadResult></CompleteMultipartUploadResult>"
                     ),
                 };
 
-            return new HttpResponseMessage(HttpStatusCode.OK);
+            return new(HttpStatusCode.OK);
         }
     }
 

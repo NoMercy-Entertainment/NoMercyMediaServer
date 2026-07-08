@@ -98,7 +98,7 @@ public class FinalizeStageHlsDerivativesTests
         Mock<IFontExtractor> fontMock = new();
         fontMock
             .Setup(f => f.WriteFontManifestAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(0);
 
         FinalizeStage stage = new(
             chapterMock.Object,
@@ -124,7 +124,7 @@ public class FinalizeStageHlsDerivativesTests
 
         return EncodingContext.Create() with
         {
-            MediaInfo = new MediaInfo(
+            MediaInfo = new(
                 FilePath: "/src/movie.mkv",
                 Format: "matroska",
                 Duration: TimeSpan.FromHours(2),
@@ -144,9 +144,7 @@ public class FinalizeStageHlsDerivativesTests
     public async Task GenerateChapters_True_CallsChapterWriter_WhenChaptersExist()
     {
         (FinalizeStage stage, Mock<IChapterWriter> chapterMock, _, _) = BuildStage();
-        FinalizeInput input = MakeInput(
-            hlsDerivatives: new HlsDerivatives { GenerateChapters = true }
-        );
+        FinalizeInput input = MakeInput(hlsDerivatives: new() { GenerateChapters = true });
         EncodingContext ctx = ContextWithChapters(2);
 
         await stage.ExecuteAsync(input, ctx, CancellationToken.None);
@@ -166,9 +164,7 @@ public class FinalizeStageHlsDerivativesTests
     public async Task GenerateChapters_False_SkipsChapterWriter()
     {
         (FinalizeStage stage, Mock<IChapterWriter> chapterMock, _, _) = BuildStage();
-        FinalizeInput input = MakeInput(
-            hlsDerivatives: new HlsDerivatives { GenerateChapters = false }
-        );
+        FinalizeInput input = MakeInput(hlsDerivatives: new() { GenerateChapters = false });
         EncodingContext ctx = ContextWithChapters(2);
 
         await stage.ExecuteAsync(input, ctx, CancellationToken.None);
@@ -190,9 +186,7 @@ public class FinalizeStageHlsDerivativesTests
     public async Task GenerateFontsJson_True_CallsFontExtractor()
     {
         (FinalizeStage stage, _, Mock<IFontExtractor> fontMock, _) = BuildStage();
-        FinalizeInput input = MakeInput(
-            hlsDerivatives: new HlsDerivatives { GenerateFontsJson = true }
-        );
+        FinalizeInput input = MakeInput(hlsDerivatives: new() { GenerateFontsJson = true });
 
         await stage.ExecuteAsync(input, EncodingContext.Create(), CancellationToken.None);
 
@@ -206,9 +200,7 @@ public class FinalizeStageHlsDerivativesTests
     public async Task GenerateFontsJson_False_SkipsFontExtractor()
     {
         (FinalizeStage stage, _, Mock<IFontExtractor> fontMock, _) = BuildStage();
-        FinalizeInput input = MakeInput(
-            hlsDerivatives: new HlsDerivatives { GenerateFontsJson = false }
-        );
+        FinalizeInput input = MakeInput(hlsDerivatives: new() { GenerateFontsJson = false });
 
         await stage.ExecuteAsync(input, EncodingContext.Create(), CancellationToken.None);
 
@@ -254,9 +246,7 @@ public class FinalizeStageHlsDerivativesTests
     public async Task GenerateChapters_True_NoChaptersInSource_SkipsWriter()
     {
         (FinalizeStage stage, Mock<IChapterWriter> chapterMock, _, _) = BuildStage();
-        FinalizeInput input = MakeInput(
-            hlsDerivatives: new HlsDerivatives { GenerateChapters = true }
-        );
+        FinalizeInput input = MakeInput(hlsDerivatives: new() { GenerateChapters = true });
         // MediaInfo with zero chapters
         EncodingContext ctx = ContextWithChapters(0);
 
@@ -282,7 +272,7 @@ public class FinalizeStageHlsDerivativesTests
     {
         (FinalizeStage stage, _, _, _) = BuildStage();
         FinalizeInput input = MakeInput(
-            hlsDerivatives: new HlsDerivatives
+            hlsDerivatives: new()
             {
                 GenerateSpriteVtt = false,
                 GenerateIFramePlaylists = true,

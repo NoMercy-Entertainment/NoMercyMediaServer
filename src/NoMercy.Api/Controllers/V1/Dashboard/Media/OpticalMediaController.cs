@@ -390,7 +390,7 @@ public class OpticalMediaController(
 
         CustomMetadata meta =
             request.MediaType == "tv"
-                ? new CustomMetadata(
+                ? new(
                     Title: request.Title ?? string.Empty,
                     Year: request.Year,
                     Type: MediaType.TvShow,

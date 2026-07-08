@@ -50,7 +50,7 @@ public class ParentJobFailedSkipTests : IDisposable
         // parent job id in ParentJobId so descendant jobs can detect it.
         const int parentJobId = 1;
         _context.FailedJobs.Add(
-            new FailedJob
+            new()
             {
                 Queue = "encoder",
                 Payload = $"{{\"Id\":{parentJobId},\"Type\":\"VideoEncodeJob\"}}",

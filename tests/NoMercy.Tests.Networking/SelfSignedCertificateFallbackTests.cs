@@ -60,7 +60,7 @@ public sealed class SelfSignedCertificateFallbackTests : IDisposable
 
     private static CertificateService BuildService(INetworkDiscovery? networkDiscovery = null)
     {
-        return new CertificateService(
+        return new(
             NullLogger<CertificateService>.Instance,
             new NullHttpClientFactory(),
             networkDiscovery

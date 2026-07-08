@@ -146,7 +146,7 @@ public class DecomposeTests
             ? new ThumbnailOutputPlan(160, 68, 10)
             : null;
 
-        return new OutputPlan(
+        return new(
             Format: OutputFormat.Hls,
             VideoOutputs: videos,
             AudioOutputs: audios,

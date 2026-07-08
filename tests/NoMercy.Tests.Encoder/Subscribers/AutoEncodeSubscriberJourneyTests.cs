@@ -56,8 +56,8 @@ public class AutoEncodeSubscriberJourneyTests
             .Options;
         Mock<IDbContextFactory<MediaContext>> mock = new();
         mock.Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => new MediaContext(options));
-        mock.Setup(f => f.CreateDbContext()).Returns(() => new MediaContext(options));
+            .ReturnsAsync(() => new(options));
+        mock.Setup(f => f.CreateDbContext()).Returns(() => new(options));
         return mock.Object;
     }
 

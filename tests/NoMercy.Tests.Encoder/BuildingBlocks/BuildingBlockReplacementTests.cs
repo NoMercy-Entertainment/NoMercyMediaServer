@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.Extensions.DependencyInjection;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Commands;
 
@@ -72,11 +73,14 @@ public class BuildingBlockReplacementTests
         public FfmpegCommand BuildExtractionCommand(
             string ffmpegPath,
             string inputPath,
-            string outputDirectory
+            string outputDirectory,
+            IReadOnlyList<AttachmentInfo> attachments
         ) => StubCommand();
 
-        public Task WriteFontManifestAsync(string outputDirectory, CancellationToken ct) =>
-            Task.CompletedTask;
+        public Task<int> WriteFontManifestAsync(string outputDirectory, CancellationToken ct) =>
+            Task.FromResult(0);
+
+        public int CountFontAttachments(IReadOnlyList<AttachmentInfo> attachments) => 0;
     }
 
     private sealed class FakeFontExtractor : IFontExtractor
@@ -84,10 +88,13 @@ public class BuildingBlockReplacementTests
         public FfmpegCommand BuildExtractionCommand(
             string ffmpegPath,
             string inputPath,
-            string outputDirectory
+            string outputDirectory,
+            IReadOnlyList<AttachmentInfo> attachments
         ) => StubCommand();
 
-        public Task WriteFontManifestAsync(string outputDirectory, CancellationToken ct) =>
-            Task.CompletedTask;
+        public Task<int> WriteFontManifestAsync(string outputDirectory, CancellationToken ct) =>
+            Task.FromResult(0);
+
+        public int CountFontAttachments(IReadOnlyList<AttachmentInfo> attachments) => 0;
     }
 }

@@ -74,10 +74,10 @@ public static class DolbyVisionGate
     {
         // --- Condition 0: no DV in source → silent no-op ---------------------
         if (source is null)
-            return new DolbyVisionDecision(
+            return new(
                 Preserved: false,
                 Reason: "source has no Dolby Vision metadata",
-                ExtraFlags: new Dictionary<string, string>()
+                ExtraFlags: new()
             );
 
         // --- Condition: AlwaysTonemap forces strip ----------------------------
@@ -85,17 +85,17 @@ public static class DolbyVisionGate
         {
             string reason = "hdr_policy = AlwaysTonemap forces tonemap to SDR";
             decisions.Add(
-                new DecisionLog(
+                new(
                     "plan",
                     "plan.dv_stripped",
                     reason,
                     new { policy = "AlwaysTonemap" }
                 )
             );
-            return new DolbyVisionDecision(
+            return new(
                 Preserved: false,
                 Reason: reason,
-                ExtraFlags: new Dictionary<string, string>()
+                ExtraFlags: new()
             );
         }
 
@@ -105,17 +105,17 @@ public static class DolbyVisionGate
             string reason =
                 $"output codec '{outputCodec}' does not support Dolby Vision (HEVC or AV1 required)";
             decisions.Add(
-                new DecisionLog(
+                new(
                     "plan",
                     "plan.dv_stripped",
                     reason,
                     new { codec = outputCodec.ToString() }
                 )
             );
-            return new DolbyVisionDecision(
+            return new(
                 Preserved: false,
                 Reason: reason,
-                ExtraFlags: new Dictionary<string, string>()
+                ExtraFlags: new()
             );
         }
 
@@ -124,17 +124,17 @@ public static class DolbyVisionGate
         {
             string reason = $"output bit_depth {outputBitDepth} below 10 — DV requires 10-bit";
             decisions.Add(
-                new DecisionLog(
+                new(
                     "plan",
                     "plan.dv_stripped",
                     reason,
                     new { bitDepth = outputBitDepth }
                 )
             );
-            return new DolbyVisionDecision(
+            return new(
                 Preserved: false,
                 Reason: reason,
-                ExtraFlags: new Dictionary<string, string>()
+                ExtraFlags: new()
             );
         }
 
@@ -143,17 +143,17 @@ public static class DolbyVisionGate
         {
             string reason = $"container '{container}' does not carry DV RPU";
             decisions.Add(
-                new DecisionLog(
+                new(
                     "plan",
                     "plan.dv_stripped",
                     reason,
                     new { container = container.ToString() }
                 )
             );
-            return new DolbyVisionDecision(
+            return new(
                 Preserved: false,
                 Reason: reason,
-                ExtraFlags: new Dictionary<string, string>()
+                ExtraFlags: new()
             );
         }
 
@@ -172,23 +172,23 @@ public static class DolbyVisionGate
             string reason =
                 "HLS mpegts segments do not carry DV RPU — use Container.HlsFmp4 to preserve DV";
             decisions.Add(
-                new DecisionLog(
+                new(
                     "plan",
                     "plan.dv_stripped",
                     reason,
                     new { container = "Hls", segmentType = "mpegts" }
                 )
             );
-            return new DolbyVisionDecision(
+            return new(
                 Preserved: false,
                 Reason: reason,
-                ExtraFlags: new Dictionary<string, string>()
+                ExtraFlags: new()
             );
         }
 
         string preserveReason = $"DV profile {source.Profile} level {source.Level} preserved";
         decisions.Add(
-            new DecisionLog(
+            new(
                 "plan",
                 "plan.dv_preserved",
                 preserveReason,
@@ -204,7 +204,7 @@ public static class DolbyVisionGate
             )
         );
 
-        return new DolbyVisionDecision(
+        return new(
             Preserved: true,
             Reason: preserveReason,
             ExtraFlags: extraFlags
@@ -240,7 +240,7 @@ public static class DolbyVisionGate
                 // (mpegts) we don't silently override — return empty flags to trigger
                 // the strip path so the operator sees the warning.
                 if (!hlsUsesFmp4Segments)
-                    return new Dictionary<string, string>();
+                    return new();
 
                 flags["-hls_segment_type"] = "fmp4";
                 break;

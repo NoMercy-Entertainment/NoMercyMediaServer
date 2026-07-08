@@ -141,11 +141,11 @@ public sealed class LocalStorage : IStorage
         foreach (StorageEntryInfo info in _driver.EnumerateEntries(safe, effectivePattern, option))
         {
             ct.ThrowIfCancellationRequested();
-            yield return new StorageEntry(
+            yield return new(
                 ToScopeRelative(info.Path),
                 info.IsDirectory,
                 info.Size,
-                new DateTimeOffset(info.LastWriteUtc, TimeSpan.Zero)
+                new(info.LastWriteUtc, TimeSpan.Zero)
             );
             await Task.Yield();
         }
@@ -198,7 +198,7 @@ public sealed class LocalStorage : IStorage
     public DateTimeOffset LastModified(string path)
     {
         string safe = ValidateScoped(path);
-        return new DateTimeOffset(_driver.GetLastWriteTimeUtc(safe), TimeSpan.Zero);
+        return new(_driver.GetLastWriteTimeUtc(safe), TimeSpan.Zero);
     }
 
     public void CreateDirectory(string path)
@@ -282,11 +282,11 @@ public sealed class LocalStorage : IStorage
             long size = isDir ? 0L : _driver.GetFileSize(entry);
             DateTime utc = _driver.GetLastWriteTimeUtc(entry);
             entries.Add(
-                new StorageEntry(
+                new(
                     ToScopeRelative(entry),
                     isDir,
                     size,
-                    new DateTimeOffset(utc, TimeSpan.Zero)
+                    new(utc, TimeSpan.Zero)
                 )
             );
         }
@@ -296,7 +296,7 @@ public sealed class LocalStorage : IStorage
     public LocalPathLease AcquireLocalPath(string path)
     {
         string safe = ValidateScoped(path);
-        return new LocalPathLease(safe);
+        return new(safe);
     }
 
     string IStorage.GetFullPath(string path) => ValidateScoped(path);

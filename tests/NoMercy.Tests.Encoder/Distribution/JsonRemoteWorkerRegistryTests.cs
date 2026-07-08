@@ -59,12 +59,12 @@ public class JsonRemoteWorkerRegistryTests : IDisposable
     private static IStorage MakeStorage() =>
         new LocalStorage(
             new LocalStorageDriver(),
-            new StoragePathGuard([], new LocalStorageDriver())
+            new([], new LocalStorageDriver())
         );
 
     private JsonRemoteWorkerRegistry BuildRegistry() =>
         new(
-            inner: new InMemoryRemoteWorkerRegistry(),
+            inner: new(),
             filePath: _path,
             httpClientFactory: MakeHttpClientFactory(),
             serializer: _serializer,
@@ -81,7 +81,7 @@ public class JsonRemoteWorkerRegistryTests : IDisposable
         factory
             .Setup(f => f.CreateClient(It.IsAny<string>()))
             .Returns(() =>
-                new HttpClient(new NoOpHandler()) { BaseAddress = new("http://worker.test/") }
+                new(new NoOpHandler()) { BaseAddress = new("http://worker.test/") }
             );
         return factory.Object;
     }
@@ -89,7 +89,7 @@ public class JsonRemoteWorkerRegistryTests : IDisposable
     private HttpRemoteWorker MakeWorker(string id, string baseUrl = "http://worker.test/") =>
         new(
             workerId: id,
-            http: new HttpClient(new NoOpHandler()) { BaseAddress = new(baseUrl) },
+            http: new(new NoOpHandler()) { BaseAddress = new(baseUrl) },
             serializer: _serializer,
             signingKey: _signingKey,
             initialCapabilities: new HardwareCapabilities([], 4),
@@ -170,7 +170,7 @@ public class JsonRemoteWorkerRegistryTests : IDisposable
     {
         // Path points at a file that doesn't exist.
         JsonRemoteWorkerRegistry sut = new(
-            inner: new InMemoryRemoteWorkerRegistry(),
+            inner: new(),
             filePath: Path.Combine(_dir, "nonexistent.json"),
             httpClientFactory: MakeHttpClientFactory(),
             serializer: _serializer,

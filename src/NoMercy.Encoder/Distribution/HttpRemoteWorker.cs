@@ -73,7 +73,7 @@ public class HttpRemoteWorker : IRemoteWorker
         _logger = logger;
 
         if (encoderOptions?.IsDistributedEncodingEnabled == true)
-            _hmacSigner = new HmacSigner(encoderOptions.DistributedEncodingSigningKey!);
+            _hmacSigner = new(encoderOptions.DistributedEncodingSigningKey!);
     }
 
     /// <summary>

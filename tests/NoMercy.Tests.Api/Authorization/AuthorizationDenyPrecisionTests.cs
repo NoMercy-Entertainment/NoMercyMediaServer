@@ -82,8 +82,8 @@ public sealed class AuthorizationDenyPrecisionTests
 
     private static ClaimsPrincipal PrincipalFor(Guid userId)
     {
-        List<Claim> claims = [new Claim(ClaimTypes.NameIdentifier, userId.ToString())];
-        return new ClaimsPrincipal(new ClaimsIdentity(claims, "TestScheme"));
+        List<Claim> claims = [new(ClaimTypes.NameIdentifier, userId.ToString())];
+        return new(new ClaimsIdentity(claims, "TestScheme"));
     }
 
     private static (MediaAuthorizationHandler handler, UserCache cache) BuildHandler()
@@ -495,7 +495,7 @@ public sealed class TokenParamAuthDenyPrecisionTests : IAsyncLifetime, IDisposab
 
     public TokenParamAuthDenyPrecisionTests()
     {
-        _connection = new SqliteConnection(
+        _connection = new(
             $"DataSource={Guid.NewGuid():N};Mode=Memory;Cache=Shared"
         );
         _connection.Open();
@@ -572,8 +572,8 @@ public sealed class TokenParamAuthDenyPrecisionTests : IAsyncLifetime, IDisposab
 
     private static ClaimsPrincipal PrincipalWithSub(string sub)
     {
-        List<Claim> claims = [new Claim(ClaimTypes.NameIdentifier, sub)];
-        return new ClaimsPrincipal(new ClaimsIdentity(claims, "TestScheme"));
+        List<Claim> claims = [new(ClaimTypes.NameIdentifier, sub)];
+        return new(new ClaimsIdentity(claims, "TestScheme"));
     }
 
     [Fact]

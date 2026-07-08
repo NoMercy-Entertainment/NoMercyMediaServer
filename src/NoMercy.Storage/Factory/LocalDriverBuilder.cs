@@ -81,8 +81,8 @@ public sealed class LocalDriverBuilder : IStorageDriverBuilder
     )
     {
         if (string.IsNullOrWhiteSpace(subPath))
-            return new StoragePathGuard([], driver);
+            return new([], driver);
 
-        return new StoragePathGuard([subPath], driver);
+        return new([subPath], driver);
     }
 }

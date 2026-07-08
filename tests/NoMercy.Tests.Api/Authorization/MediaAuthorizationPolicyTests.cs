@@ -34,8 +34,8 @@ public sealed class MediaAuthorizationPolicyTests
 
     private static ClaimsPrincipal PrincipalFor(Guid userId)
     {
-        List<Claim> claims = [new Claim(ClaimTypes.NameIdentifier, userId.ToString())];
-        return new ClaimsPrincipal(new ClaimsIdentity(claims, "TestScheme"));
+        List<Claim> claims = [new(ClaimTypes.NameIdentifier, userId.ToString())];
+        return new(new ClaimsIdentity(claims, "TestScheme"));
     }
 
     [Fact]

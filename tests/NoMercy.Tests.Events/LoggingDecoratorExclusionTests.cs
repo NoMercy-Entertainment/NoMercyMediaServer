@@ -189,7 +189,7 @@ public class LoggingDecoratorExclusionTests
         InMemoryEventBus bus = new();
         PlaybackStartedEvent? payloadSeen = null;
 
-        bus.Subscribe<PlaybackStartedEvent>((_, _) => throw new Exception("bang"));
+        bus.Subscribe<PlaybackStartedEvent>((_, _) => throw new("bang"));
 
         bus.Subscribe<PlaybackStartedEvent>(
             (evt, _) =>

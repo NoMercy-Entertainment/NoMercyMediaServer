@@ -10,7 +10,10 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Newtonsoft.Json;
 using NoMercy.Data.Services;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -22,12 +25,9 @@ using NoMercy.NmSystem.Domain;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Factory;
+using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using NoMercyQueue;
 namespace NoMercy.Data.Jobs;
 
 [Serializable]
@@ -76,7 +76,11 @@ public class FindMediaFilesJob : IShouldQueue, IJobStorageInjector
         if (Library == null)
             return;
 
-        Log.LogDebug("Finding media files for {Id} in library {ToString}", Id, Library.Id.ToString());
+        Log.LogDebug(
+            "Finding media files for {Id} in library {ToString}",
+            Id,
+            Library.Id.ToString()
+        );
 
         await using MediaContext context = new();
         Library? library = await context
@@ -100,12 +104,22 @@ public class FindMediaFilesJob : IShouldQueue, IJobStorageInjector
             NullLogger<StorageFactory>.Instance,
             driverConfigResolver
         );
-        await using FileLogic file = new(Id, library, context, storageFactory, storageDriver, LoggerFactory.CreateLogger<FileLogic>());
+        await using FileLogic file = new(
+            Id,
+            library,
+            context,
+            storageFactory,
+            LoggerFactory.CreateLogger<FileLogic>()
+        );
         await file.Process();
 
         if (file.Files.Count > 0)
         {
-            Log.LogInformation("Found {Count} files in {Path}", file.Files.Count, file.Files.FirstOrDefault()?.Path);
+            Log.LogInformation(
+                "Found {Count} files in {Path}",
+                file.Files.Count,
+                file.Files.FirstOrDefault()?.Path
+            );
 
             if (library.LibraryMovies.Count > 0)
             {

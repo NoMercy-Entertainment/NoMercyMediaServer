@@ -37,7 +37,7 @@ public sealed class LocalStorageContractTests : IStorageContractTests
 
         LocalStorageDriver driver = new();
         StoragePathGuard guard = new([_root], driver);
-        _storage = new LocalStorage(driver, guard);
+        _storage = new(driver, guard);
         return _storage;
     }
 

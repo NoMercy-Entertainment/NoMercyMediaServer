@@ -48,7 +48,7 @@ public class JsonSpeedIndexStoreTests : IDisposable
         {
             SpeedIndexCachePath = cachePath ?? Path.Combine(_tempDir, "speed-index.json"),
         };
-        return new JsonSpeedIndexStore(opts, NullLogger<JsonSpeedIndexStore>.Instance, _storage);
+        return new(opts, NullLogger<JsonSpeedIndexStore>.Instance, _storage);
     }
 
     [Fact]
@@ -86,7 +86,7 @@ public class JsonSpeedIndexStoreTests : IDisposable
     {
         // No cache path → save is a no-op; LastCalibratedAt stays null.
         JsonSpeedIndexStore store = BuildStore(cachePath: "");
-        SpeedIndex index = new(new Dictionary<SpeedKey, SpeedMeasurement>());
+        SpeedIndex index = new(new());
 
         store.Save(index);
 
@@ -101,14 +101,14 @@ public class JsonSpeedIndexStoreTests : IDisposable
         DateTime measuredAt = new(2026, 5, 22, 12, 0, 0, DateTimeKind.Utc);
 
         SpeedIndex original = new(
-            new Dictionary<SpeedKey, SpeedMeasurement>
+            new()
             {
-                [new SpeedKey(VideoCodecType.H264, "h264_nvenc", 1920, "RTX 4080")] = new(
+                [new(VideoCodecType.H264, "h264_nvenc", 1920, "RTX 4080")] = new(
                     240.0,
                     8.0,
                     measuredAt
                 ),
-                [new SpeedKey(VideoCodecType.H265, "libx265", 1280, null)] = new(
+                [new(VideoCodecType.H265, "libx265", 1280, null)] = new(
                     60.0,
                     2.0,
                     measuredAt
@@ -145,7 +145,7 @@ public class JsonSpeedIndexStoreTests : IDisposable
         JsonSpeedIndexStore store = BuildStore();
         DateTime before = DateTime.UtcNow;
 
-        store.Save(new SpeedIndex(new Dictionary<SpeedKey, SpeedMeasurement>()));
+        store.Save(new(new()));
 
         store.LastCalibratedAt.Should().NotBeNull();
         store.LastCalibratedAt!.Value.Should().BeOnOrAfter(before);
@@ -159,12 +159,12 @@ public class JsonSpeedIndexStoreTests : IDisposable
         JsonSpeedIndexStore store = BuildStore(cache);
 
         // Initial save.
-        store.Save(new SpeedIndex(new Dictionary<SpeedKey, SpeedMeasurement>()));
+        store.Save(new(new()));
         store.Save(
-            new SpeedIndex(
-                new Dictionary<SpeedKey, SpeedMeasurement>
+            new(
+                new()
                 {
-                    [new SpeedKey(VideoCodecType.Av1, "av1_nvenc", 3840, "RTX 4090")] = new(
+                    [new(VideoCodecType.Av1, "av1_nvenc", 3840, "RTX 4090")] = new(
                         120.0,
                         4.0,
                         DateTime.UtcNow

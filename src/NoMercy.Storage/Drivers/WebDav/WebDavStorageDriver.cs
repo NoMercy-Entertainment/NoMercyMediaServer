@@ -81,7 +81,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
     {
         string uri = ToUri(path);
         PropfindResponse response = _client
-            .Propfind(uri, new PropfindParameters { ApplyTo = ApplyTo.Propfind.ResourceOnly })
+            .Propfind(uri, new() { ApplyTo = ApplyTo.Propfind.ResourceOnly })
             .GetAwaiter()
             .GetResult();
 
@@ -97,7 +97,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
     {
         string uri = ToCollectionUri(path);
         PropfindResponse response = _client
-            .Propfind(uri, new PropfindParameters { ApplyTo = ApplyTo.Propfind.ResourceOnly })
+            .Propfind(uri, new() { ApplyTo = ApplyTo.Propfind.ResourceOnly })
             .GetAwaiter()
             .GetResult();
 
@@ -156,7 +156,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
             PropfindResponse listing = _client
                 .Propfind(
                     uri,
-                    new PropfindParameters { ApplyTo = ApplyTo.Propfind.ResourceAndChildren }
+                    new() { ApplyTo = ApplyTo.Propfind.ResourceAndChildren }
                 )
                 .GetAwaiter()
                 .GetResult();
@@ -238,7 +238,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
         string dstUri = ToUri(destination);
 
         WebDavResponse response = _client
-            .Move(srcUri, dstUri, new MoveParameters { Overwrite = true })
+            .Move(srcUri, dstUri, new() { Overwrite = true })
             .GetAwaiter()
             .GetResult();
 
@@ -256,7 +256,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
         string dstUri = ToUri(destination);
 
         WebDavResponse response = _client
-            .Copy(srcUri, dstUri, new CopyParameters { Overwrite = overwrite })
+            .Copy(srcUri, dstUri, new() { Overwrite = overwrite })
             .GetAwaiter()
             .GetResult();
 
@@ -296,7 +296,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
         PropfindResponse response = _client
             .Propfind(
                 uri,
-                new PropfindParameters { ApplyTo = ApplyTo.Propfind.ResourceAndChildren }
+                new() { ApplyTo = ApplyTo.Propfind.ResourceAndChildren }
             )
             .GetAwaiter()
             .GetResult();
@@ -320,7 +320,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
             {
                 string relPath = MakeRelative(resource.Uri).TrimEnd('/');
                 if (StoragePatternMatcher.Matches(entryName, searchPattern))
-                    yield return new StorageEntryInfo(
+                    yield return new(
                         relPath,
                         IsDirectory: true,
                         Size: 0L,
@@ -343,7 +343,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
             else
             {
                 if (StoragePatternMatcher.Matches(entryName, searchPattern))
-                    yield return new StorageEntryInfo(
+                    yield return new(
                         MakeRelative(resource.Uri),
                         IsDirectory: false,
                         Size: resource.ContentLength ?? 0L,
@@ -378,7 +378,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
     {
         string uri = ToUri(path);
         PropfindResponse response = _client
-            .Propfind(uri, new PropfindParameters { ApplyTo = ApplyTo.Propfind.ResourceOnly })
+            .Propfind(uri, new() { ApplyTo = ApplyTo.Propfind.ResourceOnly })
             .GetAwaiter()
             .GetResult();
 
@@ -395,7 +395,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
         string dstUri = ToCollectionUri(destination);
 
         WebDavResponse response = _client
-            .Move(srcUri, dstUri, new MoveParameters { Overwrite = true })
+            .Move(srcUri, dstUri, new() { Overwrite = true })
             .GetAwaiter()
             .GetResult();
 
@@ -444,7 +444,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
     {
         string uri = ToUri(path);
         PropfindResponse response = _client
-            .Propfind(uri, new PropfindParameters { ApplyTo = ApplyTo.Propfind.ResourceOnly })
+            .Propfind(uri, new() { ApplyTo = ApplyTo.Propfind.ResourceOnly })
             .GetAwaiter()
             .GetResult();
 
@@ -470,7 +470,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
         PropfindResponse response = _client
             .Propfind(
                 uri,
-                new PropfindParameters { ApplyTo = ApplyTo.Propfind.ResourceAndChildren }
+                new() { ApplyTo = ApplyTo.Propfind.ResourceAndChildren }
             )
             .GetAwaiter()
             .GetResult();

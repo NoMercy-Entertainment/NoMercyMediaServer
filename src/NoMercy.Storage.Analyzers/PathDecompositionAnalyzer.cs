@@ -38,7 +38,7 @@ public sealed class PathDecompositionAnalyzer : DiagnosticAnalyzer
         "GetFullPath"
     );
 
-    private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+    private static readonly DiagnosticDescriptor Rule = new(
         id: DiagnosticId,
         title: "Avoid System.IO.Path decomposition methods on storage-relative paths",
         messageFormat: "Path.{0} uses OS path conventions. On Windows this misinterprets forward-slash storage paths. Use string operations or expose a driver-aware equivalent via IStorage instead.",

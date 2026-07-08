@@ -399,29 +399,29 @@ public class ProfileRuleCompletenessTests
             ),
             [EncoderRuleId.LadderDuplicateVariant] = MakeProfile(
                 VideoTranscode(),
-                ladder: new LadderConfig
+                ladder: new()
                 {
                     Mode = LadderMode.Manual,
                     Rungs =
                     [
-                        new LadderRung(1280, 720, VideoCodecType.H264, 2500, 3000, 5000, 24),
-                        new LadderRung(1280, 720, VideoCodecType.H264, 2500, 3000, 5000, 24),
+                        new(1280, 720, VideoCodecType.H264, 2500, 3000, 5000, 24),
+                        new(1280, 720, VideoCodecType.H264, 2500, 3000, 5000, 24),
                     ],
                 }
             ),
             [EncoderRuleId.LadderManualEmpty] = MakeProfile(
                 VideoTranscode(),
-                ladder: new LadderConfig { Mode = LadderMode.Manual, Rungs = [] }
+                ladder: new() { Mode = LadderMode.Manual, Rungs = [] }
             ),
             [EncoderRuleId.LadderManualUnsorted] = MakeProfile(
                 VideoTranscode(),
-                ladder: new LadderConfig
+                ladder: new()
                 {
                     Mode = LadderMode.Manual,
                     Rungs =
                     [
-                        new LadderRung(1920, 1080, VideoCodecType.H264, 8000, 9600, 16000, 24),
-                        new LadderRung(1280, 720, VideoCodecType.H264, 4000, 4800, 8000, 24),
+                        new(1920, 1080, VideoCodecType.H264, 8000, 9600, 16000, 24),
+                        new(1280, 720, VideoCodecType.H264, 4000, 4800, 8000, 24),
                     ],
                 }
             ),
@@ -444,13 +444,13 @@ public class ProfileRuleCompletenessTests
             ),
             [EncoderRuleId.LadderInverted] = MakeProfile(
                 VideoTranscode(),
-                ladder: new LadderConfig
+                ladder: new()
                 {
                     Mode = LadderMode.Manual,
                     Rungs =
                     [
-                        new LadderRung(854, 480, VideoCodecType.H264, 4000, 4800, 8000, 24),
-                        new LadderRung(1920, 1080, VideoCodecType.H264, 2000, 2400, 4000, 24),
+                        new(854, 480, VideoCodecType.H264, 4000, 4800, 8000, 24),
+                        new(1920, 1080, VideoCodecType.H264, 2000, 2400, 4000, 24),
                     ],
                 }
             ),
@@ -491,18 +491,18 @@ public class ProfileRuleCompletenessTests
             ),
             [EncoderRuleId.CustomArgsReservedFlag] = MakeProfile(
                 VideoTranscode(),
-                customArgs: new Dictionary<string, string> { ["-c:v"] = "libx264" }
+                customArgs: new() { ["-c:v"] = "libx264" }
             ),
             [EncoderRuleId.DrmHttpNotHttps] = MakeProfile(VideoTranscode()) with
             {
-                Drm = new DrmConfig(
+                Drm = new(
                     "aes-128",
-                    new Dictionary<string, string> { ["key_uri"] = "http://server/key.bin" }
+                    new() { ["key_uri"] = "http://server/key.bin" }
                 ),
             },
             [EncoderRuleId.DrmKeyMissing] = MakeProfile(VideoTranscode()) with
             {
-                Drm = new DrmConfig("aes-128", new Dictionary<string, string>()),
+                Drm = new("aes-128", new()),
             },
         };
 
@@ -655,33 +655,33 @@ public class ProfileRuleCompletenessTests
             ),
             [EncoderRuleId.LadderDuplicateVariant] = MakeProfile(
                 VideoTranscode(),
-                ladder: new LadderConfig
+                ladder: new()
                 {
                     Mode = LadderMode.Manual,
                     Rungs =
                     [
-                        new LadderRung(1280, 720, VideoCodecType.H264, 2500, 3000, 5000, 24),
-                        new LadderRung(1920, 1080, VideoCodecType.H264, 4500, 5400, 9000, 24),
+                        new(1280, 720, VideoCodecType.H264, 2500, 3000, 5000, 24),
+                        new(1920, 1080, VideoCodecType.H264, 4500, 5400, 9000, 24),
                     ],
                 }
             ),
             [EncoderRuleId.LadderManualEmpty] = MakeProfile(
                 VideoTranscode(),
-                ladder: new LadderConfig
+                ladder: new()
                 {
                     Mode = LadderMode.Manual,
-                    Rungs = [new LadderRung(1920, 1080, VideoCodecType.H264, 4000, 4800, 8000, 24)],
+                    Rungs = [new(1920, 1080, VideoCodecType.H264, 4000, 4800, 8000, 24)],
                 }
             ),
             [EncoderRuleId.LadderManualUnsorted] = MakeProfile(
                 VideoTranscode(),
-                ladder: new LadderConfig
+                ladder: new()
                 {
                     Mode = LadderMode.Manual,
                     Rungs =
                     [
-                        new LadderRung(1280, 720, VideoCodecType.H264, 4000, 4800, 8000, 24),
-                        new LadderRung(1920, 1080, VideoCodecType.H264, 8000, 9600, 16000, 24),
+                        new(1280, 720, VideoCodecType.H264, 4000, 4800, 8000, 24),
+                        new(1920, 1080, VideoCodecType.H264, 8000, 9600, 16000, 24),
                     ],
                 }
             ),
@@ -704,13 +704,13 @@ public class ProfileRuleCompletenessTests
             ),
             [EncoderRuleId.LadderInverted] = MakeProfile(
                 VideoTranscode(),
-                ladder: new LadderConfig
+                ladder: new()
                 {
                     Mode = LadderMode.Manual,
                     Rungs =
                     [
-                        new LadderRung(854, 480, VideoCodecType.H264, 1000, 1200, 2000, 24),
-                        new LadderRung(1920, 1080, VideoCodecType.H264, 4500, 5400, 9000, 24),
+                        new(854, 480, VideoCodecType.H264, 1000, 1200, 2000, 24),
+                        new(1920, 1080, VideoCodecType.H264, 4500, 5400, 9000, 24),
                     ],
                 }
             ),
@@ -750,20 +750,20 @@ public class ProfileRuleCompletenessTests
             ),
             [EncoderRuleId.CustomArgsReservedFlag] = MakeProfile(
                 VideoTranscode(),
-                customArgs: new Dictionary<string, string> { ["-loglevel"] = "info" }
+                customArgs: new() { ["-loglevel"] = "info" }
             ),
             [EncoderRuleId.DrmHttpNotHttps] = MakeProfile(VideoTranscode()) with
             {
-                Drm = new DrmConfig(
+                Drm = new(
                     "aes-128",
-                    new Dictionary<string, string> { ["key_uri"] = "https://server/key.bin" }
+                    new() { ["key_uri"] = "https://server/key.bin" }
                 ),
             },
             [EncoderRuleId.DrmKeyMissing] = MakeProfile(VideoTranscode()) with
             {
-                Drm = new DrmConfig(
+                Drm = new(
                     "aes-128",
-                    new Dictionary<string, string> { ["key_uri"] = "https://server/key.bin" }
+                    new() { ["key_uri"] = "https://server/key.bin" }
                 ),
             },
         };

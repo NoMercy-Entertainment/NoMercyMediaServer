@@ -149,9 +149,9 @@ public class CoordinatorDispatchController_Tests
 
         DefaultHttpContext ctx = new()
         {
-            User = new ClaimsPrincipal(
+            User = new(
                 new ClaimsIdentity(
-                    [new Claim(ClaimTypes.NameIdentifier, OwnerUserId.ToString())],
+                    [new(ClaimTypes.NameIdentifier, OwnerUserId.ToString())],
                     "test"
                 )
             ),
@@ -168,7 +168,7 @@ public class CoordinatorDispatchController_Tests
         CoordinatorDispatchController sut = BuildController();
 
         IActionResult result = await sut.Dispatch(
-            new DispatchEncodeJobRequest(Tasks: []),
+            new(Tasks: []),
             CancellationToken.None
         );
 
@@ -182,7 +182,7 @@ public class CoordinatorDispatchController_Tests
         CoordinatorDispatchController sut = BuildController();
 
         IActionResult result = await sut.Dispatch(
-            new DispatchEncodeJobRequest(Tasks: null),
+            new(Tasks: null),
             CancellationToken.None
         );
 
@@ -209,8 +209,8 @@ public class CoordinatorDispatchController_Tests
         CoordinatorDispatchController sut = BuildController(dispatcherMock: mock);
 
         IActionResult result = await sut.Dispatch(
-            new DispatchEncodeJobRequest(
-                Tasks: [new DispatchTaskRequest(OutputPath: "/out/t1", TaskId: "t1")]
+            new(
+                Tasks: [new(OutputPath: "/out/t1", TaskId: "t1")]
             ),
             CancellationToken.None
         );
@@ -249,8 +249,8 @@ public class CoordinatorDispatchController_Tests
         CoordinatorDispatchController sut = BuildController(dispatcherMock: mock);
 
         await sut.Dispatch(
-            new DispatchEncodeJobRequest(
-                Tasks: [new DispatchTaskRequest(OutputPath: "/out/auto", TaskId: null)]
+            new(
+                Tasks: [new(OutputPath: "/out/auto", TaskId: null)]
             ),
             CancellationToken.None
         );
@@ -283,12 +283,12 @@ public class CoordinatorDispatchController_Tests
         CoordinatorDispatchController sut = BuildController(dispatcherMock: mock);
 
         await sut.Dispatch(
-            new DispatchEncodeJobRequest(
+            new(
                 Tasks:
                 [
-                    new DispatchTaskRequest(OutputPath: "/out/a", TaskId: "a"),
-                    new DispatchTaskRequest(OutputPath: "/out/b", TaskId: "b"),
-                    new DispatchTaskRequest(OutputPath: "/out/c", TaskId: "c"),
+                    new(OutputPath: "/out/a", TaskId: "a"),
+                    new(OutputPath: "/out/b", TaskId: "b"),
+                    new(OutputPath: "/out/c", TaskId: "c"),
                 ]
             ),
             CancellationToken.None

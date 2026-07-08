@@ -179,9 +179,16 @@ public partial class FileManager
             ),
             // Chapters = JsonConvert.SerializeObject(item.FFprobe?.Chapters ?? []),
             Chapters = "",
+            // Derive languages from the encoded audio tracks (the audio_<lang>_<codec>
+            // dirs parsed into metadata.Audio), not the source ffprobe: a scan skips
+            // ffprobe on remote drivers, so item.FFprobe is empty over NFS and this
+            // column came out blank. The encoded tracks are the authoritative set of
+            // playable languages anyway.
             Languages = JsonConvert.SerializeObject(
-                item.FFprobe?.AudioStreams.Select(stream => stream.Language)
-                    .Where(stream => stream != null && stream != "und")
+                (metadata.Audio ?? [])
+                    .Select(audio => audio.Language)
+                    .Where(language => !string.IsNullOrEmpty(language) && language != "und")
+                    .Distinct()
             ),
             Quality = (item.FFprobe?.VideoStreams.FirstOrDefault()?.Width.ToString()).OrEmpty(),
             Subtitles = JsonConvert.SerializeObject(subtitles),
@@ -252,7 +259,19 @@ public partial class FileManager
             Duration = (item.FFprobe?.Duration.ToString()).OrEmpty(),
             Folder = baseFolder.Replace("\\", "/"),
             HostFolder = hostFolder.Replace("\\", "/"),
-            FolderSize = GetDirectorySize(storage, hostFolder),
+            // Sum the sizes already gathered while building the hash lists rather
+            // than walking every segment again: a rescan verifies completeness and
+            // must not deep-dive the whole output tree over the network just to set
+            // a storage-accounting stat. Covers every catalogued asset (video and
+            // audio variants, subtitles, fonts, previews, chapters).
+            FolderSize =
+                video.Sum(entry => entry.FileSize ?? 0)
+                + audio.Sum(entry => entry.FileSize ?? 0)
+                + subtitles.Sum(entry => entry.FileSize ?? 0)
+                + fonts.Sum(entry => entry.FileSize ?? 0)
+                + previews.Sum(entry => entry.ImageFileSize + entry.TimeFileSize)
+                + (chaptersFileHashMap?.FileSize ?? 0)
+                + (fontsFileHashMap?.FileSize ?? 0),
 
             Type = Movie?.Id is not null
                 ? Database.Models.Media.MediaType.Movie

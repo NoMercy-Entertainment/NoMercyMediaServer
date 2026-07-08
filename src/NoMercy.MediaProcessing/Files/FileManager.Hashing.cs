@@ -45,19 +45,21 @@ public partial class FileManager
             int width = int.Parse(match.Groups["width"].Value);
             int height = int.Parse(match.Groups["height"].Value);
 
-            IReadOnlyList<StorageEntry> playlists = storage.List(
-                dir.Path,
-                "*.m3u8",
-                recursive: false
+            // One directory listing serves both needs: locating the playlist and
+            // summing the segment sizes. Over NFS each listing enumerates every
+            // segment in the quality dir, so a second List here doubled the scan
+            // cost per file for no new information.
+            IReadOnlyList<StorageEntry> dirEntries = storage.List(dir.Path, null, recursive: false);
+
+            StorageEntry? playlist = dirEntries.FirstOrDefault(e =>
+                !e.IsDirectory
+                && storage.GetName(e.Path).EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase)
             );
-            if (playlists.Count == 0)
+            if (playlist is null)
                 continue;
 
-            string playlistPath = playlists[0].Path;
-            long dirSize = storage
-                .List(dir.Path, null, recursive: false)
-                .Where(e => !e.IsDirectory)
-                .Sum(e => e.SizeBytes);
+            string playlistPath = playlist.Path;
+            long dirSize = dirEntries.Where(e => !e.IsDirectory).Sum(e => e.SizeBytes);
 
             videos.Add(
                 new()
@@ -96,19 +98,18 @@ public partial class FileManager
             string language = match.Groups["lang"].Value;
             string codec = match.Groups["codec"].Value;
 
-            IReadOnlyList<StorageEntry> playlists = storage.List(
-                dir.Path,
-                "*.m3u8",
-                recursive: false
+            // Single listing for playlist lookup and size sum — see GetVideoHashList.
+            IReadOnlyList<StorageEntry> dirEntries = storage.List(dir.Path, null, recursive: false);
+
+            StorageEntry? playlist = dirEntries.FirstOrDefault(e =>
+                !e.IsDirectory
+                && storage.GetName(e.Path).EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase)
             );
-            if (playlists.Count == 0)
+            if (playlist is null)
                 continue;
 
-            string playlistPath = playlists[0].Path;
-            long dirSize = storage
-                .List(dir.Path, null, recursive: false)
-                .Where(e => !e.IsDirectory)
-                .Sum(e => e.SizeBytes);
+            string playlistPath = playlist.Path;
+            long dirSize = dirEntries.Where(e => !e.IsDirectory).Sum(e => e.SizeBytes);
 
             audioList.Add(
                 new()
@@ -179,38 +180,40 @@ public partial class FileManager
     {
         IEnumerable<IPreview> sprites = extraFiles
             .Where(file => file.Kind == "sprite")
-            .Select(file => new IPreview
+            .Select(file =>
             {
-                ImageFileName = "/" + (Path.GetFileName(file.File).OrEmpty()).Replace("\\", "/"),
-                ImageFileSize = storage.SizeOrZero(
-                    storage.CombinePath(hostFolder, Path.GetFileName(file.File).OrEmpty())
-                ),
-                ImageFileHash = ComputeFileHash(
-                    storage,
-                    storage.CombinePath(hostFolder, Path.GetFileName(file.File).OrEmpty())
-                ),
+                string spritePath = storage.CombinePath(
+                    hostFolder,
+                    Path.GetFileName(file.File).OrEmpty()
+                );
+                return new IPreview
+                {
+                    ImageFileName =
+                        "/" + (Path.GetFileName(file.File).OrEmpty()).Replace("\\", "/"),
+                    ImageFileSize = storage.SizeOrZero(spritePath),
+                    ImageFileHash = ComputeFileHash(storage, spritePath),
+                };
             });
 
         IEnumerable<IPreview> times = extraFiles
             .Where(file => file.Kind == "thumbnails")
-            .Select(file => new IPreview
+            .Select(file =>
             {
-                Width = GetImageDimensionsFromVtt(
-                    storage,
-                    storage.CombinePath(hostFolder, Path.GetFileName(file.File).OrEmpty())
-                ).Width,
-                Height = GetImageDimensionsFromVtt(
-                    storage,
-                    storage.CombinePath(hostFolder, Path.GetFileName(file.File).OrEmpty())
-                ).Height,
-                TimeFileName = "/" + (Path.GetFileName(file.File).OrEmpty()).Replace("\\", "/"),
-                TimeFileSize = storage.SizeOrZero(
-                    storage.CombinePath(hostFolder, Path.GetFileName(file.File).OrEmpty())
-                ),
-                TimeFileHash = ComputeFileHash(
-                    storage,
-                    storage.CombinePath(hostFolder, Path.GetFileName(file.File).OrEmpty())
-                ),
+                string vttPath = storage.CombinePath(
+                    hostFolder,
+                    Path.GetFileName(file.File).OrEmpty()
+                );
+                // Read + parse the VTT once — it was previously read twice, once
+                // per dimension, doubling the NFS round-trips for the thumbnail track.
+                (int Width, int Height) dimensions = GetImageDimensionsFromVtt(storage, vttPath);
+                return new IPreview
+                {
+                    Width = dimensions.Width,
+                    Height = dimensions.Height,
+                    TimeFileName = "/" + (Path.GetFileName(file.File).OrEmpty()).Replace("\\", "/"),
+                    TimeFileSize = storage.SizeOrZero(vttPath),
+                    TimeFileHash = ComputeFileHash(storage, vttPath),
+                };
             });
 
         List<IPreview> previews = sprites
@@ -285,15 +288,6 @@ public partial class FileManager
         }
 
         return chapters;
-    }
-
-    private long GetDirectorySize(IStorage storage, string folder)
-    {
-        if (!storage.Exists(folder))
-            return 0;
-
-        IReadOnlyList<StorageEntry> entries = storage.List(folder, null, recursive: true);
-        return entries.Where(e => !e.IsDirectory).Sum(e => e.SizeBytes);
     }
 
     private static async Task MoveFolderAsync(

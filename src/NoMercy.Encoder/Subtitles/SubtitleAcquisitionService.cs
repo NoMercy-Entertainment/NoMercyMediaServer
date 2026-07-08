@@ -242,7 +242,7 @@ public class SubtitleAcquisitionService(
             string localPath = storage.GetFullPath(relativePath);
             bool isExactMatch = ComputeExactMatch(candidate, request, wasHashStrategy);
 
-            return new AcquiredSubtitle(
+            return new(
                 Language: candidate.Language,
                 LocalPath: localPath,
                 Provider: candidate.Provider,

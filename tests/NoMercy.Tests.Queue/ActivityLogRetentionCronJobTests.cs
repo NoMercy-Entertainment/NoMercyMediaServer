@@ -42,7 +42,7 @@ public class ActivityLogRetentionCronJobTests : IDisposable
 
         Mock<IDbContextFactory<MediaContext>> mock = new();
         mock.Setup(x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => new MediaContext(options));
+            .ReturnsAsync(() => new(options));
         return mock.Object;
     }
 
@@ -114,7 +114,7 @@ public class ActivityLogRetentionCronJobTests : IDisposable
         await using (MediaContext seed = await factory.CreateDbContextAsync())
         {
             seed.ActivityLogs.Add(
-                new ActivityLog
+                new()
                 {
                     Category = ActivityCategory.Connection,
                     Time = DateTime.UtcNow,

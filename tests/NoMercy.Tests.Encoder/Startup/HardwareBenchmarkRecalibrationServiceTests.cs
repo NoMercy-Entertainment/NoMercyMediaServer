@@ -200,7 +200,7 @@ public class HardwareBenchmarkRecalibrationServiceTests
             driverDetector,
             store,
             activityProbe,
-            new EncoderOptions { AutoCalibrate = true },
+            new() { AutoCalibrate = true },
             NullLogger<HardwareBenchmarkRecalibrationService>.Instance,
             checkInterval: TimeSpan.FromMilliseconds(1),
             busyRetryInterval: TimeSpan.FromMilliseconds(1),

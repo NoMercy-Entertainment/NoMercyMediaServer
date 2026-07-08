@@ -265,7 +265,7 @@ public class EncoderProfilesController(
         if (string.IsNullOrWhiteSpace(request.ProfileJson))
         {
             ValidationEnvelope empty = ValidationEnvelope.FromRules([
-                new EncoderRule(
+                new(
                     EncoderRuleId.ProfileNameMissing,
                     EncoderRuleSeverity.Error,
                     "profile_json",
@@ -284,7 +284,7 @@ public class EncoderProfilesController(
         catch (JsonException ex)
         {
             ValidationEnvelope parseError = ValidationEnvelope.FromRules([
-                new EncoderRule(
+                new(
                     EncoderRuleId.ProfileNameMissing,
                     EncoderRuleSeverity.Error,
                     "profile_json",
@@ -298,7 +298,7 @@ public class EncoderProfilesController(
         if (profile is null)
         {
             ValidationEnvelope nullError = ValidationEnvelope.FromRules([
-                new EncoderRule(
+                new(
                     EncoderRuleId.ProfileNameMissing,
                     EncoderRuleSeverity.Error,
                     "profile_json",

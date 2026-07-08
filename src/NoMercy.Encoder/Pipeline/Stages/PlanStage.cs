@@ -132,7 +132,7 @@ public class PlanStage(
             if (hardwarePreferenceResolver is not null)
             {
                 SpeedIndex effectiveSpeedIndex =
-                    speedIndex ?? new SpeedIndex(new Dictionary<SpeedKey, SpeedMeasurement>());
+                    speedIndex ?? new SpeedIndex(new());
 
                 List<string> availableEncoderNames =
                     ffmpegCapabilities.AvailableEncoders.ToList() ?? [];
@@ -482,7 +482,7 @@ public class PlanStage(
                             );
 
                             context.DecisionsOrNoOp.Add(
-                                new DecisionLog(
+                                new(
                                     "plan",
                                     "plan.crf_translated",
                                     $"CRF {v.Crf} → {encoderHandle} quality {translatedCrf}",

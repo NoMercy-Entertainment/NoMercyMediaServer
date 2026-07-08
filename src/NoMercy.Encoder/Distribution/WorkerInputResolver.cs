@@ -31,7 +31,7 @@ public class WorkerInputResolver(
             logger.LogWarning(
                 "Worker rejected task payload — signature invalid or payload expired"
             );
-            return new WorkerInputResolution();
+            return new();
         }
 
         logger.LogInformation("Worker executing task {TaskId} ({Type})", task.TaskId, task.Type);
@@ -58,7 +58,7 @@ public class WorkerInputResolver(
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Source fetch failed for task {TaskId}", task.TaskId);
-            return new WorkerInputResolution
+            return new()
             {
                 Task = task,
                 SourceFetchFailed = true,
@@ -66,7 +66,7 @@ public class WorkerInputResolver(
             };
         }
 
-        return new WorkerInputResolution { Task = task, EffectiveTask = effectiveTask };
+        return new() { Task = task, EffectiveTask = effectiveTask };
     }
 
     public Task ReleaseAsync(EncodeTask task) => sourceFetcher.ReleaseAsync(task);

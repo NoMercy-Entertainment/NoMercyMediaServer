@@ -54,7 +54,7 @@ public class DbDriverFingerprintStoreTests : IDisposable
 
         Mock<IDbContextFactory<AppDbContext>> mock = new();
         mock.Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => new AppDbContext(opts));
+            .ReturnsAsync(() => new(opts));
         return mock.Object;
     }
 
@@ -67,7 +67,7 @@ public class DbDriverFingerprintStoreTests : IDisposable
         {
             SpeedIndexCachePath = Path.Combine(_tempDir, "speed_index.json"),
         };
-        return new DbDriverFingerprintStore(
+        return new(
             opts,
             NullLogger<DbDriverFingerprintStore>.Instance,
             storage ?? Mock.Of<IStorage>(),

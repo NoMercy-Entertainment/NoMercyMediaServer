@@ -40,8 +40,8 @@ public sealed class MediaAuthorizationHandlerTests
 
     private static ClaimsPrincipal PrincipalFor(Guid userId)
     {
-        List<Claim> claims = [new Claim(ClaimTypes.NameIdentifier, userId.ToString())];
-        return new ClaimsPrincipal(new ClaimsIdentity(claims, "TestScheme"));
+        List<Claim> claims = [new(ClaimTypes.NameIdentifier, userId.ToString())];
+        return new(new ClaimsIdentity(claims, "TestScheme"));
     }
 
     private static AuthorizationHandlerContext MakeContext(
@@ -49,7 +49,7 @@ public sealed class MediaAuthorizationHandlerTests
         IAuthorizationRequirement requirement
     )
     {
-        return new AuthorizationHandlerContext([requirement], user, null);
+        return new([requirement], user, null);
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public sealed class MediaAuthorizationHandlerTests
     {
         (MediaAuthorizationHandler handler, UserCache cache) = BuildHandler();
         cache.AddUser(
-            new User
+            new()
             {
                 Id = OwnerId,
                 Owner = true,
@@ -80,7 +80,7 @@ public sealed class MediaAuthorizationHandlerTests
     {
         (MediaAuthorizationHandler handler, UserCache cache) = BuildHandler();
         cache.AddUser(
-            new User
+            new()
             {
                 Id = OwnerId,
                 Owner = true,
@@ -103,7 +103,7 @@ public sealed class MediaAuthorizationHandlerTests
     {
         (MediaAuthorizationHandler handler, UserCache cache) = BuildHandler();
         cache.AddUser(
-            new User
+            new()
             {
                 Id = ModeratorId,
                 Manage = true,
@@ -126,7 +126,7 @@ public sealed class MediaAuthorizationHandlerTests
     {
         (MediaAuthorizationHandler handler, UserCache cache) = BuildHandler();
         cache.AddUser(
-            new User
+            new()
             {
                 Id = AllowedId,
                 Allowed = true,
@@ -151,7 +151,7 @@ public sealed class MediaAuthorizationHandlerTests
     {
         (MediaAuthorizationHandler handler, UserCache cache) = BuildHandler();
         cache.AddUser(
-            new User
+            new()
             {
                 Id = AllowedId,
                 Allowed = true,
@@ -195,7 +195,7 @@ public sealed class MediaAuthorizationHandlerTests
         );
 
         cache.AddUser(
-            new User
+            new()
             {
                 Id = OwnerId,
                 Owner = true,

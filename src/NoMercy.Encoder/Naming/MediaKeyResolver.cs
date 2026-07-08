@@ -43,6 +43,6 @@ public class MediaKeyResolver : IMediaKeyResolver
             buffer[--i] = Alphabet[(int)(value % 36)];
             value /= 36;
         }
-        return new string(buffer[i..]);
+        return new(buffer[i..]);
     }
 }

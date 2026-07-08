@@ -60,7 +60,7 @@ public sealed class WebVttSegmenter
         if (cues.Count == 0)
             return
             [
-                new WebVttSegment(
+                new(
                     0,
                     BuildSegment(header, [], segmentDuration),
                     TimeSpan.Zero,
@@ -84,7 +84,7 @@ public sealed class WebVttSegmenter
                 .ToList();
 
             string content = BuildSegment(header, overlapping, segmentDuration);
-            result.Add(new WebVttSegment(i, content, segStart, segEnd));
+            result.Add(new(i, content, segStart, segEnd));
         }
 
         return result;
@@ -161,7 +161,7 @@ public sealed class WebVttSegmenter
             if (!TryParseTimestamps(timestampLine, out TimeSpan start, out TimeSpan end))
                 continue;
 
-            cues.Add(new ParsedCue(cueId, timestampLine, start, end, payload.ToString()));
+            cues.Add(new(cueId, timestampLine, start, end, payload.ToString()));
         }
 
         return (headerSb.ToString().TrimEnd(), cues);
@@ -187,7 +187,7 @@ public sealed class WebVttSegmenter
         int minutes = int.Parse(m.Groups[hourGroupIndex + 1].Value, CultureInfo.InvariantCulture);
         int seconds = int.Parse(m.Groups[hourGroupIndex + 2].Value, CultureInfo.InvariantCulture);
         int ms = int.Parse(m.Groups[hourGroupIndex + 3].Value, CultureInfo.InvariantCulture);
-        return new TimeSpan(0, hours, minutes, seconds, ms);
+        return new(0, hours, minutes, seconds, ms);
     }
 
     // ------------------------------------------------------------------

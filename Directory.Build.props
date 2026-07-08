@@ -3,13 +3,15 @@
     <TargetFramework>net10.0</TargetFramework>
     <!-- Suppress NETSDK1206: MediaInfo.Core.Native uses version-specific RIDs (third-party, not fixable) -->
     <NoWarn>$(NoWarn);NETSDK1206</NoWarn>
+    <!-- Zero warnings, enforced: any warning is a build failure so none can creep back in. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Authors>NoMercy Entertainment</Authors>
     <Company>NoMercy Entertainment</Company>
     <Copyright>2026 NoMercy Entertainment</Copyright>
     <PackageProjectUrl>https://nomercy.tv</PackageProjectUrl>
     <RepositoryUrl>https://github.com/NoMercy-Entertainment/nomercy-media-server</RepositoryUrl>
 
-    <Version>0.1.404</Version>
+    <Version>0.1.405</Version>
     <AssemblyVersion>$(Version).0</AssemblyVersion>
     <FileVersion>$(Version).0</FileVersion>
   </PropertyGroup>

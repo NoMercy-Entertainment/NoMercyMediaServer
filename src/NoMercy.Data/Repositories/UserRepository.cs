@@ -117,7 +117,7 @@ public class UserRepository(MediaContext context, IDbContextFactory<MediaContext
         user.LibraryUser.Clear();
 
         foreach (Ulid libraryId in libraryIds)
-            user.LibraryUser.Add(new LibraryUser { LibraryId = libraryId, UserId = targetUserId });
+            user.LibraryUser.Add(new() { LibraryId = libraryId, UserId = targetUserId });
 
         await permContext.SaveChangesAsync();
     }

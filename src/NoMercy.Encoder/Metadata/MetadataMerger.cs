@@ -63,7 +63,7 @@ public class MetadataMerger : IMetadataMerger
             {
                 // Source-only: no DB row — emit source values, default dispositions false.
                 result.Add(
-                    new TrackMetadata(
+                    new(
                         OutputIndex: src!.OutputIndex,
                         Kind: src.Kind,
                         Language: src.Language,
@@ -93,7 +93,7 @@ public class MetadataMerger : IMetadataMerger
             bool mergedIsForced = db.IsForced; // rule: DB wins
 
             result.Add(
-                new TrackMetadata(
+                new(
                     OutputIndex: idx,
                     Kind: db.Kind,
                     Language: mergedLanguage,

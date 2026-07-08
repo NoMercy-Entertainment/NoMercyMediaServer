@@ -57,7 +57,7 @@ public sealed class V2BackedProfileValidator : IProfileValidator
         foreach (string message in legacy.Errors)
         {
             errors.Add(
-                new EncoderRule(
+                new(
                     EncoderRuleId.ProfileNoOutputs,
                     EncoderRuleSeverity.Error,
                     "profile",
@@ -69,7 +69,7 @@ public sealed class V2BackedProfileValidator : IProfileValidator
         foreach (string message in legacy.Warnings)
         {
             warnings.Add(
-                new EncoderRule(
+                new(
                     EncoderRuleId.ProfileNoOutputs,
                     EncoderRuleSeverity.Warning,
                     "profile",
@@ -79,6 +79,6 @@ public sealed class V2BackedProfileValidator : IProfileValidator
             );
         }
 
-        return new ValidationEnvelope(errors.Count == 0, errors, warnings);
+        return new(errors.Count == 0, errors, warnings);
     }
 }

@@ -95,7 +95,7 @@ public class QueueRunner
         _workers = new();
         foreach (KeyValuePair<string, int> entry in configuration.WorkerCounts)
         {
-            _workers[entry.Key] = new WorkerEntry(entry.Value);
+            _workers[entry.Key] = new(entry.Value);
         }
 
         _logger.LogInformation(

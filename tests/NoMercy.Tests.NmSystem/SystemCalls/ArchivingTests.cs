@@ -35,7 +35,7 @@ public class ArchivingTests : IDisposable
         Directory.CreateDirectory(_workDir);
 
         LocalStorageDriver driver = new();
-        _storage = new LocalStorage(driver, new StoragePathGuard([], driver));
+        _storage = new LocalStorage(driver, new([], driver));
     }
 
     public void Dispose()

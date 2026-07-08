@@ -31,7 +31,6 @@ public partial class FileLogic(
     Library library,
     MediaContext mediaContext,
     IStorageFactory storageFactory,
-    IStorageDriver storageDriver,
     ILogger<FileLogic> logger
 ) : IDisposable, IAsyncDisposable
 {

@@ -142,7 +142,7 @@ public class DriversController(
             );
 
             // Inject credentialsRef into Config so the StorageFactory can resolve it.
-            configToStore ??= new JObject();
+            configToStore ??= new();
             configToStore["credentialsRef"] = credRef;
         }
         else if (request.Credentials is not null)
@@ -254,7 +254,7 @@ public class DriversController(
 
             // Ensure credentialsRef is present in Config.
             configToStore ??= request.Config ?? ParseConfigJson(driver.Config);
-            configToStore ??= new JObject();
+            configToStore ??= new();
             configToStore["credentialsRef"] = credRef;
         }
         else if (request.Credentials is not null)
@@ -419,7 +419,7 @@ public class DriversController(
                 configObj = null;
         }
 
-        return new DriverDto
+        return new()
         {
             Id = driver.Id.ToString(),
             Name = driver.Name,

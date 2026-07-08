@@ -77,7 +77,7 @@ public class PluginProfileOverride(IPluginManager pluginManager) : IProfileOverr
             Id: Ulid.NewUlid(),
             Name: profile.Name,
             Container: ParseContainer(profile.Container),
-            Video: new EncoderVideoOutput(
+            Video: new(
                 Policy: Encoder.Profiles.StreamPolicy.Transcode,
                 Codec: videoCodec,
                 Width: profile.Width ?? 0,

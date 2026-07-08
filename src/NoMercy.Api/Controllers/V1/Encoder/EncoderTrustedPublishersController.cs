@@ -68,7 +68,7 @@ public class EncoderTrustedPublishersController(MediaContext mediaContext) : Bas
         catch (FormatException)
         {
             ValidationEnvelope decodeError = ValidationEnvelope.FromRules([
-                new EncoderRule(
+                new(
                     EncoderRuleId.TrustedPublisherPublicKeyInvalid,
                     EncoderRuleSeverity.Error,
                     "public_key_base64",
@@ -82,7 +82,7 @@ public class EncoderTrustedPublishersController(MediaContext mediaContext) : Bas
         if (publicKeyBytes.Length != 32)
         {
             ValidationEnvelope lengthError = ValidationEnvelope.FromRules([
-                new EncoderRule(
+                new(
                     EncoderRuleId.TrustedPublisherPublicKeyInvalid,
                     EncoderRuleSeverity.Error,
                     "public_key_base64",
@@ -104,7 +104,7 @@ public class EncoderTrustedPublishersController(MediaContext mediaContext) : Bas
         if (exists)
         {
             ValidationEnvelope conflictError = ValidationEnvelope.FromRules([
-                new EncoderRule(
+                new(
                     EncoderRuleId.TrustedPublisherAlreadyTrusted,
                     EncoderRuleSeverity.Error,
                     "public_key_base64",

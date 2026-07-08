@@ -117,7 +117,7 @@ public class SingleFileAudioStrategiesTests
         );
 
         EncodingResult result = await strategy.EncodeAsync(
-            new EncodingRequest("/in.flac", "/out", null!),
+            new("/in.flac", "/out", null!),
             progress: null,
             CancellationToken.None
         );
@@ -158,7 +158,7 @@ public class SingleFileAudioStrategiesTests
         );
 
         EncodingResult result = await strategy.EncodeAsync(
-            new EncodingRequest("/in.wav", "/out", null!),
+            new("/in.wav", "/out", null!),
             progress: null,
             CancellationToken.None
         );
@@ -194,7 +194,7 @@ public class SingleFileAudioStrategiesTests
         );
 
         EncodingResult result = await strategy.EncodeAsync(
-            new EncodingRequest("/in.flac", "/out", null!),
+            new("/in.flac", "/out", null!),
             progress: null,
             CancellationToken.None
         );

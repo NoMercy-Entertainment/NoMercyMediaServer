@@ -242,7 +242,7 @@ public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement, IJobSt
             string? artifactsJson = artifacts.Count > 0 ? string.Join("\n", artifacts) : null;
 
             outcomeContext.EncodeTaskOutcomes.Add(
-                new EncodeTaskOutcome
+                new()
                 {
                     TaskId = Task.TaskId,
                     ParentJobId = Task.ParentJobId,
@@ -288,7 +288,7 @@ public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement, IJobSt
                     continue;
 
                 outcomeContext.EncodeTaskOutcomes.Add(
-                    new EncodeTaskOutcome
+                    new()
                     {
                         TaskId = id,
                         ParentJobId = Task.ParentJobId,

@@ -140,7 +140,7 @@ public class PlanStageAudioFilterTests
         // first. The two filters chain as "pan=...,loudnorm=..." in that order.
         EncodingProfile profile = BuildProfile(
             LoudnessMode.EbuR128,
-            new DownmixConfig(DownmixMode.StereoItuR128)
+            new(DownmixMode.StereoItuR128)
         );
         OutputPlan plan = await RunPlan(profile);
 
@@ -157,7 +157,7 @@ public class PlanStageAudioFilterTests
     {
         EncodingProfile profile = BuildProfile(
             LoudnessMode.None,
-            new DownmixConfig(DownmixMode.Mono)
+            new(DownmixMode.Mono)
         );
         OutputPlan plan = await RunPlan(profile);
 

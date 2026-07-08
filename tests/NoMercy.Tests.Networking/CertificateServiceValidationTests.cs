@@ -48,7 +48,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
 
     private static CertificateService BuildService(IHttpClientFactory? factory = null)
     {
-        return new CertificateService(
+        return new(
             NullLogger<CertificateService>.Instance,
             factory ?? new NullHttpClientFactory()
         );
@@ -133,7 +133,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         public HttpClient CreateClient(string name) =>
             new(new DelegatingFakeHandler(handler))
             {
-                BaseAddress = new Uri("https://test.nomercy.tv/v1/server/"),
+                BaseAddress = new("https://test.nomercy.tv/v1/server/"),
             };
 
         private sealed class DelegatingFakeHandler(
@@ -241,7 +241,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         StubHttpClientFactory factory = new(_ =>
         {
             factoryCalled = true;
-            return new HttpResponseMessage(HttpStatusCode.Accepted);
+            return new(HttpStatusCode.Accepted);
         });
         CertificateService service = BuildFastRetryService(factory);
 
@@ -257,7 +257,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         StubHttpClientFactory factory = new(_ =>
         {
             factoryCalled = true;
-            return new HttpResponseMessage(HttpStatusCode.OK);
+            return new(HttpStatusCode.OK);
         });
         CertificateService service = BuildService(factory);
         using X509Certificate2 valid = CreateSelfSignedCert(DateTimeOffset.UtcNow.AddDays(14));
@@ -275,7 +275,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         StubHttpClientFactory factory = new(_ =>
         {
             factoryCalled = true;
-            return new HttpResponseMessage(HttpStatusCode.Accepted);
+            return new(HttpStatusCode.Accepted);
         });
         CertificateService service = BuildFastRetryService(factory);
         using X509Certificate2 nearExpiry = CreateSelfSignedCert(DateTimeOffset.UtcNow.AddDays(12));
@@ -293,7 +293,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         StubHttpClientFactory factory = new(_ =>
         {
             factoryCalled = true;
-            return new HttpResponseMessage(HttpStatusCode.Accepted);
+            return new(HttpStatusCode.Accepted);
         });
         CertificateService service = BuildFastRetryService(factory);
         using X509Certificate2 expired = CreateSelfSignedCert(DateTimeOffset.UtcNow.AddSeconds(-1));
@@ -311,7 +311,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         StubHttpClientFactory factory = new(_ =>
         {
             factoryCalled = true;
-            return new HttpResponseMessage(HttpStatusCode.OK);
+            return new(HttpStatusCode.OK);
         });
         CertificateService service = BuildService(factory);
 
@@ -327,7 +327,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         StubHttpClientFactory factory = new(_ =>
         {
             factoryCalled = true;
-            return new HttpResponseMessage(HttpStatusCode.OK);
+            return new(HttpStatusCode.OK);
         });
         CertificateService service = BuildService(factory);
 
@@ -343,7 +343,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         StubHttpClientFactory factory = new(_ =>
         {
             callCount++;
-            return new HttpResponseMessage(HttpStatusCode.BadRequest)
+            return new(HttpStatusCode.BadRequest)
             {
                 Content = new StringContent(
                     "{\"status\":\"error\",\"message\":\"Certificate is not due for renewal yet\"}"
@@ -364,7 +364,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         StubHttpClientFactory factory = new(_ =>
         {
             callCount++;
-            return new HttpResponseMessage(HttpStatusCode.BadRequest)
+            return new(HttpStatusCode.BadRequest)
             {
                 Content = new StringContent(string.Empty),
             };
@@ -383,7 +383,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         StubHttpClientFactory factory = new(_ =>
         {
             callCount++;
-            return new HttpResponseMessage(HttpStatusCode.BadRequest)
+            return new(HttpStatusCode.BadRequest)
             {
                 Content = new StringContent("plain text error message"),
             };
@@ -402,7 +402,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         StubHttpClientFactory factory = new(_ =>
         {
             callCount++;
-            return new HttpResponseMessage(HttpStatusCode.Accepted);
+            return new(HttpStatusCode.Accepted);
         });
         CertificateService service = BuildFastRetryService(factory);
 
@@ -418,7 +418,7 @@ public sealed class CertificateServiceValidationTests : IDisposable
         StubHttpClientFactory factory = new(_ =>
         {
             callCount++;
-            return new HttpResponseMessage(HttpStatusCode.GatewayTimeout);
+            return new(HttpStatusCode.GatewayTimeout);
         });
         CertificateService service = BuildFastRetryService(factory);
 

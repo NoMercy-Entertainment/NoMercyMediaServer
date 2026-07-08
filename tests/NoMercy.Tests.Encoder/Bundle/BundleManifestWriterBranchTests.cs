@@ -42,7 +42,7 @@ public class BundleManifestWriterBranchTests
             MediaExternalId: null,
             MediaFolder: "/media/movies/Fight Club (1999)",
             Container: "hls-fmp4",
-            CreatedAt: new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            CreatedAt: new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             CompletedAt: new DateTime(2026, 1, 1, 1, 0, 0, DateTimeKind.Utc),
             MediaKey: "mfa",
             Files: files

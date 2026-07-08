@@ -45,7 +45,7 @@ public class PluginManager : IPluginManager, IDisposable
         _driver = driver ?? throw new ArgumentNullException(nameof(driver));
         _storage = storage ?? throw new ArgumentNullException(nameof(storage));
         _registry = new PluginRegistry();
-        _loader = new PluginLoader(
+        _loader = new(
             _eventBus,
             _serviceProvider,
             _logger,
@@ -53,7 +53,7 @@ public class PluginManager : IPluginManager, IDisposable
             _storage,
             _registry
         );
-        _lifecycle = new PluginLifecycleManager(
+        _lifecycle = new(
             _eventBus,
             _serviceProvider,
             _logger,

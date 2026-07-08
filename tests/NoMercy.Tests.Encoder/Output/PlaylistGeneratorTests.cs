@@ -172,7 +172,7 @@ public class PlaylistGeneratorTests
         // fMP4 requires v7 minimum per HLS spec.
         OutputPlan plan = CreatePlan() with
         {
-            HlsOptions = new HlsPlanOptions { SegmentType = "fmp4" },
+            HlsOptions = new() { SegmentType = "fmp4" },
         };
 
         string playlist = Generate(plan);

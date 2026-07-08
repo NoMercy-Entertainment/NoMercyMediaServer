@@ -214,13 +214,13 @@ public class ResourceAllocatorTests
         );
 
         IResourceMonitor loadedGpu0Monitor = new FixedGpuSampleMonitor([
-            new GpuProcessSample(
+            new(
                 Pid: 100,
                 GpuIndex: 0,
                 EncoderUtilizationPercent: 80,
                 EncoderMemoryBytes: 0
             ),
-            new GpuProcessSample(
+            new(
                 Pid: 101,
                 GpuIndex: 1,
                 EncoderUtilizationPercent: 20,

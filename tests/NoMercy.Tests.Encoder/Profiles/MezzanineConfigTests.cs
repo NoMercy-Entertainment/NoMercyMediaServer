@@ -40,7 +40,7 @@ public class MezzanineConfigTests
 
         EncodingProfile withMezzanine = noMezzanine with
         {
-            Mezzanine = new MezzanineConfig(Codec: "ffv1", Crf: 0),
+            Mezzanine = new(Codec: "ffv1", Crf: 0),
         };
 
         withMezzanine.Mezzanine.Should().NotBeNull();

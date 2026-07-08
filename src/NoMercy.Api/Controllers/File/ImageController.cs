@@ -70,7 +70,7 @@ public class ImageController(
             string originalMimeType = MimeUtility.GetMimeMapping(filePath);
 
             bool emptyArguments =
-                request.Width is null && request.Type is null && request.Quality is 100;
+                request.Width is null && request.Type is null && request.Quality is null or 100;
 
             if (
                 emptyArguments
@@ -102,7 +102,8 @@ public class ImageController(
                     filePath,
                     request.Width,
                     request.AspectRatio,
-                    request.Type
+                    request.Type,
+                    request.Quality
                 );
                 await storage.WriteAsync(cachedImagePath, magickImage, CancellationToken.None);
 

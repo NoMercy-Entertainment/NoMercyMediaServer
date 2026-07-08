@@ -168,7 +168,7 @@ public class InboxController(IInboxRepository inboxRepository, IInboxMetadataPro
             {
                 Status = "ok",
                 Message = "Successfully assigned inbox item.",
-                Data = new InboxItemDto(item),
+                Data = new(item),
             }
         );
     }

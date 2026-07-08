@@ -123,7 +123,7 @@ public class DiscFingerprintTests
             ))
             .ToArray();
 
-        return new DiscInfo(
+        return new(
             OpticalDiscType.BluRay,
             "Test Disc",
             discTitles,

@@ -110,7 +110,7 @@ public class NetworkingExternalIpTests
             new LocalStorageDriver(),
             new AuthTokenStore(),
             new ConnectivityStatus(),
-            new NetworkProbeConfig()
+            new()
         );
         string original = discovery.ExternalIp;
 

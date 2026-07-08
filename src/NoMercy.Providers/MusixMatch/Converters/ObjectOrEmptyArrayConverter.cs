@@ -40,7 +40,7 @@ public class ObjectOrEmptyArrayConverter<T> : JsonConverter<T?>
                 return null;
             case JsonToken.StartArray:
                 JArray.Load(reader);
-                return new T();
+                return new();
             default:
                 JObject json = JObject.Load(reader);
                 return json.ToObject<T>(serializer);

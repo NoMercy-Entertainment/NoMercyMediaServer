@@ -112,7 +112,7 @@ public class BundleGarbageCollector(
                     string.Join(", ", jsonFiles.Select(f => f.Path))
                 );
                 orphans.Add(
-                    new BundleOrphan(
+                    new(
                         Path: bundleDir,
                         PresetSlug: slug,
                         PresetId: string.Empty,
@@ -135,7 +135,7 @@ public class BundleGarbageCollector(
             if (!knownPresetIds.Contains(manifest.PresetId))
             {
                 orphans.Add(
-                    new BundleOrphan(
+                    new(
                         Path: bundleDir,
                         PresetSlug: manifest.PresetSlug,
                         PresetId: manifest.PresetId,

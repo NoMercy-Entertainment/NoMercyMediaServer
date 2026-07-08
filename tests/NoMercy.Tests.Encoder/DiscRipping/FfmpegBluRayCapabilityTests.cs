@@ -107,7 +107,7 @@ public class FfmpegBluRayCapabilityTests
         {
             FfmpegPathOverride = "/usr/bin/ffmpeg",
             FfprobePathOverride = "/usr/bin/ffprobe",
-            BluRay = new BluRayOptions { KeyDbOverridePath = "/home/user/KEYDB.cfg" },
+            BluRay = new() { KeyDbOverridePath = "/home/user/KEYDB.cfg" },
         };
 
         Mock<IProcessRunner> runner = new();
@@ -234,7 +234,7 @@ public class FfmpegBluRayCapabilityTests
         {
             FfmpegPathOverride = "/usr/bin/ffmpeg",
             FfprobePathOverride = "/usr/bin/ffprobe",
-            BluRay = new BluRayOptions { KeyDbOverridePath = "/mnt/keys/KEYDB.cfg" },
+            BluRay = new() { KeyDbOverridePath = "/mnt/keys/KEYDB.cfg" },
         };
 
         IReadOnlyDictionary<string, string>? capturedEnv = null;
@@ -276,7 +276,7 @@ public class FfmpegBluRayCapabilityTests
         try
         {
             LocalStorageDriver driver = new();
-            LocalStorage storage = new(driver, new StoragePathGuard([], driver));
+            LocalStorage storage = new(driver, new([], driver));
             DriveLockRegistry lockRegistry = new();
             DiscRipper ripper = new(
                 options,
@@ -318,7 +318,7 @@ public class FfmpegBluRayCapabilityTests
         {
             FfmpegPathOverride = "/usr/bin/ffmpeg",
             FfprobePathOverride = "/usr/bin/ffprobe",
-            BluRay = new BluRayOptions { AacsKeysOverridePath = "/mnt/keys/bdplus/" },
+            BluRay = new() { AacsKeysOverridePath = "/mnt/keys/bdplus/" },
         };
 
         IReadOnlyDictionary<string, string>? capturedEnv = null;
@@ -358,7 +358,7 @@ public class FfmpegBluRayCapabilityTests
         try
         {
             LocalStorageDriver driver = new();
-            LocalStorage storage = new(driver, new StoragePathGuard([], driver));
+            LocalStorage storage = new(driver, new([], driver));
             DriveLockRegistry lockRegistry = new();
             DiscRipper ripper = new(
                 options,
@@ -424,7 +424,7 @@ public class FfmpegBluRayCapabilityTests
         try
         {
             LocalStorageDriver driver = new();
-            LocalStorage storage = new(driver, new StoragePathGuard([], driver));
+            LocalStorage storage = new(driver, new([], driver));
             DriveLockRegistry lockRegistry = new();
             DiscRipper ripper = new(
                 options,

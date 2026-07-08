@@ -26,7 +26,7 @@ public sealed class PollingDriveBackend(ILogger<PollingDriveBackend> logger) : I
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(5);
 
     private readonly Channel<DriveEvent> _events = Channel.CreateUnbounded<DriveEvent>(
-        new UnboundedChannelOptions { SingleReader = true, SingleWriter = false }
+        new() { SingleReader = true, SingleWriter = false }
     );
     private readonly HashSet<string> _knownDrives = [];
     private readonly Lock _lock = new();
@@ -85,9 +85,9 @@ public sealed class PollingDriveBackend(ILogger<PollingDriveBackend> logger) : I
                         {
                             OpticalDiscType type = Optical.GetDiscType(drive);
                             _events.Writer.TryWrite(
-                                new DriveEvent(
+                                new(
                                     DriveEventType.DiscInserted,
-                                    new DiscDrive(drive, label, true, type)
+                                    new(drive, label, true, type)
                                 )
                             );
                         }
@@ -95,9 +95,9 @@ public sealed class PollingDriveBackend(ILogger<PollingDriveBackend> logger) : I
                     foreach (string ejected in _knownDrives.Except(detected.Keys).ToList())
                     {
                         _events.Writer.TryWrite(
-                            new DriveEvent(
+                            new(
                                 DriveEventType.DiscEjected,
-                                new DiscDrive(ejected, null, false, OpticalDiscType.None)
+                                new(ejected, null, false, OpticalDiscType.None)
                             )
                         );
                         _knownDrives.Remove(ejected);

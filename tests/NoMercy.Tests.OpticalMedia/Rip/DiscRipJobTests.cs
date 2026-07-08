@@ -36,7 +36,7 @@ public class DiscRipJobTests
             DrivePath: drivePath,
             SelectedTitleIndices: [1],
             MetadataId: null,
-            Custom: new CustomMetadata(
+            Custom: new(
                 Title: "Test Movie",
                 Year: 2024,
                 Type: MediaType.Movie,
@@ -203,7 +203,7 @@ public class DiscRipJobTests
                 )
             )
             .ReturnsAsync([
-                new DiscRipResult(
+                new(
                     TitleIndex: 1,
                     OutputPath: Path.Combine(Path.GetTempPath(), "title_01.mkv"),
                     Success: true,
@@ -248,7 +248,7 @@ public class DiscRipJobTests
                 )
             )
             .ReturnsAsync([
-                new DiscRipResult(
+                new(
                     1,
                     Path.Combine(Path.GetTempPath(), "t.mkv"),
                     true,

@@ -44,7 +44,7 @@ public class AutoEncodeSubscriberLifecycleTests
     private static IStorage NoOpStorage()
     {
         IStorageDriver driver = new LocalStorageDriver();
-        return new LocalStorage(driver, new StoragePathGuard([], driver));
+        return new LocalStorage(driver, new([], driver));
     }
 
     private static IDbContextFactory<MediaContext> ContextFactory(out SqliteConnection connection)
@@ -72,8 +72,8 @@ public class AutoEncodeSubscriberLifecycleTests
         Mock<IDbContextFactory<MediaContext>> factory = new();
         factory
             .Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => new MediaContext(options));
-        factory.Setup(f => f.CreateDbContext()).Returns(() => new MediaContext(options));
+            .ReturnsAsync(() => new(options));
+        factory.Setup(f => f.CreateDbContext()).Returns(() => new(options));
         return factory.Object;
     }
 
@@ -286,7 +286,7 @@ public class AutoEncodeSubscriberLifecycleTests
             DriverId = driverId,
         };
         context.Folders.Add(folder);
-        context.FolderLibrary.Add(new FolderLibrary { FolderId = folderId, LibraryId = libraryId });
+        context.FolderLibrary.Add(new() { FolderId = folderId, LibraryId = libraryId });
 
         EncodingPreset preset = new()
         {
@@ -297,7 +297,7 @@ public class AutoEncodeSubscriberLifecycleTests
         };
         context.EncodingPresets.Add(preset);
         context.EncodingPresetFolders.Add(
-            new EncodingPresetFolder
+            new()
             {
                 PresetId = preset.Id,
                 FolderId = folderId,
@@ -310,13 +310,13 @@ public class AutoEncodeSubscriberLifecycleTests
             EncoderProfile profile = new() { Id = Ulid.NewUlid(), Name = "Archive 1080p (v1)" };
             context.EncoderProfiles.Add(profile);
             context.EncoderProfileFolder.Add(
-                new EncoderProfileFolder { EncoderProfileId = profile.Id, FolderId = folderId }
+                new() { EncoderProfileId = profile.Id, FolderId = folderId }
             );
         }
 
         int movieId = 4242;
         context.VideoFiles.Add(
-            new VideoFile
+            new()
             {
                 Id = Ulid.NewUlid(),
                 MovieId = movieId,
@@ -354,17 +354,17 @@ public class AutoEncodeSubscriberLifecycleTests
             DriverId = driverId,
         };
         context.Folders.Add(folder);
-        context.FolderLibrary.Add(new FolderLibrary { FolderId = folderId, LibraryId = libraryId });
+        context.FolderLibrary.Add(new() { FolderId = folderId, LibraryId = libraryId });
 
         EncoderProfile profile = new() { Id = Ulid.NewUlid(), Name = "Archive 1080p" };
         context.EncoderProfiles.Add(profile);
         context.EncoderProfileFolder.Add(
-            new EncoderProfileFolder { EncoderProfileId = profile.Id, FolderId = folderId }
+            new() { EncoderProfileId = profile.Id, FolderId = folderId }
         );
 
         int movieId = 4343;
         context.VideoFiles.Add(
-            new VideoFile
+            new()
             {
                 Id = Ulid.NewUlid(),
                 MovieId = movieId,

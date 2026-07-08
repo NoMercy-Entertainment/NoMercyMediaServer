@@ -144,7 +144,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     [InlineData("GET", "/api/v1/dashboard/drivers/types")]
     public async Task AllEncoderEndpoints_Anonymous_Returns401Or403(string method, string path)
     {
-        HttpRequestMessage req = new(new HttpMethod(method), path);
+        HttpRequestMessage req = new(new(method), path);
         if (method is "POST" or "PUT")
             req.Content = new StringContent("{}", Encoding.UTF8, "application/json");
 
@@ -161,7 +161,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     [InlineData("GET", "/api/v1/dashboard/drivers/types")]
     public async Task ReadEndpoints_Authenticated_ReturnsOk(string method, string path)
     {
-        HttpRequestMessage req = new(new HttpMethod(method), path);
+        HttpRequestMessage req = new(new(method), path);
         HttpResponseMessage response = await _authed.SendAsync(req);
 
         string body = await response.Content.ReadAsStringAsync();
@@ -596,7 +596,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         await using (MediaContext seedCtx = new())
         {
             seedCtx.EncodingPresets.Add(
-                new EncodingPreset
+                new()
                 {
                     Id = deleteTargetId,
                     Name = $"Delete-Target-{deleteTargetId}",
@@ -643,7 +643,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         await using (MediaContext seedCtx = new())
         {
             seedCtx.EncodingPresets.Add(
-                new EncodingPreset
+                new()
                 {
                     Id = parentId,
                     Name = $"Parent-{parentId}",
@@ -1644,7 +1644,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         await using (MediaContext seedCtx = new())
         {
             seedCtx.Drivers.Add(
-                new NoMercy.Database.Models.Storage.Driver
+                new()
                 {
                     Id = firstId,
                     Name = sharedName,
@@ -1729,7 +1729,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         await using (MediaContext seedCtx = new())
         {
             seedCtx.Drivers.Add(
-                new NoMercy.Database.Models.Storage.Driver
+                new()
                 {
                     Id = deleteableId,
                     Name = $"Deleteable-{deleteableId}",
@@ -1776,7 +1776,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         await using (MediaContext seedCtx = new())
         {
             seedCtx.Drivers.Add(
-                new NoMercy.Database.Models.Storage.Driver
+                new()
                 {
                     Id = updateableId,
                     Name = $"Updateable-{updateableId}",
@@ -1812,7 +1812,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         await using (MediaContext seedCtx = new())
         {
             seedCtx.Drivers.Add(
-                new NoMercy.Database.Models.Storage.Driver
+                new()
                 {
                     Id = driverId,
                     Name = $"CredDriver-{driverId}",
@@ -1853,7 +1853,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         await using (MediaContext seedCtx = new())
         {
             seedCtx.Drivers.Add(
-                new NoMercy.Database.Models.Storage.Driver
+                new()
                 {
                     Id = driverId,
                     Name = $"CredDriverFull-{driverId}",

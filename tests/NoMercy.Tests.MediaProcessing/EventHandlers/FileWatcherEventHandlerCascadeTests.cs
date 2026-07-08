@@ -120,7 +120,7 @@ internal sealed class FileWatcherTmdbMockFactory : IHttpClientFactory
     private const int ShowId = 1396;
 
     public HttpClient CreateClient(string name) =>
-        new(new Handler()) { BaseAddress = new Uri("https://api.themoviedb.org/3/") };
+        new(new Handler()) { BaseAddress = new("https://api.themoviedb.org/3/") };
 
     private sealed class Handler : HttpMessageHandler
     {
@@ -141,7 +141,7 @@ internal sealed class FileWatcherTmdbMockFactory : IHttpClientFactory
             };
 
             HttpResponseMessage response = body is null
-                ? new HttpResponseMessage(HttpStatusCode.NotFound)
+                ? new(HttpStatusCode.NotFound)
                 : new HttpResponseMessage(HttpStatusCode.OK)
                 {
                     Content = new StringContent(body, Encoding.UTF8, "application/json"),
@@ -185,18 +185,18 @@ public class FileWatcherEventHandlerCascadeTests : IDisposable
     {
         HttpClientProvider.Initialize(new FileWatcherTmdbMockFactory());
 
-        _queueContext = new FileWatcherTestQueueContext();
+        _queueContext = new();
         QueueConfiguration config = new()
         {
-            WorkerCounts = new Dictionary<string, int> { ["import"] = 0 },
+            WorkerCounts = new() { ["import"] = 0 },
         };
-        _queueRunner = new QueueRunner(_queueContext, config, NullLoggerFactory.Instance);
+        _queueRunner = new(_queueContext, config, NullLoggerFactory.Instance);
 
         _tempRoot = Path.Combine(Path.GetTempPath(), "nm-fweh-" + Path.GetRandomFileName());
         Directory.CreateDirectory(_tempRoot);
 
         _localDriver = new LocalStorageDriver();
-        _storageFactory = new StorageFactory(_localDriver, NullLogger<StorageFactory>.Instance);
+        _storageFactory = new(_localDriver, NullLogger<StorageFactory>.Instance);
     }
 
     public void Dispose()
@@ -381,7 +381,7 @@ public class FileWatcherEventHandlerCascadeTests : IDisposable
     private sealed class NoResultsTmdbFactory : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) =>
-            new(new Handler()) { BaseAddress = new Uri("https://api.themoviedb.org/3/") };
+            new(new Handler()) { BaseAddress = new("https://api.themoviedb.org/3/") };
 
         private sealed class Handler : HttpMessageHandler
         {
@@ -413,14 +413,14 @@ public class InboxClassifierCascadeViaEventBusTests : IDisposable
     public InboxClassifierCascadeViaEventBusTests()
     {
         string dbName = Guid.NewGuid().ToString();
-        _connection = new SqliteConnection($"DataSource={dbName};Mode=Memory;Cache=Shared");
+        _connection = new($"DataSource={dbName};Mode=Memory;Cache=Shared");
         _connection.Open();
 
         DbContextOptions<MediaContext> opts = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(_connection)
             .Options;
 
-        _sharedContext = new MediaContext(opts);
+        _sharedContext = new(opts);
         _sharedContext.Database.EnsureCreated();
         _sharedContext.Database.ExecuteSqlRaw("PRAGMA foreign_keys = OFF;");
     }
@@ -436,7 +436,7 @@ public class InboxClassifierCascadeViaEventBusTests : IDisposable
         DbContextOptions<MediaContext> opts = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(_connection)
             .Options;
-        return new MediaContext(opts);
+        return new(opts);
     }
 
     private Ulid SeedInboxLibrary(string folderPath)
@@ -446,7 +446,7 @@ public class InboxClassifierCascadeViaEventBusTests : IDisposable
         Ulid driverId = Ulid.NewUlid();
 
         _sharedContext.Libraries.Add(
-            new Library
+            new()
             {
                 Id = libraryId,
                 Title = "Inbox",
@@ -454,7 +454,7 @@ public class InboxClassifierCascadeViaEventBusTests : IDisposable
             }
         );
         _sharedContext.Folders.Add(
-            new Folder
+            new()
             {
                 Id = folderId,
                 Path = folderPath,
@@ -462,7 +462,7 @@ public class InboxClassifierCascadeViaEventBusTests : IDisposable
             }
         );
         _sharedContext.FolderLibrary.Add(
-            new FolderLibrary { LibraryId = libraryId, FolderId = folderId }
+            new() { LibraryId = libraryId, FolderId = folderId }
         );
         _sharedContext.SaveChanges();
 
@@ -506,7 +506,7 @@ public class InboxClassifierCascadeViaEventBusTests : IDisposable
         Mock<IStorage> storageMock = new();
         storageMock
             .Setup(s => s.List("", null, false))
-            .Returns([new StorageEntry(childFile, false, 1024, DateTimeOffset.UtcNow)]);
+            .Returns([new(childFile, false, 1024, DateTimeOffset.UtcNow)]);
         storageMock
             .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
             .Returns<string, string>((parent, child) => $"{parent}/{child}");

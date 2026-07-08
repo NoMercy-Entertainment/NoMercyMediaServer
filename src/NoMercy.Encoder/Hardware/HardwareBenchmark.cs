@@ -249,7 +249,7 @@ public class HardwareBenchmark(
                 // its next refetch interval. Without this, _cache only
                 // updates after the entire ~10 min run completes and the
                 // user watches a stale table for the whole benchmark.
-                _cache = new SpeedIndex(new Dictionary<SpeedKey, SpeedMeasurement>(results));
+                _cache = new(new(results));
 
                 logger.LogInformation(
                     "Benchmarked {Encoder}{DeviceTag} @ {W}x{H}: {Fps:F1} fps ({Speed:F2}x)",

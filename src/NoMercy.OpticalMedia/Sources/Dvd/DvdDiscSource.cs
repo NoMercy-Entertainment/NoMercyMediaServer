@@ -109,7 +109,7 @@ public sealed class DvdDiscSource(
                 }
 
                 titles.Add(
-                    new DiscTitle(
+                    new(
                         Index: titleIdx,
                         Name: $"Title {titleIdx:D2}",
                         Duration: duration,
@@ -140,7 +140,7 @@ public sealed class DvdDiscSource(
                 drive.Path,
                 protection?.Message ?? "(no protection detected)"
             );
-            return new DiscInfo(
+            return new(
                 OpticalDiscType.Dvd,
                 drive.Label,
                 [],
@@ -157,7 +157,7 @@ public sealed class DvdDiscSource(
             .OrderByDescending(t => t.Duration)
             .ToArray();
 
-        return new DiscInfo(
+        return new(
             Type: OpticalDiscType.Dvd,
             DiscLabel: drive.Label,
             Titles: flagged,
@@ -260,7 +260,7 @@ public sealed class DvdDiscSource(
             )
         )
         {
-            return new DiscProtection(
+            return new(
                 Kind: "CSS",
                 VolumeId: null,
                 Message: "DVD CSS handshake failed. The drive's region may not match the disc's region, "
@@ -270,7 +270,7 @@ public sealed class DvdDiscSource(
 
         if (stderr.Contains("region code mismatch", StringComparison.OrdinalIgnoreCase))
         {
-            return new DiscProtection(
+            return new(
                 Kind: "RegionLock",
                 VolumeId: null,
                 Message: "DVD region does not match the drive region — change the drive region or use a region-free drive."

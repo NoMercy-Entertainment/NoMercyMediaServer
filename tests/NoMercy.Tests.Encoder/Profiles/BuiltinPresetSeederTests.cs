@@ -29,7 +29,7 @@ public class BuiltinPresetSeederTests
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
             .UseInMemoryDatabase($"seeder-{Ulid.NewUlid()}")
             .Options;
-        return new MediaContext(options);
+        return new(options);
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public class BuiltinPresetSeederTests
         EncodingProfile firstBuiltin = BuiltinPresets.All()[0];
 
         ctx.EncodingPresets.Add(
-            new EncodingPreset
+            new()
             {
                 Id = firstBuiltin.Id,
                 Name = "Stale Name",
@@ -93,7 +93,7 @@ public class BuiltinPresetSeederTests
         await using MediaContext ctx = NewContext();
         Ulid staleId = Ulid.NewUlid();
         ctx.EncodingPresets.Add(
-            new EncodingPreset
+            new()
             {
                 Id = staleId,
                 Name = "Removed Built-in",
@@ -120,7 +120,7 @@ public class BuiltinPresetSeederTests
         await using MediaContext ctx = NewContext();
         Ulid userId = Ulid.NewUlid();
         ctx.EncodingPresets.Add(
-            new EncodingPreset
+            new()
             {
                 Id = userId,
                 Name = "My Custom",

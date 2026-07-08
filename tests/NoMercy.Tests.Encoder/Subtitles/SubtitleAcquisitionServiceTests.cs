@@ -80,7 +80,7 @@ public class SubtitleAcquisitionServiceTests
             out Mock<IOpenSubtitlesAdapter> adapter,
             out _
         );
-        AcquisitionRequest request = MakeRequest(new SubtitleAcquisitionConfig { Enabled = false });
+        AcquisitionRequest request = MakeRequest(new() { Enabled = false });
 
         IReadOnlyList<AcquiredSubtitle> result = await subject.AcquireAsync(
             request,
@@ -99,7 +99,7 @@ public class SubtitleAcquisitionServiceTests
             out _
         );
         AcquisitionRequest request = MakeRequest(
-            new SubtitleAcquisitionConfig { Enabled = true, Languages = [] }
+            new() { Enabled = true, Languages = [] }
         );
 
         IReadOnlyList<AcquiredSubtitle> result = await subject.AcquireAsync(
@@ -140,7 +140,7 @@ public class SubtitleAcquisitionServiceTests
             .ReturnsAsync([1, 2, 3]);
 
         AcquisitionRequest request = MakeRequest(
-            config: new SubtitleAcquisitionConfig
+            config: new()
             {
                 Enabled = true,
                 Languages = ["eng", "fra"],
@@ -194,7 +194,7 @@ public class SubtitleAcquisitionServiceTests
             .ThrowsAsync(new OpenSubtitlesRateLimitException("429 — too many calls"));
 
         AcquisitionRequest request = MakeRequest(
-            new SubtitleAcquisitionConfig
+            new()
             {
                 Enabled = true,
                 Languages = ["eng"],
@@ -232,7 +232,7 @@ public class SubtitleAcquisitionServiceTests
             .ThrowsAsync(new HttpRequestException("DNS fail"));
 
         AcquisitionRequest request = MakeRequest(
-            new SubtitleAcquisitionConfig
+            new()
             {
                 Enabled = true,
                 Languages = ["eng"],
@@ -268,7 +268,7 @@ public class SubtitleAcquisitionServiceTests
             .ThrowsAsync(new OperationCanceledException());
 
         AcquisitionRequest request = MakeRequest(
-            new SubtitleAcquisitionConfig
+            new()
             {
                 Enabled = true,
                 Languages = ["eng"],
@@ -314,7 +314,7 @@ public class SubtitleAcquisitionServiceTests
             .ReturnsAsync([1, 2, 3]);
 
         AcquisitionRequest request = MakeRequest(
-            new SubtitleAcquisitionConfig
+            new()
             {
                 Enabled = true,
                 Languages = ["eng"],
@@ -377,7 +377,7 @@ public class SubtitleAcquisitionServiceTests
             .ReturnsAsync([1, 2, 3]);
 
         AcquisitionRequest request = MakeRequest(
-            new SubtitleAcquisitionConfig
+            new()
             {
                 Enabled = true,
                 Languages = ["eng"],
@@ -434,7 +434,7 @@ public class SubtitleAcquisitionServiceTests
             .ReturnsAsync([1, 2, 3]);
 
         AcquisitionRequest request = MakeRequest(
-            new SubtitleAcquisitionConfig
+            new()
             {
                 Enabled = true,
                 Languages = ["eng"],
@@ -500,7 +500,7 @@ public class SubtitleAcquisitionServiceTests
             .ReturnsAsync([1, 2, 3]);
 
         AcquisitionRequest request = MakeRequest(
-            new SubtitleAcquisitionConfig
+            new()
             {
                 Enabled = true,
                 Languages = ["eng"],
@@ -550,7 +550,7 @@ public class SubtitleAcquisitionServiceTests
             .ReturnsAsync([1, 2, 3]);
 
         AcquisitionRequest request = MakeRequest(
-            config: new SubtitleAcquisitionConfig
+            config: new()
             {
                 Enabled = true,
                 Languages = ["eng"],
@@ -597,7 +597,7 @@ public class SubtitleAcquisitionServiceTests
             .ReturnsAsync([1, 2, 3]);
 
         AcquisitionRequest request = MakeRequest(
-            new SubtitleAcquisitionConfig
+            new()
             {
                 Enabled = true,
                 Languages = ["eng"],
@@ -649,7 +649,7 @@ public class SubtitleAcquisitionServiceTests
             .ReturnsAsync([1, 2, 3]);
 
         AcquisitionRequest request = MakeRequest(
-            new SubtitleAcquisitionConfig
+            new()
             {
                 Enabled = true,
                 Languages = ["eng"],
@@ -702,7 +702,7 @@ public class SubtitleAcquisitionServiceTests
             .ThrowsAsync(new HttpRequestException("ECONNRESET"));
 
         AcquisitionRequest request = MakeRequest(
-            new SubtitleAcquisitionConfig
+            new()
             {
                 Enabled = true,
                 Languages = ["eng", "fra"],

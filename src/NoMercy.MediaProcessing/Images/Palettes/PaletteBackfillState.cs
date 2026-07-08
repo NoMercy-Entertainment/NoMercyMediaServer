@@ -111,7 +111,7 @@ public class PaletteBackfillState
         Configuration? existing = await db.Configuration.FirstOrDefaultAsync(c => c.Key == key, ct);
         if (existing is null)
         {
-            db.Configuration.Add(new Configuration { Key = key, Value = value });
+            db.Configuration.Add(new() { Key = key, Value = value });
         }
         else
         {

@@ -68,7 +68,7 @@ public class EncodingHistoryController(IEncodingHistoryRepository historyReposit
         return Ok(
             new HistoryListResponse(
                 Data: data,
-                Meta: new HistoryListMeta(
+                Meta: new(
                     Total: total,
                     PageSize: pageSize,
                     PageIndex: pageIndex,

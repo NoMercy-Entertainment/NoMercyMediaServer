@@ -25,7 +25,7 @@ public class SystemLocalDriverSeedTests : IDisposable
 
     public SystemLocalDriverSeedTests()
     {
-        _connection = new SqliteConnection("DataSource=:memory:");
+        _connection = new("DataSource=:memory:");
         _connection.Open();
 
         _options = new DbContextOptionsBuilder<MediaContext>()
@@ -89,7 +89,7 @@ public class SystemLocalDriverSeedTests : IDisposable
 
         // Pre-insert a row with the same id to simulate an existing install.
         ctx.Drivers.Add(
-            new Driver
+            new()
             {
                 Id = Driver.SystemLocalDriverId,
                 Name = "Local",

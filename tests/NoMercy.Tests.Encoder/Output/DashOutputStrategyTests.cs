@@ -231,8 +231,8 @@ public class DashOutputStrategyTests
             {
                 Chapters =
                 [
-                    new ChapterInfo(TimeSpan.Zero, TimeSpan.FromSeconds(300), "Intro"),
-                    new ChapterInfo(TimeSpan.FromSeconds(300), TimeSpan.FromSeconds(600), "Main"),
+                    new(TimeSpan.Zero, TimeSpan.FromSeconds(300), "Intro"),
+                    new(TimeSpan.FromSeconds(300), TimeSpan.FromSeconds(600), "Main"),
                 ],
             };
 

@@ -50,7 +50,7 @@ public static class WebHostFactory
         >();
         builder.Services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
         builder.Services.AddSingleton<NoMercy.NmSystem.Logging.NoMercyLoggerOptions>(
-            _ => new NoMercy.NmSystem.Logging.NoMercyLoggerOptions
+            _ => new()
             {
                 MinimumLevel = Microsoft.Extensions.Logging.LogLevel.Information,
                 LogDirectory = NoMercy.NmSystem.Information.AppFiles.LogPath,

@@ -194,7 +194,7 @@ public class WebDavStorageDriverFactoryTests
     {
         Mock<IDriverConfigResolver> resolver = new();
         resolver.Setup(r => r.Resolve(It.IsAny<Ulid>())).Returns((type, config));
-        return new StorageFactory(
+        return new(
             new LocalStorageDriver(),
             NullLogger<StorageFactory>.Instance,
             resolver.Object
@@ -251,7 +251,7 @@ public class WebDavStorageDriverFactoryTests
         Mock<ICredentialResolver> credResolver = new();
         credResolver.Setup(r => r.Resolve(It.IsAny<string>())).Returns(("alice", "s3cr3t"));
 
-        StorageFactory factory = new StorageFactory(
+        StorageFactory factory = new(
             new LocalStorageDriver(),
             NullLogger<StorageFactory>.Instance,
             driverResolver.Object,
@@ -413,7 +413,7 @@ public class WebDavStorageDriverIntegrationTests(StorageBackendsFixture fix)
         WebDavClient badClient = new(
             new WebDavClientParams
             {
-                BaseAddress = new Uri(fix.WebDavBaseUrl),
+                BaseAddress = new(fix.WebDavBaseUrl),
                 Credentials = new NetworkCredential("testuser", "wrongpassword"),
             }
         );
@@ -437,7 +437,7 @@ public class WebDavEnumerateContractTests
 
     private static WebDavStorageDriver BuildDriver(Mock<IWebDavClient> mockClient)
     {
-        return new WebDavStorageDriver(mockClient.Object, BaseUrl);
+        return new(mockClient.Object, BaseUrl);
     }
 
     private static WebDavResource MakeResource(string absoluteUri, bool isCollection)
@@ -455,7 +455,7 @@ public class WebDavEnumerateContractTests
         IEnumerable<WebDavResource> resources
     )
     {
-        return new PropfindResponse(statusCode, resources);
+        return new(statusCode, resources);
     }
 
     [Fact]

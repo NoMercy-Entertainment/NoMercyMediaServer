@@ -136,7 +136,7 @@ public class DegradedModeStartupTests
             new LocalStorageDriver(),
             new AuthTokenStore(),
             new ConnectivityStatus(),
-            new NetworkProbeConfig()
+            new()
         );
         string ip = discovery.InternalIp;
 
@@ -154,7 +154,7 @@ public class DegradedModeStartupTests
             new LocalStorageDriver(),
             new AuthTokenStore(),
             new ConnectivityStatus(),
-            new NetworkProbeConfig()
+            new()
         );
         string ip = discovery.InternalIp;
 
@@ -174,7 +174,7 @@ public class DegradedModeStartupTests
             new LocalStorageDriver(),
             new AuthTokenStore(),
             new ConnectivityStatus(),
-            new NetworkProbeConfig()
+            new()
         );
 
         Assert.True(
@@ -194,7 +194,7 @@ public class DegradedModeStartupTests
             new LocalStorageDriver(),
             new AuthTokenStore(),
             new ConnectivityStatus(),
-            new NetworkProbeConfig()
+            new()
         )
         {
             InternalIp = discovered,
@@ -211,7 +211,7 @@ public class DegradedModeStartupTests
             new LocalStorageDriver(),
             new AuthTokenStore(),
             new ConnectivityStatus(),
-            new NetworkProbeConfig()
+            new()
         )
         {
             InternalIp = "192.168.1.50",
@@ -361,7 +361,7 @@ public class CloudflareFallbackTests
             new LocalStorageDriver(),
             new AuthTokenStore(),
             new ConnectivityStatus(),
-            new NetworkProbeConfig()
+            new()
         );
         string ip = discovery.ExternalIp;
         Assert.NotNull(ip);
@@ -444,7 +444,7 @@ public class CloudflareFallbackTests
                 new LocalStorageDriver(),
                 new AuthTokenStore(),
                 new ConnectivityStatus(),
-                new NetworkProbeConfig()
+                new()
             );
             await discovery.DiscoverExternalIpAsync();
         }

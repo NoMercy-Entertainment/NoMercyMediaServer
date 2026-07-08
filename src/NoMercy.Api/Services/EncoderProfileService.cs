@@ -62,7 +62,7 @@ public class EncoderProfileService(
         if (string.IsNullOrWhiteSpace(name))
         {
             await TryLogFailureAsync(userId, "validation_error", "name is required");
-            return new CreateResult
+            return new()
             {
                 ErrorCode = "validation_error",
                 ErrorMessage = "name is required",
@@ -72,7 +72,7 @@ public class EncoderProfileService(
         if (string.IsNullOrWhiteSpace(profileJson))
         {
             await TryLogFailureAsync(userId, "validation_error", "profile_json is required");
-            return new CreateResult
+            return new()
             {
                 ErrorCode = "validation_error",
                 ErrorMessage = "profile_json is required",
@@ -81,7 +81,7 @@ public class EncoderProfileService(
 
         EncodingPreset? existing = await presetRepository.GetByNameAsync(name);
         if (existing is not null)
-            return new CreateResult
+            return new()
             {
                 ErrorCode = "conflict",
                 ErrorMessage = $"A profile named '{name}' already exists",
@@ -112,7 +112,7 @@ public class EncoderProfileService(
             }
         );
 
-        return new CreateResult { Saved = saved };
+        return new() { Saved = saved };
     }
 
     // -------------------------------------------------------------------------
@@ -140,7 +140,7 @@ public class EncoderProfileService(
     {
         if (string.IsNullOrWhiteSpace(profileJson))
         {
-            return new PreviewParseResult
+            return new()
             {
                 EarlyResponse = BuildPreviewErrorResponse(
                     id,
@@ -160,7 +160,7 @@ public class EncoderProfileService(
         }
         catch (JsonException ex)
         {
-            return new PreviewParseResult
+            return new()
             {
                 EarlyResponse = BuildPreviewErrorResponse(
                     id,
@@ -175,7 +175,7 @@ public class EncoderProfileService(
 
         if (profile is null)
         {
-            return new PreviewParseResult
+            return new()
             {
                 EarlyResponse = BuildPreviewErrorResponse(
                     id,
@@ -188,7 +188,7 @@ public class EncoderProfileService(
             };
         }
 
-        return new PreviewParseResult { Profile = profile };
+        return new() { Profile = profile };
     }
 
     // -------------------------------------------------------------------------
@@ -226,10 +226,10 @@ public class EncoderProfileService(
         {
             if (!url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
-                return new ImportResult
+                return new()
                 {
                     ValidationError = ValidationEnvelope.FromRules([
-                        new EncoderRule(
+                        new(
                             EncoderRuleId.ImportHttpNotHttps,
                             EncoderRuleSeverity.Error,
                             "url",
@@ -253,10 +253,10 @@ public class EncoderProfileService(
             }
             catch (Exception ex)
             {
-                return new ImportResult
+                return new()
                 {
                     ValidationError = ValidationEnvelope.FromRules([
-                        new EncoderRule(
+                        new(
                             EncoderRuleId.ImportFetchFailed,
                             EncoderRuleSeverity.Error,
                             "url",
@@ -271,10 +271,10 @@ public class EncoderProfileService(
         }
         else
         {
-            return new ImportResult
+            return new()
             {
                 ValidationError = ValidationEnvelope.FromRules([
-                    new EncoderRule(
+                    new(
                         EncoderRuleId.ImportSourceMissing,
                         EncoderRuleSeverity.Error,
                         "profile_json",
@@ -293,10 +293,10 @@ public class EncoderProfileService(
         }
         catch (JsonException ex)
         {
-            return new ImportResult
+            return new()
             {
                 ValidationError = ValidationEnvelope.FromRules([
-                    new EncoderRule(
+                    new(
                         EncoderRuleId.ImportJsonMalformed,
                         EncoderRuleSeverity.Error,
                         "profile_json",
@@ -309,10 +309,10 @@ public class EncoderProfileService(
 
         if (profile is null)
         {
-            return new ImportResult
+            return new()
             {
                 ValidationError = ValidationEnvelope.FromRules([
-                    new EncoderRule(
+                    new(
                         EncoderRuleId.ImportJsonMalformed,
                         EncoderRuleSeverity.Error,
                         "profile_json",
@@ -344,7 +344,7 @@ public class EncoderProfileService(
 
             if (rejection is not null)
             {
-                return new ImportResult
+                return new()
                 {
                     ValidationError = ValidationEnvelope.FromRules([rejection]),
                 };
@@ -354,10 +354,10 @@ public class EncoderProfileService(
         {
             if (!trustUnsigned)
             {
-                return new ImportResult
+                return new()
                 {
                     ValidationError = ValidationEnvelope.FromRules([
-                        new EncoderRule(
+                        new(
                             EncoderRuleId.ImportUnsignedRequiresFlag,
                             EncoderRuleSeverity.Error,
                             "trust_unsigned",
@@ -398,7 +398,7 @@ public class EncoderProfileService(
             }
         );
 
-        return new ImportResult { Saved = saved, ImportedProfile = importedProfile };
+        return new() { Saved = saved, ImportedProfile = importedProfile };
     }
 
     // -------------------------------------------------------------------------
@@ -414,10 +414,10 @@ public class EncoderProfileService(
         string suggestion
     )
     {
-        return new PreviewResponse(
+        return new(
             ProfileId: id,
             SourceVideoFileId: sourcePath ?? string.Empty,
-            SourceAnalysis: new SourceAnalysisDto(
+            SourceAnalysis: new(
                 string.Empty,
                 0,
                 0,
@@ -432,10 +432,10 @@ public class EncoderProfileService(
                 null,
                 null
             ),
-            PerStreamPlan: new PerStreamPlan([], [], []),
+            PerStreamPlan: new([], [], []),
             SourceWarnings:
             [
-                new EncoderRule(ruleId, EncoderRuleSeverity.Error, field, message, suggestion),
+                new(ruleId, EncoderRuleSeverity.Error, field, message, suggestion),
             ],
             EstimatedFps: 0,
             EstimatedDurationSeconds: 0,

@@ -34,7 +34,7 @@ public class EncodingOrchestratorTests
         // Pass-through lease so tests that reach the staging step don't null-ref.
         _storage
             .Setup(s => s.AcquireLocalPathAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string path, CancellationToken _) => new LocalPathLease(path));
+            .ReturnsAsync((string path, CancellationToken _) => new(path));
 
         // Driver is accessed when naming the publish stage — provide a non-null stub.
         _storage.Setup(s => s.Driver).Returns(new LocalStorageDriver());

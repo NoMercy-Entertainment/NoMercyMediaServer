@@ -94,7 +94,7 @@ public class AdultContentFilterTests : IDisposable
     {
         RuntimeServerSettings.Current.AllowAdultContent = false;
         _context.People.Add(
-            new Person
+            new()
             {
                 Id = 11,
                 Name = "Clean Actor",
@@ -102,7 +102,7 @@ public class AdultContentFilterTests : IDisposable
             }
         );
         _context.People.Add(
-            new Person
+            new()
             {
                 Id = 12,
                 Name = "Adult Performer",
@@ -120,7 +120,7 @@ public class AdultContentFilterTests : IDisposable
     private void AddAdultMovie()
     {
         _context.Movies.Add(
-            new Movie
+            new()
             {
                 Id = AdultMovieId,
                 Title = "Explicit Title",

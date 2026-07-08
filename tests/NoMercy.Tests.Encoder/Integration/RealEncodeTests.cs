@@ -214,7 +214,7 @@ public class RealEncodeTests : IAsyncLifetime
                     SampleRateHz: 48000,
                     AllowedLanguages: ["und"],
                     DefaultLanguage: null,
-                    Loudness: new LoudnessConfig(LoudnessMode.None),
+                    Loudness: new(LoudnessMode.None),
                     Downmix: null,
                     SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
                     PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
@@ -224,7 +224,7 @@ public class RealEncodeTests : IAsyncLifetime
         )
         {
             HardwarePreference = HardwarePreference.ForceSoftware,
-            HlsDerivatives = new HlsDerivatives
+            HlsDerivatives = new()
             {
                 GenerateSpriteVtt = false,
                 GenerateThumbnailTrack = false,
@@ -312,7 +312,7 @@ public class RealEncodeTests : IAsyncLifetime
                     SampleRateHz: 48000,
                     AllowedLanguages: ["und"],
                     DefaultLanguage: null,
-                    Loudness: new LoudnessConfig(LoudnessMode.None),
+                    Loudness: new(LoudnessMode.None),
                     Downmix: null,
                     SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
                     PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
@@ -322,7 +322,7 @@ public class RealEncodeTests : IAsyncLifetime
         )
         {
             HardwarePreference = HardwarePreference.ForceSoftware,
-            HlsDerivatives = new HlsDerivatives
+            HlsDerivatives = new()
             {
                 GenerateSpriteVtt = false,
                 GenerateThumbnailTrack = false,
@@ -415,14 +415,14 @@ public class RealEncodeTests : IAsyncLifetime
                     SampleRateHz: 48000,
                     AllowedLanguages: ["und"],
                     DefaultLanguage: null,
-                    Loudness: new LoudnessConfig(LoudnessMode.None),
+                    Loudness: new(LoudnessMode.None),
                     Downmix: null,
                     SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
                     PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
                 ),
             ],
             Subtitles: [],
-            Ladder: new NoMercy.Encoder.Profiles.LadderConfig
+            Ladder: new()
             {
                 Mode = NoMercy.Encoder.Profiles.LadderMode.Manual,
                 // Validator requires manual rungs sorted ascending by bitrate
@@ -437,7 +437,7 @@ public class RealEncodeTests : IAsyncLifetime
         )
         {
             HardwarePreference = HardwarePreference.ForceSoftware,
-            HlsDerivatives = new HlsDerivatives
+            HlsDerivatives = new()
             {
                 GenerateSpriteVtt = false,
                 GenerateThumbnailTrack = false,
@@ -525,7 +525,7 @@ public class RealEncodeTests : IAsyncLifetime
                     SampleRateHz: 48000,
                     AllowedLanguages: ["und"],
                     DefaultLanguage: null,
-                    Loudness: new LoudnessConfig(LoudnessMode.None),
+                    Loudness: new(LoudnessMode.None),
                     Downmix: null,
                     SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
                     PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
@@ -535,7 +535,7 @@ public class RealEncodeTests : IAsyncLifetime
         )
         {
             HardwarePreference = HardwarePreference.ForceSoftware,
-            HlsDerivatives = new HlsDerivatives
+            HlsDerivatives = new()
             {
                 GenerateSpriteVtt = false,
                 GenerateThumbnailTrack = false,
@@ -627,7 +627,7 @@ public class RealEncodeTests : IAsyncLifetime
                     SampleRateHz: 48000,
                     AllowedLanguages: ["und"],
                     DefaultLanguage: null,
-                    Loudness: new LoudnessConfig(LoudnessMode.None),
+                    Loudness: new(LoudnessMode.None),
                     Downmix: null,
                     SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
                     PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
@@ -638,7 +638,7 @@ public class RealEncodeTests : IAsyncLifetime
         )
         {
             HardwarePreference = HardwarePreference.ForceSoftware,
-            HlsDerivatives = new HlsDerivatives
+            HlsDerivatives = new()
             {
                 GenerateSpriteVtt = false,
                 GenerateThumbnailTrack = false,
@@ -1046,7 +1046,7 @@ public class RealEncodeTests : IAsyncLifetime
                     SampleRateHz: 48000,
                     AllowedLanguages: ["und", "eng"],
                     DefaultLanguage: null,
-                    Loudness: new LoudnessConfig(LoudnessMode.None),
+                    Loudness: new(LoudnessMode.None),
                     Downmix: null,
                     SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
                     PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
@@ -1056,7 +1056,7 @@ public class RealEncodeTests : IAsyncLifetime
         )
         {
             HardwarePreference = HardwarePreference.ForceSoftware,
-            HlsDerivatives = new HlsDerivatives
+            HlsDerivatives = new()
             {
                 GenerateSpriteVtt = false,
                 GenerateThumbnailTrack = false,
@@ -1148,7 +1148,7 @@ public class RealEncodeTests : IAsyncLifetime
                     SampleRateHz: 48000,
                     AllowedLanguages: ["jpn", "und"],
                     DefaultLanguage: "jpn",
-                    Loudness: new LoudnessConfig(LoudnessMode.None),
+                    Loudness: new(LoudnessMode.None),
                     Downmix: null,
                     SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
                     PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
@@ -1158,7 +1158,7 @@ public class RealEncodeTests : IAsyncLifetime
         )
         {
             HardwarePreference = HardwarePreference.ForceSoftware,
-            HlsDerivatives = new HlsDerivatives
+            HlsDerivatives = new()
             {
                 GenerateSpriteVtt = false,
                 GenerateThumbnailTrack = false,
@@ -1251,7 +1251,7 @@ public class RealEncodeTests : IAsyncLifetime
                     SampleRateHz: 48000,
                     AllowedLanguages: ["und", "eng"],
                     DefaultLanguage: null,
-                    Loudness: new LoudnessConfig(LoudnessMode.None),
+                    Loudness: new(LoudnessMode.None),
                     Downmix: null,
                     SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
                     PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
@@ -1261,7 +1261,7 @@ public class RealEncodeTests : IAsyncLifetime
         )
         {
             HardwarePreference = HardwarePreference.ForceSoftware,
-            HlsDerivatives = new HlsDerivatives
+            HlsDerivatives = new()
             {
                 GenerateSpriteVtt = false,
                 GenerateThumbnailTrack = false,
@@ -1337,7 +1337,7 @@ public class RealEncodeTests : IAsyncLifetime
                     SampleRateHz: 48000,
                     AllowedLanguages: ["und", "eng"],
                     DefaultLanguage: null,
-                    Loudness: new LoudnessConfig(LoudnessMode.None),
+                    Loudness: new(LoudnessMode.None),
                     Downmix: null,
                     SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
                     PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
@@ -1347,7 +1347,7 @@ public class RealEncodeTests : IAsyncLifetime
         )
         {
             HardwarePreference = HardwarePreference.ForceSoftware,
-            HlsDerivatives = new HlsDerivatives
+            HlsDerivatives = new()
             {
                 GenerateSpriteVtt = false,
                 GenerateThumbnailTrack = false,

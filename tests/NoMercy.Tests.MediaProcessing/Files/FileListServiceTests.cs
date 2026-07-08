@@ -34,13 +34,13 @@ public class FileListServiceTests
 
         List<StorageEntry> entries =
         [
-            new StorageEntry(
+            new(
                 "Movies/Inception.2010.1080p.BluRay.mkv",
                 false,
                 1000,
                 DateTimeOffset.UtcNow
             ),
-            new StorageEntry(
+            new(
                 "Movies/The.Matrix.1999.1080p.BluRay.mkv",
                 false,
                 2000,

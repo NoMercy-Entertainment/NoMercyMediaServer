@@ -289,7 +289,7 @@ public class BuildStage(
             if (burnInPlan is not null)
             {
                 context.DecisionsOrNoOp.Add(
-                    new DecisionLog(
+                    new(
                         Stage: Name,
                         Key: EncoderRuleId.SubtitlesBurnInPermanent,
                         Message: "Subtitle stream will be burned permanently into video frames. "
@@ -471,7 +471,8 @@ public class BuildStage(
                 FfmpegCommand fontCommand = fontExtractor.BuildExtractionCommand(
                     options.FfmpegPath,
                     input.InputPath,
-                    input.OutputDirectory
+                    input.OutputDirectory,
+                    context.MediaInfo.Attachments
                 );
                 allCommands.Add(fontCommand);
             }
@@ -596,17 +597,13 @@ public class BuildStage(
         string outputFile = $"chapters/{chapterIndex:D2}.webp";
 
         return new FfmpegCommandBuilder()
-            .WithGlobalOptions(new GlobalOptions(ProgressPipe: false, Overwrite: true))
-            .AddInput(new InputOptions(FilePath: inputPath, SeekTo: timestamp))
+            .WithGlobalOptions(new(ProgressPipe: false, Overwrite: true))
+            .AddInput(new(FilePath: inputPath, SeekTo: timestamp))
             .AddOutput(
-                new OutputOptions(
+                new(
                     FilePath: outputFile,
                     VideoCodec: "libwebp",
-                    ExtraFlags: new Dictionary<string, string>
-                    {
-                        ["-frames:v"] = "1",
-                        ["-vf"] = "scale=240:-2",
-                    }
+                    ExtraFlags: new() { ["-frames:v"] = "1", ["-vf"] = "scale=240:-2" }
                 )
             )
             .Build(ffmpegPath, outputDirectory);

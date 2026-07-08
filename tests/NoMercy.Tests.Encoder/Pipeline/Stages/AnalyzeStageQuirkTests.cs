@@ -242,8 +242,8 @@ public class AnalyzeStageQuirkTests
         MediaInfo info = BuildMedia(
             chapters:
             [
-                new ChapterInfo(TimeSpan.Zero, TimeSpan.FromMinutes(10), "Intro"),
-                new ChapterInfo(TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(45), "Act 1"),
+                new(TimeSpan.Zero, TimeSpan.FromMinutes(10), "Intro"),
+                new(TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(45), "Act 1"),
             ]
         );
 

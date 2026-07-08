@@ -47,7 +47,7 @@ public class JsonDriverFingerprintStoreTests : IDisposable
         {
             SpeedIndexCachePath = Path.Combine(_tempDir, "speed_index.json"),
         };
-        return new JsonDriverFingerprintStore(
+        return new(
             opts,
             NullLogger<JsonDriverFingerprintStore>.Instance,
             _storage

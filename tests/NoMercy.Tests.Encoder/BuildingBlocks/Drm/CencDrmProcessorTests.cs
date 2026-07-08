@@ -62,7 +62,7 @@ public class CencDrmProcessorTests
                     It.IsAny<CancellationToken>()
                 ) == Task.FromResult(new ProcessResult(0, "", "", TimeSpan.Zero))
             );
-        return new CencDrmProcessor(
+        return new(
             opts,
             processRunner,
             NullLogger<CencDrmProcessor>.Instance,

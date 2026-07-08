@@ -46,11 +46,11 @@ public class CrashSweepTests : IDisposable
         _tempRoot = Path.Combine(Path.GetTempPath(), $"CrashSweep_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempRoot);
 
-        _encoder = new Mock<IEncoder>(MockBehavior.Strict);
-        _checkpointStore = new Mock<ICheckpointStore>();
+        _encoder = new(MockBehavior.Strict);
+        _checkpointStore = new();
         _storage = TestStorageFactory.CreateLocal();
 
-        _strategy = new HlsTwoPassStrategy(
+        _strategy = new(
             _encoder.Object,
             _checkpointStore.Object,
             NullLogger<HlsTwoPassStrategy>.Instance,
@@ -89,7 +89,7 @@ public class CrashSweepTests : IDisposable
                     Success: false,
                     OutputPath: string.Empty,
                     Duration: TimeSpan.Zero,
-                    Error: new EncodingError(
+                    Error: new(
                         Kind: EncodingErrorKind.ProcessCrashed,
                         Message: "ffmpeg crashed",
                         FfmpegStderr: null,
@@ -107,7 +107,7 @@ public class CrashSweepTests : IDisposable
         EncodingRequest request = new(
             InputPath: "/media/source.mkv",
             OutputDirectory: outputDir,
-            Profile: new EncodingProfile(
+            Profile: new(
                 Id: Ulid.NewUlid(),
                 Name: "Test HLS",
                 Container: Container.HlsTs,
@@ -154,7 +154,7 @@ public class CrashSweepTests : IDisposable
                     Success: false,
                     OutputPath: string.Empty,
                     Duration: TimeSpan.Zero,
-                    Error: new EncodingError(
+                    Error: new(
                         Kind: EncodingErrorKind.ProcessCrashed,
                         Message: "crashed",
                         FfmpegStderr: null,
@@ -172,7 +172,7 @@ public class CrashSweepTests : IDisposable
         EncodingRequest request = new(
             InputPath: "/media/source.mkv",
             OutputDirectory: outputDir,
-            Profile: new EncodingProfile(
+            Profile: new(
                 Id: Ulid.NewUlid(),
                 Name: "Test HLS",
                 Container: Container.HlsTs,
@@ -224,7 +224,7 @@ public class CrashSweepTests : IDisposable
         EncodingRequest request = new(
             InputPath: "/media/source.mkv",
             OutputDirectory: outputDir,
-            Profile: new EncodingProfile(
+            Profile: new(
                 Id: Ulid.NewUlid(),
                 Name: "Test HLS",
                 Container: Container.HlsTs,

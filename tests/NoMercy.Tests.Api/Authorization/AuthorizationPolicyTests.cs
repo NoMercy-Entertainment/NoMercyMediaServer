@@ -30,7 +30,7 @@ public sealed class AuthorizationPolicyTests : IDisposable
     {
         UserCache.Current.Reset();
         UserCache.Current.AddUser(
-            new User
+            new()
             {
                 Id = KnownUserId,
                 Email = "known@nomercy.tv",
@@ -83,14 +83,14 @@ public sealed class AuthorizationPolicyTests : IDisposable
         bool includeProfile
     )
     {
-        List<Claim> claims = [new Claim(ClaimTypes.NameIdentifier, userId.ToString())];
+        List<Claim> claims = [new(ClaimTypes.NameIdentifier, userId.ToString())];
         if (includeOpenid)
-            claims.Add(new Claim("scope", "openid"));
+            claims.Add(new("scope", "openid"));
         if (includeProfile)
-            claims.Add(new Claim("scope", "profile"));
+            claims.Add(new("scope", "profile"));
 
         ClaimsIdentity identity = new(claims, "TestScheme");
-        return new ClaimsPrincipal(identity);
+        return new(identity);
     }
 
     [Fact]
@@ -175,9 +175,9 @@ public sealed class AuthorizationPolicyTests : IDisposable
 
         List<Claim> claims =
         [
-            new Claim(ClaimTypes.NameIdentifier, "not-a-guid"),
-            new Claim("scope", "openid"),
-            new Claim("scope", "profile"),
+            new(ClaimTypes.NameIdentifier, "not-a-guid"),
+            new("scope", "openid"),
+            new("scope", "profile"),
         ];
         ClaimsIdentity identity = new(claims, "TestScheme");
         ClaimsPrincipal principal = new(identity);

@@ -55,14 +55,14 @@ public sealed class NfsStorageContractTests : IStorageContractTests
 
     protected override IStorage CreateStorage()
     {
-        _fake = new FaultyLibNfs();
+        _fake = new();
 
         // Seed root "/" so DirectoryExists("") → ToNfsPath("") = "/" → stat "/" → exists
         _fake.SeedDir("/");
 
         NfsDriverConfig config = NfsDriverConfig.For("fake-server", "/export");
-        _driver = new NfsStorageDriver(config, _fake, NullLogger.Instance);
-        _storage = new RemoteStorage(_driver);
+        _driver = new(config, _fake, NullLogger.Instance);
+        _storage = new(_driver);
         return _storage;
     }
 

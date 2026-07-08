@@ -45,11 +45,11 @@ public class CancellationTests : IDisposable
         _tempRoot = Path.Combine(Path.GetTempPath(), $"CancelTest_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempRoot);
 
-        _encoder = new Mock<IEncoder>(MockBehavior.Strict);
-        _checkpointStore = new Mock<ICheckpointStore>();
+        _encoder = new(MockBehavior.Strict);
+        _checkpointStore = new();
         _storage = TestStorageFactory.CreateLocal();
 
-        _strategy = new HlsTwoPassStrategy(
+        _strategy = new(
             _encoder.Object,
             _checkpointStore.Object,
             NullLogger<HlsTwoPassStrategy>.Instance,
@@ -104,7 +104,7 @@ public class CancellationTests : IDisposable
                     cts.Cancel();
                     await Task.Delay(1, ct); // yields — lets cancellation propagate
                     ct.ThrowIfCancellationRequested();
-                    return new EncodingResult(true, outputDir, TimeSpan.Zero, null, null);
+                    return new(true, outputDir, TimeSpan.Zero, null, null);
                 }
             );
 
@@ -177,7 +177,7 @@ public class CancellationTests : IDisposable
                 // First call = pass 1 → success (checkpoint will be saved).
                 // Second call = pass 2 → crash.
                 return callCount == 1
-                    ? new EncodingResult(true, outputDir, TimeSpan.FromSeconds(10), null, null)
+                    ? new(true, outputDir, TimeSpan.FromSeconds(10), null, null)
                     : new EncodingResult(
                         false,
                         outputDir,
@@ -222,7 +222,7 @@ public class CancellationTests : IDisposable
         new(
             InputPath: "/media/source/movie.mkv",
             OutputDirectory: outputDir,
-            Profile: new EncodingProfile(
+            Profile: new(
                 Id: Ulid.NewUlid(),
                 Name: "Test HLS",
                 Container: Container.HlsTs,

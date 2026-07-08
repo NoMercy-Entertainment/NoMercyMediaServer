@@ -110,7 +110,7 @@ public sealed class NvmlGpuSampler : ProcessResourceMonitor
                 continue;
 
             samples.Add(
-                new GpuProcessSample(
+                new(
                     Pid: pid,
                     GpuIndex: 0,
                     EncoderUtilizationPercent: 0,

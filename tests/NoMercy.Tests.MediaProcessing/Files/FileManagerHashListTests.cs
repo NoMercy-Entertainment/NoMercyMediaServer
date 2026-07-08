@@ -42,7 +42,7 @@ public sealed class FileManagerHashListTests : IDisposable
         Mock<IFileRepository> repoMock = new();
         Mock<IStorageFactory> factoryMock = new();
         Mock<IStorageDriver> driverMock = new();
-        return new FileManager(repoMock.Object, factoryMock.Object, driverMock.Object);
+        return new(repoMock.Object, factoryMock.Object, driverMock.Object);
     }
 
     private static List<IVideo> InvokeGetVideoHashList(
@@ -211,8 +211,8 @@ public sealed class FileManagerHashListTests : IDisposable
 
         LocalStorageDriver driver = new();
 
-        LocalStorage openStorage = new(driver, new StoragePathGuard([], driver));
-        LocalStorage enforcedStorage = new(driver, new StoragePathGuard([root], driver));
+        LocalStorage openStorage = new(driver, new([], driver));
+        LocalStorage enforcedStorage = new(driver, new([root], driver));
 
         FileManager manager = BuildFileManager();
 
@@ -233,8 +233,8 @@ public sealed class FileManagerHashListTests : IDisposable
 
         LocalStorageDriver driver = new();
 
-        LocalStorage openStorage = new(driver, new StoragePathGuard([], driver));
-        LocalStorage enforcedStorage = new(driver, new StoragePathGuard([root], driver));
+        LocalStorage openStorage = new(driver, new([], driver));
+        LocalStorage enforcedStorage = new(driver, new([root], driver));
 
         FileManager manager = BuildFileManager();
 

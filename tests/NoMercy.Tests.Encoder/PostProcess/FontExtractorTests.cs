@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Newtonsoft.Json.Linq;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.PostProcess;
 using NoMercy.Tests.Encoder.Storage;
@@ -33,20 +34,84 @@ public class FontExtractorTests : IDisposable
             Directory.Delete(_tempDir, true);
     }
 
+    private static readonly IReadOnlyList<AttachmentInfo> TwoFonts =
+    [
+        new(
+            Index: 5,
+            Codec: "ttf",
+            Filename: "ChalkDust_0.ttf",
+            MimeType: "application/x-truetype-font"
+        ),
+        new(Index: 6, Codec: "ttf", Filename: "Arial.ttf", MimeType: "application/x-truetype-font"),
+    ];
+
     // ------------------------------------------------------------------
-    // BuildExtractionCommand includes -dump_attachment:t flag
+    // BuildExtractionCommand emits one -dump_attachment flag per attachment
     // ------------------------------------------------------------------
 
     [Fact]
-    public void BuildExtractionCommand_ContainsDumpAttachmentFlag()
+    public void BuildExtractionCommand_EmitsDumpFlagPerAttachment()
     {
         FfmpegCommand cmd = _extractor.BuildExtractionCommand(
             "ffmpeg",
             "/input/movie.mkv",
-            _tempDir
+            _tempDir,
+            TwoFonts
         );
 
-        cmd.Arguments.Should().Contain("-dump_attachment:t");
+        cmd.Arguments.Should().Contain("-dump_attachment:5");
+        cmd.Arguments.Should().Contain("-dump_attachment:6");
+    }
+
+    // ------------------------------------------------------------------
+    // An attachment filename ffmpeg rejects as "unsafe" (spaces) is
+    // sanitized to an explicit output name — the whole dump no longer aborts.
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public void BuildExtractionCommand_UnsafeFilename_IsSanitized()
+    {
+        IReadOnlyList<AttachmentInfo> attachments =
+        [
+            new(Index: 6, Codec: "ttf", Filename: "CM Big Fat Paintbrush_0.ttf", MimeType: null),
+        ];
+
+        FfmpegCommand cmd = _extractor.BuildExtractionCommand(
+            "ffmpeg",
+            "/input/movie.mkv",
+            _tempDir,
+            attachments
+        );
+
+        cmd.Arguments.Should().Contain("CM_Big_Fat_Paintbrush_0.ttf");
+        cmd.Arguments.Should().NotContain(arg => arg.Contains(' '));
+    }
+
+    // ------------------------------------------------------------------
+    // Two attachments that sanitize to the same name stay distinct
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public void BuildExtractionCommand_NameCollision_IsDisambiguated()
+    {
+        IReadOnlyList<AttachmentInfo> attachments =
+        [
+            new(Index: 5, Codec: "ttf", Filename: "My Font.ttf", MimeType: null),
+            new(Index: 6, Codec: "ttf", Filename: "My@Font.ttf", MimeType: null),
+        ];
+
+        FfmpegCommand cmd = _extractor.BuildExtractionCommand(
+            "ffmpeg",
+            "/input/movie.mkv",
+            _tempDir,
+            attachments
+        );
+
+        List<string> names = cmd
+            .Arguments.Where(a => a.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        names.Should().OnlyHaveUniqueItems();
+        names.Should().HaveCount(2);
     }
 
     // ------------------------------------------------------------------
@@ -59,7 +124,8 @@ public class FontExtractorTests : IDisposable
         FfmpegCommand cmd = _extractor.BuildExtractionCommand(
             "ffmpeg",
             "/input/movie.mkv",
-            _tempDir
+            _tempDir,
+            TwoFonts
         );
 
         string expectedFontDir = Path.Combine(_tempDir, "fonts");
@@ -76,7 +142,8 @@ public class FontExtractorTests : IDisposable
         FfmpegCommand cmd = _extractor.BuildExtractionCommand(
             "/usr/bin/ffmpeg",
             "/input/movie.mkv",
-            _tempDir
+            _tempDir,
+            TwoFonts
         );
 
         cmd.Executable.Should().Be("/usr/bin/ffmpeg");
@@ -92,10 +159,30 @@ public class FontExtractorTests : IDisposable
         FfmpegCommand cmd = _extractor.BuildExtractionCommand(
             "ffmpeg",
             "/input/movie.mkv",
-            _tempDir
+            _tempDir,
+            TwoFonts
         );
 
         cmd.Arguments.Should().Contain("/input/movie.mkv");
+    }
+
+    // ------------------------------------------------------------------
+    // CountFontAttachments counts fonts (incl. .ttc) and ignores non-fonts
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public void CountFontAttachments_CountsFontsIgnoresOthers()
+    {
+        IReadOnlyList<AttachmentInfo> attachments =
+        [
+            new(Index: 5, Codec: "ttf", Filename: "A.ttf", MimeType: null),
+            new(Index: 6, Codec: "otf", Filename: "B.otf", MimeType: null),
+            new(Index: 7, Codec: "ttf", Filename: "C.ttc", MimeType: null),
+            new(Index: 8, Codec: "bin", Filename: "grade.cube", MimeType: null),
+            new(Index: 9, Codec: "bin", Filename: null, MimeType: null),
+        ];
+
+        _extractor.CountFontAttachments(attachments).Should().Be(3);
     }
 
     // ------------------------------------------------------------------

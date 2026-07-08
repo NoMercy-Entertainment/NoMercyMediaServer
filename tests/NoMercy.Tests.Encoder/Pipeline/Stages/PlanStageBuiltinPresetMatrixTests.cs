@@ -83,7 +83,7 @@ public class PlanStageBuiltinPresetMatrixTests
             )
             .Returns(
                 (VideoCodecType codec, IHardwareCapabilities _, EncoderPreference _) =>
-                    new ResolvedCodec(
+                    new(
                         FfmpegEncoderName: SoftwareEncoderFor(codec),
                         EncoderInfo: new(
                             FfmpegName: SoftwareEncoderFor(codec),

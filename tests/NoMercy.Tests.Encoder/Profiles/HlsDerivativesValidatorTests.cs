@@ -83,7 +83,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.Mkv,
-            hlsDerivatives: new HlsDerivatives { GenerateSpriteVtt = true }
+            hlsDerivatives: new() { GenerateSpriteVtt = true }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -99,7 +99,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.HlsFmp4,
-            hlsDerivatives: new HlsDerivatives { GenerateSpriteVtt = true }
+            hlsDerivatives: new() { GenerateSpriteVtt = true }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -112,7 +112,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.HlsTs,
-            hlsDerivatives: new HlsDerivatives { GenerateSpriteVtt = true }
+            hlsDerivatives: new() { GenerateSpriteVtt = true }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -125,7 +125,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.Mkv,
-            hlsDerivatives: new HlsDerivatives { GenerateSpriteVtt = false }
+            hlsDerivatives: new() { GenerateSpriteVtt = false }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -140,7 +140,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.HlsFmp4,
-            hlsDerivatives: new HlsDerivatives { GenerateIFramePlaylists = true },
+            hlsDerivatives: new() { GenerateIFramePlaylists = true },
             videoPolicy: StreamPolicy.Copy
         );
 
@@ -157,7 +157,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.HlsFmp4,
-            hlsDerivatives: new HlsDerivatives { GenerateIFramePlaylists = true },
+            hlsDerivatives: new() { GenerateIFramePlaylists = true },
             videoPolicy: StreamPolicy.Transcode
         );
 
@@ -173,7 +173,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.HlsFmp4,
-            hlsDerivatives: new HlsDerivatives { GenerateMasterPlaylist = false }
+            hlsDerivatives: new() { GenerateMasterPlaylist = false }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -189,7 +189,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.Mkv,
-            hlsDerivatives: new HlsDerivatives
+            hlsDerivatives: new()
             {
                 GenerateMasterPlaylist = false,
                 GenerateSpriteVtt = false,
@@ -211,7 +211,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.HlsFmp4,
-            hlsDerivatives: new HlsDerivatives { SpriteVttIntervalSeconds = value }
+            hlsDerivatives: new() { SpriteVttIntervalSeconds = value }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -225,7 +225,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.HlsFmp4,
-            hlsDerivatives: new HlsDerivatives { SpriteVttIntervalSeconds = 10 }
+            hlsDerivatives: new() { SpriteVttIntervalSeconds = 10 }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -241,7 +241,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.HlsFmp4,
-            hlsDerivatives: new HlsDerivatives { SpriteVttColumns = value }
+            hlsDerivatives: new() { SpriteVttColumns = value }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -258,7 +258,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.HlsFmp4,
-            hlsDerivatives: new HlsDerivatives { SpriteVttRows = value }
+            hlsDerivatives: new() { SpriteVttRows = value }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -275,7 +275,7 @@ public class HlsDerivativesValidatorTests
     {
         EncodingProfile profile = HlsProfile(
             Container.HlsFmp4,
-            hlsDerivatives: new HlsDerivatives { SpriteVttThumbnailWidth = value }
+            hlsDerivatives: new() { SpriteVttThumbnailWidth = value }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);

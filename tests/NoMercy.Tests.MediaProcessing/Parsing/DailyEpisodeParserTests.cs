@@ -27,7 +27,7 @@ public class DailyEpisodeParserTests
     public void Parses_air_date(string name, int y, int m, int d)
     {
         DateOnly? date = DailyEpisodeParser.TryGetAirDate(name);
-        date.Should().Be(new System.DateOnly(y, m, d));
+        date.Should().Be(new(y, m, d));
     }
 
     [Theory]

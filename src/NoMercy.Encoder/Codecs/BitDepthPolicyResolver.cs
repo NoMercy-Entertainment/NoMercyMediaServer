@@ -50,14 +50,14 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
         if (requestedBitDepth <= 8)
         {
             decisions.Add(
-                new DecisionLog(
+                new(
                     "plan",
                     "plan.bit_depth",
                     "8-bit requested — no policy check needed",
                     new { requested = 8 }
                 )
             );
-            return new BitDepthResolutionResult(
+            return new(
                 FinalBitDepth: 8,
                 PixelFormat: "yuv420p",
                 SwitchedToEncoder: null,
@@ -74,7 +74,7 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
                 : resolvedCodec.EncoderInfo.PixelFormat10Bit;
 
             decisions.Add(
-                new DecisionLog(
+                new(
                     "plan",
                     "plan.bit_depth",
                     "10-bit kept — encoder supports it",
@@ -82,7 +82,7 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
                 )
             );
 
-            return new BitDepthResolutionResult(
+            return new(
                 FinalBitDepth: 10,
                 PixelFormat: pf,
                 SwitchedToEncoder: null,
@@ -115,7 +115,7 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
     )
     {
         decisions.Add(
-            new DecisionLog(
+            new(
                 "plan",
                 "plan.bit_depth",
                 "10-bit auto-downgraded to 8-bit",
@@ -142,7 +142,7 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
             Fix: "Set bit_depth_policy = PreferSoftware to swap to libx264/libx265 instead, or accept 8-bit."
         );
 
-        return new BitDepthResolutionResult(
+        return new(
             FinalBitDepth: 8,
             PixelFormat: "yuv420p",
             SwitchedToEncoder: null,
@@ -157,7 +157,7 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
     )
     {
         decisions.Add(
-            new DecisionLog(
+            new(
                 "plan",
                 "plan.bit_depth",
                 "Strict violation — plan failed",
@@ -166,7 +166,7 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
         );
 
         EncoderRuntimeException failure = new(
-            new EncoderErrorShape(
+            new(
                 Id: EncoderRuleId.BitDepthStrictViolation,
                 Message: $"Encoder '{encoderHandle}' does not support 10-bit and bit_depth_policy = Strict forbids downgrade.",
                 Suggestion: "Switch the profile to PreferSoftware or remove the 10-bit requirement.",
@@ -175,7 +175,7 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
             422
         );
 
-        return new BitDepthResolutionResult(
+        return new(
             FinalBitDepth: 0,
             PixelFormat: null,
             SwitchedToEncoder: null,
@@ -199,7 +199,7 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
             : sw.EncoderInfo.PixelFormat10Bit;
 
         decisions.Add(
-            new DecisionLog(
+            new(
                 "plan",
                 "plan.bit_depth_switched_to_software",
                 $"10-bit needed — switched from {fromHandle} to {toHandle}",
@@ -212,7 +212,7 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
             )
         );
 
-        return new BitDepthResolutionResult(
+        return new(
             FinalBitDepth: 10,
             PixelFormat: pf,
             SwitchedToEncoder: toHandle,
@@ -224,7 +224,7 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
     private static BitDepthResolutionResult HandleSilentDowngrade(IDecisionLogSink decisions)
     {
         decisions.Add(
-            new DecisionLog(
+            new(
                 "plan",
                 "plan.bit_depth",
                 "10-bit silently downgraded to 8-bit (policy = SilentDowngrade)",
@@ -232,7 +232,7 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
             )
         );
 
-        return new BitDepthResolutionResult(
+        return new(
             FinalBitDepth: 8,
             PixelFormat: "yuv420p",
             SwitchedToEncoder: null,

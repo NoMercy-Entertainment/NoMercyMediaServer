@@ -78,7 +78,7 @@ public sealed record NfsDriverConfig(
                 nameof(json)
             );
 
-        return new NfsDriverConfig(
+        return new(
             raw.Server.Trim(),
             NormalizeExport(raw.Export.Trim()),
             version,

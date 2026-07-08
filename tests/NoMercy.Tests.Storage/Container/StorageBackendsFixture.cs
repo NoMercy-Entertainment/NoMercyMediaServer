@@ -223,7 +223,7 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
             ForcePathStyle = true,
             AuthenticationRegion = "us-east-1",
         };
-        return new AmazonS3Client(new BasicAWSCredentials(S3AccessKey, S3SecretKey), cfg);
+        return new(new BasicAWSCredentials(S3AccessKey, S3SecretKey), cfg);
     }
 
     public S3StorageDriver BuildS3Driver(string? prefix = null) =>
@@ -241,11 +241,11 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
         WebDavClient client = new(
             new WebDavClientParams
             {
-                BaseAddress = new Uri(WebDavBaseUrl),
+                BaseAddress = new(WebDavBaseUrl),
                 Credentials = new NetworkCredential(WebDavUser, WebDavPassword),
             }
         );
-        return new WebDavStorageDriver(client, WebDavBaseUrl);
+        return new(client, WebDavBaseUrl);
     }
 
     public SmbStorageDriver BuildSmbDriver(string basePath = "")
@@ -258,7 +258,7 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
             port: SmbPort,
             basePath: basePath
         );
-        return new SmbStorageDriver(config);
+        return new(config);
     }
 
     /// <summary>
@@ -271,7 +271,7 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
         try
         {
             NfsDriverConfig config = NfsDriverConfig.For(NfsHost, NfsExport, version: version);
-            return new NfsStorageDriver(config);
+            return new(config);
         }
         catch (DllNotFoundException)
         {

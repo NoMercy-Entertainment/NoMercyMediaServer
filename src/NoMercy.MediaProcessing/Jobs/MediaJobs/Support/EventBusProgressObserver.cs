@@ -117,7 +117,7 @@ public class EventBusProgressObserver : IProgressObserver
         TimeSpan remaining = progress.EstimatedRemaining ?? TimeSpan.Zero;
 
         EventBusFireAndForget.Publish(
-            new EncodingProgressBroadcastedEvent
+            new()
             {
                 ProgressData = new
                 {
@@ -182,7 +182,7 @@ public class EventBusProgressObserver : IProgressObserver
     private void Publish(string status, string message)
     {
         EventBusFireAndForget.Publish(
-            new EncodingProgressBroadcastedEvent
+            new()
             {
                 ProgressData = new
                 {

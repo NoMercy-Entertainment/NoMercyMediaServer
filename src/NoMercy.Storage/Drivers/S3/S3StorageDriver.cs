@@ -94,7 +94,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
         AmazonS3Config config;
         if (!string.IsNullOrWhiteSpace(endpoint))
         {
-            config = new AmazonS3Config
+            config = new()
             {
                 ServiceURL = endpoint,
                 ForcePathStyle = true,
@@ -103,7 +103,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
         }
         else
         {
-            config = new AmazonS3Config { RegionEndpoint = RegionEndpoint.GetBySystemName(region) };
+            config = new() { RegionEndpoint = RegionEndpoint.GetBySystemName(region) };
         }
 
         _client =
@@ -183,7 +183,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
 
         Uri uri = string.IsNullOrEmpty(canonicalQs)
             ? ObjectUrl(key)
-            : new Uri(ObjectUrl(key).ToString() + "?" + canonicalQs);
+            : new(ObjectUrl(key).ToString() + "?" + canonicalQs);
 
         HttpRequestMessage req = new(method, uri);
         req.Headers.TryAddWithoutValidation("Authorization", authHeader);
@@ -703,7 +703,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                     continue;
 
                 results.Add(
-                    new StorageEntryInfo(
+                    new(
                         relPath,
                         IsDirectory: false,
                         Size: obj.Size,
@@ -725,7 +725,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
 
                     if (StoragePatternMatcher.Matches(dirName, searchPattern))
                         results.Add(
-                            new StorageEntryInfo(
+                            new(
                                 relPath,
                                 IsDirectory: true,
                                 Size: 0L,
@@ -767,7 +767,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                     : relPath;
                 if (StoragePatternMatcher.Matches(fileName, searchPattern))
                     results.Add(
-                        new StorageEntryInfo(
+                        new(
                             relPath,
                             IsDirectory: false,
                             Size: size,
@@ -786,7 +786,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                         : relPath;
                     if (StoragePatternMatcher.Matches(dirName, searchPattern))
                         results.Add(
-                            new StorageEntryInfo(
+                            new(
                                 relPath,
                                 IsDirectory: true,
                                 Size: 0L,

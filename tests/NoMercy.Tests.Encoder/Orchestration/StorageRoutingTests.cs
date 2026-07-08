@@ -38,7 +38,7 @@ public class StorageRoutingTests
         Mock<IStorage> mock = new();
         mock.Setup(s => s.Driver).Returns(new LocalStorageDriver());
         mock.Setup(s => s.AcquireLocalPathAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string _, CancellationToken _) => new LocalPathLease(stagingPath));
+            .ReturnsAsync((string _, CancellationToken _) => new(stagingPath));
         return mock;
     }
 

@@ -27,7 +27,7 @@ public class ActivityLoggerTests : IDisposable
 
     public ActivityLoggerTests()
     {
-        _connection = new SqliteConnection("Data Source=:memory:");
+        _connection = new("Data Source=:memory:");
         _connection.Open();
 
         using (SqliteCommand fkOff = _connection.CreateCommand())
@@ -51,7 +51,7 @@ public class ActivityLoggerTests : IDisposable
     {
         Mock<IDbContextFactory<MediaContext>> mock = new();
         mock.Setup(x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => new MediaContext(_options));
+            .ReturnsAsync(() => new(_options));
         return mock.Object;
     }
 

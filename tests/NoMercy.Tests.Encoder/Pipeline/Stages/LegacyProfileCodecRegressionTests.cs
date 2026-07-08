@@ -153,7 +153,7 @@ public class LegacyProfileCodecRegressionTests
 
         DateTime measuredAt = DateTime.UtcNow;
         SpeedIndex speedIndex = new(
-            new Dictionary<SpeedKey, SpeedMeasurement>
+            new()
             {
                 [new(VideoCodecType.H264, "h264_nvenc", 1920, GpuName)] = new(
                     240,
@@ -167,9 +167,9 @@ public class LegacyProfileCodecRegressionTests
         );
 
         PlanStage stage = new(
-            new ExecutionGraphBuilder(),
-            new GroupingStrategy(),
-            new CostEstimator(),
+            new(),
+            new(),
+            new(),
             codecResolver,
             hardware.Object,
             new TonemapSelector(),

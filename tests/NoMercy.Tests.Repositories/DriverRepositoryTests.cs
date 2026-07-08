@@ -31,7 +31,7 @@ public class DriverRepositoryTests : IDisposable
     {
         (_context, _connection) = (
             TestMediaContextFactory.CreateSeededContext(),
-            new SqliteConnection("Data Source=:memory:")
+            new("Data Source=:memory:")
         );
         _repository = new(_context);
     }
@@ -83,7 +83,7 @@ public class DriverRepositoryTests : IDisposable
     {
         await using MediaContext context = _context;
         context.Drivers.Add(
-            new Driver
+            new()
             {
                 Id = Ulid.NewUlid(),
                 Name = "Zebra Drive",
@@ -94,7 +94,7 @@ public class DriverRepositoryTests : IDisposable
             }
         );
         context.Drivers.Add(
-            new Driver
+            new()
             {
                 Id = Ulid.NewUlid(),
                 Name = "Alpha Drive",
@@ -137,7 +137,7 @@ public class DriverRepositoryTests : IDisposable
         };
         context.Drivers.Add(driver);
         context.Folders.Add(
-            new Folder
+            new()
             {
                 Id = Ulid.NewUlid(),
                 Path = "/test1",
@@ -145,7 +145,7 @@ public class DriverRepositoryTests : IDisposable
             }
         );
         context.Folders.Add(
-            new Folder
+            new()
             {
                 Id = Ulid.NewUlid(),
                 Path = "/test2",
@@ -232,7 +232,7 @@ public class DriverRepositoryTests : IDisposable
         Ulid driverId2 = Ulid.NewUlid();
         string sharedName = "Shared Name " + Guid.NewGuid();
         context.Drivers.Add(
-            new Driver
+            new()
             {
                 Id = driverId1,
                 Name = sharedName,
@@ -243,7 +243,7 @@ public class DriverRepositoryTests : IDisposable
             }
         );
         context.Drivers.Add(
-            new Driver
+            new()
             {
                 Id = driverId2,
                 Name = sharedName + "_other",
@@ -276,7 +276,7 @@ public class DriverRepositoryTests : IDisposable
         };
         context.Drivers.Add(driver);
         context.Folders.Add(
-            new Folder
+            new()
             {
                 Id = Ulid.NewUlid(),
                 Path = "/path1",
@@ -284,7 +284,7 @@ public class DriverRepositoryTests : IDisposable
             }
         );
         context.Folders.Add(
-            new Folder
+            new()
             {
                 Id = Ulid.NewUlid(),
                 Path = "/path2",
@@ -292,7 +292,7 @@ public class DriverRepositoryTests : IDisposable
             }
         );
         context.Folders.Add(
-            new Folder
+            new()
             {
                 Id = Ulid.NewUlid(),
                 Path = "/path3",

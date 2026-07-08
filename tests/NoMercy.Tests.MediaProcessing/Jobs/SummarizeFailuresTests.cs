@@ -22,7 +22,7 @@ public sealed class SummarizeFailuresTests
     {
         List<EncodeTaskOutcome> failed =
         [
-            new EncodeTaskOutcome
+            new()
             {
                 TaskId = "t1",
                 ParentJobId = 1,
@@ -32,7 +32,7 @@ public sealed class SummarizeFailuresTests
                 ErrorMessage = "x",
                 CompletedAt = DateTime.UtcNow,
             },
-            new EncodeTaskOutcome
+            new()
             {
                 TaskId = "t2",
                 ParentJobId = 1,
@@ -42,7 +42,7 @@ public sealed class SummarizeFailuresTests
                 ErrorMessage = null,
                 CompletedAt = DateTime.UtcNow,
             },
-            new EncodeTaskOutcome
+            new()
             {
                 TaskId = "t3",
                 ParentJobId = 1,
@@ -72,7 +72,7 @@ public sealed class SummarizeFailuresTests
     {
         List<EncodeTaskOutcome> failedOnly =
         [
-            new EncodeTaskOutcome
+            new()
             {
                 TaskId = "t1",
                 ParentJobId = 1,
@@ -82,7 +82,7 @@ public sealed class SummarizeFailuresTests
                 ErrorMessage = "err1",
                 CompletedAt = DateTime.UtcNow,
             },
-            new EncodeTaskOutcome
+            new()
             {
                 TaskId = "t2",
                 ParentJobId = 1,
@@ -108,7 +108,7 @@ public sealed class SummarizeFailuresTests
     {
         List<EncodeTaskOutcome> failedOnly =
         [
-            new EncodeTaskOutcome
+            new()
             {
                 TaskId = "t1",
                 ParentJobId = 1,

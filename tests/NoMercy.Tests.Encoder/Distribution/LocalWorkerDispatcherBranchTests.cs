@@ -286,7 +286,7 @@ public class LocalWorkerDispatcherBranchTests
                     ExitCode: 1,
                     StdErr: "no such file",
                     Duration: TimeSpan.FromSeconds(1),
-                    Error: new EncodingError(
+                    Error: new(
                         EncodingErrorKind.InputNotFound,
                         "input.mkv vanished",
                         null,
@@ -383,7 +383,7 @@ public class LocalWorkerDispatcherBranchTests
         LocalWorkerDispatcher dispatcher = NewDispatcher(executor.Object);
         EncodeTask task = new(
             TaskId: "t0",
-            Command: new FfmpegCommand("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
             OutputPath: "/out/a",
             Type: EncodeTaskType.TimeChunk,
             TimeRangeStart: TimeSpan.FromMinutes(5),
@@ -491,7 +491,7 @@ public class LocalWorkerDispatcherBranchTests
     private static EncodeTask MakeTask(string id, string outputPath) =>
         new(
             TaskId: id,
-            Command: new FfmpegCommand("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
             OutputPath: outputPath,
             Type: EncodeTaskType.QualityVariant
         );

@@ -65,7 +65,7 @@ public abstract class TwoPassStrategyBase(
         {
             VideoOutputPlan video = plan.VideoOutputs[i];
             tasks.Add(
-                new DecomposedTask(
+                new(
                     TaskId: $"{groupTag}-pass1-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
@@ -82,7 +82,7 @@ public abstract class TwoPassStrategyBase(
         {
             VideoOutputPlan video = plan.VideoOutputs[i];
             tasks.Add(
-                new DecomposedTask(
+                new(
                     TaskId: $"{groupTag}-pass2-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
@@ -100,7 +100,7 @@ public abstract class TwoPassStrategyBase(
         {
             AudioOutputPlan audio = plan.AudioOutputs[i];
             tasks.Add(
-                new DecomposedTask(
+                new(
                     TaskId: $"{groupTag}-audio-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
@@ -117,7 +117,7 @@ public abstract class TwoPassStrategyBase(
         {
             SubtitleOutputPlan sub = plan.SubtitleOutputs[i];
             tasks.Add(
-                new DecomposedTask(
+                new(
                     TaskId: $"{groupTag}-sub-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
@@ -133,7 +133,7 @@ public abstract class TwoPassStrategyBase(
         if (plan.Thumbnails is not null)
         {
             tasks.Add(
-                new DecomposedTask(
+                new(
                     TaskId: $"{groupTag}-thumbs",
                     ParentJobId: 0,
                     GroupTag: groupTag,
@@ -153,7 +153,7 @@ public abstract class TwoPassStrategyBase(
             {
                 ChapterInfo chapter = plan.Chapters[i];
                 tasks.Add(
-                    new DecomposedTask(
+                    new(
                         TaskId: $"{groupTag}-chapter-{i}",
                         ParentJobId: 0,
                         GroupTag: groupTag,

@@ -29,7 +29,7 @@ public sealed class ConnectivityManagerStateTests
             new LocalStorageDriver(),
             new AuthTokenStore(),
             new ConnectivityStatus(),
-            new NetworkProbeConfig()
+            new()
         );
         d.ExternalIp = "1.2.3.4";
         return d;
@@ -63,7 +63,7 @@ public sealed class ConnectivityManagerStateTests
         BootStatus boot = new();
         boot.MarkStarted();
 
-        return new ConnectivityManager(
+        return new(
             NullLogger<ConnectivityManager>.Instance,
             tokenStore,
             BuildNetworkDiscovery(),

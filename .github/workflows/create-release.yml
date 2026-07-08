@@ -259,10 +259,9 @@ jobs:
           git add -A
 
           # Create the squash commit with version and changelog.
-          # [skip ci]: this commit is force-synced to dev at the end of this job;
-          # without it the dev push starts a new pipeline run that cancels this
-          # run's promote_docker_images job (cancel-in-progress concurrency),
-          # leaving :latest unpromoted. The sync run was always a no-op anyway.
+          # [skip ci]: the release commit is this pipeline's own output; letting the
+          # master push start another run would cancel this run's promote_docker_images
+          # job (cancel-in-progress concurrency) and leave :latest unpromoted.
           git commit -m "release: v$NEW_VERSION [skip ci]" -m "$CHANGELOG"
 
           # Push to master
@@ -328,18 +327,6 @@ jobs:
           fi
 
           echo "All assets uploaded successfully"
-
-      - name: Sync dev branch to match master
-        env:
-          PAT: ${{ secrets.PAT }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git remote set-url origin "https://x-access-token:${PAT}@github.com/NoMercy-Entertainment/nomercy-media-server.git"
-          git checkout -f dev
-          git reset --hard master
-          git push --force-with-lease origin dev
-
-          echo "Synced dev to match master"
 
       - name: Trigger package repository update
         env:

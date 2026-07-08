@@ -38,7 +38,7 @@ public class BenchmarkJobTrackerTests
                 == Task.FromResult(new SpeedIndex(new()))
             );
 
-        return new BenchmarkJobTracker(
+        return new(
             bench,
             NullLogger<BenchmarkJobTracker>.Instance,
             lifetime ?? NeverStoppingLifetime()
@@ -127,7 +127,7 @@ public class BenchmarkJobTrackerTests
         BenchmarkJobStatus job = tracker.Start([], []);
 
         // Resolve the task so the background work can complete.
-        tcs.SetResult(new SpeedIndex(new()));
+        tcs.SetResult(new(new()));
 
         // Allow the background Task.Run to finish.
         await Task.Delay(200);
@@ -223,7 +223,7 @@ public class BenchmarkJobTrackerTests
                     concurrentCount--;
                 }
 
-                return new SpeedIndex(new());
+                return new(new());
             });
 
         BenchmarkJobTracker tracker = MakeTracker(mock.Object);
@@ -310,7 +310,7 @@ public class BenchmarkJobTrackerTests
         tracker.Get(first.JobId)!.Status.Should().Be("running");
 
         // Release the first job so the test doesn't leak a running task.
-        firstJobRelease.TrySetResult(new SpeedIndex(new()));
+        firstJobRelease.TrySetResult(new(new()));
         await Task.Delay(150);
 
         calibrateCallCount.Should().Be(1); // second job's CalibrateAsync was never invoked

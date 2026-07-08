@@ -268,7 +268,7 @@ public class MediaAnalyzerTests
         MediaAnalyzer analyzer = new(
             mockRunner.Object,
             TestStorageFactory.CreateLocal(),
-            new EncoderOptions { FfprobePathOverride = "ffprobe" }
+            new() { FfprobePathOverride = "ffprobe" }
         );
         MediaInfo info = await analyzer.AnalyzeAsync("/media/test.mkv");
 
@@ -313,7 +313,7 @@ public class MediaAnalyzerTests
         MediaAnalyzer analyzer = new(
             mockRunner.Object,
             TestStorageFactory.CreateLocal(),
-            new EncoderOptions { FfprobePathOverride = "ffprobe" }
+            new() { FfprobePathOverride = "ffprobe" }
         );
 
         Func<Task> act = async () => await analyzer.AnalyzeAsync("/nonexistent.mkv");

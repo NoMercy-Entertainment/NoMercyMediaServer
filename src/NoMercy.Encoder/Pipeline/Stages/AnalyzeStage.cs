@@ -93,7 +93,7 @@ public class AnalyzeStage(IMediaAnalyzer analyzer, IStorage storage, ILogger<Ana
         if (info.DolbyVision is not null)
         {
             sink.Add(
-                new DecisionLog(
+                new(
                     "analyze",
                     "analyze.dv_present",
                     $"Dolby Vision profile {info.DolbyVision.Profile} level {info.DolbyVision.Level} detected.",
@@ -107,7 +107,7 @@ public class AnalyzeStage(IMediaAnalyzer analyzer, IStorage storage, ILogger<Ana
             if (v.IsVariableFrameRate)
             {
                 sink.Add(
-                    new DecisionLog(
+                    new(
                         "analyze",
                         "analyze.vfr_detected",
                         $"Stream {v.Index} reports variable frame rate (real {v.RealFrameRate:F3} vs avg {v.AverageFrameRate:F3}).",
@@ -126,7 +126,7 @@ public class AnalyzeStage(IMediaAnalyzer analyzer, IStorage storage, ILogger<Ana
         if (fontAttachments > 0)
         {
             sink.Add(
-                new DecisionLog(
+                new(
                     "analyze",
                     "analyze.attached_fonts",
                     $"{fontAttachments} font attachment(s) present — will be extracted next to subtitles.",
@@ -138,7 +138,7 @@ public class AnalyzeStage(IMediaAnalyzer analyzer, IStorage storage, ILogger<Ana
         if (info.Chapters.Count > 0)
         {
             sink.Add(
-                new DecisionLog(
+                new(
                     "analyze",
                     "analyze.chapter_count",
                     $"{info.Chapters.Count} chapter(s) detected.",

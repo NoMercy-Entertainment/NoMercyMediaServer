@@ -116,7 +116,7 @@ public class DriveLockRegistryTests
         storageMock.Setup(s => s.CreateDirectory(It.IsAny<string>()));
         storageMock
             .Setup(s => s.AcquireLocalPath(It.IsAny<string>()))
-            .Returns((string p) => new LocalPathLease(p));
+            .Returns((string p) => new(p));
         storageMock.Setup(s => s.SizeOrZero(It.IsAny<string>())).Returns(1024L);
 
         Mock<ILogger<DiscRipper>> loggerMock = new();

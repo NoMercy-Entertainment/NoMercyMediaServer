@@ -62,8 +62,8 @@ public class DriverFingerprintTests
     [Fact]
     public void ComputeHash_HandlesEmptyDriverVersion_ProducesStableHash()
     {
-        DriverFingerprint fp1 = new([new GpuDriverInfo("Nvidia", "RTX 4090", string.Empty, 0)]);
-        DriverFingerprint fp2 = new([new GpuDriverInfo("Nvidia", "RTX 4090", string.Empty, 0)]);
+        DriverFingerprint fp1 = new([new("Nvidia", "RTX 4090", string.Empty, 0)]);
+        DriverFingerprint fp2 = new([new("Nvidia", "RTX 4090", string.Empty, 0)]);
 
         string hash = fp1.ComputeHash();
 

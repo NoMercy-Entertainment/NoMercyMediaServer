@@ -21,6 +21,7 @@ using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Storage;
+using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.MediaProcessing.Files;
@@ -64,12 +65,33 @@ public partial class FileManager(
                 Files.AddRange(files);
         }
 
+        // How many playable files the scan actually resolved. Logged next to the
+        // per-type candidate count so an empty result is distinguishable from a
+        // scan that found files but failed to parse them.
+        int rawFileCount = Files.Sum(folder => folder.Files?.Count ?? 0);
+        bool hasCandidates = Files
+            .SelectMany(folder => folder.Files ?? [])
+            .Any(file => file.Parsed is not null);
+
+        Logger.App(
+            $"[FindFiles] {Type} id={id}: scan resolved {rawFileCount} file(s), "
+                + $"{(hasCandidates ? "has" : "no")} parseable candidates across {Folders.Count} folder(s)",
+            LogEventLevel.Information
+        );
+
         // Delete old records first as a single committed step, then insert each
         // new record in its own SaveChangesAsync. A single wrapping transaction
         // around 80 NFS/S3 reads holds the SQLite writer lock for the entire
         // scan and hides every insert until commit, so partial progress is
         // invisible and the writer blocks every other workload.
-        if (Filter is null)
+        //
+        // Only clear when the scan actually found replacements. A rescan that
+        // comes back empty — a transient remote-storage hiccup, or a scan-side
+        // regression — must NOT wipe a show/movie that is still fully on disk;
+        // deleting here and then storing 0 leaves the library emptier than
+        // before the rescan. Genuine on-disk deletions are reconciled by the
+        // file-watcher's FileDeletedEvent path, not by nuking on every empty scan.
+        if (Filter is null && hasCandidates)
         {
             switch (library.Type)
             {
@@ -81,6 +103,14 @@ public partial class FileManager(
                     await fileRepository.DeleteVideoFilesAndMetadataByTvIdAsync(Show?.Id ?? id);
                     break;
             }
+        }
+        else if (Filter is null && !hasCandidates)
+        {
+            Logger.App(
+                $"[FindFiles] {Type} id={id}: scan found no parseable files — preserving existing "
+                    + "records instead of deleting (rescan is non-destructive on an empty result)",
+                LogEventLevel.Warning
+            );
         }
 
         switch (library.Type)

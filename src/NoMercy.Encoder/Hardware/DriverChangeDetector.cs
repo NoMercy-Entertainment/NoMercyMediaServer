@@ -38,7 +38,7 @@ public class DriverChangeDetector(IHardwareDetector hardwareDetector, IDriverFin
         bool isFirstBoot = previousHash is null;
         bool changed = !isFirstBoot && previousHash != currentHash;
 
-        return new DriverChangeResult(
+        return new(
             CurrentHash: currentHash,
             PreviousHash: previousHash,
             Changed: changed,
