@@ -111,40 +111,31 @@ public class FolderRepository(MediaContext context) : IFolderRepository
 
     public async Task<int> DeleteFolderAsync(Folder folder)
     {
-        // SQLite schema uses DeleteBehavior.Restrict globally. Folder has FK
-        // dependents (FolderLibrary entries, etc.) that aren't on the cascade
-        // list in OnModelCreating, so a straight Remove + SaveChangesAsync
-        // throws on the constraint violation. Mirrors the same workaround
-        // pattern as MovieRepository / CollectionRepository / TvShowRepository.
-        //
-        // PRAGMA foreign_keys is per-connection in SQLite. EF Core's
-        // ExecuteSqlRawAsync and SaveChangesAsync each open and close a pooled
-        // connection by default — PRAGMA OFF on connection A doesn't apply to
-        // the DELETE on connection B. Pin one connection across all calls.
-        bool ownsConnection =
-            context.Database.GetDbConnection().State != System.Data.ConnectionState.Open;
+        // The SQLite schema uses DeleteBehavior.Restrict, so a folder's required
+        // FK dependents must be deleted before the folder itself. Do it set-based
+        // with ExecuteDelete rather than a tracked Remove: GetFolderByIdAsync loads
+        // the folder WITH its FolderLibraries navigation, so context.Folders.Remove
+        // marks a required relationship severed and throws in the change tracker
+        // (HandleConceptualNulls) before any SQL runs — a PRAGMA foreign_keys = OFF
+        // toggle can't prevent a tracker-time error. ExecuteDelete bypasses the
+        // tracker entirely and emits plain DELETEs in FK-safe order.
+        await context
+            .FolderLibrary.Where(folderLibrary => folderLibrary.FolderId == folder.Id)
+            .ExecuteDeleteAsync();
 
-        if (ownsConnection)
-            await context.Database.OpenConnectionAsync();
+        await context
+            .EncoderProfileFolder.Where(encoderProfileFolder =>
+                encoderProfileFolder.FolderId == folder.Id
+            )
+            .ExecuteDeleteAsync();
 
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF");
-            try
-            {
-                context.Folders.Remove(folder);
-                return await context.SaveChangesAsync();
-            }
-            finally
-            {
-                await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON");
-            }
-        }
-        finally
-        {
-            if (ownsConnection)
-                await context.Database.CloseConnectionAsync();
-        }
+        await context
+            .EncodingPresetFolders.Where(encodingPresetFolder =>
+                encodingPresetFolder.FolderId == folder.Id
+            )
+            .ExecuteDeleteAsync();
+
+        return await context.Folders.Where(f => f.Id == folder.Id).ExecuteDeleteAsync();
     }
 
     public Task<List<Folder>> GetAllFoldersAsync(CancellationToken ct = default)

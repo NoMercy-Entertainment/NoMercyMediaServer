@@ -327,12 +327,10 @@ public class FolderRepositoryTests : IDisposable
     [Fact]
     public async Task DeleteFolderAsync_WithForeignKeyDependents_SucceedsWithoutThrowing()
     {
-        // Real DB-level FK dependents (FolderLibrary, EncoderProfileFolder),
-        // fetched through a context that has never tracked those dependents —
-        // isolates the SQLite-connection-pinning bug from EF's client-side
-        // change-tracker fixup (a container concern, not the PRAGMA bug).
-        // PRAGMA foreign_keys=OFF must apply to the same physical connection
-        // as the DELETE, or SQLite's Restrict constraint throws here.
+        // Real DB-level FK dependents (FolderLibrary, EncoderProfileFolder) with the
+        // folder fetched through a context that has never tracked them. The
+        // set-based ExecuteDelete must remove the dependents before the folder so
+        // SQLite's Restrict constraint does not throw.
         (IDbContextFactory<MediaContext> factory, SqliteConnection keepAlive) =
             TestMediaContextFactory.CreateSeededFactory();
         try
@@ -358,6 +356,32 @@ public class FolderRepositoryTests : IDisposable
         {
             keepAlive.Dispose();
         }
+    }
+
+    [Fact]
+    public async Task DeleteFolderAsync_WhenFolderLoadedWithIncludedLibraries_DoesNotThrow()
+    {
+        // Reproduces the production failure: GetFolderByIdAsync Includes
+        // FolderLibraries, so the returned folder is tracked WITH its required
+        // children. A tracked Remove marks that required relationship severed and
+        // throws HandleConceptualNulls in the change tracker before any SQL runs —
+        // which a DB-level PRAGMA foreign_keys=OFF cannot prevent. The set-based
+        // delete must survive a folder loaded with its dependents.
+        Folder folder = (await _repository.GetFolderByIdAsync(SeedConstants.MovieFolderId))!;
+        folder.FolderLibraries.Should().NotBeEmpty();
+
+        Func<Task> act = async () => await _repository.DeleteFolderAsync(folder);
+        await act.Should().NotThrowAsync();
+
+        Folder? deleted = await _context.Folders.FirstOrDefaultAsync(f =>
+            f.Id == SeedConstants.MovieFolderId
+        );
+        deleted.Should().BeNull();
+
+        bool orphanLinks = await _context.FolderLibrary.AnyAsync(fl =>
+            fl.FolderId == SeedConstants.MovieFolderId
+        );
+        orphanLinks.Should().BeFalse();
     }
 
     [Fact]
