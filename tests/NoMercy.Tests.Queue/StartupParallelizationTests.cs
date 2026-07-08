@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using Xunit;
 
 namespace NoMercy.Tests.Queue;
@@ -119,41 +118,32 @@ public class StartupParallelizationTests
 
     /// <summary>
     /// Validates that Phase 2 tasks (Auth and Binaries) actually run concurrently,
-    /// not sequentially. Verified by checking that both tasks' execution windows overlap
-    /// rather than using elapsed time thresholds (which are unreliable on CI runners).
+    /// not sequentially. Proven with a shared barrier rather than wall-clock
+    /// overlap: comparing Stopwatch windows flakes on CI, where coverage
+    /// instrumentation starves the thread pool and can serialize two Task.Run
+    /// bodies so one starts only after the other has finished.
     /// </summary>
     [Fact]
     public async Task Phase2_AuthAndBinaries_RunConcurrently()
     {
-        long authStart = 0,
-            authEnd = 0;
-        long binariesStart = 0,
-            binariesEnd = 0;
+        // Each participant runs on its own dedicated thread (LongRunning, so the
+        // pool can't serialize them), signals a shared barrier and waits for the
+        // other. Both cross it only if they run at the same time; a serialized run
+        // would wait out the timeout and return false. No timing comparison, so
+        // thread-pool jitter and coverage overhead can't flake it.
+        using Barrier barrier = new(2);
 
-        Task binariesTask = Task.Run(async () =>
-        {
-            binariesStart = Stopwatch.GetTimestamp();
-            await Task.Delay(100);
-            binariesEnd = Stopwatch.GetTimestamp();
-        });
+        Task<bool> RunParticipant() =>
+            Task.Factory.StartNew(
+                () => barrier.SignalAndWait(TimeSpan.FromSeconds(10)),
+                TaskCreationOptions.LongRunning
+            );
 
-        Task authTask = Task.Run(async () =>
-        {
-            authStart = Stopwatch.GetTimestamp();
-            await Task.Delay(100);
-            authEnd = Stopwatch.GetTimestamp();
-        });
-
-        await Task.WhenAll(authTask, binariesTask);
-
-        // If concurrent, the execution windows overlap: each task starts before the other ends.
-        // If sequential, one would start after the other finishes — no overlap.
-        bool authStartedBeforeBinariesEnded = authStart < binariesEnd;
-        bool binariesStartedBeforeAuthEnded = binariesStart < authEnd;
+        bool[] reachedBarrier = await Task.WhenAll(RunParticipant(), RunParticipant());
 
         Assert.True(
-            authStartedBeforeBinariesEnded && binariesStartedBeforeAuthEnded,
-            "Tasks should have overlapping execution windows when running concurrently"
+            reachedBarrier[0] && reachedBarrier[1],
+            "Auth and Binaries must run concurrently: both reached the shared barrier."
         );
     }
 
@@ -163,41 +153,30 @@ public class StartupParallelizationTests
     [Fact]
     public async Task Phase3_TasksRunConcurrentlyAfterAuth()
     {
-        const int perTaskDurationMs = 80;
         const int taskCount = 4;
 
         // Simulate Auth completing first.
         await Task.Delay(10);
 
-        long[] starts = new long[taskCount];
-        long[] ends = new long[taskCount];
+        // Same barrier proof as Phase 2, scaled to all Phase 3 tasks: every task
+        // must reach the shared rendezvous before any is allowed to finish, which
+        // is only possible if they run at the same time. Robust to CI thread-pool
+        // jitter, unlike a wall-clock overlap comparison.
+        using Barrier barrier = new(taskCount);
 
-        // Phase 3: all tasks in parallel.
-        List<Task> phase3Tasks = Enumerable
-            .Range(0, taskCount)
-            .Select(i =>
-                Task.Run(async () =>
-                {
-                    starts[i] = Stopwatch.GetTimestamp();
-                    await Task.Delay(perTaskDurationMs);
-                    ends[i] = Stopwatch.GetTimestamp();
-                })
-            )
-            .ToList();
+        Task<bool> RunParticipant() =>
+            Task.Factory.StartNew(
+                () => barrier.SignalAndWait(TimeSpan.FromSeconds(10)),
+                TaskCreationOptions.LongRunning
+            );
 
-        await Task.WhenAll(phase3Tasks);
-
-        // Concurrent execution means every task started before the first one
-        // finished — their windows overlap. This is robust to thread-pool
-        // scheduling jitter on CI runners, unlike an absolute elapsed-time
-        // threshold (mirrors Phase2_AuthAndBinaries_RunConcurrently).
-        long lastStart = starts.Max();
-        long firstEnd = ends.Min();
+        bool[] reachedBarrier = await Task.WhenAll(
+            Enumerable.Range(0, taskCount).Select(_ => RunParticipant())
+        );
 
         Assert.True(
-            lastStart < firstEnd,
-            "Phase 3 tasks should have overlapping execution windows when running "
-                + "concurrently (no task started after another had already finished)."
+            reachedBarrier.All(reached => reached),
+            "Phase 3 tasks should run concurrently: all reached the shared barrier."
         );
     }
 
