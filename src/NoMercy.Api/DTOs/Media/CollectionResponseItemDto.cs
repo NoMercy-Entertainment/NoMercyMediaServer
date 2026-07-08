@@ -227,10 +227,11 @@ public record CollectionResponseItemDto
         Favorite = false;
         Link = new($"/collection/{Id}", UriKind.Relative);
 
-        VoteAverage = tmdbCollectionAppends
-            .Parts.Where(movie => movie.VoteAverage > 0)
-            .Select(movie => movie.VoteAverage)
-            .Average();
+        VoteAverage =
+            tmdbCollectionAppends
+                .Parts.Where(movie => movie.VoteAverage > 0)
+                .Average(movie => (double?)movie.VoteAverage)
+            ?? 0;
 
         Keywords = [];
 
