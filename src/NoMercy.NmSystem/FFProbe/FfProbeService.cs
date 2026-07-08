@@ -69,7 +69,57 @@ public class FfProbeService : IFfProbeService
 
         try
         {
+            // Fast path: pipe the file header through ffprobe stdin. Cheap for
+            // faststart / streamable containers — ffprobe reads a few MB and
+            // exits without pulling the whole file across the network.
             string json = await RunFfprobeStdinWithRetry(driver, file, ct);
+            FfProbeRawResult? raw = string.IsNullOrEmpty(json)
+                ? null
+                : json.FromJson<FfProbeRawResult>();
+
+            // The pipe is non-seekable and byte-capped, so it can't handle an
+            // imperfect or legacy encode whose metadata it can't reach in one
+            // forward pass (moov atom at the end, unusual atom order, a header
+            // past the probe budget). ffprobe streams to EOF, times out, and
+            // yields nothing. Fall back to a seekable local copy — the same way
+            // playback and the encoder already read these files successfully.
+            if (
+                raw is null
+                || (raw.Format is null && (raw.Streams is null || raw.Streams.Length == 0))
+            )
+                return await CreateFromStagedCopyAsync(driver, file, ct);
+
+            return BuildFfProbeData(file, raw);
+        }
+        catch (Exception ex)
+        {
+            Logger.App($"FfProbe failed for: {file}: {ex.Message}", LogEventLevel.Warning);
+            return new() { ErrorData = [ex.Message] };
+        }
+    }
+
+    // Non-seekable-pipe fallback: stage the remote file to a seekable local temp
+    // path (the same primitive the encoder uses for remote sources) and probe
+    // that. Handles any encode the pipe can't — legacy/imperfect headers, a
+    // trailing index — because ffprobe can seek freely in the local copy.
+    private async Task<FfProbeData> CreateFromStagedCopyAsync(
+        IStorageDriver driver,
+        string file,
+        CancellationToken ct
+    )
+    {
+        // Staging streams the whole file over the network link, so gate it with
+        // the same remote-concurrency cap the pipe probes use — otherwise a scan
+        // full of legacy files would saturate the backend the cap protects.
+        bool remoteAcquired = await FfProbeThrottle.WaitRemoteAsync(TimeSpan.FromSeconds(120), ct);
+        if (!remoteAcquired)
+            throw new TimeoutException("Throttle timeout waiting for remote ffprobe slot");
+
+        try
+        {
+            await using LocalPathLease lease = await driver.AcquireLocalPathAsync(file, ct);
+
+            string json = await RunFfprobeWithRetry(lease.Path, ct);
             if (string.IsNullOrEmpty(json))
                 return new() { ErrorData = ["ffprobe returned empty output"] };
 
@@ -79,10 +129,9 @@ public class FfProbeService : IFfProbeService
 
             return BuildFfProbeData(file, raw);
         }
-        catch (Exception ex)
+        finally
         {
-            Logger.App($"FfProbe failed for: {file}: {ex.Message}", LogEventLevel.Warning);
-            return new() { ErrorData = [ex.Message] };
+            FfProbeThrottle.ReleaseRemote();
         }
     }
 
@@ -465,14 +514,20 @@ public class FfProbeService : IFfProbeService
             {
                 return await RunFfprobeStdin(driver, file, ct);
             }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (OperationCanceledException)
             {
+                // Internal execution timeout, not external cancellation. The pipe
+                // can't seek, so retrying it against the same file is futile —
+                // return empty and let the caller stage a seekable local copy.
                 Logger.App(
-                    $"ffprobe stdin timed out for {file} (attempt {attempt}/{MaxRetries})",
+                    $"ffprobe stdin timed out for {file}; staging a local copy",
                     LogEventLevel.Warning
                 );
-                if (attempt < MaxRetries)
-                    await Task.Delay(500, ct);
+                return string.Empty;
             }
             catch (Exception ex)
             {
