@@ -88,6 +88,63 @@ public class BinaryVerificationTests : IDisposable
     }
 
     // -------------------------------------------------------------------------
+    // GitHub asset digest extraction
+    // -------------------------------------------------------------------------
+
+    [Theory]
+    [InlineData("sha256:ABC123", "ABC123")]
+    [InlineData("SHA256:deadbeef", "deadbeef")]
+    public void ExtractSha256FromDigest_ValidPrefix_ReturnsHex(string digest, string expected)
+    {
+        BinaryVerification.ExtractSha256FromDigest(digest).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("sha512:abcdef")]
+    [InlineData("abcdef")]
+    public void ExtractSha256FromDigest_MissingOrUnsupported_ReturnsNull(string? digest)
+    {
+        BinaryVerification.ExtractSha256FromDigest(digest).Should().BeNull();
+    }
+
+    // -------------------------------------------------------------------------
+    // Upstream SHA2-256SUMS parsing (yt-dlp and friends)
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void ParseSha256Sums_FindsMatchingAsset()
+    {
+        string sums = "aaa111  yt-dlp\nbbb222  yt-dlp_linux\nccc333  yt-dlp.exe\n";
+
+        BinaryVerification.ParseSha256Sums(sums, "yt-dlp_linux").Should().Be("bbb222");
+    }
+
+    [Fact]
+    public void ParseSha256Sums_ToleratesBinaryMarkerAndBlankLines()
+    {
+        string sums = "\n   \ndeadbeef *yt-dlp_macos\n";
+
+        BinaryVerification.ParseSha256Sums(sums, "yt-dlp_macos").Should().Be("deadbeef");
+    }
+
+    [Fact]
+    public void ParseSha256Sums_NoMatch_ReturnsNull()
+    {
+        string sums = "aaa111  yt-dlp\nbbb222  yt-dlp_linux\n";
+
+        BinaryVerification.ParseSha256Sums(sums, "yt-dlp_win.exe").Should().BeNull();
+    }
+
+    [Fact]
+    public void ParseSha256Sums_Empty_ReturnsNull()
+    {
+        BinaryVerification.ParseSha256Sums(string.Empty, "anything").Should().BeNull();
+    }
+
+    // -------------------------------------------------------------------------
     // Manifest JSON parsing
     // -------------------------------------------------------------------------
 
@@ -132,17 +189,47 @@ public class BinaryVerificationTests : IDisposable
     // -------------------------------------------------------------------------
 
     [Fact]
-    public void VerifyManifestSignature_NoPublicKey_ReturnsFalse()
+    public void VerifyManifestSignature_GarbageSignatureAgainstEmbeddedKey_ReturnsFalse()
     {
-        // Call the public overload which uses the embedded (placeholder) key.
-        // In a dev build the embedded key is the placeholder, so verification
-        // must return false rather than throw.
+        // The public overload uses the real embedded org key. A malformed detached
+        // signature must be rejected cleanly (false), never throw.
         bool result = BinaryVerification.VerifyManifestSignature(
             """{"version":"1.0"}""",
             "-----BEGIN PGP SIGNATURE-----\nfake\n-----END PGP SIGNATURE-----"
         );
 
         result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void VerifyManifestSignature_ForeignSignatureAgainstEmbeddedKey_ReturnsFalse()
+    {
+        string manifest = """{"version":"1.0","assets":[]}""";
+        (_, string foreignSignature) = GenerateSignedManifest(manifest);
+
+        // A valid signature from a key that is NOT the embedded org key must not
+        // verify — the embedded overload looks the signer up by key id and misses.
+        bool result = BinaryVerification.VerifyManifestSignature(manifest, foreignSignature);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void EmbeddedPublicKey_IsRealKey_NotPlaceholder()
+    {
+        // Regression guard: the shipped assembly must embed the real org public key,
+        // not the placeholder that silently disabled all signature verification.
+        using Stream? stream = typeof(BinaryVerification).Assembly.GetManifestResourceStream(
+            "NoMercy.Setup.Resources.nomercy-public-key.asc"
+        );
+
+        stream.Should().NotBeNull("the org public key must be embedded for manifest verification");
+
+        using StreamReader reader = new(stream!);
+        string content = reader.ReadToEnd();
+
+        content.Should().Contain("BEGIN PGP PUBLIC KEY BLOCK");
+        content.Should().NotContain("PLACEHOLDER");
     }
 
     [Fact]

@@ -77,7 +77,8 @@ public class BinaryDownloaderTests : IDisposable
             new Uri(assetUrl),
             destPath,
             release,
-            "asset.bin"
+            "asset.bin",
+            enforceSignedManifest: false
         );
 
         result.Should().Be(destPath);
@@ -119,7 +120,8 @@ public class BinaryDownloaderTests : IDisposable
             new Uri(assetUrl),
             destPath,
             release,
-            "asset.bin"
+            "asset.bin",
+            enforceSignedManifest: false
         );
 
         result.Should().Be(destPath);
@@ -161,7 +163,8 @@ public class BinaryDownloaderTests : IDisposable
                 new Uri(assetUrl),
                 destPath,
                 release,
-                "asset.bin"
+                "asset.bin",
+                enforceSignedManifest: false
             );
 
         await act.Should().ThrowAsync<InvalidDataException>().WithMessage("*SHA-256 mismatch*");
@@ -221,7 +224,8 @@ public class BinaryDownloaderTests : IDisposable
             new Uri(assetUrl),
             destPath,
             release,
-            "asset.bin"
+            "asset.bin",
+            enforceSignedManifest: false
         );
 
         result.Should().Be(destPath);
@@ -266,7 +270,8 @@ public class BinaryDownloaderTests : IDisposable
                 new Uri(assetUrl),
                 destPath,
                 release,
-                "asset.bin"
+                "asset.bin",
+                enforceSignedManifest: false
             );
 
         await act.Should().ThrowAsync<InvalidDataException>();
@@ -274,6 +279,279 @@ public class BinaryDownloaderTests : IDisposable
         // Original file must still be present (was not overwritten before verification)
         File.Exists(destPath).Should().BeTrue();
         (await File.ReadAllBytesAsync(destPath)).Should().BeEquivalentTo(originalContent);
+    }
+
+    // -------------------------------------------------------------------------
+    // Trust policy: enforcement for owned assets + the GitHub digest integrity floor
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task Download_OwnedRepo_ManifestSignatureInvalid_FallsBackToDigest_Succeeds()
+    {
+        // A signature that does not verify (e.g. the embedded key is stale after a key
+        // rotation) must NOT brick the update path. The unverified manifest's hash is not
+        // trusted — even though it is present, the download is governed by GitHub's
+        // independent asset digest, and succeeds when that matches.
+        byte[] payload = Encoding.UTF8.GetBytes("owned payload after rotation");
+        string correctDigest =
+            "sha256:" + Convert.ToHexString(SHA256.HashData(payload)).ToLowerInvariant();
+        string destPath = Path.Combine(_tempDir, "asset.bin");
+        string assetUrl = "https://example.com/asset.bin";
+        string manifestUrl = "https://example.com/manifest.json";
+        string manifestSigUrl = "https://example.com/manifest.json.sig";
+
+        // Manifest hash is deliberately WRONG: if the unverified manifest were trusted
+        // this would fail, proving the fallback ignores it and uses the digest instead.
+        ReleaseManifest manifest = new()
+        {
+            Version = "1.0",
+            Assets =
+            [
+                new ManifestAsset
+                {
+                    Name = "asset.bin",
+                    Sha256 = new string('e', 64),
+                    Size = payload.Length,
+                },
+            ],
+        };
+
+        GithubReleaseResponse release = BuildRelease(
+            assetName: "asset.bin",
+            assetUrl: assetUrl,
+            sha256: null,
+            includeManifest: true,
+            manifestUrl: manifestUrl,
+            manifestSigUrl: manifestSigUrl,
+            digest: correctDigest
+        );
+
+        FakeHttpHandler handler = new();
+        handler.Register(assetUrl, payload);
+        handler.Register(
+            manifestUrl,
+            Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(manifest))
+        );
+        handler.Register(
+            manifestSigUrl,
+            Encoding.ASCII.GetBytes(
+                "-----BEGIN PGP SIGNATURE-----\nnot-a-real-signature\n-----END PGP SIGNATURE-----"
+            )
+        );
+
+        Binaries binaries = BuildBinaries(handler);
+
+        string result = await binaries.DownloadWithVerificationAsync(
+            "https://api.github.com/test",
+            "asset",
+            new Uri(assetUrl),
+            destPath,
+            release,
+            "asset.bin",
+            enforceSignedManifest: true
+        );
+
+        result.Should().Be(destPath);
+        (await File.ReadAllBytesAsync(destPath)).Should().BeEquivalentTo(payload);
+    }
+
+    [Fact]
+    public async Task Download_OwnedRepo_ManifestSignatureInvalid_DigestMismatch_Throws()
+    {
+        // When the signature is bypassed, the digest integrity floor still applies —
+        // bytes that don't match GitHub's digest are rejected, so a bad signature never
+        // opens the door to a corrupted or truncated download.
+        byte[] payload = Encoding.UTF8.GetBytes("tampered owned payload");
+        string destPath = Path.Combine(_tempDir, "asset.bin");
+        string assetUrl = "https://example.com/asset.bin";
+        string manifestUrl = "https://example.com/manifest.json";
+        string manifestSigUrl = "https://example.com/manifest.json.sig";
+        string wrongDigest = "sha256:" + new string('f', 64);
+
+        ReleaseManifest manifest = new()
+        {
+            Version = "1.0",
+            Assets =
+            [
+                new ManifestAsset
+                {
+                    Name = "asset.bin",
+                    Sha256 = Convert.ToHexString(SHA256.HashData(payload)),
+                    Size = payload.Length,
+                },
+            ],
+        };
+
+        GithubReleaseResponse release = BuildRelease(
+            assetName: "asset.bin",
+            assetUrl: assetUrl,
+            sha256: null,
+            includeManifest: true,
+            manifestUrl: manifestUrl,
+            manifestSigUrl: manifestSigUrl,
+            digest: wrongDigest
+        );
+
+        FakeHttpHandler handler = new();
+        handler.Register(assetUrl, payload);
+        handler.Register(
+            manifestUrl,
+            Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(manifest))
+        );
+        handler.Register(
+            manifestSigUrl,
+            Encoding.ASCII.GetBytes(
+                "-----BEGIN PGP SIGNATURE-----\nnot-a-real-signature\n-----END PGP SIGNATURE-----"
+            )
+        );
+
+        Binaries binaries = BuildBinaries(handler);
+
+        Func<Task> act = () =>
+            binaries.DownloadWithVerificationAsync(
+                "https://api.github.com/test",
+                "asset",
+                new Uri(assetUrl),
+                destPath,
+                release,
+                "asset.bin",
+                enforceSignedManifest: true
+            );
+
+        await act.Should().ThrowAsync<InvalidDataException>().WithMessage("*SHA-256 mismatch*");
+    }
+
+    [Fact]
+    public async Task Download_OwnedRepo_NoManifest_FallsBackToDigest_Succeeds()
+    {
+        // Rollout tolerance: an owned release with no manifest yet is still accepted,
+        // integrity-checked against GitHub's asset digest rather than hard-failing.
+        byte[] payload = Encoding.UTF8.GetBytes("owned no-manifest payload");
+        string digest =
+            "sha256:" + Convert.ToHexString(SHA256.HashData(payload)).ToLowerInvariant();
+        string destPath = Path.Combine(_tempDir, "asset.bin");
+        string assetUrl = "https://example.com/asset.bin";
+
+        GithubReleaseResponse release = BuildRelease(
+            assetName: "asset.bin",
+            assetUrl: assetUrl,
+            sha256: null,
+            digest: digest
+        );
+
+        FakeHttpHandler handler = new();
+        handler.Register(assetUrl, payload);
+
+        Binaries binaries = BuildBinaries(handler);
+
+        string result = await binaries.DownloadWithVerificationAsync(
+            "https://api.github.com/test",
+            "asset",
+            new Uri(assetUrl),
+            destPath,
+            release,
+            "asset.bin",
+            enforceSignedManifest: true
+        );
+
+        result.Should().Be(destPath);
+        (await File.ReadAllBytesAsync(destPath)).Should().BeEquivalentTo(payload);
+    }
+
+    [Fact]
+    public async Task Download_DigestMismatch_Throws()
+    {
+        // Universal integrity floor: bytes that don't match GitHub's asset digest are
+        // rejected even for a third-party dep with no manifest.
+        byte[] payload = Encoding.UTF8.GetBytes("third-party payload");
+        string wrongDigest = "sha256:" + new string('a', 64);
+        string destPath = Path.Combine(_tempDir, "asset.bin");
+        string assetUrl = "https://example.com/asset.bin";
+
+        GithubReleaseResponse release = BuildRelease(
+            assetName: "asset.bin",
+            assetUrl: assetUrl,
+            sha256: null,
+            digest: wrongDigest
+        );
+
+        FakeHttpHandler handler = new();
+        handler.Register(assetUrl, payload);
+
+        Binaries binaries = BuildBinaries(handler);
+
+        Func<Task> act = () =>
+            binaries.DownloadWithVerificationAsync(
+                "https://api.github.com/test",
+                "asset",
+                new Uri(assetUrl),
+                destPath,
+                release,
+                "asset.bin",
+                enforceSignedManifest: false
+            );
+
+        await act.Should().ThrowAsync<InvalidDataException>().WithMessage("*SHA-256 mismatch*");
+    }
+
+    [Fact]
+    public async Task Download_ExpectedSha256Override_Match_Succeeds()
+    {
+        // yt-dlp path: the caller supplies the hash from the upstream SHA2-256SUMS.
+        byte[] payload = Encoding.UTF8.GetBytes("yt-dlp binary");
+        string sha256 = Convert.ToHexString(SHA256.HashData(payload));
+        string destPath = Path.Combine(_tempDir, "asset.bin");
+        string assetUrl = "https://example.com/asset.bin";
+
+        GithubReleaseResponse release = BuildRelease("asset.bin", assetUrl, sha256: null);
+
+        FakeHttpHandler handler = new();
+        handler.Register(assetUrl, payload);
+
+        Binaries binaries = BuildBinaries(handler);
+
+        string result = await binaries.DownloadWithVerificationAsync(
+            "https://api.github.com/test",
+            "yt-dlp",
+            new Uri(assetUrl),
+            destPath,
+            release,
+            "asset.bin",
+            enforceSignedManifest: false,
+            expectedSha256Override: sha256
+        );
+
+        result.Should().Be(destPath);
+    }
+
+    [Fact]
+    public async Task Download_ExpectedSha256Override_Mismatch_Throws()
+    {
+        byte[] payload = Encoding.UTF8.GetBytes("yt-dlp binary");
+        string wrong = new('c', 64);
+        string destPath = Path.Combine(_tempDir, "asset.bin");
+        string assetUrl = "https://example.com/asset.bin";
+
+        GithubReleaseResponse release = BuildRelease("asset.bin", assetUrl, sha256: null);
+
+        FakeHttpHandler handler = new();
+        handler.Register(assetUrl, payload);
+
+        Binaries binaries = BuildBinaries(handler);
+
+        Func<Task> act = () =>
+            binaries.DownloadWithVerificationAsync(
+                "https://api.github.com/test",
+                "yt-dlp",
+                new Uri(assetUrl),
+                destPath,
+                release,
+                "asset.bin",
+                enforceSignedManifest: false,
+                expectedSha256Override: wrong
+            );
+
+        await act.Should().ThrowAsync<InvalidDataException>().WithMessage("*SHA-256 mismatch*");
     }
 
     // -------------------------------------------------------------------------
@@ -401,7 +679,9 @@ public class BinaryDownloaderTests : IDisposable
         string? sha256,
         string? sha256Url = null,
         bool includeManifest = false,
-        string? manifestUrl = null
+        string? manifestUrl = null,
+        string? manifestSigUrl = null,
+        string? digest = null
     )
     {
         List<Asset> assets =
@@ -411,6 +691,7 @@ public class BinaryDownloaderTests : IDisposable
                 Name = assetName,
                 BrowserDownloadUrl = new Uri(assetUrl),
                 Size = 1,
+                Digest = digest ?? string.Empty,
             },
         ];
 
@@ -433,6 +714,18 @@ public class BinaryDownloaderTests : IDisposable
                 {
                     Name = "manifest.json",
                     BrowserDownloadUrl = new Uri(manifestUrl),
+                    Size = 100,
+                }
+            );
+        }
+
+        if (manifestSigUrl is not null)
+        {
+            assets.Add(
+                new Asset
+                {
+                    Name = "manifest.json.sig",
+                    BrowserDownloadUrl = new Uri(manifestSigUrl),
                     Size = 100,
                 }
             );

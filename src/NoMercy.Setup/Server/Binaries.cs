@@ -60,6 +60,12 @@ public class Binaries
     private const string GithubShakaPackagerApiUrl =
         "https://api.github.com/repos/shaka-project/shaka-packager/releases/latest";
 
+    // Third-party releases (yt-dlp, cloudflared, shaka-packager) are held to a
+    // minimum age before adoption: a compromised or yanked upstream release gets a
+    // soak window to surface before a self-hosted server pulls it. NoMercy-owned
+    // releases are exempt — they are signature-verified and must ship fast.
+    private static readonly TimeSpan ThirdPartyMinReleaseAge = TimeSpan.FromDays(14);
+
     public Binaries(IStorageDriver driver, IStorage storage)
     {
         _driver = driver;
@@ -198,24 +204,63 @@ public class Binaries
         Uri downloadUrl,
         string destPath,
         GithubReleaseResponse releaseInfo,
-        string assetName
+        string assetName,
+        bool enforceSignedManifest,
+        string? expectedSha256Override = null
     )
     {
-        // Resolve expected SHA-256 — prefer manifest (may be signature-verified),
-        // fall back to per-asset .sha256 sidecar.
-        string? expectedSha256 = null;
+        // Resolve the expected SHA-256 in trust order:
+        //   1. explicit override (e.g. yt-dlp's own SHA2-256SUMS)
+        //   2. signature-verified release manifest (NoMercy-owned repos)
+        //   3. per-asset .sha256 sidecar
+        //   4. GitHub's server-computed asset digest (universal integrity floor)
+        string? expectedSha256 = expectedSha256Override;
+        string sha256Source = expectedSha256 is not null ? "upstream checksum" : "none";
+
         (ReleaseManifest? manifest, bool sigVerified) = await GetOrFetchManifestAsync(
             apiUrl,
             releaseInfo
         );
 
-        if (manifest is not null)
+        // Owned assets prefer the signature-verified manifest for authenticity. But a
+        // signature that does NOT verify — a stale key after a rotation, a CI signing
+        // glitch, or a stripped/forged manifest — must never brick the update path: we
+        // log loudly and fall through to GitHub's independent asset digest, which still
+        // guarantees integrity. Only an actual hash MISMATCH (below) is fatal. A hard
+        // throw here would also be illusory security: a repo-write attacker simply omits
+        // the manifest and hits the same digest fallback, so failing closed only strands
+        // honest servers on the next key rotation.
+        bool manifestTrusted = sigVerified || !enforceSignedManifest;
+
+        if (enforceSignedManifest && manifest is not null && !sigVerified)
+        {
+            Logger.Setup(
+                $"Release manifest signature for {label} did not verify against the embedded NoMercy key — "
+                    + "falling back to GitHub asset-digest integrity. Investigate the signing key if this persists.",
+                LogEventLevel.Error
+            );
+        }
+        else if (enforceSignedManifest && manifest is null)
+        {
+            // Visible until every owned repo publishes signed manifests. A missing
+            // manifest on an owned release is either the signing rollout still in
+            // progress (ffmpeg/tesseract/whisper) or a downgrade attempt — either way
+            // it must not be silent.
+            Logger.Setup(
+                $"No signed manifest published for owned release {label} — accepting on GitHub digest integrity only.",
+                LogEventLevel.Warning
+            );
+        }
+
+        if (expectedSha256 is null && manifest is not null && manifestTrusted)
         {
             expectedSha256 = manifest
                 .Assets.FirstOrDefault(a =>
                     a.Name.Equals(assetName, StringComparison.OrdinalIgnoreCase)
                 )
                 ?.Sha256;
+            if (expectedSha256 is not null)
+                sha256Source = sigVerified ? "signed manifest" : "manifest";
         }
 
         if (expectedSha256 is null)
@@ -232,6 +277,7 @@ public class Binaries
                 try
                 {
                     expectedSha256 = (await _httpClient.GetStringAsync(sidecarUrl)).Trim();
+                    sha256Source = "sidecar";
                 }
                 catch (Exception ex)
                 {
@@ -241,6 +287,20 @@ public class Binaries
                     );
                 }
             }
+        }
+
+        if (expectedSha256 is null)
+        {
+            // GitHub returns "sha256:<hex>" for every release asset — a zero-cost
+            // integrity check against what GitHub stored, even for third-party binaries.
+            string? digest = releaseInfo
+                .Assets.FirstOrDefault(a =>
+                    a.Name.Equals(assetName, StringComparison.OrdinalIgnoreCase)
+                )
+                ?.Digest;
+            expectedSha256 = BinaryVerification.ExtractSha256FromDigest(digest);
+            if (expectedSha256 is not null)
+                sha256Source = "github digest";
         }
 
         // --- Download to a temp file -----------------------------------------------------------
@@ -292,13 +352,16 @@ public class Binaries
                 );
             }
 
-            Logger.Setup($"SHA-256 verified for {label}", LogEventLevel.Verbose);
+            Logger.Setup($"SHA-256 verified for {label} ({sha256Source})", LogEventLevel.Verbose);
         }
         else
         {
+            // No manifest, sidecar, or digest resolved. For NoMercy-owned assets this
+            // is unexpected (every current release carries at least a digest) and worth
+            // surfacing; for third-party it is tolerated by policy.
             Logger.Setup(
                 $"No SHA-256 available for {label} — skipping integrity check",
-                LogEventLevel.Debug
+                enforceSignedManifest ? LogEventLevel.Warning : LogEventLevel.Debug
             );
         }
 
@@ -532,6 +595,108 @@ public class Binaries
         }
     }
 
+    /// <summary>
+    /// Returns the newest published (non-draft, non-prerelease) release that is at
+    /// least <paramref name="minAge"/> old. Used for third-party dependencies whose
+    /// authenticity we cannot vouch for: a minimum age gives a bad upstream release
+    /// time to be caught and pulled before a self-hosted server adopts it.
+    /// </summary>
+    /// <returns>
+    /// The qualifying release, or an empty <see cref="GithubReleaseResponse"/> when
+    /// none is old enough yet (the caller then keeps whatever is already installed).
+    /// </returns>
+    private async Task<GithubReleaseResponse> GetLatestReleaseInfoOlderThan(
+        string latestApiUrl,
+        TimeSpan minAge
+    )
+    {
+        // Derive the list endpoint from the "…/releases/latest" URL.
+        const string latestSuffix = "/releases/latest";
+        string listUrl = latestApiUrl.EndsWith(latestSuffix, StringComparison.OrdinalIgnoreCase)
+            ? string.Concat(
+                latestApiUrl.AsSpan(0, latestApiUrl.Length - "/latest".Length),
+                "?per_page=30"
+            )
+            : latestApiUrl;
+
+        DateTimeOffset cutoff = DateTimeOffset.UtcNow - minAge;
+
+        try
+        {
+            using HttpResponseMessage response = await _httpClient.GetAsync(listUrl);
+            response.EnsureSuccessStatusCode();
+            string json = await response.Content.ReadAsStringAsync();
+
+            GithubReleaseResponse[] releases = json.FromJson<GithubReleaseResponse[]>() ?? [];
+
+            GithubReleaseResponse? qualifying = SelectNewestPublishedBefore(releases, cutoff);
+
+            if (qualifying is null)
+            {
+                Logger.Setup(
+                    $"No release older than {minAge.TotalDays:F0} days found at {listUrl} — keeping current binary.",
+                    LogEventLevel.Debug
+                );
+                return new();
+            }
+
+            return qualifying;
+        }
+        catch (Exception e)
+        {
+            Logger.Setup(
+                $"Error fetching release list from {listUrl}: {e.Message}",
+                LogEventLevel.Warning
+            );
+            return new();
+        }
+    }
+
+    /// <summary>
+    /// Selects the newest published (non-draft, non-prerelease) release whose
+    /// <c>published_at</c> is at or before <paramref name="cutoff"/>. Pure so the
+    /// age-gate policy can be unit-tested without the network.
+    /// </summary>
+    internal static GithubReleaseResponse? SelectNewestPublishedBefore(
+        IEnumerable<GithubReleaseResponse> releases,
+        DateTimeOffset cutoff
+    )
+    {
+        return releases
+            .Where(r => r is { Draft: false, Prerelease: false })
+            .Where(r => r.PublishedAt != DateTimeOffset.MinValue && r.PublishedAt <= cutoff)
+            .MaxBy(r => r.PublishedAt);
+    }
+
+    /// <summary>
+    /// Fails closed when <paramref name="asset"/> carries a GitHub SHA-256 digest and
+    /// the file at <paramref name="path"/> does not match it. A missing digest (older
+    /// releases) is tolerated. Used for third-party binaries downloaded outside
+    /// <see cref="DownloadWithVerificationAsync"/> (which handle their own extraction).
+    /// </summary>
+    private async Task VerifyAssetDigestOrThrow(string path, Asset? asset, string label)
+    {
+        string? expected = BinaryVerification.ExtractSha256FromDigest(asset?.Digest);
+        if (expected is null)
+        {
+            Logger.Setup(
+                $"No GitHub digest for {label} — skipping integrity check",
+                LogEventLevel.Debug
+            );
+            return;
+        }
+
+        if (!await BinaryVerification.VerifyFileSha256Async(path, expected))
+        {
+            _storage.Delete(path);
+            throw new InvalidDataException(
+                $"SHA-256 mismatch for {label}: the downloaded file does not match GitHub's asset digest"
+            );
+        }
+
+        Logger.Setup($"SHA-256 verified for {label} (github digest)", LogEventLevel.Verbose);
+    }
+
     private async Task DownloadApp()
     {
         if (ExistsInInstalledDirectory("NoMercyApp" + Info.ExecSuffix))
@@ -619,7 +784,8 @@ public class Binaries
             downloadUrl,
             AppFiles.AppExePath,
             releaseInfo,
-            assetName
+            assetName,
+            enforceSignedManifest: true
         );
 
         await FileAttributes.SetCreatedAttribute(path, releaseInfo.PublishedAt);
@@ -714,7 +880,8 @@ public class Binaries
             downloadUrl,
             AppFiles.LauncherExePath,
             releaseInfo,
-            assetName
+            assetName,
+            enforceSignedManifest: true
         );
 
         await FileAttributes.SetCreatedAttribute(path, releaseInfo.PublishedAt);
@@ -809,7 +976,8 @@ public class Binaries
             downloadUrl,
             AppFiles.CliExePath,
             releaseInfo,
-            assetName
+            assetName,
+            enforceSignedManifest: true
         );
 
         await FileAttributes.SetCreatedAttribute(path, releaseInfo.PublishedAt);
@@ -935,7 +1103,8 @@ public class Binaries
             downloadUrl,
             AppFiles.ServerTempExePath,
             releaseInfo,
-            assetName
+            assetName,
+            enforceSignedManifest: true
         );
 
         // Wait for the file to become available (antivirus scanning can briefly lock/quarantine it)
@@ -1072,7 +1241,8 @@ public class Binaries
             selectedAsset.BrowserDownloadUrl,
             archiveDestPath,
             releaseInfo,
-            selectedAsset.Name
+            selectedAsset.Name,
+            enforceSignedManifest: true
         );
 
         // Re-check the lock right before extraction — the encoder worker may have
@@ -1101,9 +1271,49 @@ public class Binaries
         await Downloader.DeleteSourceDownload(_storage, path);
     }
 
+    /// <summary>
+    /// Fetches an upstream checksum manifest (e.g. yt-dlp's <c>SHA2-256SUMS</c>) from
+    /// the release assets and returns the hex SHA-256 for <paramref name="targetAssetName"/>.
+    /// The file format is one <c>"&lt;hash&gt;  &lt;filename&gt;"</c> entry per line.
+    /// </summary>
+    /// <returns>The hex digest, or <c>null</c> when the sums file or entry is absent.</returns>
+    private async Task<string?> ResolveUpstreamSha256Async(
+        GithubReleaseResponse releaseInfo,
+        string sumsAssetName,
+        string targetAssetName
+    )
+    {
+        Uri? sumsUrl = releaseInfo
+            .Assets.FirstOrDefault(a =>
+                a.Name.Equals(sumsAssetName, StringComparison.OrdinalIgnoreCase)
+            )
+            ?.BrowserDownloadUrl;
+
+        if (sumsUrl is null)
+            return null;
+
+        try
+        {
+            string sums = await _httpClient.GetStringAsync(sumsUrl);
+            return BinaryVerification.ParseSha256Sums(sums, targetAssetName);
+        }
+        catch (Exception ex)
+        {
+            Logger.Setup(
+                $"Could not fetch upstream {sumsAssetName} for {targetAssetName}: {ex.Message}",
+                LogEventLevel.Warning
+            );
+        }
+
+        return null;
+    }
+
     private async Task DownloadYtdlp()
     {
-        GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubYtdlpApiUrl);
+        GithubReleaseResponse releaseInfo = await GetLatestReleaseInfoOlderThan(
+            GithubYtdlpApiUrl,
+            ThirdPartyMinReleaseAge
+        );
         if (releaseInfo.Assets.Length == 0)
         {
             Logger.Setup("No assets found for yt-dlp release.", LogEventLevel.Warning);
@@ -1118,48 +1328,31 @@ public class Binaries
 
         await Downloader.DeleteSourceDownload(_storage, AppFiles.YtdlpPath);
 
-        Uri? downloadUrl = null;
-
+        string? assetName = null;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            downloadUrl = releaseInfo
-                .Assets.FirstOrDefault(a =>
-                    a.Name.Equals("yt-dlp_x86.exe", StringComparison.OrdinalIgnoreCase)
-                )
-                ?.BrowserDownloadUrl;
-        }
+            assetName = "yt-dlp_x86.exe";
         else if (
             RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
             && RuntimeInformation.ProcessArchitecture == Architecture.Arm64
         )
-        {
-            downloadUrl = releaseInfo
-                .Assets.FirstOrDefault(a =>
-                    a.Name.Equals("yt-dlp_linux_aarch64", StringComparison.OrdinalIgnoreCase)
-                )
-                ?.BrowserDownloadUrl;
-        }
+            assetName = "yt-dlp_linux_aarch64";
         else if (
             RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
             && RuntimeInformation.ProcessArchitecture == Architecture.X64
         )
-        {
-            downloadUrl = releaseInfo
-                .Assets.FirstOrDefault(a =>
-                    a.Name.Equals("yt-dlp_linux", StringComparison.OrdinalIgnoreCase)
-                )
-                ?.BrowserDownloadUrl;
-        }
+            assetName = "yt-dlp_linux";
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-        {
-            downloadUrl = releaseInfo
+            assetName = "yt-dlp_macos";
+
+        Uri? downloadUrl = assetName is null
+            ? null
+            : releaseInfo
                 .Assets.FirstOrDefault(a =>
-                    a.Name.Equals("yt-dlp_macos", StringComparison.OrdinalIgnoreCase)
+                    a.Name.Equals(assetName, StringComparison.OrdinalIgnoreCase)
                 )
                 ?.BrowserDownloadUrl;
-        }
 
-        if (downloadUrl == null)
+        if (downloadUrl is null || assetName is null)
         {
             Logger.Setup(
                 "No suitable yt-dlp asset found for the current platform.",
@@ -1168,11 +1361,25 @@ public class Binaries
             return;
         }
 
-        string outputPath = await Downloader.DownloadFile(
-            _storage,
+        // yt-dlp publishes its own SHA2-256SUMS — enforce the download against the
+        // hash the yt-dlp maintainers listed for this exact asset. When that file is
+        // unavailable, DownloadWithVerificationAsync still falls back to GitHub's
+        // asset digest, so the binary is never accepted unverified.
+        string? expectedSha256 = await ResolveUpstreamSha256Async(
+            releaseInfo,
+            "SHA2-256SUMS",
+            assetName
+        );
+
+        string outputPath = await DownloadWithVerificationAsync(
+            GithubYtdlpApiUrl,
             "yt-dlp",
             downloadUrl,
-            AppFiles.YtdlpPath
+            AppFiles.YtdlpPath,
+            releaseInfo,
+            assetName,
+            enforceSignedManifest: false,
+            expectedSha256Override: expectedSha256
         );
 
         await FileAttributes.SetCreatedAttribute(outputPath, releaseInfo.PublishedAt);
@@ -1184,7 +1391,10 @@ public class Binaries
 
     private async Task DownloadShakaPackager()
     {
-        GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubShakaPackagerApiUrl);
+        GithubReleaseResponse releaseInfo = await GetLatestReleaseInfoOlderThan(
+            GithubShakaPackagerApiUrl,
+            ThirdPartyMinReleaseAge
+        );
         if (releaseInfo.Assets.Length == 0)
         {
             Logger.Setup("No assets found for shaka-packager release.", LogEventLevel.Warning);
@@ -1237,7 +1447,8 @@ public class Binaries
             downloadUrl,
             AppFiles.ShakaPackagerPath,
             releaseInfo,
-            assetName
+            assetName,
+            enforceSignedManifest: false
         );
 
         await FileAttributes.SetCreatedAttribute(outputPath, releaseInfo.PublishedAt);
@@ -1250,7 +1461,10 @@ public class Binaries
     {
         string destinationPath = AppFiles.CloudflareDPath;
 
-        GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubCloudflaredApiUrl);
+        GithubReleaseResponse releaseInfo = await GetLatestReleaseInfoOlderThan(
+            GithubCloudflaredApiUrl,
+            ThirdPartyMinReleaseAge
+        );
         if (releaseInfo.Assets.Length == 0)
         {
             Logger.Setup("No assets found for cloudflared release.", LogEventLevel.Warning);
@@ -1265,41 +1479,41 @@ public class Binaries
 
         await Downloader.DeleteSourceDownload(_storage, destinationPath);
 
-        Uri? downloadUrl = null;
+        Asset? selectedAsset = null;
         bool needsExtraction = false;
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            downloadUrl = releaseInfo
-                .Assets.FirstOrDefault(a => a.Name.Equals("cloudflared-windows-amd64.exe"))
-                ?.BrowserDownloadUrl;
+            selectedAsset = releaseInfo.Assets.FirstOrDefault(a =>
+                a.Name.Equals("cloudflared-windows-amd64.exe")
+            );
         }
         else if (
             RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
             && RuntimeInformation.ProcessArchitecture == Architecture.Arm64
         )
         {
-            downloadUrl = releaseInfo
-                .Assets.FirstOrDefault(a => a.Name.Equals("cloudflared-linux-arm"))
-                ?.BrowserDownloadUrl;
+            selectedAsset = releaseInfo.Assets.FirstOrDefault(a =>
+                a.Name.Equals("cloudflared-linux-arm")
+            );
         }
         else if (
             RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
             && RuntimeInformation.ProcessArchitecture == Architecture.X64
         )
         {
-            downloadUrl = releaseInfo
-                .Assets.FirstOrDefault(a => a.Name.Equals("cloudflared-linux-amd64"))
-                ?.BrowserDownloadUrl;
+            selectedAsset = releaseInfo.Assets.FirstOrDefault(a =>
+                a.Name.Equals("cloudflared-linux-amd64")
+            );
         }
         else if (
             RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
             && RuntimeInformation.ProcessArchitecture == Architecture.Arm64
         )
         {
-            downloadUrl = releaseInfo
-                .Assets.FirstOrDefault(a => a.Name.Equals("cloudflared-darwin-arm64.tgz"))
-                ?.BrowserDownloadUrl;
+            selectedAsset = releaseInfo.Assets.FirstOrDefault(a =>
+                a.Name.Equals("cloudflared-darwin-arm64.tgz")
+            );
             needsExtraction = true;
         }
         else if (
@@ -1307,13 +1521,13 @@ public class Binaries
             && RuntimeInformation.ProcessArchitecture == Architecture.X64
         )
         {
-            downloadUrl = releaseInfo
-                .Assets.FirstOrDefault(a => a.Name.Equals("cloudflared-darwin-amd64.tgz"))
-                ?.BrowserDownloadUrl;
+            selectedAsset = releaseInfo.Assets.FirstOrDefault(a =>
+                a.Name.Equals("cloudflared-darwin-amd64.tgz")
+            );
             needsExtraction = true;
         }
 
-        if (downloadUrl == null)
+        if (selectedAsset is null)
         {
             Logger.Setup(
                 "No suitable cloudflared asset found for the current platform.",
@@ -1322,7 +1536,16 @@ public class Binaries
             return;
         }
 
-        string path = await Downloader.DownloadFile(_storage, "cloudflared", downloadUrl);
+        string path = await Downloader.DownloadFile(
+            _storage,
+            "cloudflared",
+            selectedAsset.BrowserDownloadUrl
+        );
+
+        // cloudflared publishes no checksums, so authenticity rests on the 14-day
+        // release-age gate. We can still reject a corrupt or tampered download by
+        // matching GitHub's own asset digest before we install or extract it.
+        await VerifyAssetDigestOrThrow(path, selectedAsset, "cloudflared");
 
         Logger.Setup($"Downloaded cloudflared to {path}");
 
@@ -1399,17 +1622,15 @@ public class Binaries
                     asset.BrowserDownloadUrl,
                     partDestPath,
                     releaseInfo,
-                    asset.Name
+                    asset.Name,
+                    enforceSignedManifest: true
                 )
             );
         }
 
         if (modelAssets.Count > 1)
         {
-            string outputPath = await ConcatenateModelParts(
-                modelName,
-                modelAssets.Select(a => a.BrowserDownloadUrl)
-            );
+            string outputPath = await ConcatenateModelParts(modelName, paths);
 
             foreach (string path in paths)
             {
@@ -1426,19 +1647,19 @@ public class Binaries
         }
     }
 
-    private async Task<string> ConcatenateModelParts(string modelName, IEnumerable<Uri> partUrls)
+    private async Task<string> ConcatenateModelParts(
+        string modelName,
+        IEnumerable<string> partPaths
+    )
     {
         string destinationPath = Path.Combine(AppFiles.FfmpegFolder, modelName + ".bin");
 
         await using Stream destinationStream = _driver.OpenWrite(destinationPath, overwrite: true);
 
-        foreach (Uri partUrl in partUrls)
+        // Concatenate the exact local files DownloadWithVerificationAsync already
+        // hash-verified — never re-derive paths from URLs.
+        foreach (string partPath in partPaths)
         {
-            string partPath = Path.Combine(
-                AppFiles.DependenciesPath,
-                Path.GetFileName(partUrl.ToString())
-            );
-
             await using Stream partStream = _driver.OpenRead(partPath);
             await partStream.CopyToAsync(destinationStream);
         }
@@ -1494,7 +1715,8 @@ public class Binaries
                 downloadUrl,
                 destinationPath,
                 releaseInfo,
-                assetName
+                assetName,
+                enforceSignedManifest: true
             );
 
             await FileAttributes.SetCreatedAttribute(path, releaseInfo.PublishedAt);

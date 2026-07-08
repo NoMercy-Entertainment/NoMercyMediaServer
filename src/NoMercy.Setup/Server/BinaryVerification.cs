@@ -89,6 +89,54 @@ public static class BinaryVerification
     }
 
     /// <summary>
+    /// Extracts the hex SHA-256 from a GitHub release-asset <c>digest</c> value of
+    /// the form <c>sha256:&lt;hex&gt;</c>. GitHub computes this server-side for every
+    /// asset, so it is a zero-cost integrity source already present in the release
+    /// response.
+    /// </summary>
+    /// <returns>
+    /// The bare hex digest, or <c>null</c> when the value is empty or uses an
+    /// algorithm other than SHA-256.
+    /// </returns>
+    public static string? ExtractSha256FromDigest(string? digest)
+    {
+        if (string.IsNullOrWhiteSpace(digest))
+            return null;
+
+        const string prefix = "sha256:";
+        return digest.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            ? digest[prefix.Length..]
+            : null;
+    }
+
+    /// <summary>
+    /// Finds the SHA-256 for <paramref name="targetFileName"/> inside the content of a
+    /// coreutils-style checksum file (e.g. yt-dlp's <c>SHA2-256SUMS</c>), where each
+    /// line is <c>"&lt;hex&gt;  &lt;filename&gt;"</c>. A leading <c>'*'</c> binary marker
+    /// on the filename is tolerated.
+    /// </summary>
+    /// <returns>The bare hex digest, or <c>null</c> when no line matches.</returns>
+    public static string? ParseSha256Sums(string sumsContent, string targetFileName)
+    {
+        if (string.IsNullOrEmpty(sumsContent))
+            return null;
+
+        foreach (string line in sumsContent.Split('\n'))
+        {
+            string[] parts = line.Trim()
+                .Split((char[]?)null, 2, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length != 2)
+                continue;
+
+            string fileName = parts[1].TrimStart('*').Trim();
+            if (fileName.Equals(targetFileName, StringComparison.OrdinalIgnoreCase))
+                return parts[0].Trim();
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Verifies a detached ASCII-armored PGP signature over <paramref name="manifestJson"/>
     /// using the org's embedded public key.
     /// </summary>
