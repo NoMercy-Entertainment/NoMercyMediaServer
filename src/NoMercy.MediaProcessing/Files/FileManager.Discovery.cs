@@ -22,6 +22,7 @@ using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
 using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
@@ -36,14 +37,8 @@ public partial class FileManager
 
     private async Task<ConcurrentBag<MediaFolderExtend>> GetFiles(Library library, Folder folder)
     {
-        // Mount at configured root; MediaScan walks via absolute paths.
-        // Resolve through the driver, not the IStorage facade: the facade's
-        // GetFullPath is a LocalStorage-only escape hatch that throws on every
-        // remote backend, so a facade call here killed every rescan of an
-        // NFS / SMB / S3 / WebDAV library. The driver resolves the path within
-        // its own backend, exactly as MediaScan.Process does internally.
         IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
-        string scanRoot = folderStorage.Driver.GetFullPath(folder.Path);
+        string scanRoot = ResolveBackendPath(folderStorage, folder.Path);
         MediaScan mediaScan = new(folderStorage.Driver);
 
         int depth = library.Type switch
@@ -64,6 +59,24 @@ public partial class FileManager
 
         return folders;
     }
+
+    // Resolve a scope-relative folder key ("Anime/Anime/Show") to the backend-
+    // absolute path the raw driver's file APIs (EnumerateFileSystemEntries,
+    // DirectoryExists, MediaScan) expect.
+    //
+    // A local library's root lives in the LocalStorage facade's path guard, not
+    // in the stateless LocalStorageDriver — its GetFullPath is a bare
+    // Path.GetFullPath that canonicalizes against the process CWD (/app in the
+    // container). Resolving a scope-relative key through the driver therefore
+    // produced "/app/Anime/Anime/Show" instead of the library root, and every
+    // local-library rescan / move silently found zero files. Remote backends
+    // (NFS / S3 / SMB / WebDAV) carry their own export/bucket root inside the
+    // driver and don't implement the facade's local-only GetFullPath escape
+    // hatch, so they must resolve through the driver.
+    private static string ResolveBackendPath(IStorage storage, string scopeRelativePath) =>
+        storage.Driver is LocalStorageDriver
+            ? storage.GetFullPath(scopeRelativePath)
+            : storage.Driver.GetFullPath(scopeRelativePath);
 
     private List<Folder> Paths(Library library, Movie? movie = null, Tv? show = null)
     {
@@ -120,7 +133,7 @@ public partial class FileManager
                 // root and returns a driver-absolute directory. Convert that hit
                 // back to a scope-relative key before storing / re-checking, so
                 // the facade and the downstream scan keep working in one space.
-                string resolvedRoot = folderStorage.Driver.GetFullPath(rootFolder.Path);
+                string resolvedRoot = ResolveBackendPath(folderStorage, rootFolder.Path);
                 string? match = TryFindMatchingDirectory(
                     folderStorage.Driver,
                     resolvedRoot,
