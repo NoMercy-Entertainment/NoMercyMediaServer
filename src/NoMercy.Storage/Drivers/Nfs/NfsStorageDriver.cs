@@ -118,7 +118,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         // returns NFS4ERR_EXPIRED. Stat the export root every 30s so the
         // server treats us as alive even when no streaming reads are in
         // flight (typical between user sessions).
-        _keepAlive = new Timer(KeepAliveTick, null, KeepAliveInterval, KeepAliveInterval);
+        _keepAlive = new(KeepAliveTick, null, KeepAliveInterval, KeepAliveInterval);
     }
 
     private void KeepAliveTick(object? _)

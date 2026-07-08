@@ -35,7 +35,7 @@ file static class ReconstructionTestData
             FileSizeBytes: 24_375_000_000L,
             VideoStreams:
             [
-                new VideoStreamInfo(
+                new(
                     Index: 0,
                     Codec: "hevc",
                     Width: 1920,
@@ -52,7 +52,7 @@ file static class ReconstructionTestData
             ],
             AudioStreams:
             [
-                new AudioStreamInfo(
+                new(
                     Index: 1,
                     Codec: "truehd",
                     Channels: 8,
@@ -65,7 +65,7 @@ file static class ReconstructionTestData
             ],
             SubtitleStreams:
             [
-                new SubtitleStreamInfo(
+                new(
                     Index: 2,
                     Codec: "ass",
                     Language: "eng",
@@ -130,7 +130,7 @@ public class ReconstructionWriterTests
             Format: OutputFormat.Mkv,
             VideoOutputs:
             [
-                new VideoOutputPlan(
+                new(
                     Width: 1920,
                     Height: 800,
                     EncoderName: "copy",
@@ -142,12 +142,12 @@ public class ReconstructionWriterTests
                     TenBit: true,
                     PixelFormat: "yuv420p10le",
                     MapLabel: "0:v:0",
-                    ExtraFlags: new Dictionary<string, string>()
+                    ExtraFlags: new()
                 ),
             ],
             AudioOutputs:
             [
-                new AudioOutputPlan(
+                new(
                     EncoderName: "copy",
                     BitrateKbps: 0,
                     Channels: 8,
@@ -159,7 +159,7 @@ public class ReconstructionWriterTests
             ],
             SubtitleOutputs:
             [
-                new SubtitleOutputPlan(
+                new(
                     OutputCodec: SubtitleCodecType.Copy,
                     Action: StreamAction.Copy,
                     Language: "eng",
@@ -197,7 +197,7 @@ public class ReconstructionWriterTests
             Format: OutputFormat.Hls,
             VideoOutputs:
             [
-                new VideoOutputPlan(
+                new(
                     Width: 1920,
                     Height: 800,
                     EncoderName: "libx264",
@@ -209,12 +209,12 @@ public class ReconstructionWriterTests
                     TenBit: false,
                     PixelFormat: "yuv420p",
                     MapLabel: "0:v:0",
-                    ExtraFlags: new Dictionary<string, string>()
+                    ExtraFlags: new()
                 ),
             ],
             AudioOutputs:
             [
-                new AudioOutputPlan(
+                new(
                     EncoderName: "aac",
                     BitrateKbps: 192,
                     Channels: 2,
@@ -226,7 +226,7 @@ public class ReconstructionWriterTests
             ],
             SubtitleOutputs:
             [
-                new SubtitleOutputPlan(
+                new(
                     OutputCodec: SubtitleCodecType.WebVtt,
                     Action: StreamAction.Extract,
                     Language: "eng",
@@ -276,7 +276,7 @@ public class ReconstructionWriterTests
             Format: OutputFormat.Hls,
             VideoOutputs:
             [
-                new VideoOutputPlan(
+                new(
                     Width: 1920,
                     Height: 800,
                     EncoderName: "libx264",
@@ -288,13 +288,13 @@ public class ReconstructionWriterTests
                     TenBit: false,
                     PixelFormat: "yuv420p",
                     MapLabel: "0:v:0",
-                    ExtraFlags: new Dictionary<string, string>()
+                    ExtraFlags: new()
                 ),
             ],
             AudioOutputs: [],
             SubtitleOutputs:
             [
-                new SubtitleOutputPlan(
+                new(
                     OutputCodec: SubtitleCodecType.WebVtt,
                     Action: StreamAction.Drop,
                     Language: "eng",
@@ -334,7 +334,7 @@ public class ReconstructionWriterTests
             AudioOutputs: [],
             SubtitleOutputs:
             [
-                new SubtitleOutputPlan(
+                new(
                     OutputCodec: SubtitleCodecType.WebVtt,
                     Action: StreamAction.Extract,
                     Language: "fra",
@@ -455,8 +455,8 @@ public class ReconstructionWriterTests
         {
             Chapters =
             [
-                new ChapterInfo(TimeSpan.Zero, TimeSpan.FromMinutes(30), "Act 1"),
-                new ChapterInfo(TimeSpan.FromMinutes(30), TimeSpan.FromMinutes(90), "Act 2"),
+                new(TimeSpan.Zero, TimeSpan.FromMinutes(30), "Act 1"),
+                new(TimeSpan.FromMinutes(30), TimeSpan.FromMinutes(90), "Act 2"),
             ],
         };
         BundleLayout layout = ReconstructionTestData.MkvLayout();
@@ -487,9 +487,9 @@ public class ReconstructionWriterTests
         {
             Attachments =
             [
-                new AttachmentInfo(4, "ttf", "OpenSans.ttf", "application/x-truetype-font"),
-                new AttachmentInfo(5, "ttf", "Roboto.ttf", "application/x-truetype-font"),
-                new AttachmentInfo(6, "bin", "cover.jpg", "image/jpeg"),
+                new(4, "ttf", "OpenSans.ttf", "application/x-truetype-font"),
+                new(5, "ttf", "Roboto.ttf", "application/x-truetype-font"),
+                new(6, "bin", "cover.jpg", "image/jpeg"),
             ],
         };
         BundleLayout layout = ReconstructionTestData.MkvLayout();

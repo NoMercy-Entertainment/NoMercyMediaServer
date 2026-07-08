@@ -124,7 +124,7 @@ public class PlanStageEmitHdrAndSdrTests
     }
 
     private static EncodingProfile EmitHdrAndSdrProfile() =>
-        new EncodingProfile(
+        new(
             Id: Ulid.NewUlid(),
             Name: "EmitHdrAndSdr Test",
             Container: Container.HlsTs,
@@ -134,12 +134,12 @@ public class PlanStageEmitHdrAndSdrTests
         )
         {
             HdrPolicy = HdrPolicy.EmitHdrAndSdr,
-            Ladder = new LadderConfig
+            Ladder = new()
             {
                 Mode = LadderMode.Manual,
                 Rungs =
                 [
-                    new LadderRung(
+                    new(
                         Width: 1920,
                         Height: 1080,
                         Codec: VideoCodecType.H265,
@@ -149,7 +149,7 @@ public class PlanStageEmitHdrAndSdrTests
                         Framerate: 24.0,
                         BitDepth: 10
                     ),
-                    new LadderRung(
+                    new(
                         Width: 1280,
                         Height: 720,
                         Codec: VideoCodecType.H264,

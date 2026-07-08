@@ -28,12 +28,12 @@ public class AnalyzeStageDecisionsTests
 
     public AnalyzeStageDecisionsTests()
     {
-        _stage = new AnalyzeStage(
+        _stage = new(
             _analyzer.Object,
             _storage.Object,
             NullLogger<AnalyzeStage>.Instance
         );
-        _context = new EncodingContext("test-correlation", Decisions: _log);
+        _context = new("test-correlation", Decisions: _log);
         _storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(true);
     }
 
@@ -50,7 +50,7 @@ public class AnalyzeStageDecisionsTests
             )
             .ReturnsAsync(
                 BuildMediaInfo(
-                    dolbyVision: new DolbyVisionInfo(7, 6, true, false, DvBlCompatibility.Hdr10)
+                    dolbyVision: new(7, 6, true, false, DvBlCompatibility.Hdr10)
                 )
             );
 
@@ -128,13 +128,13 @@ public class AnalyzeStageDecisionsTests
                 BuildMediaInfo(
                     attachments:
                     [
-                        new AttachmentInfo(
+                        new(
                             99,
                             "ttf",
                             "OpenSans-Regular.ttf",
                             "application/x-truetype-font"
                         ),
-                        new AttachmentInfo(100, "ttf", "OpenSans-Bold.ttf", "font/ttf"),
+                        new(100, "ttf", "OpenSans-Bold.ttf", "font/ttf"),
                     ]
                 )
             );
@@ -159,8 +159,8 @@ public class AnalyzeStageDecisionsTests
                 BuildMediaInfo(
                     chapters:
                     [
-                        new ChapterInfo(TimeSpan.Zero, TimeSpan.FromMinutes(5), "Open"),
-                        new ChapterInfo(TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(10), "Act 1"),
+                        new(TimeSpan.Zero, TimeSpan.FromMinutes(5), "Open"),
+                        new(TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(10), "Act 1"),
                     ]
                 )
             );
@@ -184,7 +184,7 @@ public class AnalyzeStageDecisionsTests
             )
             .ReturnsAsync(
                 BuildMediaInfo(
-                    dolbyVision: new DolbyVisionInfo(7, 6, true, false, DvBlCompatibility.Hdr10)
+                    dolbyVision: new(7, 6, true, false, DvBlCompatibility.Hdr10)
                 )
             );
 

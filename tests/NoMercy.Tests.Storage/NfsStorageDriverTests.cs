@@ -128,7 +128,7 @@ public class NfsDriverConfigParsingTests
     {
         Mock<IDriverConfigResolver> resolver = new();
         resolver.Setup(r => r.Resolve(It.IsAny<Ulid>())).Returns((type, config));
-        return new StorageFactory(
+        return new(
             new LocalStorageDriver(),
             NullLogger<StorageFactory>.Instance,
             resolver.Object
@@ -390,7 +390,7 @@ public class NfsStorageDriverIntegrationTests(StorageBackendsFixture fix)
         NfsStorageDriver? backend;
         try
         {
-            backend = new NfsStorageDriver(config);
+            backend = new(config);
         }
         catch (DllNotFoundException)
         {

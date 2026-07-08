@@ -45,18 +45,18 @@ public class InboxClassifierEventHandlerTests : IDisposable
     public InboxClassifierEventHandlerTests()
     {
         string dbName = Guid.NewGuid().ToString();
-        _connection = new SqliteConnection($"DataSource={dbName};Mode=Memory;Cache=Shared");
+        _connection = new($"DataSource={dbName};Mode=Memory;Cache=Shared");
         _connection.Open();
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(_connection)
             .Options;
 
-        _context = new MediaContext(options);
+        _context = new(options);
         _context.Database.EnsureCreated();
         _context.Database.ExecuteSqlRaw("PRAGMA foreign_keys = OFF;");
 
-        _eventBusMock = new Mock<IEventBus>();
+        _eventBusMock = new();
         _eventBusMock
             .Setup(bus =>
                 bus.Subscribe<FileCreatedEvent>(
@@ -70,7 +70,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
             )
             .Returns(Task.CompletedTask);
 
-        _probeMock = new Mock<IInboxMetadataProbe>();
+        _probeMock = new();
         _probeMock
             .Setup(p =>
                 p.SearchMoviesAsync(
@@ -89,14 +89,14 @@ public class InboxClassifierEventHandlerTests : IDisposable
             .Setup(p => p.LookupMusicReleaseAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((CandidateMatch?)null);
 
-        _tagReaderMock = new Mock<IInboxAudioTagReader>();
+        _tagReaderMock = new();
         _tagReaderMock
             .Setup(r =>
                 r.ReadAsync(It.IsAny<string>(), It.IsAny<Ulid>(), It.IsAny<CancellationToken>())
             )
             .ReturnsAsync((InboxAudioTags?)null);
 
-        _storageFactoryMock = new Mock<IStorageFactory>();
+        _storageFactoryMock = new();
     }
 
     public void Dispose()
@@ -110,18 +110,18 @@ public class InboxClassifierEventHandlerTests : IDisposable
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(_connection)
             .Options;
-        return new MediaContext(options);
+        return new(options);
     }
 
     private InboxClassifierEventHandler MakeHandler()
     {
-        InboxClassifier classifier = new InboxClassifier(_probeMock.Object, _tagReaderMock.Object);
-        InboxRoutingService routing = new InboxRoutingService(
+        InboxClassifier classifier = new(_probeMock.Object, _tagReaderMock.Object);
+        InboxRoutingService routing = new(
             _storageFactoryMock.Object,
-            new JobDispatcher()
+            new()
         );
 
-        return new InboxClassifierEventHandler(
+        return new(
             NullLogger<InboxClassifierEventHandler>.Instance,
             _eventBusMock.Object,
             classifier,
@@ -138,7 +138,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
         Ulid driverId = Ulid.NewUlid();
 
         _context.Libraries.Add(
-            new Library
+            new()
             {
                 Id = libraryId,
                 Title = "Inbox",
@@ -147,7 +147,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
         );
 
         _context.Folders.Add(
-            new Folder
+            new()
             {
                 Id = folderId,
                 Path = folderPath,
@@ -156,7 +156,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
         );
 
         _context.FolderLibrary.Add(
-            new FolderLibrary { LibraryId = libraryId, FolderId = folderId }
+            new() { LibraryId = libraryId, FolderId = folderId }
         );
 
         _context.SaveChanges();
@@ -236,7 +236,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
         Mock<IStorage> storageMock = new();
         storageMock
             .Setup(s => s.List("", null, false))
-            .Returns([new StorageEntry("somefile.mkv", false, 1024, DateTimeOffset.UtcNow)]);
+            .Returns([new("somefile.mkv", false, 1024, DateTimeOffset.UtcNow)]);
         storageMock
             .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
             .Returns<string, string>((parent, child) => $"{parent}/{child}");
@@ -331,7 +331,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
             Ulid driverId = Ulid.NewUlid();
 
             seedContext.Libraries.Add(
-                new Library
+                new()
                 {
                     Id = libraryId,
                     Title = "Inbox",
@@ -339,7 +339,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
                 }
             );
             seedContext.Folders.Add(
-                new Folder
+                new()
                 {
                     Id = folderId,
                     Path = inboxDir,
@@ -347,7 +347,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
                 }
             );
             seedContext.FolderLibrary.Add(
-                new FolderLibrary { LibraryId = libraryId, FolderId = folderId }
+                new() { LibraryId = libraryId, FolderId = folderId }
             );
             await seedContext.SaveChangesAsync();
 
@@ -403,13 +403,13 @@ public class InboxClassifierEventHandlerTests : IDisposable
                 )
                 .ReturnsAsync((InboxAudioTags?)null);
 
-            InboxClassifier classifier = new InboxClassifier(
+            InboxClassifier classifier = new(
                 probeMock.Object,
                 tagReaderMock.Object
             );
-            InboxRoutingService routing = new InboxRoutingService(
+            InboxRoutingService routing = new(
                 realStorageFactory,
-                new JobDispatcher()
+                new()
             );
 
             MediaContext ContextFactory()
@@ -417,7 +417,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
                 DbContextOptions<MediaContext> ctx = new DbContextOptionsBuilder<MediaContext>()
                     .UseSqlite(connection)
                     .Options;
-                return new MediaContext(ctx);
+                return new(ctx);
             }
 
             InboxClassifierEventHandler handler = new(
@@ -487,7 +487,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
         storageMock
             .Setup(s => s.List("", null, false))
             .Returns([
-                new StorageEntry("The Matrix (1999).mkv", false, 1024, DateTimeOffset.UtcNow),
+                new("The Matrix (1999).mkv", false, 1024, DateTimeOffset.UtcNow),
             ]);
         storageMock
             .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))

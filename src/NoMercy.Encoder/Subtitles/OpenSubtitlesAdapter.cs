@@ -148,7 +148,7 @@ public class OpenSubtitlesAdapter(
             double? fps = TryParseDouble(r.MovieFPS);
 
             candidates.Add(
-                new SubtitleCandidate(
+                new(
                     Provider: ProviderName,
                     Language: r.Language,
                     Rating: rating,

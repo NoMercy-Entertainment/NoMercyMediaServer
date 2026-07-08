@@ -26,7 +26,7 @@ public class EncoderProfileParamsDtoTests
             Name = "Test Profile",
             VideoProfiles =
             [
-                new VideoProfile
+                new()
                 {
                     Width = 1920,
                     Crf = 21,
@@ -35,7 +35,7 @@ public class EncoderProfileParamsDtoTests
                     Codec = "h264",
                 },
             ],
-            AudioProfiles = [new AudioProfile { Codec = "aac" }],
+            AudioProfiles = [new() { Codec = "aac" }],
         };
 
         EncoderProfileParamsDto dto = new(profile);
@@ -51,7 +51,7 @@ public class EncoderProfileParamsDtoTests
     [Fact]
     public void Constructor_WithNoProfiles_LeavesDefaults()
     {
-        EncoderProfileParamsDto dto = new(new EncoderProfile { Name = "Test Profile" });
+        EncoderProfileParamsDto dto = new(new() { Name = "Test Profile" });
 
         Assert.Equal(0, dto.Width);
         Assert.Equal(0, dto.Crf);

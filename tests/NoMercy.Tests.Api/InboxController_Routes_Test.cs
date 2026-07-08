@@ -162,7 +162,7 @@ public class InboxController_Routes_Test
             Status = "NeedsReview",
             Candidates =
             [
-                new CandidateMatch
+                new()
                 {
                     Provider = "tmdb",
                     ExternalId = "603",

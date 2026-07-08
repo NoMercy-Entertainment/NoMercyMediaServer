@@ -95,7 +95,7 @@ public class ProfileToEncoderMappingTests
     public void H264_Nvenc_Has_Seven_Presets()
     {
         ICodecDefinition def = _registry.GetVideoDefinition(VideoCodecType.H264);
-        EncoderInfo nvenc = def.Encoders.FirstOrDefault(e => e.FfmpegName == "h264_nvenc");
+        EncoderInfo nvenc = def.Encoders.First(e => e.FfmpegName == "h264_nvenc");
 
         nvenc.Should().NotBeNull();
         nvenc!.Presets.Should().HaveCount(7);
@@ -106,7 +106,7 @@ public class ProfileToEncoderMappingTests
     public void H264_Nvenc_Does_Not_Have_High10_Profile()
     {
         ICodecDefinition def = _registry.GetVideoDefinition(VideoCodecType.H264);
-        EncoderInfo nvenc = def.Encoders.FirstOrDefault(e => e.FfmpegName == "h264_nvenc");
+        EncoderInfo nvenc = def.Encoders.First(e => e.FfmpegName == "h264_nvenc");
 
         nvenc!.Profiles.Should().NotContain("high10");
         nvenc.Profiles.Should().Equal("baseline", "main", "high");
@@ -116,7 +116,7 @@ public class ProfileToEncoderMappingTests
     public void H264_Nvenc_Supports_Cq_Cqp_Cbr_Vbr()
     {
         ICodecDefinition def = _registry.GetVideoDefinition(VideoCodecType.H264);
-        EncoderInfo nvenc = def.Encoders.FirstOrDefault(e => e.FfmpegName == "h264_nvenc");
+        EncoderInfo nvenc = def.Encoders.First(e => e.FfmpegName == "h264_nvenc");
 
         nvenc!.SupportedRateControl.Should().Contain(RateControlMode.Cq);
         nvenc.SupportedRateControl.Should().Contain(RateControlMode.Cqp);
@@ -129,7 +129,7 @@ public class ProfileToEncoderMappingTests
     public void H264_Amf_Has_Three_Presets()
     {
         ICodecDefinition def = _registry.GetVideoDefinition(VideoCodecType.H264);
-        EncoderInfo amf = def.Encoders.FirstOrDefault(e => e.FfmpegName == "h264_amf");
+        EncoderInfo amf = def.Encoders.First(e => e.FfmpegName == "h264_amf");
 
         amf!.Presets.Should().HaveCount(3);
         amf.Presets.Should().Equal("speed", "balanced", "quality");
@@ -139,7 +139,7 @@ public class ProfileToEncoderMappingTests
     public void H264_Amf_Supports_Qvbr_And_Hqvbr()
     {
         ICodecDefinition def = _registry.GetVideoDefinition(VideoCodecType.H264);
-        EncoderInfo amf = def.Encoders.FirstOrDefault(e => e.FfmpegName == "h264_amf");
+        EncoderInfo amf = def.Encoders.First(e => e.FfmpegName == "h264_amf");
 
         amf!.SupportedRateControl.Should().Contain(RateControlMode.Qvbr);
         amf.SupportedRateControl.Should().Contain(RateControlMode.Hqvbr);
@@ -150,7 +150,7 @@ public class ProfileToEncoderMappingTests
     public void H264_Amf_Has_VendorSpecificFlag_Usage()
     {
         ICodecDefinition def = _registry.GetVideoDefinition(VideoCodecType.H264);
-        EncoderInfo amf = def.Encoders.FirstOrDefault(e => e.FfmpegName == "h264_amf");
+        EncoderInfo amf = def.Encoders.First(e => e.FfmpegName == "h264_amf");
 
         amf!.VendorSpecificFlags.Should().ContainKey("-usage");
         amf.VendorSpecificFlags["-usage"].Should().Be("transcoding");
@@ -160,7 +160,7 @@ public class ProfileToEncoderMappingTests
     public void H264_Qsv_Has_Seven_Presets_No_Ultrafast()
     {
         ICodecDefinition def = _registry.GetVideoDefinition(VideoCodecType.H264);
-        EncoderInfo qsv = def.Encoders.FirstOrDefault(e => e.FfmpegName == "h264_qsv");
+        EncoderInfo qsv = def.Encoders.First(e => e.FfmpegName == "h264_qsv");
 
         qsv!.Presets.Should().HaveCount(7);
         qsv.Presets.Should().NotContain("ultrafast");
@@ -171,7 +171,7 @@ public class ProfileToEncoderMappingTests
     public void H264_Qsv_Quality_Range_Min_Is_One()
     {
         ICodecDefinition def = _registry.GetVideoDefinition(VideoCodecType.H264);
-        EncoderInfo qsv = def.Encoders.FirstOrDefault(e => e.FfmpegName == "h264_qsv");
+        EncoderInfo qsv = def.Encoders.First(e => e.FfmpegName == "h264_qsv");
 
         qsv!.QualityRange.Min.Should().Be(1);
         qsv.QualityRange.Max.Should().Be(51);
@@ -181,7 +181,7 @@ public class ProfileToEncoderMappingTests
     public void H264_Qsv_Supports_Icq()
     {
         ICodecDefinition def = _registry.GetVideoDefinition(VideoCodecType.H264);
-        EncoderInfo qsv = def.Encoders.FirstOrDefault(e => e.FfmpegName == "h264_qsv");
+        EncoderInfo qsv = def.Encoders.First(e => e.FfmpegName == "h264_qsv");
 
         qsv!.SupportedRateControl.Should().Contain(RateControlMode.Icq);
     }
@@ -190,7 +190,7 @@ public class ProfileToEncoderMappingTests
     public void H264_Vaapi_Has_No_Presets()
     {
         ICodecDefinition def = _registry.GetVideoDefinition(VideoCodecType.H264);
-        EncoderInfo vaapi = def.Encoders.FirstOrDefault(e => e.FfmpegName == "h264_vaapi");
+        EncoderInfo vaapi = def.Encoders.First(e => e.FfmpegName == "h264_vaapi");
 
         vaapi!.Presets.Should().BeEmpty();
     }
@@ -199,7 +199,7 @@ public class ProfileToEncoderMappingTests
     public void H264_VideoToolbox_Quality_Range_Is_0_100()
     {
         ICodecDefinition def = _registry.GetVideoDefinition(VideoCodecType.H264);
-        EncoderInfo vt = def.Encoders.FirstOrDefault(e => e.FfmpegName == "h264_videotoolbox");
+        EncoderInfo vt = def.Encoders.First(e => e.FfmpegName == "h264_videotoolbox");
 
         vt!.QualityRange.Min.Should().Be(0);
         vt.QualityRange.Max.Should().Be(100);
@@ -210,7 +210,7 @@ public class ProfileToEncoderMappingTests
     public void H264_VideoToolbox_Has_Numeric_Profiles()
     {
         ICodecDefinition def = _registry.GetVideoDefinition(VideoCodecType.H264);
-        EncoderInfo vt = def.Encoders.FirstOrDefault(e => e.FfmpegName == "h264_videotoolbox");
+        EncoderInfo vt = def.Encoders.First(e => e.FfmpegName == "h264_videotoolbox");
 
         vt!.Profiles.Should().Equal("66", "77", "100");
     }
@@ -219,7 +219,7 @@ public class ProfileToEncoderMappingTests
     public void H264_VideoToolbox_Supports_QualityLevel_And_Cbr()
     {
         ICodecDefinition def = _registry.GetVideoDefinition(VideoCodecType.H264);
-        EncoderInfo vt = def.Encoders.FirstOrDefault(e => e.FfmpegName == "h264_videotoolbox");
+        EncoderInfo vt = def.Encoders.First(e => e.FfmpegName == "h264_videotoolbox");
 
         vt!.SupportedRateControl.Should().Contain(RateControlMode.QualityLevel);
         vt.SupportedRateControl.Should().Contain(RateControlMode.Cbr);
@@ -258,7 +258,7 @@ public class ProfileToEncoderMappingTests
     public void H265_HevcNvenc_Supports10Bit()
     {
         ICodecDefinition def = _registry.GetVideoDefinition(VideoCodecType.H265);
-        EncoderInfo nvenc = def.Encoders.FirstOrDefault(e => e.FfmpegName == "hevc_nvenc");
+        EncoderInfo nvenc = def.Encoders.First(e => e.FfmpegName == "hevc_nvenc");
 
         nvenc!.Supports10Bit.Should().BeTrue();
     }
@@ -267,7 +267,7 @@ public class ProfileToEncoderMappingTests
     public void H265_HevcAmf_Supports10Bit()
     {
         ICodecDefinition def = _registry.GetVideoDefinition(VideoCodecType.H265);
-        EncoderInfo amf = def.Encoders.FirstOrDefault(e => e.FfmpegName == "hevc_amf");
+        EncoderInfo amf = def.Encoders.First(e => e.FfmpegName == "hevc_amf");
 
         amf!.Supports10Bit.Should().BeTrue();
     }
@@ -276,7 +276,7 @@ public class ProfileToEncoderMappingTests
     public void H265_HevcQsv_Supports10Bit()
     {
         ICodecDefinition def = _registry.GetVideoDefinition(VideoCodecType.H265);
-        EncoderInfo qsv = def.Encoders.FirstOrDefault(e => e.FfmpegName == "hevc_qsv");
+        EncoderInfo qsv = def.Encoders.First(e => e.FfmpegName == "hevc_qsv");
 
         qsv!.Supports10Bit.Should().BeTrue();
     }
@@ -285,7 +285,7 @@ public class ProfileToEncoderMappingTests
     public void H265_HevcVideoToolbox_Has_Numeric_Profiles()
     {
         ICodecDefinition def = _registry.GetVideoDefinition(VideoCodecType.H265);
-        EncoderInfo vt = def.Encoders.FirstOrDefault(e => e.FfmpegName == "hevc_videotoolbox");
+        EncoderInfo vt = def.Encoders.First(e => e.FfmpegName == "hevc_videotoolbox");
 
         vt!.Profiles.Should().HaveCount(2);
         vt.Profiles.Should().Contain("1");
@@ -315,7 +315,7 @@ public class ProfileToEncoderMappingTests
     public void Vp9_QsvIsTheOnlyHardwareOption()
     {
         ICodecDefinition def = _registry.GetVideoDefinition(VideoCodecType.Vp9);
-        EncoderInfo hw = def.Encoders.FirstOrDefault(e => e.FfmpegName == "vp9_qsv");
+        EncoderInfo hw = def.Encoders.First(e => e.FfmpegName == "vp9_qsv");
 
         hw!.RequiredVendor.Should().Be(GpuVendor.Intel);
     }
@@ -373,7 +373,7 @@ public class ProfileToEncoderMappingTests
     public void Av1_Av1Nvenc_Quality_Range_Is_0_51()
     {
         ICodecDefinition def = _registry.GetVideoDefinition(VideoCodecType.Av1);
-        EncoderInfo nvenc = def.Encoders.FirstOrDefault(e => e.FfmpegName == "av1_nvenc");
+        EncoderInfo nvenc = def.Encoders.First(e => e.FfmpegName == "av1_nvenc");
 
         nvenc!.QualityRange.Min.Should().Be(0);
         nvenc.QualityRange.Max.Should().Be(51);
@@ -383,7 +383,7 @@ public class ProfileToEncoderMappingTests
     public void Av1_Av1Nvenc_Supports10Bit()
     {
         ICodecDefinition def = _registry.GetVideoDefinition(VideoCodecType.Av1);
-        EncoderInfo nvenc = def.Encoders.FirstOrDefault(e => e.FfmpegName == "av1_nvenc");
+        EncoderInfo nvenc = def.Encoders.First(e => e.FfmpegName == "av1_nvenc");
 
         nvenc!.Supports10Bit.Should().BeTrue();
     }
@@ -392,7 +392,7 @@ public class ProfileToEncoderMappingTests
     public void Av1_Av1Amf_Quality_Range_Is_0_255()
     {
         ICodecDefinition def = _registry.GetVideoDefinition(VideoCodecType.Av1);
-        EncoderInfo amf = def.Encoders.FirstOrDefault(e => e.FfmpegName == "av1_amf");
+        EncoderInfo amf = def.Encoders.First(e => e.FfmpegName == "av1_amf");
 
         amf!.QualityRange.Min.Should().Be(0);
         amf.QualityRange.Max.Should().Be(255);
@@ -402,7 +402,7 @@ public class ProfileToEncoderMappingTests
     public void Av1_Av1Qsv_Does_Not_Support10Bit()
     {
         ICodecDefinition def = _registry.GetVideoDefinition(VideoCodecType.Av1);
-        EncoderInfo qsv = def.Encoders.FirstOrDefault(e => e.FfmpegName == "av1_qsv");
+        EncoderInfo qsv = def.Encoders.First(e => e.FfmpegName == "av1_qsv");
 
         qsv!.Supports10Bit.Should().BeFalse();
     }

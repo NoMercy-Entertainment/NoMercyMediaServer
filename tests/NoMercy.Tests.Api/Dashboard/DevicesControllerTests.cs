@@ -57,7 +57,7 @@ public class DevicesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLi
         if (!await ctx.Users.AnyAsync(u => u.Id == otherUserId))
         {
             ctx.Users.Add(
-                new User
+                new()
                 {
                     Id = otherUserId,
                     Email = "other@nomercy.tv",
@@ -123,7 +123,7 @@ public class DevicesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLi
         );
 
         ctx.ActivityLogs.Add(
-            new ActivityLog
+            new()
             {
                 Category = ActivityCategory.Auth,
                 Type = "auth.login",
@@ -252,7 +252,7 @@ public class DevicesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLi
         // controller the online device is deleted and the DB assertion goes red.
         ConnectedClients connectedClients = _factory.GetConnectedClients();
         string onlineClientKey = $"test-online-{_onlineDeviceId}";
-        connectedClients.Clients[onlineClientKey] = new Client { Id = _onlineDeviceId };
+        connectedClients.Clients[onlineClientKey] = new() { Id = _onlineDeviceId };
 
         try
         {

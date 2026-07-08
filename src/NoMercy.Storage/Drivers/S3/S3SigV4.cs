@@ -201,7 +201,7 @@ internal static class S3SigV4
             + canonicalQs
             + $"&X-Amz-Signature={signature}";
 
-        return new Uri(url);
+        return new(url);
     }
 
     // -----------------------------------------------------------------------

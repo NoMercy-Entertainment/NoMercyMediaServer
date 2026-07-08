@@ -203,7 +203,7 @@ public class BuildStageResumeTests
             )
         );
 
-        return new BuildInput(
+        return new(
             Plan: plan,
             InputPath: "/dev/null",
             OutputDirectory: tempDir,

@@ -49,7 +49,7 @@ public class LiveFfmpegRunner(
         // Acquire a resource-budget lease for the duration of this live session
         // so the queue scheduler sees GPU/CPU slots as occupied.
         ResourceRequirement requirement = requiresGpu
-            ? new ResourceRequirement(gpuName, GpuSlots: 1, CpuThreads: 2)
+            ? new(gpuName, GpuSlots: 1, CpuThreads: 2)
             : new ResourceRequirement(null, GpuSlots: 0, CpuThreads: 2);
 
         // Declared outside the try so the outer finally can always see whether

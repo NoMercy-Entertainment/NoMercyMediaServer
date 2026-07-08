@@ -53,8 +53,8 @@ public class AutoEncodeSubscriberTests
             .Options;
         Mock<IDbContextFactory<MediaContext>> mock = new();
         mock.Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => new MediaContext(options));
-        mock.Setup(f => f.CreateDbContext()).Returns(() => new MediaContext(options));
+            .ReturnsAsync(() => new(options));
+        mock.Setup(f => f.CreateDbContext()).Returns(() => new(options));
         return mock.Object;
     }
 
@@ -98,7 +98,7 @@ public class AutoEncodeSubscriberTests
         );
 
         await subject.OnMediaFilesScanned(
-            new MediaFilesScannedEvent { MediaId = 42, LibraryId = Ulid.NewUlid() },
+            new() { MediaId = 42, LibraryId = Ulid.NewUlid() },
             CancellationToken.None
         );
 
@@ -132,7 +132,7 @@ public class AutoEncodeSubscriberTests
         );
 
         await subject.OnMediaFilesScanned(
-            new MediaFilesScannedEvent { MediaId = 42, LibraryId = Ulid.NewUlid() },
+            new() { MediaId = 42, LibraryId = Ulid.NewUlid() },
             CancellationToken.None
         );
 
@@ -172,7 +172,7 @@ public class AutoEncodeSubscriberTests
         );
 
         await subject.OnMediaFilesScanned(
-            new MediaFilesScannedEvent { MediaId = 999, LibraryId = Ulid.NewUlid() },
+            new() { MediaId = 999, LibraryId = Ulid.NewUlid() },
             CancellationToken.None
         );
 
@@ -223,7 +223,7 @@ public class AutoEncodeSubscriberTests
         );
 
         await subject.OnMediaFilesScanned(
-            new MediaFilesScannedEvent { MediaId = 7, LibraryId = Ulid.NewUlid() },
+            new() { MediaId = 7, LibraryId = Ulid.NewUlid() },
             CancellationToken.None
         );
 
@@ -266,7 +266,7 @@ public class AutoEncodeSubscriberTests
         );
 
         await subject.OnMediaFilesScanned(
-            new MediaFilesScannedEvent { MediaId = 8, LibraryId = Ulid.NewUlid() },
+            new() { MediaId = 8, LibraryId = Ulid.NewUlid() },
             CancellationToken.None
         );
 
@@ -317,7 +317,7 @@ public class AutoEncodeSubscriberTests
 
         Func<Task> act = () =>
             subject.OnMediaFilesScanned(
-                new MediaFilesScannedEvent { MediaId = 9, LibraryId = Ulid.NewUlid() },
+                new() { MediaId = 9, LibraryId = Ulid.NewUlid() },
                 CancellationToken.None
             );
 
@@ -367,7 +367,7 @@ public class AutoEncodeSubscriberTests
         AutoEncodeSubscriber subject = new(
             bus.Object,
             Mock.Of<IEncodingOrchestrator>(),
-            new EncoderOptions(),
+            new(),
             NullLogger<AutoEncodeSubscriber>.Instance,
             InMemoryFactory("dispose")
         );

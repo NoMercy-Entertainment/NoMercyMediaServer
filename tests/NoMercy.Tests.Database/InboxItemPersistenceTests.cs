@@ -49,7 +49,7 @@ public class InboxItemPersistenceTests : IDisposable
             Status = "NeedsReview",
             Candidates =
             [
-                new CandidateMatch
+                new()
                 {
                     Provider = "tmdb",
                     ExternalId = "603",

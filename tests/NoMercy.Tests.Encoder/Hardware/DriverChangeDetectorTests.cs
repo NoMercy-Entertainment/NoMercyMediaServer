@@ -19,7 +19,7 @@ public class DriverChangeDetectorTests
 {
     private static IReadOnlyList<GpuDevice> OneGpu(string? driver = "31.0.15.4601") =>
         [
-            new GpuDevice(
+            new(
                 GpuVendor.Nvidia,
                 "RTX 4090",
                 VramMb: 24576,
@@ -88,7 +88,7 @@ public class DriverChangeDetectorTests
         detector.Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>())).ReturnsAsync(gpus);
 
         // Compute the expected hash so the stored hash matches
-        DriverFingerprint fp = new([new GpuDriverInfo("Nvidia", "RTX 4090", "31.0.15.4601", 0)]);
+        DriverFingerprint fp = new([new("Nvidia", "RTX 4090", "31.0.15.4601", 0)]);
         string expectedHash = fp.ComputeHash();
 
         Mock<IDriverFingerprintStore> store = new();

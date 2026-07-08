@@ -311,7 +311,7 @@ public class DeviceAwareVariantSelectorTests
 
         VariantSelection withCaps = _selector.Select(
             variants,
-            new DeviceCapabilities { RamTier = DeviceRamTier.Standard }
+            new() { RamTier = DeviceRamTier.Standard }
         );
         withCaps.Reason.Should().NotBeNullOrEmpty();
     }

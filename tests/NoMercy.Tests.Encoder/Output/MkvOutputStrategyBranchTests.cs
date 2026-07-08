@@ -517,7 +517,7 @@ public class MkvOutputStrategyBranchTests
                     [
                         new(SubtitleCodecType.Copy, StreamAction.Copy, "eng", 2, "[s0]"),
                     ],
-                    Thumbnails: new ThumbnailOutputPlan(160, 90, 10)
+                    Thumbnails: new(160, 90, 10)
                 )
             )
             .Should()

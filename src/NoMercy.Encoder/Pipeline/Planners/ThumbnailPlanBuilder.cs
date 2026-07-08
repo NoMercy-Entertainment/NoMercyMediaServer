@@ -49,7 +49,7 @@ public static class ThumbnailPlanBuilder
                 HlsDerivatives derivatives = profile.HlsDerivatives ?? new HlsDerivatives();
                 if (derivatives.GenerateSpriteVtt)
                 {
-                    thumbConfig = new ThumbnailOutput(
+                    thumbConfig = new(
                         Width: derivatives.SpriteVttThumbnailWidth,
                         IntervalSeconds: derivatives.SpriteVttIntervalSeconds
                     );

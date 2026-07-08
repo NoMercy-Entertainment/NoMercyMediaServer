@@ -126,7 +126,7 @@ public class EncodingPresetsController(
         if (existing.IsBuiltIn)
         {
             ValidationEnvelope envelope = ValidationEnvelope.FromRules([
-                new EncoderRule(
+                new(
                     EncoderRuleId.ProfileBuiltinReadonly,
                     EncoderRuleSeverity.Error,
                     "id",

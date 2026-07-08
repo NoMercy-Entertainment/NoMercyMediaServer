@@ -12,9 +12,7 @@
     <PackageReference Include="Makaretu.Dns" />
     <PackageReference Include="Makaretu.Dns.Multicast" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
     <PackageReference Include="Mono.Nat" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Sharpcaster" />

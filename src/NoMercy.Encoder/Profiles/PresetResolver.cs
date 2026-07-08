@@ -71,7 +71,7 @@ public static class PresetResolver
             JObject child = EnsureCurrent(JObject.Parse(chain[i].Json));
             accumulator.Merge(
                 child,
-                new JsonMergeSettings
+                new()
                 {
                     MergeArrayHandling = MergeArrayHandling.Replace,
                     MergeNullValueHandling = MergeNullValueHandling.Merge,

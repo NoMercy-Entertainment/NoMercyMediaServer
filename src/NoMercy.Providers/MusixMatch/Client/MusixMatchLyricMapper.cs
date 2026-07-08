@@ -43,7 +43,7 @@ public static class MusixMatchLyricMapper
             .Select(line => new LyricLine
             {
                 Text = line.Text,
-                Time = new LyricLine.LineTime
+                Time = new()
                 {
                     Total = line.Time.Total,
                     Minutes = line.Time.Minutes,

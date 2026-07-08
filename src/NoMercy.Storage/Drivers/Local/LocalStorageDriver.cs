@@ -108,7 +108,7 @@ public sealed class LocalStorageDriver : IStorageDriver
         {
             bool isDir = info is DirectoryInfo;
             long size = info is FileInfo file ? file.Length : 0L;
-            yield return new StorageEntryInfo(info.FullName, isDir, size, info.LastWriteTimeUtc);
+            yield return new(info.FullName, isDir, size, info.LastWriteTimeUtc);
         }
     }
 

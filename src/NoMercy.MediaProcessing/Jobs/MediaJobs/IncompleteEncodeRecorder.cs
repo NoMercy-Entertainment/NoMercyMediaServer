@@ -39,7 +39,7 @@ public sealed class IncompleteEncodeRecorder
         {
             DateTime now = DateTime.UtcNow;
             context.IncompleteEncodes.Add(
-                new IncompleteEncode
+                new()
                 {
                     MediaId = mediaId,
                     FolderId = folderId,

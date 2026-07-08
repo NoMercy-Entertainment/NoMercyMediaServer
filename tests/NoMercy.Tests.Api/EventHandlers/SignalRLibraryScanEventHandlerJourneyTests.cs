@@ -37,7 +37,7 @@ public class SignalRLibraryScanEventHandlerJourneyTests
         messengerMock
             .Setup(m => m.SendToAll(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>()))
             .Callback<string, string, object>(
-                (method, hub, payload) => calls.Add(new Capture(method, hub, payload))
+                (method, hub, payload) => calls.Add(new(method, hub, payload))
             )
             .Returns(Task.CompletedTask);
         SignalRLibraryScanEventHandler handler = new(
@@ -253,7 +253,7 @@ public class SignalRLibraryRefreshEventHandlerJourneyTests
         messengerMock
             .Setup(m => m.SendToAll(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>()))
             .Callback<string, string, object>(
-                (method, hub, payload) => calls.Add(new Capture(method, hub, payload))
+                (method, hub, payload) => calls.Add(new(method, hub, payload))
             )
             .Returns(Task.CompletedTask);
         SignalRLibraryRefreshEventHandler handler = new(bus, messengerMock.Object);

@@ -29,7 +29,7 @@ public sealed class PathCombineAnalyzer : DiagnosticAnalyzer
 {
     public const string DiagnosticId = "NMS001";
 
-    private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+    private static readonly DiagnosticDescriptor Rule = new(
         id: DiagnosticId,
         title: "Use IStorage.CombinePath instead of System.IO.Path.Combine for storage paths",
         messageFormat: "Replace Path.Combine with storage.CombinePath. Path.Combine uses the OS separator which violates the IStorage path contract (Rule 2: forward-slash separators only).",

@@ -25,7 +25,7 @@ namespace NoMercy.Tests.MediaProcessing;
 internal sealed class TmdbMockHttpClientFactory : IHttpClientFactory
 {
     public HttpClient CreateClient(string name) =>
-        new(new TmdbMockHandler()) { BaseAddress = new Uri("https://api.themoviedb.org/3/") };
+        new(new TmdbMockHandler()) { BaseAddress = new("https://api.themoviedb.org/3/") };
 
     private sealed class TmdbMockHandler : HttpMessageHandler
     {
@@ -46,7 +46,7 @@ internal sealed class TmdbMockHttpClientFactory : IHttpClientFactory
             };
 
             HttpResponseMessage response = body is null
-                ? new HttpResponseMessage(HttpStatusCode.NotFound)
+                ? new(HttpStatusCode.NotFound)
                 : new HttpResponseMessage(HttpStatusCode.OK)
                 {
                     Content = new StringContent(body, Encoding.UTF8, "application/json"),

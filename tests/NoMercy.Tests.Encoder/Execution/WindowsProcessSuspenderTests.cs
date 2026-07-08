@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Diagnostics;
+using System.Runtime.Versioning;
 using NoMercy.Encoder.Execution;
 using Xunit;
 
@@ -24,6 +25,7 @@ namespace NoMercy.Tests.Encoder.Execution;
 /// suspend/resume call and lets Process.Dispose() own closing the handle
 /// exactly once, instead of also calling NtClose manually.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class WindowsProcessSuspenderTests
 {
     [SkippableFact]

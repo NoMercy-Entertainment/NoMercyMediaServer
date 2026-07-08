@@ -70,13 +70,13 @@ public sealed class InboxRoutingIntegrationTests : IDisposable
             .Setup(r => r.Resolve(It.IsAny<Ulid>()))
             .Returns(("local", "{\"rootPath\":\"\"}"));
 
-        _storageFactory = new StorageFactory(
+        _storageFactory = new(
             realDriver,
             NullLogger<StorageFactory>.Instance,
             resolverMock.Object
         );
 
-        _dispatcherMock = new Mock<JobDispatcher>();
+        _dispatcherMock = new();
     }
 
     public void Dispose()
@@ -149,7 +149,7 @@ public sealed class InboxRoutingIntegrationTests : IDisposable
         context.FolderLibrary.Add(folderLibrary);
         context.SaveChanges();
 
-        return new InboxDestination
+        return new()
         {
             LibraryId = libraryId,
             FolderId = folderId,

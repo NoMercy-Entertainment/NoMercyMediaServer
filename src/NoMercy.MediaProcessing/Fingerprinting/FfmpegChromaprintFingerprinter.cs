@@ -106,7 +106,7 @@ public sealed partial class FfmpegChromaprintFingerprinter(
         )
             durationSeconds = (int)Math.Round(parsedDuration);
 
-        return new AudioFingerprint(fingerprintMatch.Groups[1].Value, durationSeconds);
+        return new(fingerprintMatch.Groups[1].Value, durationSeconds);
     }
 
     private static string Truncate(string value, int max) =>

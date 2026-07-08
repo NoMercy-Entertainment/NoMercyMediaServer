@@ -218,7 +218,7 @@ public class PlanStageAutoLadderTests
             Video: null,
             Audio: [],
             Subtitles: [],
-            Ladder: new LadderConfig
+            Ladder: new()
             {
                 Mode = autoLadder ? LadderMode.Auto : LadderMode.Manual,
                 Rungs = rungs,
@@ -292,7 +292,7 @@ public class PlanStageAutoLadderRoutingTests
                 )
             );
 
-        return new PlanStage(
+        return new(
             new(),
             new(),
             new(),
@@ -370,7 +370,7 @@ public class PlanStageAutoLadderRoutingTests
             Id: Ulid.NewUlid(),
             Name: "AutoConfigTest",
             Container: Container.HlsTs,
-            Video: new VideoOutput(
+            Video: new(
                 Policy: NoMercy.Encoder.Profiles.StreamPolicy.Transcode,
                 Codec: VideoCodecType.H264,
                 Width: 1920,
@@ -393,7 +393,7 @@ public class PlanStageAutoLadderRoutingTests
             ),
             Audio: [],
             Subtitles: [],
-            Ladder: new LadderConfig { Mode = LadderMode.Auto, AutoConfig = autoConfig }
+            Ladder: new() { Mode = LadderMode.Auto, AutoConfig = autoConfig }
         );
 
         PlanStage stage = BuildStage();
@@ -438,7 +438,7 @@ public class PlanStageAutoLadderRoutingTests
         _abrGenerator
             .Setup(g => g.Generate(It.IsAny<MediaInfo>(), It.IsAny<VideoOutput>()))
             .Returns([
-                new VideoOutput(
+                new(
                     Policy: NoMercy.Encoder.Profiles.StreamPolicy.Transcode,
                     Codec: VideoCodecType.H264,
                     Width: 1920,
@@ -465,7 +465,7 @@ public class PlanStageAutoLadderRoutingTests
             Id: Ulid.NewUlid(),
             Name: "LegacyAutoTest",
             Container: Container.HlsTs,
-            Video: new VideoOutput(
+            Video: new(
                 Policy: NoMercy.Encoder.Profiles.StreamPolicy.Transcode,
                 Codec: VideoCodecType.H264,
                 Width: 1920,
@@ -488,7 +488,7 @@ public class PlanStageAutoLadderRoutingTests
             ),
             Audio: [],
             Subtitles: [],
-            Ladder: new LadderConfig { Mode = LadderMode.Auto, AutoConfig = null }
+            Ladder: new() { Mode = LadderMode.Auto, AutoConfig = null }
         );
 
         PlanStage stage = BuildStage();

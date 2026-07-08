@@ -40,7 +40,7 @@ public sealed class ProfileSignatureVerifier : IProfileSignatureVerifier
 
         if (key is null)
         {
-            return new EncoderRule(
+            return new(
                 EncoderRuleId.ImportPublisherUntrusted,
                 EncoderRuleSeverity.Error,
                 "publisher_key_fingerprint",
@@ -59,7 +59,7 @@ public sealed class ProfileSignatureVerifier : IProfileSignatureVerifier
         }
         catch (FormatException)
         {
-            return new EncoderRule(
+            return new(
                 EncoderRuleId.ImportSignatureInvalid,
                 EncoderRuleSeverity.Error,
                 "signature",
@@ -74,7 +74,7 @@ public sealed class ProfileSignatureVerifier : IProfileSignatureVerifier
         }
         catch (FormatException)
         {
-            return new EncoderRule(
+            return new(
                 EncoderRuleId.ImportSignatureInvalid,
                 EncoderRuleSeverity.Error,
                 "signature",
@@ -119,7 +119,7 @@ public sealed class ProfileSignatureVerifier : IProfileSignatureVerifier
 
         if (!valid)
         {
-            return new EncoderRule(
+            return new(
                 EncoderRuleId.ImportSignatureInvalid,
                 EncoderRuleSeverity.Error,
                 "signature",

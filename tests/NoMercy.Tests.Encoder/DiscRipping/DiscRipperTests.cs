@@ -242,12 +242,12 @@ public class DiscRipperTests : IDisposable
     private DiscRipper BuildRipper()
     {
         LocalStorageDriver driver = new();
-        LocalStorage storage = new(driver, new StoragePathGuard([], driver));
-        return new DiscRipper(
+        LocalStorage storage = new(driver, new([], driver));
+        return new(
             _options,
             _processRunner.Object,
             storage,
-            new DriveLockRegistry(),
+            new(),
             NullLogger<DiscRipper>.Instance
         );
     }

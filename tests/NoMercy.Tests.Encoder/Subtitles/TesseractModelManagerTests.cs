@@ -139,7 +139,7 @@ public class TesseractModelManagerTests : IDisposable
     {
         HttpClient client = new(handler);
         LocalStorageDriver driver = new();
-        LocalStorage storage = new(driver, new StoragePathGuard([], driver));
+        LocalStorage storage = new(driver, new([], driver));
         return new(_options, client, storage, NullLogger<TesseractModelManager>.Instance);
     }
 

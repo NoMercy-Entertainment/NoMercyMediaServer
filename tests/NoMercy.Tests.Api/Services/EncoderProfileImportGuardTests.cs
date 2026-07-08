@@ -74,9 +74,9 @@ public class EncoderProfileImportGuardTests
         Mock<IHttpClientFactory> httpClientFactory = new();
         httpClientFactory
             .Setup(f => f.CreateClient(It.IsAny<string>()))
-            .Returns(() => new HttpClient(handler));
+            .Returns(() => new(handler));
 
-        return new EncoderProfileService(
+        return new(
             repository.Object,
             activityLogger.Object,
             httpClientFactory.Object,

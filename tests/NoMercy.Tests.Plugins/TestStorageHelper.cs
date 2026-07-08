@@ -22,6 +22,6 @@ internal static class TestStorageHelper
     public static IStorage CreateStorage(string rootPath)
     {
         IStorageDriver driver = CreateBackend();
-        return new LocalStorage(driver, new StoragePathGuard([rootPath], driver));
+        return new LocalStorage(driver, new([rootPath], driver));
     }
 }

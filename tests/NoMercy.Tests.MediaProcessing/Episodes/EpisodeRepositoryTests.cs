@@ -26,7 +26,7 @@ public class EpisodeRepositoryTests : IDisposable
 
     public EpisodeRepositoryTests()
     {
-        _connection = new SqliteConnection("Data Source=:memory:");
+        _connection = new("Data Source=:memory:");
         _connection.Open();
 
         using (SqliteCommand fkOff = _connection.CreateCommand())
@@ -79,7 +79,7 @@ public class EpisodeRepositoryTests : IDisposable
         stored!.Title.Should().Be("Pilot");
         stored.EpisodeNumber.Should().Be(1);
         stored.SeasonNumber.Should().Be(1);
-        stored.AirDate.Should().Be(new DateTime(2023, 01, 15));
+        stored.AirDate.Should().Be(new(2023, 01, 15));
         stored.Overview.Should().Contain("first episode");
         stored.ProductionCode.Should().Be("E001");
         stored.Still.Should().Be("/still_path.jpg");
@@ -133,7 +133,7 @@ public class EpisodeRepositoryTests : IDisposable
         result.Should().NotBeNull();
         result!.Title.Should().Be("Updated Title");
         result.EpisodeNumber.Should().Be(2);
-        result.AirDate.Should().Be(new DateTime(2023, 01, 22));
+        result.AirDate.Should().Be(new(2023, 01, 22));
         result.ProductionCode.Should().Be("NEW");
     }
 
@@ -231,7 +231,7 @@ public class EpisodeRepositoryTests : IDisposable
 
         List<Translation> translations = new()
         {
-            new Translation
+            new()
             {
                 Iso31661 = "US",
                 Iso6391 = "en",
@@ -241,7 +241,7 @@ public class EpisodeRepositoryTests : IDisposable
                 EnglishName = "English",
                 EpisodeId = episodeId,
             },
-            new Translation
+            new()
             {
                 Iso31661 = "FR",
                 Iso6391 = "fr",
@@ -302,7 +302,7 @@ public class EpisodeRepositoryTests : IDisposable
 
         List<Translation> translations = new()
         {
-            new Translation
+            new()
             {
                 Iso31661 = "US",
                 Iso6391 = "en",

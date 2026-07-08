@@ -59,7 +59,7 @@ public class TwoPassSplitTests : IDisposable
             .Setup(store => store.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((JobCheckpoint?)null);
 
-        _strategy = new HlsTwoPassStrategy(
+        _strategy = new(
             _encoder.Object,
             _checkpointStore.Object,
             NullLogger<HlsTwoPassStrategy>.Instance,
@@ -183,10 +183,10 @@ public class TwoPassSplitTests : IDisposable
 
     private EncodingRequest BuildRequest(EncodingPass? passOverride, string? statsFilePath = null)
     {
-        return new EncodingRequest(
+        return new(
             InputPath: Path.Combine(_outputDir, "input.mp4"),
             OutputDirectory: _outputDir,
-            Profile: new NoMercy.Encoder.Profiles.EncodingProfile(
+            Profile: new(
                 Id: Ulid.NewUlid(),
                 Name: "test",
                 Container: NoMercy.Encoder.Profiles.Container.HlsTs,

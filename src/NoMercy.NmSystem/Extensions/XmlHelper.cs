@@ -25,7 +25,7 @@ public static class XmlHelper
         return Encoding.UTF8.GetString(memoryStream.ToArray());
     }
 
-    public static T? FromXml<T>(this string xml)
+    public static T? FromXml<T>(this string? xml)
     {
         if (string.IsNullOrEmpty(xml))
             return default;

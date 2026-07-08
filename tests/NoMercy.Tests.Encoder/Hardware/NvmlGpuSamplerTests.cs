@@ -65,7 +65,7 @@ public class NvmlGpuSamplerTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ThrowsAsync(new Exception("nvidia-smi not on PATH"));
+            .ThrowsAsync(new("nvidia-smi not on PATH"));
 
         NvmlGpuSampler sampler = new(runner.Object, NullLogger<NvmlGpuSampler>.Instance);
 

@@ -41,7 +41,7 @@ public class PlanStageAcquisitionTests
         PlanStage stage = BuildStage(acquisitionService: svc.Object);
 
         EncodingProfile profile = BuildProfile(
-            new SubtitleAcquisitionConfig { Enabled = false, Languages = ["en"] }
+            new() { Enabled = false, Languages = ["en"] }
         );
 
         OutputPlan plan = await RunPlan(stage, profile);
@@ -75,7 +75,7 @@ public class PlanStageAcquisitionTests
 
         PlanStage stage = BuildStage(acquisitionService: svc.Object);
         EncodingProfile profile = BuildProfile(
-            new SubtitleAcquisitionConfig
+            new()
             {
                 Enabled = true,
                 Languages = ["en"],
@@ -106,7 +106,7 @@ public class PlanStageAcquisitionTests
 
         PlanStage stage = BuildStage(acquisitionService: svc.Object);
         EncodingProfile profile = BuildProfile(
-            new SubtitleAcquisitionConfig
+            new()
             {
                 Enabled = true,
                 Languages = ["en"],

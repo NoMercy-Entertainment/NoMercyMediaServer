@@ -65,7 +65,7 @@ public class SubtitleAcquisitionValidatorTests
     {
         EncodingProfile profile = VideoProfile(
             subtitles: [],
-            acquisition: new SubtitleAcquisitionConfig { Enabled = true }
+            acquisition: new() { Enabled = true }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -84,7 +84,7 @@ public class SubtitleAcquisitionValidatorTests
     {
         EncodingProfile profile = VideoProfile(
             subtitles: [WebVttOutput()],
-            acquisition: new SubtitleAcquisitionConfig { Enabled = true }
+            acquisition: new() { Enabled = true }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -107,7 +107,7 @@ public class SubtitleAcquisitionValidatorTests
     {
         EncodingProfile profile = AudioOnlyProfile(
             container,
-            acquisition: new SubtitleAcquisitionConfig { Enabled = true }
+            acquisition: new() { Enabled = true }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -126,7 +126,7 @@ public class SubtitleAcquisitionValidatorTests
     {
         EncodingProfile profile = VideoProfile(
             subtitles: [WebVttOutput()],
-            acquisition: new SubtitleAcquisitionConfig { Enabled = true, MinRating = -0.1 }
+            acquisition: new() { Enabled = true, MinRating = -0.1 }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -143,7 +143,7 @@ public class SubtitleAcquisitionValidatorTests
     {
         EncodingProfile profile = VideoProfile(
             subtitles: [WebVttOutput()],
-            acquisition: new SubtitleAcquisitionConfig { Enabled = true, MinRating = 10.1 }
+            acquisition: new() { Enabled = true, MinRating = 10.1 }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -160,7 +160,7 @@ public class SubtitleAcquisitionValidatorTests
     {
         EncodingProfile profile = VideoProfile(
             subtitles: [WebVttOutput()],
-            acquisition: new SubtitleAcquisitionConfig { Enabled = true, MinRating = 0.0 }
+            acquisition: new() { Enabled = true, MinRating = 0.0 }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -176,7 +176,7 @@ public class SubtitleAcquisitionValidatorTests
     {
         EncodingProfile profile = VideoProfile(
             subtitles: [WebVttOutput()],
-            acquisition: new SubtitleAcquisitionConfig { Enabled = true, MaxPerLanguage = 0 }
+            acquisition: new() { Enabled = true, MaxPerLanguage = 0 }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -193,7 +193,7 @@ public class SubtitleAcquisitionValidatorTests
     {
         EncodingProfile profile = VideoProfile(
             subtitles: [WebVttOutput()],
-            acquisition: new SubtitleAcquisitionConfig { Enabled = true, MaxPerLanguage = -1 }
+            acquisition: new() { Enabled = true, MaxPerLanguage = -1 }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -210,7 +210,7 @@ public class SubtitleAcquisitionValidatorTests
     {
         EncodingProfile profile = VideoProfile(
             subtitles: [WebVttOutput()],
-            acquisition: new SubtitleAcquisitionConfig
+            acquisition: new()
             {
                 Enabled = true,
                 EmbedPolicy = SubtitleEmbedPolicy.ExactMatchOnly,
@@ -244,7 +244,7 @@ public class SubtitleAcquisitionValidatorTests
     {
         EncodingProfile profile = VideoProfile(
             subtitles: [],
-            acquisition: new SubtitleAcquisitionConfig
+            acquisition: new()
             {
                 Enabled = false,
                 MaxPerLanguage = 0,

@@ -183,7 +183,7 @@ public class ForUserExtensionTests
             }
         );
         context.Drivers.Add(
-            new Driver
+            new()
             {
                 Id = Driver.SystemLocalDriverId,
                 Name = "Local Filesystem",
@@ -194,7 +194,7 @@ public class ForUserExtensionTests
             }
         );
         context.Folders.Add(
-            new Folder
+            new()
             {
                 Id = musicFolderId,
                 Path = "/media/music",

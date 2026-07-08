@@ -299,7 +299,7 @@ internal sealed class FaultyLibNfs : ILibNfs
         }
 
         IntPtr handle = new(Interlocked.Increment(ref _nextHandle));
-        _openDirs[handle] = new DirIter { Entries = entries, EntryIsDir = entryIsDir };
+        _openDirs[handle] = new() { Entries = entries, EntryIsDir = entryIsDir };
         dir = handle;
         return 0;
     }

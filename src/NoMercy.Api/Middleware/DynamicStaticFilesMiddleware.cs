@@ -443,7 +443,7 @@ public class DynamicStaticFilesMiddleware(
     /// </summary>
     public static void AddFolder(Ulid folderId, Ulid driverId, string subPath)
     {
-        Folders[folderId] = new FolderRef(driverId, subPath ?? string.Empty);
+        Folders[folderId] = new(driverId, subPath ?? string.Empty);
     }
 
     public static void RemoveFolder(Ulid folderId)

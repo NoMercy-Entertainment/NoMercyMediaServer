@@ -32,8 +32,8 @@ public class AniDbService : IAniDbService
 
     public AniDbService()
     {
-        _client = new AniDBClient(
-            new AniDBClientOptions
+        _client = new(
+            new()
             {
                 ClientName = "nomercy",
                 ClientVersion = 1,

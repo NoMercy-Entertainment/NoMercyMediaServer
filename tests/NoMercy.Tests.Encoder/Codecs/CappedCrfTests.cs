@@ -66,10 +66,10 @@ public class CappedCrfTests
         hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
         hardware.Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>())).Returns((GpuDevice?)null);
 
-        return new PlanStage(
-            new ExecutionGraphBuilder(),
-            new GroupingStrategy(),
-            new CostEstimator(),
+        return new(
+            new(),
+            new(),
+            new(),
             codecResolver.Object,
             hardware.Object,
             new TonemapSelector(),
@@ -193,7 +193,7 @@ public class CappedCrfTests
                 PixelFormat10Bit: "yuv420p10le",
                 VendorSpecificFlags: new()
             ),
-            Device: new GpuDevice(
+            Device: new(
                 Vendor: GpuVendor.Nvidia,
                 Name: "TestGpu",
                 VramMb: 8192,

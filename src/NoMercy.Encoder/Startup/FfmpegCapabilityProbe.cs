@@ -101,7 +101,7 @@ public sealed class FfmpegCapabilityProbe(
             tesseractPresent
         );
 
-        _cached = new CapabilityReport(
+        _cached = new(
             BluRayProtocol: bluRay,
             DvdReadProtocol: dvdRead,
             AvailableEncoders: ffmpegCapabilities.AvailableEncoders.ToList(),
@@ -195,7 +195,7 @@ public sealed class FfmpegCapabilityProbe(
 
         if (!fpcalcPresent)
             issues.Add(
-                new EncoderRule(
+                new(
                     EncoderRuleId.CapabilityFpcalcMissing,
                     EncoderRuleSeverity.Warning,
                     "fpcalc",
@@ -206,7 +206,7 @@ public sealed class FfmpegCapabilityProbe(
 
         if (!whisperModelPresent)
             issues.Add(
-                new EncoderRule(
+                new(
                     EncoderRuleId.CapabilityWhisperMissing,
                     EncoderRuleSeverity.Warning,
                     "WhisperModelPath",
@@ -217,7 +217,7 @@ public sealed class FfmpegCapabilityProbe(
 
         if (!tesseractPresent)
             issues.Add(
-                new EncoderRule(
+                new(
                     EncoderRuleId.CapabilityTesseractModelMissing,
                     EncoderRuleSeverity.Warning,
                     "TesseractModelsDirectory",

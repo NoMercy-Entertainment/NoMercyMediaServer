@@ -125,7 +125,7 @@ public class LiveFfmpegRunnerCapTests
             .ReturnsAsync(noopLease);
         noopBudget.Setup(b => b.Release(It.IsAny<ResourceLease>()));
 
-        return new LiveFfmpegRunner(
+        return new(
             processRunner ?? MakeInstantProcessRunner(),
             opts,
             NullLogger<LiveFfmpegRunner>.Instance,

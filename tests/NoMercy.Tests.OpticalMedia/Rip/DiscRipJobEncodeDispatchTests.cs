@@ -64,7 +64,7 @@ public class DiscRipJobEncodeDispatchTests
             DrivePath: "D:\\",
             SelectedTitleIndices: [1],
             MetadataId: null,
-            Custom: new CustomMetadata(
+            Custom: new(
                 Title: "Test Film",
                 Year: 2024,
                 Type: OpticalMediaType.Movie,
@@ -85,7 +85,7 @@ public class DiscRipJobEncodeDispatchTests
             PresetId = presetId,
             FolderId = KnownFolderId,
             IsDefault = false,
-            Preset = new EncodingPreset
+            Preset = new()
             {
                 Id = presetId,
                 Name = "Test Preset",
@@ -163,13 +163,13 @@ public class DiscRipJobEncodeDispatchTests
             TargetLibraryId = library.Id,
             TargetLibraryType = library.Type,
             DiscRipper = ripper,
-            IdentificationService = new DiscIdentificationService(
+            IdentificationService = new(
                 [],
                 NullLogger<DiscIdentificationService>.Instance
             ),
             StorageFactory = factoryMock.Object,
             StorageDriver = Mock.Of<IStorageDriver>(),
-            DriveLockRegistry = new DriveLockRegistry(),
+            DriveLockRegistry = new(),
             LoggerFactory = NullLoggerFactory.Instance,
             JobDispatcher = jobDispatcher,
         };

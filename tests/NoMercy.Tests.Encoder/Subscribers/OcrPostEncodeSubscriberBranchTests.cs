@@ -58,7 +58,7 @@ public class OcrPostEncodeSubscriberBranchTests
             )
             .ToList();
 
-        return new MediaInfo(
+        return new(
             FilePath: "/out/master.m3u8",
             Format: "mpegts",
             Duration: TimeSpan.FromMinutes(60),
@@ -98,7 +98,7 @@ public class OcrPostEncodeSubscriberBranchTests
     public async Task Null_ocr_engine_skips_without_probing()
     {
         Mock<IMediaAnalyzer> analyzer = new();
-        OcrPostEncodeSubscriber subscriber = Build(new EncoderOptions(), analyzer, ocr: null);
+        OcrPostEncodeSubscriber subscriber = Build(new(), analyzer, ocr: null);
 
         await subscriber.OnEncodingCompleted(Event(), CancellationToken.None);
 
@@ -116,7 +116,7 @@ public class OcrPostEncodeSubscriberBranchTests
             .ThrowsAsync(new InvalidOperationException("probe boom"));
 
         Mock<ISubtitleOcrEngine> ocr = new();
-        OcrPostEncodeSubscriber subscriber = Build(new EncoderOptions(), analyzer, ocr);
+        OcrPostEncodeSubscriber subscriber = Build(new(), analyzer, ocr);
 
         Func<Task> act = () => subscriber.OnEncodingCompleted(Event(), CancellationToken.None);
         await act.Should().NotThrowAsync();
@@ -160,7 +160,7 @@ public class OcrPostEncodeSubscriberBranchTests
                 new SubtitleTrack("/out/sub.fre.vtt", "fre", SubtitleCodecType.WebVtt, 5)
             );
 
-        OcrPostEncodeSubscriber subscriber = Build(new EncoderOptions(), analyzer, ocr);
+        OcrPostEncodeSubscriber subscriber = Build(new(), analyzer, ocr);
 
         Func<Task> act = () => subscriber.OnEncodingCompleted(Event(), CancellationToken.None);
         await act.Should().NotThrowAsync();
@@ -218,7 +218,7 @@ public class OcrPostEncodeSubscriberBranchTests
             )
             .ReturnsAsync(new SubtitleTrack("/out/sub.vtt", "eng", SubtitleCodecType.WebVtt, 5));
 
-        OcrPostEncodeSubscriber subscriber = Build(new EncoderOptions(), analyzer, ocr);
+        OcrPostEncodeSubscriber subscriber = Build(new(), analyzer, ocr);
 
         await subscriber.OnEncodingCompleted(Event(), CancellationToken.None);
 
@@ -286,7 +286,7 @@ public class OcrPostEncodeSubscriberBranchTests
             )
             .ReturnsAsync(new SubtitleTrack("/out/sub.vtt", "eng", SubtitleCodecType.WebVtt, 5));
 
-        OcrPostEncodeSubscriber subscriber = Build(new EncoderOptions(), analyzer, ocr);
+        OcrPostEncodeSubscriber subscriber = Build(new(), analyzer, ocr);
 
         await subscriber.OnEncodingCompleted(Event(), CancellationToken.None);
 
@@ -348,7 +348,7 @@ public class OcrPostEncodeSubscriberBranchTests
             )
             .ReturnsAsync(new SubtitleTrack("/out/sub.vtt", "eng", SubtitleCodecType.WebVtt, 5));
 
-        OcrPostEncodeSubscriber subscriber = Build(new EncoderOptions(), analyzer, ocr);
+        OcrPostEncodeSubscriber subscriber = Build(new(), analyzer, ocr);
 
         await subscriber.OnEncodingCompleted(Event(), CancellationToken.None);
 
@@ -392,7 +392,7 @@ public class OcrPostEncodeSubscriberBranchTests
             )
             .ReturnsAsync(new SubtitleTrack("/out/sub.vtt", "eng", SubtitleCodecType.WebVtt, 5));
 
-        OcrPostEncodeSubscriber subscriber = Build(new EncoderOptions(), analyzer, ocr);
+        OcrPostEncodeSubscriber subscriber = Build(new(), analyzer, ocr);
 
         await subscriber.OnEncodingCompleted(Event(), CancellationToken.None);
 
@@ -432,7 +432,7 @@ public class OcrPostEncodeSubscriberBranchTests
             )
             .ReturnsAsync(new SubtitleTrack("/out/sub.vtt", "eng", SubtitleCodecType.WebVtt, 5));
 
-        OcrPostEncodeSubscriber subscriber = Build(new EncoderOptions(), analyzer, ocr);
+        OcrPostEncodeSubscriber subscriber = Build(new(), analyzer, ocr);
 
         await subscriber.OnEncodingCompleted(Event(), CancellationToken.None);
 
@@ -475,7 +475,7 @@ public class OcrPostEncodeSubscriberBranchTests
             )
             .ReturnsAsync(new SubtitleTrack("/out/sub.vtt", "eng", SubtitleCodecType.WebVtt, 5));
 
-        OcrPostEncodeSubscriber subscriber = Build(new EncoderOptions(), analyzer, ocr);
+        OcrPostEncodeSubscriber subscriber = Build(new(), analyzer, ocr);
 
         await subscriber.OnEncodingCompleted(Event(outputPath), CancellationToken.None);
 
@@ -491,7 +491,7 @@ public class OcrPostEncodeSubscriberBranchTests
     {
         Mock<IMediaAnalyzer> analyzer = new();
         Mock<ISubtitleOcrEngine> ocr = new();
-        OcrPostEncodeSubscriber subscriber = Build(new EncoderOptions(), analyzer, ocr);
+        OcrPostEncodeSubscriber subscriber = Build(new(), analyzer, ocr);
 
         await subscriber.OnEncodingCompleted(Event(outputPath), CancellationToken.None);
 

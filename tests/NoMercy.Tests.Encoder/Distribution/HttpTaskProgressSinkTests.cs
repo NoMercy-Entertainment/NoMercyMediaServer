@@ -65,11 +65,11 @@ public class HttpTaskProgressSinkTests
         Mock<IHttpClientFactory> factory = new();
         factory
             .Setup(f => f.CreateClient(It.IsAny<string>()))
-            .Returns(() => new HttpClient(handler, disposeHandler: false));
+            .Returns(() => new(handler, disposeHandler: false));
         EncoderOptions options = new() { CoordinatorUrl = coordinatorUrl, WorkerId = "w1" };
 
         return (
-            new HttpTaskProgressSink(
+            new(
                 factory.Object,
                 options,
                 NullLogger<HttpTaskProgressSink>.Instance

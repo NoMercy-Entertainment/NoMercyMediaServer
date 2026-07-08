@@ -435,7 +435,7 @@ public class PlanStageTests
                 ),
             ],
             Subtitles: [],
-            Ladder: new LadderConfig
+            Ladder: new()
             {
                 Mode = LadderMode.Manual,
                 Rungs =

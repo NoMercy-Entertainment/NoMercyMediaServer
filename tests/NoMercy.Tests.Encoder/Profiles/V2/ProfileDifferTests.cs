@@ -114,7 +114,7 @@ public class ProfileDifferTests
         JObject reconstructed = JObject.FromObject(parent);
         reconstructed.Merge(
             diff,
-            new JsonMergeSettings
+            new()
             {
                 MergeArrayHandling = MergeArrayHandling.Replace,
                 MergeNullValueHandling = MergeNullValueHandling.Merge,
@@ -247,7 +247,7 @@ public class ProfileDifferTests
         JObject reconstructed = JObject.FromObject(parent);
         reconstructed.Merge(
             diff,
-            new JsonMergeSettings
+            new()
             {
                 MergeArrayHandling = MergeArrayHandling.Replace,
                 MergeNullValueHandling = MergeNullValueHandling.Merge,

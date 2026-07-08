@@ -86,7 +86,7 @@ internal sealed record WebDavDriverConfig(string Url, bool IgnoreCertErrors, int
                 nameof(json)
             );
 
-        return new WebDavDriverConfig(
+        return new(
             NormalizeUrl(raw.Url.Trim()),
             raw.IgnoreCertErrors ?? false,
             timeout

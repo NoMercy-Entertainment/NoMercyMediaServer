@@ -50,7 +50,7 @@ public class BundleGarbageCollectorTests : IDisposable
             MediaExternalId: null,
             MediaFolder: "/media/movies/Fight Club",
             Container: "hls-fmp4",
-            CreatedAt: new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            CreatedAt: new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             CompletedAt: new DateTime(2026, 1, 1, 1, 0, 0, DateTimeKind.Utc),
             MediaKey: "mfa",
             Files: files ?? ["mfa_master.m3u8", "video/1080p/mfa_1080p_init.mp4"]
@@ -85,7 +85,7 @@ public class BundleGarbageCollectorTests : IDisposable
         foreach (string id in presentPresetIds)
         {
             ctx.EncodingPresets.Add(
-                new EncodingPreset
+                new()
                 {
                     Id = Ulid.Parse(id),
                     Name = $"Preset {id}",
@@ -109,7 +109,7 @@ public class BundleGarbageCollectorTests : IDisposable
     )
     {
         BundleManifestWriter writer = new(storage);
-        return new BundleGarbageCollector(
+        return new(
             storage,
             factory,
             writer,

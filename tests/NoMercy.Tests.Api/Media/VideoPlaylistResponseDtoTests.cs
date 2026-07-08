@@ -40,7 +40,7 @@ public class VideoPlaylistResponseDtoTests
         };
 
         movie.CertificationMovies.Add(
-            new CertificationMovie
+            new()
             {
                 CertificationId = certification.Id,
                 Certification = certification,
@@ -50,7 +50,7 @@ public class VideoPlaylistResponseDtoTests
         );
 
         movie.VideoFiles.Add(
-            new VideoFile
+            new()
             {
                 Filename = "test-movie.mkv",
                 Folder = "/test",

@@ -58,7 +58,7 @@ public class FinalizeStageManifestTests
         new(
             Results:
             [
-                new ExecutionResult(
+                new(
                     Success: true,
                     ExitCode: 0,
                     StdErr: string.Empty,
@@ -118,7 +118,7 @@ public class FinalizeStageManifestTests
 
         EncodingContext context = EncodingContext.Create() with
         {
-            MediaItem = new MediaItemRef(MediaType.Movie, 550, "Fight Club", 1999),
+            MediaItem = new(MediaType.Movie, 550, "Fight Club", 1999),
         };
 
         StageResult result = await stage.ExecuteAsync(

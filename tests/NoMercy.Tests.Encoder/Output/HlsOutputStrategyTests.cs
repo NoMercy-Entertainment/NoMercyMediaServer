@@ -130,7 +130,7 @@ public class HlsOutputStrategyTests
         builder.AddInput(new("/input.mkv"));
         OutputPlan plan = CreateSimplePlan() with
         {
-            HlsOptions = new HlsPlanOptions { SegmentType = "fmp4" },
+            HlsOptions = new() { SegmentType = "fmp4" },
         };
 
         strategy.ConfigureOutput(builder, plan, "/output");

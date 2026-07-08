@@ -34,8 +34,8 @@ public class IntroDetectSubscriberTests
             .Options;
         Mock<IDbContextFactory<MediaContext>> mock = new();
         mock.Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => new MediaContext(options));
-        mock.Setup(f => f.CreateDbContext()).Returns(() => new MediaContext(options));
+            .ReturnsAsync(() => new(options));
+        mock.Setup(f => f.CreateDbContext()).Returns(() => new(options));
         return mock.Object;
     }
 
@@ -50,7 +50,7 @@ public class IntroDetectSubscriberTests
         EncoderOptions options = new() { EnableIntroDetectSubscriber = enabled };
         Mock<IStorage> storage = new();
         storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(true);
-        return new IntroDetectSubscriber(
+        return new(
             bus,
             fingerprinter,
             detector,
@@ -73,7 +73,7 @@ public class IntroDetectSubscriberTests
         await using MediaContext ctx = await factory.CreateDbContextAsync();
 
         ctx.Libraries.Add(
-            new NoMercy.Database.Models.Libraries.Library
+            new()
             {
                 Id = libraryId,
                 Title = "TV Library",
@@ -82,7 +82,7 @@ public class IntroDetectSubscriberTests
         );
 
         ctx.Tvs.Add(
-            new Tv
+            new()
             {
                 Id = tvId,
                 Title = "Test Show",
@@ -92,7 +92,7 @@ public class IntroDetectSubscriberTests
         );
 
         ctx.Seasons.Add(
-            new Season
+            new()
             {
                 Id = seasonId,
                 TvId = tvId,
@@ -101,13 +101,13 @@ public class IntroDetectSubscriberTests
             }
         );
 
-        ctx.LibraryTv.Add(new LibraryTv(libraryId, tvId));
+        ctx.LibraryTv.Add(new(libraryId, tvId));
 
         for (int index = 0; index < episodeIds.Length; index++)
         {
             int episodeId = episodeIds[index];
             ctx.Episodes.Add(
-                new Episode
+                new()
                 {
                     Id = episodeId,
                     TvId = tvId,
@@ -117,7 +117,7 @@ public class IntroDetectSubscriberTests
                 }
             );
             ctx.VideoFiles.Add(
-                new VideoFile
+                new()
                 {
                     Filename = $"s01e0{index + 1}.mkv",
                     HostFolder = hostFolder,
@@ -460,7 +460,7 @@ public class IntroDetectSubscriberTests
         await using (MediaContext seedCtx = await factory.CreateDbContextAsync())
         {
             seedCtx.ContentSegments.Add(
-                new ContentSegment
+                new()
                 {
                     EpisodeId = episodeWithManual,
                     SegmentType = ContentSegmentType.Intro,
@@ -602,7 +602,7 @@ public class IntroDetectSubscriberTests
             bus.Object,
             Mock.Of<IAudioFingerprinter>(),
             Mock.Of<IIntroDetector>(),
-            new EncoderOptions(),
+            new(),
             NullLogger<IntroDetectSubscriber>.Instance,
             Mock.Of<IStorage>(),
             InMemoryFactory("dispose")

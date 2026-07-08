@@ -279,7 +279,7 @@ public class ProfileValidatorCoreTests
     {
         EncodingProfile profile = Profile(
             container: Container.HlsFmp4,
-            ladder: new LadderConfig { Mode = LadderMode.Manual, Rungs = null }
+            ladder: new() { Mode = LadderMode.Manual, Rungs = null }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -293,7 +293,7 @@ public class ProfileValidatorCoreTests
     {
         EncodingProfile profile = Profile(
             container: Container.HlsFmp4,
-            ladder: new LadderConfig { Mode = LadderMode.Manual, Rungs = [] }
+            ladder: new() { Mode = LadderMode.Manual, Rungs = [] }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -330,7 +330,7 @@ public class ProfileValidatorCoreTests
 
         EncodingProfile profile = Profile(
             container: Container.HlsFmp4,
-            ladder: new LadderConfig { Mode = LadderMode.Manual, Rungs = rungs }
+            ladder: new() { Mode = LadderMode.Manual, Rungs = rungs }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -369,7 +369,7 @@ public class ProfileValidatorCoreTests
 
         EncodingProfile profile = Profile(
             container: Container.HlsFmp4,
-            ladder: new LadderConfig { Mode = LadderMode.Manual, Rungs = rungs }
+            ladder: new() { Mode = LadderMode.Manual, Rungs = rungs }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -406,7 +406,7 @@ public class ProfileValidatorCoreTests
 
         EncodingProfile profile = Profile(
             container: Container.HlsFmp4,
-            ladder: new LadderConfig { Mode = LadderMode.Manual, Rungs = rungs }
+            ladder: new() { Mode = LadderMode.Manual, Rungs = rungs }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -443,7 +443,7 @@ public class ProfileValidatorCoreTests
             container: Container.HlsFmp4,
             video: Video(codec: VideoCodecType.H264),
             audio: [Audio(codec: AudioCodecType.Ac3)],
-            hls: new HlsConfig(CmafCompatible: true)
+            hls: new(CmafCompatible: true)
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -462,7 +462,7 @@ public class ProfileValidatorCoreTests
             container: Container.HlsFmp4,
             video: Video(codec: VideoCodecType.H264),
             audio: [Audio(codec: AudioCodecType.Ac3)],
-            hls: new HlsConfig(CmafCompatible: false)
+            hls: new(CmafCompatible: false)
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -478,7 +478,7 @@ public class ProfileValidatorCoreTests
             container: Container.HlsTs,
             video: Video(codec: VideoCodecType.H264),
             audio: [Audio(codec: AudioCodecType.Ac3)],
-            hls: new HlsConfig(CmafCompatible: true)
+            hls: new(CmafCompatible: true)
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -510,7 +510,7 @@ public class ProfileValidatorCoreTests
             container: Container.HlsFmp4,
             video: Video(codec: VideoCodecType.H264),
             audio: [Audio(codec: AudioCodecType.Ac3, policy: StreamPolicy.Copy)],
-            hls: new HlsConfig(CmafCompatible: true)
+            hls: new(CmafCompatible: true)
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -526,7 +526,7 @@ public class ProfileValidatorCoreTests
             container: Container.HlsFmp4,
             video: Video(codec: VideoCodecType.H264),
             audio: [Audio(codec: AudioCodecType.Aac)],
-            hls: new HlsConfig(CmafCompatible: true)
+            hls: new(CmafCompatible: true)
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -547,7 +547,7 @@ public class ProfileValidatorCoreTests
     public void Forbidden_custom_arg_produces_warning(string key)
     {
         EncodingProfile profile = Profile(
-            customArguments: new Dictionary<string, string> { [key] = "libx264" }
+            customArguments: new() { [key] = "libx264" }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -565,7 +565,7 @@ public class ProfileValidatorCoreTests
     {
         // The hash set uses StringComparer.OrdinalIgnoreCase — casing must not bypass.
         EncodingProfile profile = Profile(
-            customArguments: new Dictionary<string, string> { [key] = "anything" }
+            customArguments: new() { [key] = "anything" }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -577,7 +577,7 @@ public class ProfileValidatorCoreTests
     public void Non_forbidden_custom_arg_produces_no_warning()
     {
         EncodingProfile profile = Profile(
-            customArguments: new Dictionary<string, string>
+            customArguments: new()
             {
                 ["preset"] = "slow",
                 ["crf"] = "20",
@@ -605,7 +605,7 @@ public class ProfileValidatorCoreTests
     {
         // Two forbidden keys must each emit a warning — loop must not deduplicate.
         EncodingProfile profile = Profile(
-            customArguments: new Dictionary<string, string> { ["c:v"] = "libx264", ["c:a"] = "aac" }
+            customArguments: new() { ["c:v"] = "libx264", ["c:a"] = "aac" }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -639,7 +639,7 @@ public class ProfileValidatorCoreTests
     {
         // Forbidden custom arg is the only issue — IsValid should still be true.
         EncodingProfile profile = Profile(
-            customArguments: new Dictionary<string, string> { ["c:v"] = "libx264" }
+            customArguments: new() { ["c:v"] = "libx264" }
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);

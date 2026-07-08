@@ -108,7 +108,7 @@ public class FinalizeStageNotImplementedFlagsTests
     public async Task GenerateIFramePlaylists_true_returns_StageFailure_with_diagnostic_message()
     {
         (FinalizeStage stage, _, _) = BuildStage();
-        FinalizeInput input = MakeInput(new HlsDerivatives { GenerateIFramePlaylists = true });
+        FinalizeInput input = MakeInput(new() { GenerateIFramePlaylists = true });
 
         StageResult result = await stage.ExecuteAsync(
             input,
@@ -132,7 +132,7 @@ public class FinalizeStageNotImplementedFlagsTests
     public async Task ExtractClosedCaptions_true_returns_StageFailure_with_diagnostic_message()
     {
         (FinalizeStage stage, _, _) = BuildStage();
-        FinalizeInput input = MakeInput(new HlsDerivatives { ExtractClosedCaptions = true });
+        FinalizeInput input = MakeInput(new() { ExtractClosedCaptions = true });
 
         StageResult result = await stage.ExecuteAsync(
             input,
@@ -158,7 +158,7 @@ public class FinalizeStageNotImplementedFlagsTests
     {
         (FinalizeStage stage, Mock<IOutputStrategy> strategyMock, _) = BuildStage();
         FinalizeInput input = MakeInput(
-            new HlsDerivatives
+            new()
             {
                 GenerateMasterPlaylist = false,
                 GenerateFontsJson = false,
@@ -190,7 +190,7 @@ public class FinalizeStageNotImplementedFlagsTests
     {
         (FinalizeStage stage, Mock<IOutputStrategy> strategyMock, _) = BuildStage();
         FinalizeInput input = MakeInput(
-            new HlsDerivatives
+            new()
             {
                 GenerateMasterPlaylist = true,
                 GenerateFontsJson = false,

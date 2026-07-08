@@ -534,7 +534,7 @@ public static class Logger
         string logDirectoryPath = AppFiles.LogPath;
         // LOCAL-ONLY: Logger is a static class in NmSystem; no reference to NoMercy.Providers.
         IStorageDriver driver = new LocalStorageDriver();
-        IStorage storage = new LocalStorage(driver, new StoragePathGuard([], driver));
+        IStorage storage = new LocalStorage(driver, new([], driver));
         List<LogEntry> logs = await LogReader.GetLogsAsync(
             storage,
             logDirectoryPath,

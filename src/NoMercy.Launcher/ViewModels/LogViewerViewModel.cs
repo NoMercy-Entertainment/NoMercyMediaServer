@@ -176,7 +176,7 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
             string logPath = AppFiles.LogPath;
             // LOCAL-ONLY: Launcher is a separate GUI process; NoMercy.Service DI is not available here.
             IStorageDriver driver = new LocalStorageDriver();
-            IStorage storage = new LocalStorage(driver, new StoragePathGuard([], driver));
+            IStorage storage = new LocalStorage(driver, new([], driver));
             if (!driver.DirectoryExists(logPath))
             {
                 StatusText = "No log directory found";

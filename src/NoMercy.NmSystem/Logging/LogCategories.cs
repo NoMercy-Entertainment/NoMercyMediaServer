@@ -131,7 +131,7 @@ public static class LogCategories
         Dictionary<string, LogCategory> map = new(StringComparer.OrdinalIgnoreCase);
 
         void Add(string key, string display, string group, string dark, string light) =>
-            map[key] = new LogCategory(key, display, group, dark, light);
+            map[key] = new(key, display, group, dark, light);
 
         // Levels
         Add("debug", "Debug", "Level", "#6c7086", "#8c8fa1");

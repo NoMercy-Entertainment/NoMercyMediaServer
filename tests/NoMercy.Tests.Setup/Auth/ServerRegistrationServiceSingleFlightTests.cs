@@ -59,7 +59,7 @@ public class ServerRegistrationServiceSingleFlightTests
 
         Mock<ICertificateService> certificateService = new();
 
-        return new ServerRegistrationService(
+        return new(
             authTokenStore.Object,
             dbContextFactory.Object,
             userProvisioning.Object,

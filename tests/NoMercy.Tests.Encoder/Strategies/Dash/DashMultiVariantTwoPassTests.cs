@@ -186,7 +186,7 @@ public class DashMultiVariantTwoPassTests : IDisposable
                 Audio: [],
                 Subtitles: [],
                 EncodeMode: EncodeMode.TwoPass,
-                Ladder: new LadderConfig
+                Ladder: new()
                 {
                     Mode = LadderMode.Manual,
                     Rungs = Enumerable

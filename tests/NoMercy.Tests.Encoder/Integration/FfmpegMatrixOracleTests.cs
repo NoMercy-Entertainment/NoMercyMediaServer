@@ -468,7 +468,7 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
                 baseProfile.Audio[0] with
                 {
                     Channels = channels,
-                    Loudness = new LoudnessConfig(
+                    Loudness = new(
                         loudness,
                         TargetLufs: loudness == LoudnessMode.EbuR128 ? -16 : null,
                         TruePeakDb: loudness == LoudnessMode.EbuR128 ? -1.5 : null
@@ -525,7 +525,7 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
         {
             Subtitles =
             [
-                new SubtitleOutput(
+                new(
                     Policy: policy,
                     Codec: codec,
                     AllowedLanguages: ["und", "eng"],
@@ -596,7 +596,7 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
             ),
             Audio:
             [
-                new AudioOutput(
+                new(
                     Policy: StreamPolicy.Transcode,
                     Codec: audio,
                     BitrateKbps: 128,
@@ -604,7 +604,7 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
                     SampleRateHz: 48000,
                     AllowedLanguages: ["und"],
                     DefaultLanguage: null,
-                    Loudness: new LoudnessConfig(LoudnessMode.None),
+                    Loudness: new(LoudnessMode.None),
                     Downmix: null,
                     SegmentNameTemplate: "audio/:codec:",
                     PlaylistNameTemplate: "audio/:codec:/playlist"
@@ -614,7 +614,7 @@ public class FfmpegMatrixOracleTests : IAsyncLifetime
         )
         {
             HardwarePreference = HardwarePreference.ForceSoftware,
-            HlsDerivatives = new HlsDerivatives
+            HlsDerivatives = new()
             {
                 GenerateSpriteVtt = false,
                 GenerateThumbnailTrack = false,

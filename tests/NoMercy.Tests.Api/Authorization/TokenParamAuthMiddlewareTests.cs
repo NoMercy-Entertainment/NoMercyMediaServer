@@ -37,7 +37,7 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
 
     public TokenParamAuthMiddlewareTests()
     {
-        _connection = new SqliteConnection(
+        _connection = new(
             $"DataSource={Guid.NewGuid():N};Mode=Memory;Cache=Shared"
         );
         _connection.Open();
@@ -102,7 +102,7 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
 
     private static TokenParamAuthMiddleware BuildMiddleware(RequestDelegate next)
     {
-        return new TokenParamAuthMiddleware(next, NullLogger<TokenParamAuthMiddleware>.Instance);
+        return new(next, NullLogger<TokenParamAuthMiddleware>.Instance);
     }
 
     private static HttpContext BuildContext(
@@ -126,8 +126,8 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
 
     private static ClaimsPrincipal PrincipalWithSub(string sub)
     {
-        List<Claim> claims = [new Claim(ClaimTypes.NameIdentifier, sub)];
-        return new ClaimsPrincipal(new ClaimsIdentity(claims, "TestScheme"));
+        List<Claim> claims = [new(ClaimTypes.NameIdentifier, sub)];
+        return new(new ClaimsIdentity(claims, "TestScheme"));
     }
 
     [Fact]

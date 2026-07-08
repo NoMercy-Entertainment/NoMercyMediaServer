@@ -40,7 +40,7 @@ public class EncodingContextTests
 
         sink.Should().NotBeNull();
         // Null sink swallows adds — verify by calling and not throwing.
-        Action act = () => sink.Add(new DecisionLog("plan", "test.key", "msg", new { x = 1 }));
+        Action act = () => sink.Add(new("plan", "test.key", "msg", new { x = 1 }));
         act.Should().NotThrow();
     }
 

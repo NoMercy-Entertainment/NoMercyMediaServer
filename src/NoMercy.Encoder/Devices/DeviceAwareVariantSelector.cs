@@ -25,10 +25,10 @@ public class DeviceAwareVariantSelector : IDeviceAwareVariantSelector
     )
     {
         if (variants.Count == 0)
-            return new VariantSelection(null, caps, null, null, "no variants available");
+            return new(null, caps, null, null, "no variants available");
 
         if (caps is null)
-            return new VariantSelection(
+            return new(
                 variants[0].Index,
                 null,
                 null,
@@ -92,7 +92,7 @@ public class DeviceAwareVariantSelector : IDeviceAwareVariantSelector
             VariantDescriptor best = withinCeiling
                 .OrderByDescending(v => v.VideoBitrateKbps)
                 .First();
-            return new VariantSelection(
+            return new(
                 best.Index,
                 caps,
                 null,
@@ -119,7 +119,7 @@ public class DeviceAwareVariantSelector : IDeviceAwareVariantSelector
         {
             int targetChannels = caps.MaxAudioChannels ?? 2;
             string targetCodec = caps.AudioCodecs.Length > 0 ? caps.AudioCodecs[0] : "aac";
-            audioConstraint = new AudioConstraint(targetChannels, targetCodec);
+            audioConstraint = new(targetChannels, targetCodec);
             reasons.Add($"audio downmix to {targetChannels}ch {targetCodec}");
         }
 
@@ -136,7 +136,7 @@ public class DeviceAwareVariantSelector : IDeviceAwareVariantSelector
         if (videoMismatch)
         {
             string? targetCodec = caps.VideoCodecs.Length > 0 ? caps.VideoCodecs[0] : null;
-            videoConstraint = new VideoConstraint(caps.MaxVideoHeight, targetCodec);
+            videoConstraint = new(caps.MaxVideoHeight, targetCodec);
             reasons.Add(
                 $"video constrained to {caps.MaxVideoHeight?.ToString() ?? "any"}px {targetCodec ?? "any codec"} within {caps.RamTier} ({ramCeiling} kbps)"
             );
@@ -151,7 +151,7 @@ public class DeviceAwareVariantSelector : IDeviceAwareVariantSelector
         if (!reason.Contains(caps.RamTier.ToString()))
             reason += $" [{caps.RamTier}]";
 
-        return new VariantSelection(null, caps, audioConstraint, videoConstraint, reason);
+        return new(null, caps, audioConstraint, videoConstraint, reason);
     }
 
     /// <summary>

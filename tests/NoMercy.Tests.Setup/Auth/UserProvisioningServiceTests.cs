@@ -48,7 +48,7 @@ public class UserProvisioningServiceTests : IDisposable
 
         Mock<IDbContextFactory<MediaContext>> mock = new();
         mock.Setup(x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => new MediaContext(options));
+            .ReturnsAsync(() => new(options));
 
         return mock.Object;
     }

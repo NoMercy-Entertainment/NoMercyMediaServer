@@ -276,7 +276,7 @@ public class BuildStageFilterGraphTests
             AudioOutputs: [BuildAudioOutput()],
             SubtitleOutputs: [],
             Thumbnails: null,
-            GpuAccel: new GpuAccelPlan("cuda", "cuda", "scale_cuda")
+            GpuAccel: new("cuda", "cuda", "scale_cuda")
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
@@ -326,7 +326,7 @@ public class BuildStageFilterGraphTests
             VideoOutputs: [sdrRung],
             AudioOutputs: [BuildAudioOutput()],
             SubtitleOutputs: [],
-            Thumbnails: new ThumbnailOutputPlan(320, 180, 10)
+            Thumbnails: new(320, 180, 10)
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);

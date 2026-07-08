@@ -32,7 +32,7 @@ public class FolderRepositoryTests : IDisposable
     {
         _context = TestMediaContextFactory.CreateSeededContext();
         _repository = new(_context);
-        _connection = new SqliteConnection("Data Source=:memory:");
+        _connection = new("Data Source=:memory:");
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class FolderRepositoryTests : IDisposable
     {
         Ulid otherDriverId = Ulid.NewUlid();
         _context.Drivers.Add(
-            new Driver
+            new()
             {
                 Id = otherDriverId,
                 Name = "Other Driver",
@@ -108,7 +108,7 @@ public class FolderRepositoryTests : IDisposable
             }
         );
         _context.Folders.Add(
-            new Folder
+            new()
             {
                 Id = Ulid.NewUlid(),
                 Path = "/media/movies",
@@ -162,14 +162,14 @@ public class FolderRepositoryTests : IDisposable
     {
         Ulid folder2Id = Ulid.NewUlid();
         _context.Folders.Add(
-            new Folder
+            new()
             {
                 Id = folder2Id,
                 Path = "/media/tv",
                 DriverId = Driver.SystemLocalDriverId,
             }
         );
-        _context.FolderLibrary.Add(new FolderLibrary(folder2Id, SeedConstants.MovieLibraryId));
+        _context.FolderLibrary.Add(new(folder2Id, SeedConstants.MovieLibraryId));
         await _context.SaveChangesAsync();
 
         List<Folder> result = await _repository.GetFoldersByLibraryIdAsync(
@@ -236,7 +236,7 @@ public class FolderRepositoryTests : IDisposable
     {
         Ulid folderId = Ulid.NewUlid();
         _context.Folders.Add(
-            new Folder
+            new()
             {
                 Id = folderId,
                 Path = "/test",
@@ -404,11 +404,11 @@ public class FolderRepositoryTests : IDisposable
             DriverId = Driver.SystemLocalDriverId,
         };
         _context.Folders.Add(folder);
-        _context.FolderLibrary.Add(new FolderLibrary(folderId, SeedConstants.MovieLibraryId));
+        _context.FolderLibrary.Add(new(folderId, SeedConstants.MovieLibraryId));
         await _context.SaveChangesAsync();
 
         FolderLibrary[] newFls = new[] { new FolderLibrary(folderId, SeedConstants.TvLibraryId) };
-        await _repository.SyncFolderLibraryAsync(newFls, new List<Folder> { folder });
+        await _repository.SyncFolderLibraryAsync(newFls, new() { folder });
 
         FolderLibrary? oldMapping = await _context.FolderLibrary.FirstOrDefaultAsync(x =>
             x.FolderId == folderId && x.LibraryId == SeedConstants.MovieLibraryId

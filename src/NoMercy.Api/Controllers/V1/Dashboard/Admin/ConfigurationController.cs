@@ -96,15 +96,19 @@ public class ConfigurationController(
         string key = $"{queueName}Runners";
         await appContext
             .Configuration.Upsert(
-                new Configuration
+                new()
                 {
                     Key = key,
                     Value = count.ToString(),
                     ModifiedBy = userId,
                 }
             )
-            .On(c => c.Key)
-            .WhenMatched((_, n) => new() { Value = n.Value, ModifiedBy = n.ModifiedBy })
+            .On(configuration => configuration.Key)
+            .WhenMatched((_, configuration) => new()
+            {
+                Value = configuration.Value, 
+                ModifiedBy = configuration.ModifiedBy
+            })
             .RunAsync();
 
         await queueRunner.SetWorkerCount(queueName, count, userId);
@@ -137,8 +141,12 @@ public class ConfigurationController(
                         ModifiedBy = userId,
                     }
                 )
-                .On(e => e.Key)
-                .WhenMatched((o, n) => new() { Value = n.Value, ModifiedBy = n.ModifiedBy })
+                .On(configuration => configuration.Key)
+                .WhenMatched((o, configuration) => new()
+                {
+                    Value = configuration.Value, 
+                    ModifiedBy = configuration.ModifiedBy
+                })
                 .RunAsync();
             changes.Add(("internalPort", oldPort, request.InternalServerPort));
         }
@@ -156,8 +164,12 @@ public class ConfigurationController(
                         ModifiedBy = userId,
                     }
                 )
-                .On(e => e.Key)
-                .WhenMatched((o, n) => new() { Value = n.Value, ModifiedBy = n.ModifiedBy })
+                .On(configuration => configuration.Key)
+                .WhenMatched((o, configuration) => new()
+                {
+                    Value = configuration.Value, 
+                    ModifiedBy = configuration.ModifiedBy
+                })
                 .RunAsync();
             changes.Add(("externalPort", oldPort, request.ExternalServerPort));
         }
@@ -247,13 +259,13 @@ public class ConfigurationController(
                         ModifiedBy = User.UserId(),
                     }
                 )
-                .On(e => e.Key)
+                .On(configuration => configuration.Key)
                 .WhenMatched(
-                    (o, n) =>
+                    (o, configuration) =>
                         new()
                         {
                             Value = runtimeSettings.Swagger.ToString(),
-                            ModifiedBy = n.ModifiedBy,
+                            ModifiedBy = configuration.ModifiedBy,
                         }
                 )
                 .RunAsync();
@@ -273,13 +285,13 @@ public class ConfigurationController(
                         ModifiedBy = userId,
                     }
                 )
-                .On(e => e.Key)
+                .On(configuration => configuration.Key)
                 .WhenMatched(
-                    (o, n) =>
+                    (o, configuration) =>
                         new()
                         {
                             Value = runtimeSettings.UseSynthesizedDns.ToString(),
-                            ModifiedBy = n.ModifiedBy,
+                            ModifiedBy = configuration.ModifiedBy,
                         }
                 )
                 .RunAsync();
@@ -301,8 +313,12 @@ public class ConfigurationController(
                         ModifiedBy = userId,
                     }
                 )
-                .On(e => e.Key)
-                .WhenMatched((o, n) => new() { Value = n.Value, ModifiedBy = n.ModifiedBy })
+                .On(configuration => configuration.Key)
+                .WhenMatched((o, configuration) => new()
+                {
+                    Value = configuration.Value, 
+                    ModifiedBy = configuration.ModifiedBy
+                })
                 .RunAsync();
             changes.Add(("allowAdultContent", oldAllowAdult, (bool)request.AllowAdultContent));
         }
@@ -319,9 +335,13 @@ public class ConfigurationController(
                         ModifiedBy = User.UserId(),
                     }
                 )
-                .On(e => e.Key)
+                .On(configuration => configuration.Key)
                 .WhenMatched(
-                    (o, n) => new() { Value = request.ServerName, ModifiedBy = n.ModifiedBy }
+                    (o, configuration) => new()
+                    {
+                        Value = request.ServerName, 
+                        ModifiedBy = configuration.ModifiedBy
+                    }
                 )
                 .RunAsync();
             changes.Add(("serverName", oldName, request.ServerName));
@@ -334,7 +354,7 @@ public class ConfigurationController(
                 await activityLogger.LogConfigurationAsync(
                     "config.server_changed",
                     userId,
-                    Ulid.Empty,
+                    deviceId: Ulid.Empty,
                     configKey: key,
                     oldValue: oldVal,
                     newValue: newVal

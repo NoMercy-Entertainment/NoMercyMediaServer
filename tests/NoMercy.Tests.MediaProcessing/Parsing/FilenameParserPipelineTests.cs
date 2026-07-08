@@ -51,7 +51,7 @@ public class FilenameParserPipelineTests
             .Replace(Path.GetFileNameWithoutExtension(fileName), string.Empty)
             .Trim();
 
-        return new ParseContext
+        return new()
         {
             FileNameWithExtension = fileName,
             DirectoryName = null,

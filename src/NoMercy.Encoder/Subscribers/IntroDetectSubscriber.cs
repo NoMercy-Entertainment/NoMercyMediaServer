@@ -204,7 +204,7 @@ public class IntroDetectSubscriber : IDisposable
                             continue;
 
                         newSegments.Add(
-                            new ContentSegment
+                            new()
                             {
                                 EpisodeId = episode.Id,
                                 SegmentType = ContentSegmentType.Intro,
@@ -241,7 +241,7 @@ public class IntroDetectSubscriber : IDisposable
                             continue;
 
                         newSegments.Add(
-                            new ContentSegment
+                            new()
                             {
                                 EpisodeId = episode.Id,
                                 SegmentType = ContentSegmentType.Outro,

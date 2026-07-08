@@ -315,7 +315,7 @@ public class BinaryVerificationTests : IDisposable
         keyGen.Init(
             new RsaKeyGenerationParameters(
                 Org.BouncyCastle.Math.BigInteger.ValueOf(0x10001),
-                new SecureRandom(),
+                new(),
                 2048,
                 12
             )

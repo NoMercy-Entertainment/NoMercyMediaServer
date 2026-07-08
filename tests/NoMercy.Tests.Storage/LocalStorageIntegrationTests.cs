@@ -30,7 +30,7 @@ public class LocalStorageIntegrationTests : IDisposable
         Directory.CreateDirectory(_root);
         LocalStorageDriver driver = new();
         StoragePathGuard guard = new([_root], driver);
-        _storage = new LocalStorage(driver, guard);
+        _storage = new(driver, guard);
     }
 
     public void Dispose()

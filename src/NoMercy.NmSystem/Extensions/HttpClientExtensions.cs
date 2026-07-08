@@ -32,7 +32,7 @@ public static class HttpClientExtensions
     public static SocketsHttpHandler CreateDnsHandler(string? dnsServer = null)
     {
         string server = dnsServer ?? DefaultDnsServer;
-        return new SocketsHttpHandler
+        return new()
         {
             ConnectCallback = async (context, token) =>
             {

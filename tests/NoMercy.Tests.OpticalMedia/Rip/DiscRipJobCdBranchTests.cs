@@ -75,13 +75,13 @@ public class DiscRipJobCdBranchTests
         );
 
         job.DiscRipper = ripper;
-        job.IdentificationService = new DiscIdentificationService(
+        job.IdentificationService = new(
             [],
             NullLogger<DiscIdentificationService>.Instance
         );
         job.StorageFactory = Mock.Of<IStorageFactory>();
         job.StorageDriver = Mock.Of<IStorageDriver>();
-        job.DriveLockRegistry = new DriveLockRegistry();
+        job.DriveLockRegistry = new();
         job.LoggerFactory = NullLoggerFactory.Instance;
         job.AudioMetadataWriter = tagWriter ?? Mock.Of<IAudioMetadataWriter>();
         job.MusicBrainzReleaseClient = mbClient ?? new MusicBrainzReleaseClient();
@@ -278,7 +278,7 @@ public class DiscRipJobCdBranchTests
             DrivePath: "bluray:/dev/sr0",
             SelectedTitleIndices: [1],
             MetadataId: null,
-            Custom: new CustomMetadata(
+            Custom: new(
                 Title: "The Matrix",
                 Year: 1999,
                 Type: MediaType.Movie,

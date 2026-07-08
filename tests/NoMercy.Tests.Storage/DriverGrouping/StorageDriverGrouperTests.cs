@@ -178,7 +178,7 @@ public class StorageDriverGrouperTests
     public void Group_SingleFolder_ProducesOneDriveRootedAtThatFolder()
     {
         Ulid folderId = Ulid.NewUlid();
-        FolderRootInput[] inputs = [new FolderRootInput(folderId, @"C:\Media\Movies")];
+        FolderRootInput[] inputs = [new(folderId, @"C:\Media\Movies")];
 
         IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs);
 
@@ -199,10 +199,10 @@ public class StorageDriverGrouperTests
 
         FolderRootInput[] inputs =
         [
-            new FolderRootInput(animeId, @"\\192.168.1.1\Media\Anime"),
-            new FolderRootInput(moviesId, @"\\192.168.1.1\Media\Movies"),
-            new FolderRootInput(tvId, @"\\192.168.1.1\Media\TV"),
-            new FolderRootInput(musicId, @"\\192.168.1.1\Media\Music"),
+            new(animeId, @"\\192.168.1.1\Media\Anime"),
+            new(moviesId, @"\\192.168.1.1\Media\Movies"),
+            new(tvId, @"\\192.168.1.1\Media\TV"),
+            new(musicId, @"\\192.168.1.1\Media\Music"),
         ];
 
         IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs);
@@ -226,8 +226,8 @@ public class StorageDriverGrouperTests
 
         FolderRootInput[] inputs =
         [
-            new FolderRootInput(movieId, @"C:\Media\Movies"),
-            new FolderRootInput(tvId, @"D:\Media\TV"),
+            new(movieId, @"C:\Media\Movies"),
+            new(tvId, @"D:\Media\TV"),
         ];
 
         IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs);
@@ -246,8 +246,8 @@ public class StorageDriverGrouperTests
 
         FolderRootInput[] inputs =
         [
-            new FolderRootInput(movies1Id, @"\\nas1\Media\Movies"),
-            new FolderRootInput(movies2Id, @"\\nas2\Media\Movies"),
+            new(movies1Id, @"\\nas1\Media\Movies"),
+            new(movies2Id, @"\\nas2\Media\Movies"),
         ];
 
         IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs);
@@ -266,9 +266,9 @@ public class StorageDriverGrouperTests
 
         FolderRootInput[] inputs =
         [
-            new FolderRootInput(animesId, @"C:\Data\Media\Anime"),
-            new FolderRootInput(moviesId, @"C:\Data\Media\Movies"),
-            new FolderRootInput(musicId, @"C:\Data\Media\Music"),
+            new(animesId, @"C:\Data\Media\Anime"),
+            new(moviesId, @"C:\Data\Media\Movies"),
+            new(musicId, @"C:\Data\Media\Music"),
         ];
 
         IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs);
@@ -291,8 +291,8 @@ public class StorageDriverGrouperTests
 
         FolderRootInput[] inputs =
         [
-            new FolderRootInput(aId, @"C:\Alpha\Movies"),
-            new FolderRootInput(bId, @"C:\Beta\TV"),
+            new(aId, @"C:\Alpha\Movies"),
+            new(bId, @"C:\Beta\TV"),
         ];
 
         IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs);
@@ -311,8 +311,8 @@ public class StorageDriverGrouperTests
 
         FolderRootInput[] inputs =
         [
-            new FolderRootInput(localId, @"C:\Media\Movies"),
-            new FolderRootInput(uncId, @"\\nas1\Media\Movies"),
+            new(localId, @"C:\Media\Movies"),
+            new(uncId, @"\\nas1\Media\Movies"),
         ];
 
         IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs);

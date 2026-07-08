@@ -49,7 +49,7 @@ file sealed class LoggingMediaContextFactory : IDbContextFactory<MediaContext>
             Console.WriteLine,
             new[] { Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.CommandExecuted }
         );
-        return new MediaContext(builder.Options);
+        return new(builder.Options);
     }
 
     public Task<MediaContext> CreateDbContextAsync(CancellationToken ct = default) =>
@@ -472,7 +472,7 @@ internal static class Program
 
             warm.Sort();
             (int rows, string signature) = Fingerprint(last); // untimed
-            return new BenchmarkResult(
+            return new(
                 bench.Name.Trim(),
                 cold,
                 Median(warm),
@@ -486,7 +486,7 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            return new BenchmarkResult(
+            return new(
                 bench.Name.Trim(),
                 0,
                 0,

@@ -25,10 +25,10 @@ public class PluginRegistryTests
             Id = id,
             Name = "Test",
             Description = string.Empty,
-            Version = new Version(1, 0, 0),
+            Version = new(1, 0, 0),
             Status = PluginStatus.Active,
         };
-        return new LoadedPlugin(info, null, null);
+        return new(info, null, null);
     }
 
     [Fact]
@@ -101,9 +101,9 @@ public class PluginRegistryTests
         bool oldContextUnloaded = false;
         oldContext.Unloading += _ => oldContextUnloaded = true;
 
-        registry[id] = new LoadedPlugin(MakeInfo(id), oldInstance, oldContext);
+        registry[id] = new(MakeInfo(id), oldInstance, oldContext);
 
-        LoadedPlugin newLoaded = new LoadedPlugin(MakeInfo(id), new DisposalTrackingPlugin(), null);
+        LoadedPlugin newLoaded = new(MakeInfo(id), new DisposalTrackingPlugin(), null);
         registry[id] = newLoaded;
 
         oldInstance.WasDisposed.Should().BeTrue();
@@ -150,7 +150,7 @@ public class PluginRegistryTests
             {
                 DisposalTrackingPlugin instance = new();
                 instances.Add(instance);
-                registry[id] = new LoadedPlugin(MakeInfo(id), instance, null);
+                registry[id] = new(MakeInfo(id), instance, null);
             }
         );
 
@@ -173,7 +173,7 @@ public class PluginRegistryTests
             Id = id,
             Name = "Test",
             Description = string.Empty,
-            Version = new Version(1, 0, 0),
+            Version = new(1, 0, 0),
             Status = PluginStatus.Active,
         };
 

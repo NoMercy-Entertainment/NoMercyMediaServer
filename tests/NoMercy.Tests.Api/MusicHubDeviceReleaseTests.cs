@@ -120,10 +120,10 @@ public class MusicHubDeviceReleaseTests : IClassFixture<NoMercyApiFactory>
             _factory.Services.GetRequiredService<CastPanelWakeLauncher>();
         AuthManager authManager = _factory.Services.GetRequiredService<AuthManager>();
 
-        MusicDeviceManager musicDeviceManager = new(new MediaContext());
+        MusicDeviceManager musicDeviceManager = new(new());
         MusicPlaylistManager musicPlaylistManager = new(
             new MusicRepository(contextFactory),
-            new MediaContext()
+            new()
         );
         DeviceBusRegistry busRegistry = new(contextFactory, Mock.Of<IHubContext<DeviceHub>>());
         CastSessionTokenService castTokenService = new(authManager, new AuthTokenStore());

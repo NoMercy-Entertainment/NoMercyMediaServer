@@ -23,6 +23,6 @@ internal static class TestStorageFactory
     public static LocalStorage CreateLocal()
     {
         LocalStorageDriver driver = new();
-        return new LocalStorage(driver, new StoragePathGuard([], driver));
+        return new(driver, new([], driver));
     }
 }

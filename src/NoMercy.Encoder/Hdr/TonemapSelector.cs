@@ -76,7 +76,7 @@ public class TonemapSelector : ITonemapSelector
         else
         {
             decisions.Add(
-                new DecisionLog(
+                new(
                     "plan",
                     "plan.tonemap_unknown_algorithm_defaulted",
                     $"Unknown tonemap algorithm '{rawAlgorithm}' — falling back to hable",
@@ -105,7 +105,7 @@ public class TonemapSelector : ITonemapSelector
                 string lutFilter = $"lut3d={FilterGraphPathEscaper.Escape(lutPath)}";
 
                 decisions.Add(
-                    new DecisionLog(
+                    new(
                         "plan",
                         "plan.tonemap_resolved",
                         $"Tonemap resolved: LUT path '{lutPath}' (algorithm={algorithm}, nits={peakNits}, lut=true)",
@@ -119,7 +119,7 @@ public class TonemapSelector : ITonemapSelector
                     )
                 );
 
-                return new TonemapPlan(
+                return new(
                     Algorithm: algorithm,
                     PeakNits: peakNits,
                     LutFilterChain: lutFilter,
@@ -129,7 +129,7 @@ public class TonemapSelector : ITonemapSelector
             catch (StoragePathNotAllowedException ex)
             {
                 decisions.Add(
-                    new DecisionLog(
+                    new(
                         "plan",
                         "plan.tonemap_lut_path_rejected",
                         $"LUT path '{lutPath}' rejected ({ex.Message}) — falling back to algorithm '{algorithm}'",
@@ -150,7 +150,7 @@ public class TonemapSelector : ITonemapSelector
             $"zscale=t=linear:npl={peakNits},format=gbrpf32le,zscale=p=bt709,tonemap=tonemap={algorithm}:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p";
 
         decisions.Add(
-            new DecisionLog(
+            new(
                 "plan",
                 "plan.tonemap_resolved",
                 $"Tonemap resolved: algorithm={algorithm}, nits={peakNits}, lut=false",
@@ -163,7 +163,7 @@ public class TonemapSelector : ITonemapSelector
             )
         );
 
-        return new TonemapPlan(
+        return new(
             Algorithm: algorithm,
             PeakNits: peakNits,
             LutFilterChain: null,

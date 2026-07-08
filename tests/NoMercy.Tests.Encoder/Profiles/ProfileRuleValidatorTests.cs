@@ -139,7 +139,7 @@ public class ProfileRuleValidatorTests
             RealFrameRate: variableFrameRate ? frameRate + 5 : frameRate,
             Rotation: 0
         );
-        return new MediaInfo(
+        return new(
             FilePath: "/test.mkv",
             Format: "matroska",
             Duration: TimeSpan.FromMinutes(90),
@@ -786,7 +786,7 @@ public class ProfileRuleValidatorTests
     {
         EncodingProfile profile = ProfileFor(Video()) with
         {
-            CustomArguments = new Dictionary<string, string> { [flag] = "anything" },
+            CustomArguments = new() { [flag] = "anything" },
         };
 
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
@@ -814,7 +814,7 @@ public class ProfileRuleValidatorTests
         // CustomArguments desyncs the validator from what ffmpeg runs.
         EncodingProfile profile = ProfileFor(Video()) with
         {
-            CustomArguments = new Dictionary<string, string> { [flag] = "x" },
+            CustomArguments = new() { [flag] = "x" },
         };
 
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
@@ -829,7 +829,7 @@ public class ProfileRuleValidatorTests
         // which was validated by nothing. A video-level -rc override must fire.
         VideoOutput video = Video() with
         {
-            CustomArguments = new Dictionary<string, string> { ["-rc"] = "cbr" },
+            CustomArguments = new() { ["-rc"] = "cbr" },
         };
         EncodingProfile profile = ProfileFor(video);
 
@@ -844,7 +844,7 @@ public class ProfileRuleValidatorTests
     {
         AudioOutput audio = Audio(AudioCodecType.Aac, 192) with
         {
-            CustomArguments = new Dictionary<string, string> { ["-b:a"] = "320k" },
+            CustomArguments = new() { ["-b:a"] = "320k" },
         };
         EncodingProfile profile = ProfileFor(Video(), audio: [audio]);
 
@@ -860,7 +860,7 @@ public class ProfileRuleValidatorTests
         // A genuinely-informational per-output flag stays permitted.
         VideoOutput video = Video() with
         {
-            CustomArguments = new Dictionary<string, string> { ["-loglevel"] = "info" },
+            CustomArguments = new() { ["-loglevel"] = "info" },
         };
         EncodingProfile profile = ProfileFor(video);
 
@@ -874,7 +874,7 @@ public class ProfileRuleValidatorTests
         // Some callers store keys as "c:v" (without dash). Normalize before checking.
         EncodingProfile profile = ProfileFor(Video()) with
         {
-            CustomArguments = new Dictionary<string, string> { ["c:v"] = "libx264" },
+            CustomArguments = new() { ["c:v"] = "libx264" },
         };
 
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
@@ -887,7 +887,7 @@ public class ProfileRuleValidatorTests
         // -loglevel is informational, not derived from profile fields. Permitted.
         EncodingProfile profile = ProfileFor(Video()) with
         {
-            CustomArguments = new Dictionary<string, string> { ["-loglevel"] = "info" },
+            CustomArguments = new() { ["-loglevel"] = "info" },
         };
 
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
@@ -951,9 +951,9 @@ public class ProfileRuleValidatorTests
     {
         EncodingProfile profile = ProfileFor(Video()) with
         {
-            Drm = new DrmConfig(
+            Drm = new(
                 "aes-128",
-                new Dictionary<string, string> { ["key_uri"] = "http://server/key.bin" }
+                new() { ["key_uri"] = "http://server/key.bin" }
             ),
         };
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
@@ -966,9 +966,9 @@ public class ProfileRuleValidatorTests
     {
         EncodingProfile profile = ProfileFor(Video()) with
         {
-            Drm = new DrmConfig(
+            Drm = new(
                 "aes-128",
-                new Dictionary<string, string> { ["key_uri"] = "https://server/key.bin" }
+                new() { ["key_uri"] = "https://server/key.bin" }
             ),
         };
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
@@ -980,9 +980,9 @@ public class ProfileRuleValidatorTests
     {
         EncodingProfile profile = ProfileFor(Video()) with
         {
-            Drm = new DrmConfig(
+            Drm = new(
                 "cenc",
-                new Dictionary<string, string> { ["license_url"] = "http://license.example/issue" }
+                new() { ["license_url"] = "http://license.example/issue" }
             ),
         };
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
@@ -1079,7 +1079,7 @@ public class ProfileRuleValidatorTests
     {
         EncodingProfile profile = ProfileFor(Video()) with
         {
-            Drm = new DrmConfig("aes-128", new Dictionary<string, string>()),
+            Drm = new("aes-128", new()),
         };
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
         Assert.True(HasRule(env, EncoderRuleId.DrmKeyMissing));
@@ -1091,9 +1091,9 @@ public class ProfileRuleValidatorTests
     {
         EncodingProfile profile = ProfileFor(Video()) with
         {
-            Drm = new DrmConfig(
+            Drm = new(
                 "cenc",
-                new Dictionary<string, string> { ["scheme_id_uri"] = "urn:something" }
+                new() { ["scheme_id_uri"] = "urn:something" }
             ),
         };
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
@@ -1105,9 +1105,9 @@ public class ProfileRuleValidatorTests
     {
         EncodingProfile profile = ProfileFor(Video()) with
         {
-            Drm = new DrmConfig(
+            Drm = new(
                 "aes-128",
-                new Dictionary<string, string> { ["key_uri"] = "https://server/key.bin" }
+                new() { ["key_uri"] = "https://server/key.bin" }
             ),
         };
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
@@ -1119,9 +1119,9 @@ public class ProfileRuleValidatorTests
     {
         EncodingProfile profile = ProfileFor(Video()) with
         {
-            Drm = new DrmConfig(
+            Drm = new(
                 "cenc",
-                new Dictionary<string, string> { ["license_url"] = "https://license.example/issue" }
+                new() { ["license_url"] = "https://license.example/issue" }
             ),
         };
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
@@ -1141,7 +1141,7 @@ public class ProfileRuleValidatorTests
     {
         EncodingProfile profile = ProfileFor(Video()) with
         {
-            Drm = new DrmConfig("none", new Dictionary<string, string>()),
+            Drm = new("none", new()),
         };
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
         Assert.False(HasRule(env, EncoderRuleId.DrmKeyMissing));
@@ -1332,7 +1332,7 @@ public class ProfileRuleValidatorTests
     {
         EncodingProfile profile = ProfileFor(Video());
         MediaInfo source = Source(
-            dolbyVision: new DolbyVisionInfo(
+            dolbyVision: new(
                 Profile: 8,
                 Level: 6,
                 HasRpu: true,

@@ -38,7 +38,7 @@ internal sealed class WebDavWriteStream : Stream
         // Content-Length (WebDAV servers commonly reject chunked PUTs).
         // DeleteOnClose removes the temp file when the stream is disposed.
         string tempPath = Path.Combine(Path.GetTempPath(), $"nm-webdav-{Guid.NewGuid():N}.tmp");
-        _buffer = new FileStream(
+        _buffer = new(
             tempPath,
             FileMode.CreateNew,
             FileAccess.ReadWrite,
@@ -124,7 +124,7 @@ internal sealed class WebDavWriteStream : Stream
             : new()
             {
                 CancellationToken = ct,
-                Headers = [new KeyValuePair<string, string>("If-None-Match", "*")],
+                Headers = [new("If-None-Match", "*")],
             };
 
         WebDavResponse response = await _client.PutFile(_uri, _buffer, parameters);

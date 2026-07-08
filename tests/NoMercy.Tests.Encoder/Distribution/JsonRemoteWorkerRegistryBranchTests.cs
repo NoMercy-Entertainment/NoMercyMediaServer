@@ -250,12 +250,12 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
     private static IStorage MakeStorage() =>
         new LocalStorage(
             new LocalStorageDriver(),
-            new StoragePathGuard([], new LocalStorageDriver())
+            new([], new LocalStorageDriver())
         );
 
     private JsonRemoteWorkerRegistry BuildRegistry() =>
         new(
-            inner: new InMemoryRemoteWorkerRegistry(),
+            inner: new(),
             filePath: _path,
             httpClientFactory: MakeHttpClientFactory(),
             serializer: _serializer,
@@ -270,7 +270,7 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
         factory
             .Setup(f => f.CreateClient(It.IsAny<string>()))
             .Returns(() =>
-                new HttpClient(new NoOpHandler()) { BaseAddress = new("http://worker.test/") }
+                new(new NoOpHandler()) { BaseAddress = new("http://worker.test/") }
             );
         return factory.Object;
     }
@@ -278,7 +278,7 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
     private HttpRemoteWorker MakeWorker(string id, string baseUrl) =>
         new(
             workerId: id,
-            http: new HttpClient(new NoOpHandler()) { BaseAddress = new(baseUrl) },
+            http: new(new NoOpHandler()) { BaseAddress = new(baseUrl) },
             serializer: _serializer,
             signingKey: _signingKey,
             initialCapabilities: new HardwareCapabilities([], 4),

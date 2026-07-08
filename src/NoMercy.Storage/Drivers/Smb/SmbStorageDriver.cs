@@ -108,7 +108,7 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
             );
         }
 
-        return new SmbSession { Client = client, Store = store };
+        return new() { Client = client, Store = store };
     }
 
     private static IPAddress ResolveHost(string host)

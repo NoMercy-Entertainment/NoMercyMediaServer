@@ -50,7 +50,7 @@ public class ExecuteStageTests
             1,
             stderr,
             TimeSpan.Zero,
-            new EncodingError(EncodingErrorKind.Unknown, "exec failed", stderr, "exec", false)
+            new(EncodingErrorKind.Unknown, "exec failed", stderr, "exec", false)
         );
 
     private static ExecuteStage BuildStage(IFfmpegExecutor executor, ICheckpointStore? store = null)
@@ -326,7 +326,7 @@ public class ExecuteStageTests
                 ) =>
                 {
                     onProgress?.Invoke(
-                        new EncodingProgress(
+                        new(
                             CorrelationId: "ctx-1",
                             PercentComplete: 50,
                             Elapsed: TimeSpan.FromSeconds(30),

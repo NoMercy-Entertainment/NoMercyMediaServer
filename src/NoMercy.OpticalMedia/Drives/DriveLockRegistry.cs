@@ -50,7 +50,7 @@ public sealed class DriveLockRegistry
     {
         if (_locked.TryAdd(driveKey, 0))
         {
-            driveLock = new DriveLock(driveKey, this);
+            driveLock = new(driveKey, this);
             return true;
         }
 

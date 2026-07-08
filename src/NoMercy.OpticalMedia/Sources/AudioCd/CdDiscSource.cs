@@ -59,7 +59,7 @@ public sealed class CdDiscSource(
                 ))
                 .ToArray();
 
-            return new DiscInfo(
+            return new(
                 Type: OpticalDiscType.Cd,
                 DiscLabel: drive.Label,
                 Titles: titles,
@@ -73,7 +73,7 @@ public sealed class CdDiscSource(
         // Data CD fallback: enumerate top-level files via the unvalidated
         // low-level driver (disc roots aren't in the library allowlist).
         DiscTrack[] files = EnumerateDataCd(drive);
-        return new DiscInfo(
+        return new(
             Type: OpticalDiscType.Cd,
             DiscLabel: drive.Label,
             Titles: [],
@@ -162,7 +162,7 @@ public sealed class CdDiscSource(
                 if (storageDriver.DirectoryExists(entry))
                     continue;
                 tracks.Add(
-                    new DiscTrack(
+                    new(
                         Index: idx++,
                         // Separator-agnostic leaf: Path.GetFileName treats '\' as
                         // a literal on Linux, so a Windows-style entry would keep
@@ -234,7 +234,7 @@ public sealed class CdDiscSource(
                 : 2;
 
             result.Add(
-                new DiscTrack(
+                new(
                     Index: rawIndex + 1,
                     Title: null,
                     Artist: null,

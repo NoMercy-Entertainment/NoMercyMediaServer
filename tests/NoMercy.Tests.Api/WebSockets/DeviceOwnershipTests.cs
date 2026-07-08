@@ -65,7 +65,7 @@ public class DeviceOwnershipTests
         await using MediaContext ctx = MakeContext();
         Guid userA = Guid.NewGuid();
         Guid userB = Guid.NewGuid();
-        ctx.Devices.Add(new Device
+        ctx.Devices.Add(new()
         {
             DeviceId = "fp-1",
             Fingerprint = "fp-1",
@@ -90,7 +90,7 @@ public class DeviceOwnershipTests
     {
         await using MediaContext ctx = MakeContext();
         Guid userA = Guid.NewGuid();
-        ctx.Devices.Add(new Device
+        ctx.Devices.Add(new()
         {
             DeviceId = "fp-1",
             Fingerprint = "fp-1",

@@ -97,7 +97,7 @@ public class ChapterThumbsTests : IDisposable
         {
             TimeSpan start = TimeSpan.FromMinutes(i * 10);
             TimeSpan end = TimeSpan.FromMinutes((i + 1) * 10);
-            chapters.Add(new ChapterInfo(start, end, $"Chapter {i + 1}"));
+            chapters.Add(new(start, end, $"Chapter {i + 1}"));
         }
 
         return chapters;
@@ -127,7 +127,7 @@ public class ChapterThumbsTests : IDisposable
             ))
             .ToArray();
 
-        return new OutputPlan(
+        return new(
             Format: OutputFormat.Hls,
             VideoOutputs: videos,
             AudioOutputs: [],
@@ -242,7 +242,7 @@ public class ChapterThumbsTests : IDisposable
             GroupTag: GroupTag,
             Kind: EncodeTaskKind.Chapters,
             OutputIndex: targetChapter,
-            Resources: new ResourceRequirement(null, 0, 1),
+            Resources: new(null, 0, 1),
             EstimatedCostUnits: 1,
             Label: $"chapter still {targetChapter + 1}/3 @ {chapters[targetChapter].Start.TotalSeconds:F0}s"
         );

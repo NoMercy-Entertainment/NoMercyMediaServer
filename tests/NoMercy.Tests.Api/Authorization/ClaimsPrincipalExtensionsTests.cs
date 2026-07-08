@@ -88,9 +88,9 @@ public sealed class ClaimsPrincipalExtensionsTests
     {
         List<Claim> claims =
         [
-            new Claim("name", "Full Name"),
-            new Claim(ClaimTypes.GivenName, "Given"),
-            new Claim(ClaimTypes.Surname, "Family"),
+            new("name", "Full Name"),
+            new(ClaimTypes.GivenName, "Given"),
+            new(ClaimTypes.Surname, "Family"),
         ];
         ClaimsPrincipal principal = new(new ClaimsIdentity(claims, "TestScheme"));
 
@@ -104,8 +104,8 @@ public sealed class ClaimsPrincipalExtensionsTests
     {
         List<Claim> claims =
         [
-            new Claim(ClaimTypes.GivenName, "Jane"),
-            new Claim(ClaimTypes.Surname, "Doe"),
+            new(ClaimTypes.GivenName, "Jane"),
+            new(ClaimTypes.Surname, "Doe"),
         ];
         ClaimsPrincipal principal = new(new ClaimsIdentity(claims, "TestScheme"));
 
@@ -117,7 +117,7 @@ public sealed class ClaimsPrincipalExtensionsTests
     [Fact]
     public void Email_ReturnsEmailClaim()
     {
-        List<Claim> claims = [new Claim(ClaimTypes.Email, "user@nomercy.tv")];
+        List<Claim> claims = [new(ClaimTypes.Email, "user@nomercy.tv")];
         ClaimsPrincipal principal = new(new ClaimsIdentity(claims, "TestScheme"));
 
         string result = principal.Email();
@@ -137,7 +137,7 @@ public sealed class ClaimsPrincipalExtensionsTests
 
     private static ClaimsPrincipal PrincipalWithSub(string sub)
     {
-        List<Claim> claims = [new Claim(ClaimTypes.NameIdentifier, sub)];
-        return new ClaimsPrincipal(new ClaimsIdentity(claims, "TestScheme"));
+        List<Claim> claims = [new(ClaimTypes.NameIdentifier, sub)];
+        return new(new ClaimsIdentity(claims, "TestScheme"));
     }
 }

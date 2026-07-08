@@ -100,7 +100,7 @@ public class PluginRepositoryTests : IDisposable
     private PluginRepository MakeRepo(HttpClient? client = null)
     {
         IStorageDriver driver = TestStorageHelper.CreateBackend();
-        IStorage storage = new LocalStorage(driver, new StoragePathGuard([_tempDir], driver));
+        IStorage storage = new LocalStorage(driver, new([_tempDir], driver));
         return new(client ?? new HttpClient(), NullLogger.Instance, _tempDir, storage);
     }
 
@@ -466,9 +466,9 @@ public class PluginRepositoryTests : IDisposable
         File.WriteAllText(Path.Combine(configDir, "repositories.json"), json);
 
         IStorageDriver driver = TestStorageHelper.CreateBackend();
-        IStorage storage = new LocalStorage(driver, new StoragePathGuard([_tempDir], driver));
+        IStorage storage = new LocalStorage(driver, new([_tempDir], driver));
         PluginRepository repo = await PluginRepository.CreateAsync(
-            new HttpClient(),
+            new(),
             NullLogger.Instance,
             _tempDir,
             storage

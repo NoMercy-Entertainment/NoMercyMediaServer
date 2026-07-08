@@ -38,7 +38,7 @@ public class S3DriverConfigParsingTests
             .Setup(r => r.Resolve(It.IsAny<string>()))
             .Returns(("test-access-key", "test-secret-key"));
 
-        return new StorageFactory(
+        return new(
             new LocalStorageDriver(),
             NullLogger<StorageFactory>.Instance,
             driverResolver.Object,
@@ -330,7 +330,7 @@ public class S3EnumerateContractTests
         string prefix
     )
     {
-        return new S3StorageDriver(mockClient.Object, bucket, prefix);
+        return new(mockClient.Object, bucket, prefix);
     }
 
     [Fact]
@@ -340,7 +340,7 @@ public class S3EnumerateContractTests
 
         ListObjectsV2Response listResponse = new()
         {
-            S3Objects = [new S3Object { Key = "media/folder/file.mp3" }],
+            S3Objects = [new() { Key = "media/folder/file.mp3" }],
             CommonPrefixes = ["media/folder/"],
             IsTruncated = false,
         };
@@ -382,7 +382,7 @@ public class S3EnumerateContractTests
         // DirectoryExists call — expects prefix "media/folder/" (ToKey("folder") = "media/folder/")
         ListObjectsV2Response existsResponse = new()
         {
-            S3Objects = [new S3Object { Key = "media/folder/track.mp3" }],
+            S3Objects = [new() { Key = "media/folder/track.mp3" }],
             CommonPrefixes = [],
             IsTruncated = false,
         };

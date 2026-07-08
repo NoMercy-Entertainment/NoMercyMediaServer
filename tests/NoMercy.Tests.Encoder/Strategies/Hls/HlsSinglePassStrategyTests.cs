@@ -276,7 +276,7 @@ public class HlsSinglePassStrategyTests
             VideoOutputs: [Video()],
             AudioOutputs: [],
             SubtitleOutputs: [],
-            Thumbnails: new ThumbnailOutputPlan(160, 90, 10)
+            Thumbnails: new(160, 90, 10)
         );
 
         DecomposedTask[] thumbs = strategy

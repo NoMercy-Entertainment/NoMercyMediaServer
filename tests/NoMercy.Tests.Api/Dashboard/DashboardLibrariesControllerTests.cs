@@ -346,7 +346,7 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
 
         await using MediaContext mediaContext = new();
         mediaContext.Libraries.Add(
-            new Library
+            new()
             {
                 Id = libraryId,
                 Title = $"Isolated Library {libraryId}",

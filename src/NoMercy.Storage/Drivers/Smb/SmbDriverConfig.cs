@@ -97,7 +97,7 @@ public sealed record SmbDriverConfig(string Host, string Share, int Port, int Ti
                 nameof(json)
             );
 
-        return new SmbDriverConfig(raw.Host.Trim(), NormalizeShare(raw.Share), port, timeout)
+        return new(raw.Host.Trim(), NormalizeShare(raw.Share), port, timeout)
         {
             Domain = raw.Domain?.Trim() ?? string.Empty,
             BasePath = NormalizePath(raw.Path),

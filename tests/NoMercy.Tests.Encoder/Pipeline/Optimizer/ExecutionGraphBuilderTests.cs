@@ -244,7 +244,7 @@ public class ExecutionGraphBuilderTests
             Id: Ulid.NewUlid(),
             Name: "HDR Multi",
             Container: Container.HlsTs,
-            Video: new VideoOutput(
+            Video: new(
                 Policy: StreamPolicy.Transcode,
                 Codec: VideoCodecType.H265,
                 Width: 1920,
@@ -267,12 +267,12 @@ public class ExecutionGraphBuilderTests
             ),
             Audio: [DefaultAudioOutput],
             Subtitles: [],
-            Ladder: new LadderConfig
+            Ladder: new()
             {
                 Mode = LadderMode.Manual,
                 Rungs =
                 [
-                    new LadderRung(
+                    new(
                         Width: 1920,
                         Height: 1080,
                         Codec: VideoCodecType.H265,
@@ -285,7 +285,7 @@ public class ExecutionGraphBuilderTests
                         BitDepth: 8,
                         PixelFormat: null
                     ),
-                    new LadderRung(
+                    new(
                         Width: 1280,
                         Height: 720,
                         Codec: VideoCodecType.H265,
@@ -298,7 +298,7 @@ public class ExecutionGraphBuilderTests
                         BitDepth: 8,
                         PixelFormat: null
                     ),
-                    new LadderRung(
+                    new(
                         Width: 854,
                         Height: 480,
                         Codec: VideoCodecType.H265,
@@ -491,7 +491,7 @@ public class ExecutionGraphBuilderTests
             Id: Ulid.NewUlid(),
             Name: "Scale Down",
             Container: Container.HlsTs,
-            Video: new VideoOutput(
+            Video: new(
                 Policy: StreamPolicy.Transcode,
                 Codec: VideoCodecType.H265,
                 Width: 1920,

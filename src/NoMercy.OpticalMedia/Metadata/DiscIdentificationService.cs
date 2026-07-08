@@ -42,7 +42,7 @@ public sealed class DiscIdentificationService(
                 "No IDiscIdentifier registered for disc type {Type} — returning NeedsManualAssignment",
                 disc.Type
             );
-            return new DiscIdentification(
+            return new(
                 Kind: MediaKind.Movie,
                 Candidates: [],
                 TopConfidence: 0,

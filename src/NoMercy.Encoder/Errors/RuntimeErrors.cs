@@ -45,12 +45,12 @@ public static class RuntimeErrors
                 ?? "Set hardware_preference=force_software for this profile to encode on CPU instead, or wait for a slot to free.",
             new GpuCapacityDetails(gpu, sessions)
         );
-        return new EncoderRuntimeException(shape, 409);
+        return new(shape, 409);
     }
 
     public static EncoderRuntimeException EncoderInitFailed(string handle, string reason) =>
         new(
-            new EncoderErrorShape(
+            new(
                 EncoderRuleId.EncoderInitFailed,
                 $"Encoder '{handle}' failed to initialise: {reason}",
                 "Check the ffmpeg capability probe at /api/v1/encoder/capabilities — the encoder may be missing from this build.",
@@ -61,7 +61,7 @@ public static class RuntimeErrors
 
     public static EncoderRuntimeException SourceNotAccessible(string path) =>
         new(
-            new EncoderErrorShape(
+            new(
                 EncoderRuleId.SourceNotAccessible,
                 $"Source file is not accessible: {path}",
                 "Verify the file exists and the encoder process has read permission. For network shares, check the mount is active.",
@@ -72,7 +72,7 @@ public static class RuntimeErrors
 
     public static EncoderRuntimeException SourceReadError(string path, string detail) =>
         new(
-            new EncoderErrorShape(
+            new(
                 EncoderRuleId.SourceReadError,
                 $"Source read failed: {path} — {detail}",
                 "If this is a network share, verify connectivity. For local files, run a filesystem check.",
@@ -83,7 +83,7 @@ public static class RuntimeErrors
 
     public static EncoderRuntimeException OutputWriteError(string path, string detail) =>
         new(
-            new EncoderErrorShape(
+            new(
                 EncoderRuleId.OutputWriteError,
                 $"Output write failed: {path} — {detail}",
                 "Check disk space and that the output directory has write permission for the encoder process.",
@@ -94,7 +94,7 @@ public static class RuntimeErrors
 
     public static EncoderRuntimeException OutputPathNotAllowed(string path, string reason) =>
         new(
-            new EncoderErrorShape(
+            new(
                 EncoderRuleId.OutputPathNotAllowed,
                 $"Output path rejected: {reason} (path={path})",
                 "Add the parent directory to EncoderOptions.Storage.AllowedRoots, or write the output to an existing allowed root.",
@@ -111,7 +111,7 @@ public static class RuntimeErrors
     /// </summary>
     public static EncoderRuntimeException LicenseRevoked(string reason) =>
         new(
-            new EncoderErrorShape(
+            new(
                 EncoderRuleId.LicenseRevoked,
                 $"Cluster license revoked: {reason}",
                 "Re-link the server to your NoMercy account at https://nomercy.tv/dashboard/devices, or downgrade to standalone mode.",
@@ -122,7 +122,7 @@ public static class RuntimeErrors
 
     public static EncoderRuntimeException LicenseUnreachable(string url) =>
         new(
-            new EncoderErrorShape(
+            new(
                 EncoderRuleId.LicenseUnreachable,
                 $"Cluster license server is unreachable at {url}.",
                 "Check this server's outbound connectivity to api.nomercy.tv. Distributed encoding will resume automatically when the server is reachable again.",
@@ -133,7 +133,7 @@ public static class RuntimeErrors
 
     public static EncoderRuntimeException HardwareForcedButUnavailable(string requested) =>
         new(
-            new EncoderErrorShape(
+            new(
                 EncoderRuleId.HardwareForcedButUnavailable,
                 $"hardware_preference=force_hardware was set but no compatible hardware encoder is available for '{requested}'.",
                 "Switch hardware_preference to prefer_hardware (auto-fallback to software), or install the missing GPU drivers and run /api/v1/encoder/hardware/benchmark.",
@@ -144,7 +144,7 @@ public static class RuntimeErrors
 
     public static EncoderRuntimeException JobInterruptedNoCheckpoint(string jobId) =>
         new(
-            new EncoderErrorShape(
+            new(
                 EncoderRuleId.JobInterruptedNoCheckpoint,
                 $"Job {jobId} was interrupted by shutdown and has no checkpoint to resume from.",
                 "Re-dispatch the job — it will start from the beginning.",
@@ -155,7 +155,7 @@ public static class RuntimeErrors
 
     public static EncoderRuntimeException DiscDriveBusy(string drivePath) =>
         new(
-            new EncoderErrorShape(
+            new(
                 EncoderRuleId.DiscDriveBusy,
                 $"Drive {drivePath} is already busy with an active rip.",
                 "Wait for the active rip to finish, or insert the disc in a different drive.",
@@ -166,7 +166,7 @@ public static class RuntimeErrors
 
     public static EncoderRuntimeException DiscAacsCertMissing(string volumeId) =>
         new(
-            new EncoderErrorShape(
+            new(
                 EncoderRuleId.DiscAacsCertMissing,
                 $"AACS: no matching certificate for volume {volumeId}.",
                 "Add the volume key to KEYDB.cfg or point EncoderOptions.BluRay.KeyDbOverridePath at your own KEYDB.",
@@ -177,7 +177,7 @@ public static class RuntimeErrors
 
     public static EncoderRuntimeException DiscBdplusConverterMissing(string volumeId) =>
         new(
-            new EncoderErrorShape(
+            new(
                 EncoderRuleId.DiscBdplusConverterMissing,
                 $"BD+: no matching converter for volume {volumeId}.",
                 "Update libbdplus / the BDSVM converter database, or rip the disc on a system that has it.",
@@ -191,7 +191,7 @@ public static class RuntimeErrors
         string ffmpegStderrTail
     ) =>
         new(
-            new EncoderErrorShape(
+            new(
                 EncoderRuleId.DiscReadError,
                 $"Disc read failed on {drivePath}.",
                 "Clean the disc surface and try again. If it persists, the disc may be physically damaged.",
@@ -202,7 +202,7 @@ public static class RuntimeErrors
 
     public static EncoderRuntimeException DistributionHmacInvalid() =>
         new(
-            new EncoderErrorShape(
+            new(
                 EncoderRuleId.DistributionHmacInvalid,
                 "HMAC signature on the inbound request did not verify.",
                 "Confirm both coordinator and worker share the same DistributedEncodingSigningKey (or that the worker's cluster token is fresh).",
@@ -213,7 +213,7 @@ public static class RuntimeErrors
 
     public static EncoderRuntimeException DistributionTimestampReplay(long ageSeconds) =>
         new(
-            new EncoderErrorShape(
+            new(
                 EncoderRuleId.DistributionTimestampReplay,
                 $"Inbound request timestamp is {ageSeconds}s old — outside the 300s replay window.",
                 "Sync the system clock on the worker (NTP) and retry.",
@@ -224,7 +224,7 @@ public static class RuntimeErrors
 
     public static EncoderRuntimeException DistributionWorkerNotRegistered(string workerId) =>
         new(
-            new EncoderErrorShape(
+            new(
                 EncoderRuleId.DistributionWorkerNotRegistered,
                 $"Worker '{workerId}' is not registered with this coordinator.",
                 "Set CoordinatorUrl on the worker and let the self-registration service heartbeat once.",

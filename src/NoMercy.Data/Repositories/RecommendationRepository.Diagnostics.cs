@@ -84,7 +84,7 @@ public partial class RecommendationRepository
                     .CountAsync(r => sampleAnimeIds.Contains(r.TvFromId!.Value), ct)
                 : 0;
 
-        return new RecommendationDiagnosticsDto
+        return new()
         {
             Libraries = libraries,
             AnimeByLibraryType = animeByLibraryType,

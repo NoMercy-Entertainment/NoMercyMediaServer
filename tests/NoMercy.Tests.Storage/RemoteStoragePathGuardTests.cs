@@ -46,7 +46,7 @@ public sealed class RemoteStoragePathGuardTests
         fake.SeedDir("/");
         NfsDriverConfig config = NfsDriverConfig.For("fake-server", "/export");
         NfsStorageDriver driver = new(config, fake, NullLogger.Instance);
-        return new RemoteStorage(driver);
+        return new(driver);
     }
 
     private static RemoteStorage BuildS3Storage()
@@ -59,15 +59,15 @@ public sealed class RemoteStoragePathGuardTests
             accessKey: "test-access-key",
             secretKey: "test-secret-key"
         );
-        return new RemoteStorage(driver);
+        return new(driver);
     }
 
     private static RemoteStorage BuildWebDavStorage()
     {
-        HttpClient httpClient = new() { BaseAddress = new Uri("http://localhost:19998/") };
+        HttpClient httpClient = new() { BaseAddress = new("http://localhost:19998/") };
         WebDavClient client = new(httpClient);
         WebDavStorageDriver driver = new(client, "http://localhost:19998/");
-        return new RemoteStorage(driver);
+        return new(driver);
     }
 
     // -----------------------------------------------------------------------

@@ -27,7 +27,7 @@ public class V1DriverBridgeSeedTests : IDisposable
 
     public V1DriverBridgeSeedTests()
     {
-        _connection = new SqliteConnection("DataSource=:memory:");
+        _connection = new("DataSource=:memory:");
         _connection.Open();
 
         _options = new DbContextOptionsBuilder<MediaContext>()
@@ -293,7 +293,7 @@ public class V1DriverBridgeSeedTests : IDisposable
         await using (MediaContext seed = CreateContext())
         {
             seed.Drivers.Add(
-                new Driver
+                new()
                 {
                     Id = realDriverId,
                     Name = "NAS",
@@ -635,7 +635,7 @@ public class V1DriverBridgeSeedTests : IDisposable
         finally
         {
             // Clear connection pool so SQLite releases all file handles.
-            SqliteConnection.ClearPool(new SqliteConnection(connectionString));
+            SqliteConnection.ClearPool(new(connectionString));
 
             if (File.Exists(dbPath))
                 File.Delete(dbPath);

@@ -30,7 +30,7 @@ public class EncoderRepositoryTests : IDisposable
     {
         _context = TestMediaContextFactory.CreateSeededContext();
         _repository = new(_context);
-        _connection = new SqliteConnection("Data Source=:memory:");
+        _connection = new("Data Source=:memory:");
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public class EncoderRepositoryTests : IDisposable
     public async Task GetEncoderProfilesAsync_ReturnsMultipleProfiles()
     {
         _context.EncoderProfiles.Add(
-            new EncoderProfile
+            new()
             {
                 Id = Ulid.NewUlid(),
                 Name = "H.264",
@@ -54,7 +54,7 @@ public class EncoderRepositoryTests : IDisposable
             }
         );
         _context.EncoderProfiles.Add(
-            new EncoderProfile
+            new()
             {
                 Id = Ulid.NewUlid(),
                 Name = "H.265",
@@ -118,7 +118,7 @@ public class EncoderRepositoryTests : IDisposable
         Ulid profileId = SeedConstants.EncoderProfileId;
 
         await _repository.AddEncoderProfileAsync(
-            new EncoderProfile
+            new()
             {
                 Id = profileId,
                 Name = "Updated HLS",
@@ -157,7 +157,7 @@ public class EncoderRepositoryTests : IDisposable
         int initialCount = await _repository.GetEncoderProfileCountAsync();
 
         _context.EncoderProfiles.Add(
-            new EncoderProfile
+            new()
             {
                 Id = Ulid.NewUlid(),
                 Name = "Count Test 1",
@@ -165,7 +165,7 @@ public class EncoderRepositoryTests : IDisposable
             }
         );
         _context.EncoderProfiles.Add(
-            new EncoderProfile
+            new()
             {
                 Id = Ulid.NewUlid(),
                 Name = "Count Test 2",

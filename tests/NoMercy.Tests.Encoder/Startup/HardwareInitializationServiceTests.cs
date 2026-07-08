@@ -84,7 +84,7 @@ public class HardwareInitializationServiceTests
             ffmpegCaps,
             Mock.Of<IDriverChangeDetector>(),
             Mock.Of<IBenchmarkJobTracker>(),
-            new HardwareCapabilitiesHolder(),
+            new(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
             ServerReadyTracker(),
             probeRetryDelayMs: 0
@@ -117,7 +117,7 @@ public class HardwareInitializationServiceTests
             ffmpegCaps,
             Mock.Of<IDriverChangeDetector>(),
             Mock.Of<IBenchmarkJobTracker>(),
-            new HardwareCapabilitiesHolder(),
+            new(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
             ServerReadyTracker(),
             probeRetryDelayMs: 0
@@ -146,7 +146,7 @@ public class HardwareInitializationServiceTests
             ffmpegCaps,
             Mock.Of<IDriverChangeDetector>(),
             Mock.Of<IBenchmarkJobTracker>(),
-            new HardwareCapabilitiesHolder(),
+            new(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
             ServerReadyTracker(),
             probeRetryDelayMs: 0
@@ -179,7 +179,7 @@ public class HardwareInitializationServiceTests
             ffmpegCaps,
             Mock.Of<IDriverChangeDetector>(),
             Mock.Of<IBenchmarkJobTracker>(),
-            new HardwareCapabilitiesHolder(),
+            new(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
             ServerReadyTracker(),
             probeRetryDelayMs: 0
@@ -223,7 +223,7 @@ public class HardwareInitializationServiceTests
             ffmpegCaps,
             Mock.Of<IDriverChangeDetector>(),
             Mock.Of<IBenchmarkJobTracker>(),
-            new HardwareCapabilitiesHolder(),
+            new(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
             tracker,
             probeRetryDelayMs: 0
@@ -273,7 +273,7 @@ public class HardwareInitializationServiceTests
             {
                 callCount++;
                 string stdout = callCount <= 2 ? "" : encoderOutput;
-                return new ProcessResult(0, stdout, "", TimeSpan.Zero);
+                return new(0, stdout, "", TimeSpan.Zero);
             });
         processRunner
             .Setup(r =>
@@ -301,7 +301,7 @@ public class HardwareInitializationServiceTests
             ffmpegCaps,
             Mock.Of<IDriverChangeDetector>(),
             Mock.Of<IBenchmarkJobTracker>(),
-            new HardwareCapabilitiesHolder(),
+            new(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
             ServerReadyTracker(),
             probeRetryDelayMs: 0
@@ -338,7 +338,7 @@ public class HardwareInitializationServiceTests
             ffmpegCaps,
             Mock.Of<IDriverChangeDetector>(),
             Mock.Of<IBenchmarkJobTracker>(),
-            new HardwareCapabilitiesHolder(),
+            new(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
             ServerReadyTracker(),
             probeRetryDelayMs: 0
@@ -380,7 +380,7 @@ public class HardwareInitializationServiceTests
             ffmpegCaps,
             Mock.Of<IDriverChangeDetector>(),
             Mock.Of<IBenchmarkJobTracker>(),
-            new HardwareCapabilitiesHolder(),
+            new(),
             Mock.Of<ILogger<HardwareInitializationService>>(),
             ServerReadyTracker(),
             probeRetryDelayMs: 0

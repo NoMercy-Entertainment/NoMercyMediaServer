@@ -99,7 +99,7 @@ public sealed class PgsBurnInFilterBuilder
         // split needed, keep the single [burned] label.
         if (consumers == 1)
         {
-            return new PgsBurnInFilterChain(
+            return new(
                 FilterComplex: $"{overlay}[burned]",
                 MapLabel: "[burned]",
                 VideoLabels: ["[burned]"],
@@ -120,7 +120,7 @@ public sealed class PgsBurnInFilterBuilder
         string splitTargets = string.Concat(splitPads);
         string filterComplex = $"{overlay},split={consumers}{splitTargets}";
 
-        return new PgsBurnInFilterChain(
+        return new(
             FilterComplex: filterComplex,
             MapLabel: videoLabels[0],
             VideoLabels: videoLabels,

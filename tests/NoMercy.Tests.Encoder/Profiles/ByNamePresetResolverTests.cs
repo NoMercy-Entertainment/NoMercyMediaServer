@@ -173,7 +173,7 @@ public class ByNamePresetResolverTests
             Id: Ulid.NewUlid(),
             Name: name,
             Container: Container.HlsFmp4,
-            Video: new VideoOutput(
+            Video: new(
                 Policy: StreamPolicy.Transcode,
                 Codec: NoMercy.Encoder.Codecs.VideoCodecType.H264,
                 Width: 1920,

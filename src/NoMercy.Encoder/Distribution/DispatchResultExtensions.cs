@@ -45,13 +45,13 @@ public static class DispatchResultExtensions
 
         if (!succeeded && dispatch.Error is not null)
         {
-            enrichedError = new EncoderErrorShape(
+            enrichedError = new(
                 Id: EncoderRuleId.EncoderInitFailed,
                 Message: dispatch.Error,
                 Suggestion: null,
                 Details: dispatch.WorkerId is null ? null : new { Worker = dispatch.WorkerId }
             );
-            legacyError = new EncodingError(
+            legacyError = new(
                 Kind: EncodingErrorKind.Unknown,
                 Message: dispatch.Error,
                 FfmpegStderr: null,
@@ -60,7 +60,7 @@ public static class DispatchResultExtensions
             );
         }
 
-        return new EncodingResult(
+        return new(
             Success: succeeded,
             OutputPath: dispatch.OutputPath,
             Duration: dispatch.Duration,

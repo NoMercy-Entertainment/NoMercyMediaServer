@@ -51,7 +51,7 @@ public static class AutoLadderExpander
             );
             return profile with
             {
-                Ladder = new LadderConfig { Mode = LadderMode.Manual, Rungs = existingRungs },
+                Ladder = new() { Mode = LadderMode.Manual, Rungs = existingRungs },
             };
         }
 
@@ -116,7 +116,7 @@ public static class AutoLadderExpander
 
         return profile with
         {
-            Ladder = new LadderConfig { Mode = LadderMode.Manual, Rungs = rungs },
+            Ladder = new() { Mode = LadderMode.Manual, Rungs = rungs },
         };
     }
 }

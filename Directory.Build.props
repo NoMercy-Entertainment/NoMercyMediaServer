@@ -3,6 +3,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <!-- Suppress NETSDK1206: MediaInfo.Core.Native uses version-specific RIDs (third-party, not fixable) -->
     <NoWarn>$(NoWarn);NETSDK1206</NoWarn>
+    <!-- Zero warnings, enforced: any warning is a build failure so none can creep back in. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Authors>NoMercy Entertainment</Authors>
     <Company>NoMercy Entertainment</Company>
     <Copyright>2026 NoMercy Entertainment</Copyright>

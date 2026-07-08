@@ -30,7 +30,7 @@ public class ImageRepositoryTests : IDisposable
     {
         _context = TestMediaContextFactory.CreateSeededContext();
         _repository = new(_context);
-        _connection = new SqliteConnection("Data Source=:memory:");
+        _connection = new("Data Source=:memory:");
     }
 
     [Fact]

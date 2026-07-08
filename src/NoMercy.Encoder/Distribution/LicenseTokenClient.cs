@@ -244,7 +244,7 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
         HttpRequestMessage request = new(method, endpoint);
         string? accessToken = _accessTokenProvider();
         if (!string.IsNullOrWhiteSpace(accessToken))
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            request.Headers.Authorization = new("Bearer", accessToken);
         return request;
     }
 

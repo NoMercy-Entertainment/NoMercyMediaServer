@@ -65,7 +65,7 @@ public class NfsConcurrencyTests
             Parallel.For(
                 0,
                 20,
-                new ParallelOptions { MaxDegreeOfParallelism = 8 },
+                new() { MaxDegreeOfParallelism = 8 },
                 i => driver.FileExists($"/file_{i}.bin").Should().BeTrue()
             );
 
@@ -93,7 +93,7 @@ public class NfsConcurrencyTests
             Parallel.For(
                 0,
                 20,
-                new ParallelOptions { MaxDegreeOfParallelism = 8 },
+                new() { MaxDegreeOfParallelism = 8 },
                 i =>
                 {
                     sizes[i] = driver.GetFileSize($"/f_{i}.bin");
@@ -125,7 +125,7 @@ public class NfsConcurrencyTests
             Parallel.For(
                 0,
                 8,
-                new ParallelOptions { MaxDegreeOfParallelism = 8 },
+                new() { MaxDegreeOfParallelism = 8 },
                 i =>
                 {
                     using Stream s = driver.OpenRead($"/p_{i}.bin");
@@ -236,7 +236,7 @@ public class NfsConcurrencyTests
             Parallel.For(
                 0,
                 16,
-                new ParallelOptions { MaxDegreeOfParallelism = 16 },
+                new() { MaxDegreeOfParallelism = 16 },
                 worker =>
                 {
                     for (int i = 0; i < 50; i++)

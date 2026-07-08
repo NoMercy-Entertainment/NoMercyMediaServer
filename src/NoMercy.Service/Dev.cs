@@ -101,7 +101,7 @@ public static class Dev
     private static IStorage CreateStorage()
     {
         IStorageDriver driver = new LocalStorageDriver();
-        return new LocalStorage(driver, new StoragePathGuard([], driver));
+        return new LocalStorage(driver, new([], driver));
     }
 
     private static Task DeleteEmptyPlaylists(string episodeFolder)

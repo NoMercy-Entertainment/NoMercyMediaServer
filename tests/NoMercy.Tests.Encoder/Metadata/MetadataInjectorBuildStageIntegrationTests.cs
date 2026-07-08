@@ -38,7 +38,7 @@ public class MetadataInjectorBuildStageIntegrationTests
 
     private static BuildStage CreateStageWithInjector(IMetadataInjector injector) =>
         new(
-            new EncoderOptions { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
+            new() { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
             new FontExtractor(TestStorageFactory.CreateLocal()),
             new SubtitleExtractor(),
             OutputStrategyFactoryTestHelper.Create(),

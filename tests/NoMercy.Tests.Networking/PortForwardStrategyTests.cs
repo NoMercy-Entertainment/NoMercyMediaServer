@@ -55,7 +55,7 @@ public sealed class PortForwardStrategyTests
         bool portOpen = false
     )
     {
-        return new PortForwardStrategy(
+        return new(
             new StubNetworkDiscovery(portOpen),
             status,
             NullLogger<PortForwardStrategy>.Instance
@@ -140,7 +140,7 @@ public sealed class PortForwardStrategyTests
     [Fact]
     public void Priority_IsOne()
     {
-        PortForwardStrategy strategy = BuildStrategy(new ConnectivityStatus());
+        PortForwardStrategy strategy = BuildStrategy(new());
 
         Assert.Equal(1, strategy.Priority);
     }
@@ -148,7 +148,7 @@ public sealed class PortForwardStrategyTests
     [Fact]
     public void Type_IsPortForward()
     {
-        PortForwardStrategy strategy = BuildStrategy(new ConnectivityStatus());
+        PortForwardStrategy strategy = BuildStrategy(new());
 
         Assert.Equal(ConnectivityType.PortForward, strategy.Type);
     }

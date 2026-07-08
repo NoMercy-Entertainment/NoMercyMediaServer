@@ -61,7 +61,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
         if (codec == VideoCodecType.Copy)
         {
             decisions.Add(
-                new DecisionLog(
+                new(
                     "encoder.select",
                     "encoder.select.copy",
                     "Stream copy — no encoder selection performed",
@@ -108,7 +108,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
         string handle = CanonicalSoftwareHandle(codec);
 
         decisions.Add(
-            new DecisionLog(
+            new(
                 "plan",
                 "plan.encoder_resolved",
                 $"ForceSoftware → {handle}",
@@ -121,7 +121,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
             )
         );
 
-        return new HardwareResolutionResult(handle, null);
+        return new(handle, null);
     }
 
     private static HardwareResolutionResult ResolvePreferQuality(
@@ -138,7 +138,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
             : $"PreferQuality → {handle}";
 
         decisions.Add(
-            new DecisionLog(
+            new(
                 "plan",
                 "plan.encoder_resolved",
                 message,
@@ -152,7 +152,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
             )
         );
 
-        return new HardwareResolutionResult(handle, null);
+        return new(handle, null);
     }
 
     private static HardwareResolutionResult ResolvePreferHardware(
@@ -180,7 +180,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
             if (availableHw is not null)
             {
                 decisions.Add(
-                    new DecisionLog(
+                    new(
                         "plan",
                         "plan.encoder_resolved",
                         $"PreferHardware → {availableHw} (no benchmark yet, picked from availableEncoders)",
@@ -193,11 +193,11 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
                     )
                 );
 
-                return new HardwareResolutionResult(availableHw, null);
+                return new(availableHw, null);
             }
 
             decisions.Add(
-                new DecisionLog(
+                new(
                     "plan",
                     "plan.encoder_resolved",
                     $"PreferHardware → {swHandle} (no HW encoder available)",
@@ -210,7 +210,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
                 )
             );
 
-            return new HardwareResolutionResult(swHandle, null);
+            return new(swHandle, null);
         }
 
         // Compute speed ratio vs software baseline
@@ -218,7 +218,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
         string ratio = swFps > 0 ? $"{bestFps / swFps:F1}×" : "?×";
 
         decisions.Add(
-            new DecisionLog(
+            new(
                 "plan",
                 "plan.encoder_resolved",
                 $"PreferHardware → {best} ({ratio} over {swHandle})",
@@ -234,7 +234,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
             )
         );
 
-        return new HardwareResolutionResult(best, null);
+        return new(best, null);
     }
 
     private static HardwareResolutionResult ResolveForceHardware(
@@ -257,7 +257,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
             if (availableHw is not null)
             {
                 decisions.Add(
-                    new DecisionLog(
+                    new(
                         "plan",
                         "plan.encoder_resolved",
                         $"ForceHardware → {availableHw} (no benchmark yet, picked from availableEncoders)",
@@ -270,7 +270,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
                     )
                 );
 
-                return new HardwareResolutionResult(availableHw, null);
+                return new(availableHw, null);
             }
 
             EncoderRuntimeException failure = RuntimeErrors.HardwareForcedButUnavailable(
@@ -278,7 +278,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
             );
 
             decisions.Add(
-                new DecisionLog(
+                new(
                     "plan",
                     "plan.encoder_resolved",
                     $"ForceHardware → FAILED (no HW encoder available for {codec})",
@@ -286,7 +286,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
                 )
             );
 
-            return new HardwareResolutionResult(null, failure);
+            return new(null, failure);
         }
 
         string swHandle = CanonicalSoftwareHandle(codec);
@@ -294,7 +294,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
         string ratio = swFps > 0 ? $"{bestFps / swFps:F1}×" : "?×";
 
         decisions.Add(
-            new DecisionLog(
+            new(
                 "plan",
                 "plan.encoder_resolved",
                 $"ForceHardware → {best} ({ratio} over {swHandle})",
@@ -309,7 +309,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
             )
         );
 
-        return new HardwareResolutionResult(best, null);
+        return new(best, null);
     }
 
     // Returns the highest-fps hardware entry for the codec in the speed index.

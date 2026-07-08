@@ -198,7 +198,7 @@ internal static class RenameTestHelpers
         MediaContext ctx = new(opts);
 
         ctx.Drivers.Add(
-            new Driver
+            new()
             {
                 Id = DriverId,
                 Name = "local",
@@ -210,7 +210,7 @@ internal static class RenameTestHelpers
         );
 
         ctx.Folders.Add(
-            new Folder
+            new()
             {
                 Id = FolderId,
                 Path = folderPath,
@@ -242,7 +242,7 @@ internal static class RenameTestHelpers
     )
     {
         FixedStorageFactory factory = new(storage);
-        return new BundleSlugRenamer(
+        return new(
             slugMap,
             factory,
             context,

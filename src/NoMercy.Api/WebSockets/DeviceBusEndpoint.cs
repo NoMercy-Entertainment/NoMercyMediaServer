@@ -235,7 +235,7 @@ public sealed class DeviceBusEndpoint(
 
         if (device is null)
         {
-            device = new Device
+            device = new()
             {
                 DeviceId = fingerprint,
                 Fingerprint = fingerprint,

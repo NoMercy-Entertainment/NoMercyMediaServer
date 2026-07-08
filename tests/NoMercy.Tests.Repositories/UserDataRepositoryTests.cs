@@ -155,7 +155,7 @@ public class UserDataRepositoryTests : IDisposable
         List<UserData> userData = await context.UserData.ToListAsync();
         if (userData.Any())
         {
-            await _repository.DeleteUserDataAsync(new List<UserData> { userData[0] });
+            await _repository.DeleteUserDataAsync(new() { userData[0] });
 
             await using MediaContext verify = await _factory.CreateDbContextAsync();
             UserData? deleted = await verify.UserData.FirstOrDefaultAsync(ud =>

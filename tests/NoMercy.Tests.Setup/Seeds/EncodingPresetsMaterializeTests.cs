@@ -33,7 +33,7 @@ public class EncodingPresetsMaterializeTests : IDisposable
 
     public EncodingPresetsMaterializeTests()
     {
-        _connection = new SqliteConnection("DataSource=:memory:");
+        _connection = new("DataSource=:memory:");
         _connection.Open();
 
         _options = new DbContextOptionsBuilder<MediaContext>()

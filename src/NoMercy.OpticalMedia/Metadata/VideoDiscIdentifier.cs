@@ -137,7 +137,7 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
             autoApply
         );
 
-        return new DiscIdentification(
+        return new(
             Kind: MediaKind.Movie,
             Candidates: ranked,
             TopConfidence: topConfidence,
@@ -233,7 +233,7 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
                 runtimeMin
             );
             matches.Add(
-                new DiscCandidate(
+                new(
                     Source: "tmdb",
                     StableId: movie.Id.ToString(CultureInfo.InvariantCulture),
                     Title: movie.Title ?? movie.OriginalTitle ?? string.Empty,
@@ -272,7 +272,7 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
                 episodeRunMin
             );
             matches.Add(
-                new DiscCandidate(
+                new(
                     Source: "tmdb",
                     StableId: show.Id.ToString(CultureInfo.InvariantCulture),
                     Title: show.Name ?? show.OriginalName ?? string.Empty,

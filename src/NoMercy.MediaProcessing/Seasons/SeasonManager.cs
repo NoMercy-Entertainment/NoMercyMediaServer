@@ -90,7 +90,7 @@ public class SeasonManager(
         // Refresh the existing season's metadata in place; the show link (TvId)
         // is left untouched because a season update never re-parents a season.
         return seasonRepository.UpdateAsync(
-            new Season
+            new()
             {
                 Id = season.Id,
                 Title = season.Name,

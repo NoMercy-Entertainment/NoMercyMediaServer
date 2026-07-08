@@ -132,11 +132,11 @@ public sealed class RemoteStorage : IStorage
         )
         {
             ct.ThrowIfCancellationRequested();
-            yield return new StorageEntry(
+            yield return new(
                 info.Path,
                 info.IsDirectory,
                 info.Size,
-                new DateTimeOffset(info.LastWriteUtc, TimeSpan.Zero)
+                new(info.LastWriteUtc, TimeSpan.Zero)
             );
             await Task.Yield();
         }
@@ -181,7 +181,7 @@ public sealed class RemoteStorage : IStorage
         );
         await src.CopyToAsync(dst, ct);
 
-        return new LocalPathLease(
+        return new(
             tmp,
             async () =>
             {
@@ -262,11 +262,11 @@ public sealed class RemoteStorage : IStorage
         )
         {
             entries.Add(
-                new StorageEntry(
+                new(
                     info.Path,
                     info.IsDirectory,
                     info.Size,
-                    new DateTimeOffset(info.LastWriteUtc, TimeSpan.Zero)
+                    new(info.LastWriteUtc, TimeSpan.Zero)
                 )
             );
         }
@@ -284,7 +284,7 @@ public sealed class RemoteStorage : IStorage
         using FileStream dst = new(tmp, FileMode.Create, FileAccess.Write, FileShare.None);
         src.CopyTo(dst);
 
-        return new LocalPathLease(
+        return new(
             tmp,
             async () =>
             {

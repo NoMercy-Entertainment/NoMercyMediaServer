@@ -41,7 +41,7 @@ public static class ImportFailureRecorder
         else
         {
             context.ImportFailures.Add(
-                new ImportFailure
+                new()
                 {
                     JobType = jobType,
                     FilePath = filePath,

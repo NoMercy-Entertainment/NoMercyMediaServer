@@ -138,7 +138,7 @@ public class FontExtractor(IStorage storage) : IFontExtractor
             storage.Delete(lutFile.Path);
 
             lutEntries.Add(
-                new AssetEntry(File: $"luts/{fileName}", MimeType: "application/octet-stream")
+                new(File: $"luts/{fileName}", MimeType: "application/octet-stream")
             );
         }
 

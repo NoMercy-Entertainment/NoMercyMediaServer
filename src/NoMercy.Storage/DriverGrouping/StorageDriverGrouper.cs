@@ -78,7 +78,7 @@ public static class StorageDriverGrouper
                 })
                 .ToList();
 
-            result.Add(new DriverGroup(driverRoot, driverType, assignments));
+            result.Add(new(driverRoot, driverType, assignments));
         }
 
         return result;
@@ -98,7 +98,7 @@ public static class StorageDriverGrouper
             string withoutLeading = normalized[2..];
             int serverEnd = withoutLeading.IndexOf('\\');
             if (serverEnd < 0)
-                return new StorageEndpoint(@"\\" + withoutLeading, StorageEndpointKind.Smb);
+                return new(@"\\" + withoutLeading, StorageEndpointKind.Smb);
 
             string server = withoutLeading[..serverEnd];
             string rest = withoutLeading[(serverEnd + 1)..];
@@ -106,16 +106,16 @@ public static class StorageDriverGrouper
             string share = shareEnd < 0 ? rest : rest[..shareEnd];
 
             string endpointKey = $@"\\{server}\{share}";
-            return new StorageEndpoint(endpointKey, StorageEndpointKind.Smb);
+            return new(endpointKey, StorageEndpointKind.Smb);
         }
 
         if (normalized.Length >= 2 && normalized[1] == ':')
         {
             string driveKey = normalized[..2].ToUpperInvariant();
-            return new StorageEndpoint(driveKey, StorageEndpointKind.Local);
+            return new(driveKey, StorageEndpointKind.Local);
         }
 
-        return new StorageEndpoint("/", StorageEndpointKind.Local);
+        return new("/", StorageEndpointKind.Local);
     }
 
     /// <summary>

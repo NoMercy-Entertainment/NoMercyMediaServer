@@ -27,7 +27,7 @@ public class SafePluginIdentityTests
         identity.Id.Should().Be(WellBehavedPlugin.FixedId);
         identity.Name.Should().Be("Well Behaved");
         identity.Description.Should().Be("A normal plugin");
-        identity.Version.Should().Be(new Version(1, 2, 3));
+        identity.Version.Should().Be(new(1, 2, 3));
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public class SafePluginIdentityTests
         identity.Id.Should().Be(Guid.Empty);
         identity.Name.Should().Be(typeof(WellBehavedPlugin).FullName);
         identity.Description.Should().BeEmpty();
-        identity.Version.Should().Be(new Version(0, 0, 0));
+        identity.Version.Should().Be(new(0, 0, 0));
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public class SafePluginIdentityTests
         identity.Id.Should().Be(Guid.Empty);
         identity.Name.Should().Be(typeof(ThrowingPlugin).FullName);
         identity.Description.Should().BeEmpty();
-        identity.Version.Should().Be(new Version(0, 0, 0));
+        identity.Version.Should().Be(new(0, 0, 0));
     }
 
     private sealed class WellBehavedPlugin : IPlugin

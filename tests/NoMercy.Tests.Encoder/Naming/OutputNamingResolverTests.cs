@@ -197,7 +197,7 @@ public class OutputNamingResolverTests
         // Pinned: the container string in BundleLayout.ContainerString is the
         // dashed friendly form, never the enum's ToString().
         BundleLayout layout = _resolver.Resolve(
-            new MediaItemRef(MediaType.Movie, 1, "X", null),
+            new(MediaType.Movie, 1, "X", null),
             TestProfiles.WebHls1080p()
         );
 
@@ -214,7 +214,7 @@ public class OutputNamingResolverTests
     {
         EncodingProfile profile = TestProfiles.WithContainer(container);
         BundleLayout layout = _resolver.Resolve(
-            new MediaItemRef(MediaType.Movie, 1, "X", null),
+            new(MediaType.Movie, 1, "X", null),
             profile
         );
 

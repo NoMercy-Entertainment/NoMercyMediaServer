@@ -182,7 +182,7 @@ public class HardwareBenchmarkTests
             FfmpegName = "libaom-av1",
         };
         string[] args = CalibrationArgumentBuilder.BuildCalibrationArguments(
-            new CalibrationTarget(VideoCodecType.Av1, libaom, Device: null, VendorIndex: 0),
+            new(VideoCodecType.Av1, libaom, Device: null, VendorIndex: 0),
             1920,
             1080
         );

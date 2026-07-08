@@ -267,7 +267,7 @@ public class FileListService(
         FfProbeData ffprobeData =
             storage.Driver is Storage.Drivers.Local.LocalStorageDriver
                 ? await FfProbe.CreateAsync(entryPath)
-                : new FfProbeData();
+                : new();
 
         MovieFile parsed = ParseVideoFileName(fileName, directoryName, title, libraryType);
 
@@ -493,7 +493,7 @@ public class FileListService(
             .Trim();
 
         return filenameParser.Parse(
-            new ParseContext
+            new()
             {
                 FileNameWithExtension = fileNameWithExt,
                 DirectoryName = directoryName,

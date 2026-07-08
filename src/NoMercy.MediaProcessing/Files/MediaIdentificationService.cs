@@ -150,6 +150,13 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
             parsed.Episode = datedEpisode.EpisodeNumber;
         }
 
+        // Both are guaranteed present from here on: the guard above returns null
+        // unless Season and Episode both have values, and the dated-episode branch
+        // fills them when only an air date was parsed. The compiler can't prove it
+        // across those branches, so pin the values once.
+        int seasonNumber = parsed.Season!.Value;
+        int episodeNumber = parsed.Episode!.Value;
+
         Episode? episode = ctx
             .Episodes.Where(item => item.TvId == show.Id)
             .Where(item => item.SeasonNumber == parsed.Season)
@@ -159,11 +166,7 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
         // then episode groups (e.g. Crunchyroll splits seasons differently from TMDB default).
         if (episode == null && seasonExplicit)
         {
-            TmdbEpisodeClient episodeClient = new(
-                show.Id,
-                parsed.Season.Value,
-                parsed.Episode.Value
-            );
+            TmdbEpisodeClient episodeClient = new(show.Id, seasonNumber, episodeNumber);
             TmdbEpisodeDetails? details = await episodeClient.Details(true);
 
             // TMDB default doesn't have this season — try episode groups for alternate season splits
@@ -171,8 +174,8 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
                 episode = await ResolveSeasonedEpisodeFromGroupsAsync(
                     ctx,
                     show.Id,
-                    parsed.Season.Value,
-                    parsed.Episode.Value
+                    seasonNumber,
+                    episodeNumber
                 );
 
             if (details != null && episode == null)
@@ -210,11 +213,11 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
                 .ThenBy(item => item.EpisodeNumber)
                 .ToList();
 
-            episode = episodes.ElementAtOrDefault(parsed.Episode.Value - 1);
+            episode = episodes.ElementAtOrDefault(episodeNumber - 1);
         }
 
         if (episode == null)
-            episode = await ResolveAbsoluteEpisodeAsync(ctx, show.Id, parsed.Episode.Value);
+            episode = await ResolveAbsoluteEpisodeAsync(ctx, show.Id, episodeNumber);
 
         // Try alternate search results for absolute-order anime (e.g. TMDB ranks live-action above anime)
         if (episode == null && shows!.Results.Count > 1)
@@ -227,7 +230,7 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
                     continue;
 
                 await EnsureShowInLibraryAsync(ctx, altShow.Id, altShow.Name, libraryId);
-                episode = await ResolveAbsoluteEpisodeAsync(ctx, altShow.Id, parsed.Episode.Value);
+                episode = await ResolveAbsoluteEpisodeAsync(ctx, altShow.Id, episodeNumber);
                 if (episode != null)
                     break;
             }
@@ -235,11 +238,7 @@ public class MediaIdentificationService(MediaContext context, IServiceScopeFacto
 
         if (episode == null)
         {
-            TmdbEpisodeClient episodeClient = new(
-                show.Id,
-                parsed.Season.Value,
-                parsed.Episode.Value
-            );
+            TmdbEpisodeClient episodeClient = new(show.Id, seasonNumber, episodeNumber);
             TmdbEpisodeDetails? details = await episodeClient.Details(true);
             if (details == null)
                 return null;

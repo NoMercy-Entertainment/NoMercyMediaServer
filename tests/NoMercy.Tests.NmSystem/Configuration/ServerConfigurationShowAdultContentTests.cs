@@ -31,7 +31,7 @@ public class ServerConfigurationShowAdultContentTests : IDisposable
     private static ServerConfigurationWrapper BuildWrapper()
     {
         IOptions<ServerConfiguration> opts = Options.Create(new ServerConfiguration());
-        return new ServerConfigurationWrapper(opts);
+        return new(opts);
     }
 
     public void Dispose()

@@ -42,7 +42,7 @@ public static class BootLog
     /// </summary>
     public static PhaseScope Phase(string name)
     {
-        return new PhaseScope(name);
+        return new(name);
     }
 
     /// <summary>

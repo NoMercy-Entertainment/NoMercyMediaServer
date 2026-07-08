@@ -139,7 +139,7 @@ public class AllowlistStressTests
     private static StoragePathGuard EnforcedGuard(string root)
     {
         LocalStorageDriver driver = new();
-        return new StoragePathGuard([root], driver);
+        return new([root], driver);
     }
 
     [Fact]

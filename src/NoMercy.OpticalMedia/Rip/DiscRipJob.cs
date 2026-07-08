@@ -213,7 +213,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
             // Windows and Linux (Path.GetFileName treats '\' as literal on Linux).
             string trimmedDrivePath = Request.DrivePath.TrimEnd('/', '\\');
             string label = trimmedDrivePath[(trimmedDrivePath.LastIndexOfAny(['\\', '/']) + 1)..];
-            discInfo = new DiscInfo(Request.DiscType, label, [], null, TimeSpan.Zero);
+            discInfo = new(Request.DiscType, label, [], null, TimeSpan.Zero);
         }
 
         IStorage folderStorage = StorageFactory.For(
@@ -243,7 +243,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
                 {
                     effectiveRequest = Request with
                     {
-                        Custom = new CustomMetadata(
+                        Custom = new(
                             Title: top.Title,
                             Year: top.Year,
                             Type: top.Type == MediaType.Movie ? MediaType.Movie : MediaType.TvShow,
@@ -597,7 +597,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
         _ = EventBusProvider.Current.PublishAsync(
             new DriveStateChangedEvent
             {
-                DriveStateData = new DriveStatePayload(
+                DriveStateData = new(
                     Method: methodName,
                     Drive: Request?.DrivePath ?? string.Empty,
                     VolumeLabel: null,

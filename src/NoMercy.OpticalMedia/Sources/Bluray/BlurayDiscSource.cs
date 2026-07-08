@@ -84,7 +84,7 @@ public sealed partial class BlurayDiscSource(
                     ? result.StdErr![..600]
                     : (result.StdErr ?? "(no stderr)")
             );
-            return new DiscInfo(
+            return new(
                 OpticalDiscType.BluRay,
                 drive.Label,
                 [],
@@ -114,7 +114,7 @@ public sealed partial class BlurayDiscSource(
             .OrderByDescending(t => t.Duration)
             .ToArray();
 
-        return new DiscInfo(
+        return new(
             Type: OpticalDiscType.BluRay,
             DiscLabel: drive.Label,
             Titles: titles,
@@ -149,7 +149,7 @@ public sealed partial class BlurayDiscSource(
             )
         )
         {
-            return new DiscProtection(
+            return new(
                 Kind: "AACS",
                 VolumeId: null,
                 Message: "Disc is AACS-protected and the optical drive can't establish "
@@ -165,7 +165,7 @@ public sealed partial class BlurayDiscSource(
             || stderr.Contains("no matching certificate", StringComparison.OrdinalIgnoreCase)
         )
         {
-            return new DiscProtection(
+            return new(
                 Kind: "AACS",
                 VolumeId: null,
                 Message: "Disc is AACS-protected but no matching key was found in KEYDB.cfg."
@@ -175,7 +175,7 @@ public sealed partial class BlurayDiscSource(
         // libbdplus
         if (stderr.Contains("no matching converter", StringComparison.OrdinalIgnoreCase))
         {
-            return new DiscProtection(
+            return new(
                 Kind: "BD+",
                 VolumeId: null,
                 Message: "Disc uses BD+ and the converter database has no entry for it."
@@ -195,7 +195,7 @@ public sealed partial class BlurayDiscSource(
         DiscInfo info = await ScanWithPlaylistAsync(url, titleIndex, ct);
         DiscTitle? single = info.Titles.FirstOrDefault();
         if (single is null)
-            return new DiscTitle(
+            return new(
                 Index: titleIndex,
                 Name: $"Playlist {titleIndex:D5}",
                 Duration: TimeSpan.Zero,
@@ -247,7 +247,7 @@ public sealed partial class BlurayDiscSource(
                 result.ExitCode,
                 TrimStderr(result.StdErr)
             );
-            return new DiscInfo(OpticalDiscType.BluRay, null, [], null, TimeSpan.Zero);
+            return new(OpticalDiscType.BluRay, null, [], null, TimeSpan.Zero);
         }
 
         return DiscScanner.Parse(result.StdOut, OpticalDiscType.BluRay);
@@ -304,7 +304,7 @@ public sealed partial class BlurayDiscSource(
             )
         )
             return false;
-        dur = new TimeSpan(h, m, s);
+        dur = new(h, m, s);
         return true;
     }
 

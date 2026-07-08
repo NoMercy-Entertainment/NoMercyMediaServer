@@ -124,7 +124,7 @@ public class FinalizeStageHlsDerivativesTests
 
         return EncodingContext.Create() with
         {
-            MediaInfo = new MediaInfo(
+            MediaInfo = new(
                 FilePath: "/src/movie.mkv",
                 Format: "matroska",
                 Duration: TimeSpan.FromHours(2),
@@ -145,7 +145,7 @@ public class FinalizeStageHlsDerivativesTests
     {
         (FinalizeStage stage, Mock<IChapterWriter> chapterMock, _, _) = BuildStage();
         FinalizeInput input = MakeInput(
-            hlsDerivatives: new HlsDerivatives { GenerateChapters = true }
+            hlsDerivatives: new() { GenerateChapters = true }
         );
         EncodingContext ctx = ContextWithChapters(2);
 
@@ -167,7 +167,7 @@ public class FinalizeStageHlsDerivativesTests
     {
         (FinalizeStage stage, Mock<IChapterWriter> chapterMock, _, _) = BuildStage();
         FinalizeInput input = MakeInput(
-            hlsDerivatives: new HlsDerivatives { GenerateChapters = false }
+            hlsDerivatives: new() { GenerateChapters = false }
         );
         EncodingContext ctx = ContextWithChapters(2);
 
@@ -191,7 +191,7 @@ public class FinalizeStageHlsDerivativesTests
     {
         (FinalizeStage stage, _, Mock<IFontExtractor> fontMock, _) = BuildStage();
         FinalizeInput input = MakeInput(
-            hlsDerivatives: new HlsDerivatives { GenerateFontsJson = true }
+            hlsDerivatives: new() { GenerateFontsJson = true }
         );
 
         await stage.ExecuteAsync(input, EncodingContext.Create(), CancellationToken.None);
@@ -207,7 +207,7 @@ public class FinalizeStageHlsDerivativesTests
     {
         (FinalizeStage stage, _, Mock<IFontExtractor> fontMock, _) = BuildStage();
         FinalizeInput input = MakeInput(
-            hlsDerivatives: new HlsDerivatives { GenerateFontsJson = false }
+            hlsDerivatives: new() { GenerateFontsJson = false }
         );
 
         await stage.ExecuteAsync(input, EncodingContext.Create(), CancellationToken.None);
@@ -255,7 +255,7 @@ public class FinalizeStageHlsDerivativesTests
     {
         (FinalizeStage stage, Mock<IChapterWriter> chapterMock, _, _) = BuildStage();
         FinalizeInput input = MakeInput(
-            hlsDerivatives: new HlsDerivatives { GenerateChapters = true }
+            hlsDerivatives: new() { GenerateChapters = true }
         );
         // MediaInfo with zero chapters
         EncodingContext ctx = ContextWithChapters(0);
@@ -282,7 +282,7 @@ public class FinalizeStageHlsDerivativesTests
     {
         (FinalizeStage stage, _, _, _) = BuildStage();
         FinalizeInput input = MakeInput(
-            hlsDerivatives: new HlsDerivatives
+            hlsDerivatives: new()
             {
                 GenerateSpriteVtt = false,
                 GenerateIFramePlaylists = true,

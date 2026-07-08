@@ -51,7 +51,7 @@ public class DateTests
     [Fact]
     public void SubDays_SubtractsWholeDays()
     {
-        new DateTime(2009, 5, 10).SubDays(4).Should().Be(new DateTime(2009, 5, 6));
+        new DateTime(2009, 5, 10).SubDays(4).Should().Be(new(2009, 5, 6));
     }
 
     [Fact]

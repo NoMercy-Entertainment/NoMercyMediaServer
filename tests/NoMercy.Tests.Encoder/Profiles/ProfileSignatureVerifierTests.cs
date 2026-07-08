@@ -36,7 +36,7 @@ public class ProfileSignatureVerifierTests
     ) GenerateKeyPair()
     {
         Ed25519KeyPairGenerator generator = new();
-        generator.Init(new Ed25519KeyGenerationParameters(new SecureRandom()));
+        generator.Init(new Ed25519KeyGenerationParameters(new()));
         AsymmetricCipherKeyPair pair = generator.GenerateKeyPair();
         return ((Ed25519PublicKeyParameters)pair.Public, (Ed25519PrivateKeyParameters)pair.Private);
     }
@@ -62,7 +62,7 @@ public class ProfileSignatureVerifierTests
     /// <summary>Builds a TrustedPublisherKey record from a BouncyCastle public key.</summary>
     private static TrustedPublisherKey MakeTrustedKey(Ed25519PublicKeyParameters pubKey)
     {
-        return new TrustedPublisherKey
+        return new()
         {
             Fingerprint = Fingerprint(pubKey),
             Label = "Test Publisher",

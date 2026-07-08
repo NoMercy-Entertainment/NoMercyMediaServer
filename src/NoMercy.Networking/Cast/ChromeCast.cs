@@ -217,7 +217,7 @@ public class ChromeCastService : IChromeCastService
                     new CastDeviceStatusChangedEvent
                     {
                         EventType = "StatusChanged",
-                        StatusData = new Dictionary<string, object?>
+                        StatusData = new()
                         {
                             { "sender", sender },
                             { "args", args },
@@ -234,7 +234,7 @@ public class ChromeCastService : IChromeCastService
                     new CastDeviceStatusChangedEvent
                     {
                         EventType = "ReceiverStatusChanged",
-                        StatusData = new Dictionary<string, object?>
+                        StatusData = new()
                         {
                             { "sender", sender },
                             { "args", args },
@@ -251,7 +251,7 @@ public class ChromeCastService : IChromeCastService
                     new CastDeviceStatusChangedEvent
                     {
                         EventType = "LaunchStatusChanged",
-                        StatusData = new Dictionary<string, object?>
+                        StatusData = new()
                         {
                             { "sender", sender },
                             { "args", args },

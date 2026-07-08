@@ -72,7 +72,7 @@ public class LadderGenerator : ILadderGenerator
         if (userRungs is { Length: > 0 })
         {
             decisions.Add(
-                new DecisionLog(
+                new(
                     Stage: "plan",
                     Key: "plan.ladder_user_supplied",
                     Message: $"Using {userRungs.Length} user-supplied rung(s); default table skipped."
@@ -95,7 +95,7 @@ public class LadderGenerator : ILadderGenerator
         if (complexity is ComplexityHint.Auto)
         {
             decisions.Add(
-                new DecisionLog(
+                new(
                     Stage: "plan",
                     Key: "plan.ladder_complexity_unknown",
                     Message: "Complexity is Auto — defaulted to live-action table. "
@@ -115,7 +115,7 @@ public class LadderGenerator : ILadderGenerator
             else
             {
                 decisions.Add(
-                    new DecisionLog(
+                    new(
                         Stage: "plan",
                         Key: "plan.ladder_rung_skipped_above_source",
                         Message: $"Rung {rung.Width}x{rung.Height} skipped — exceeds source "
@@ -133,7 +133,7 @@ public class LadderGenerator : ILadderGenerator
             // for flat-colour content that compresses aggressively.
             candidates = candidates.Where((_, i) => i % 2 == 0).ToList();
             decisions.Add(
-                new DecisionLog(
+                new(
                     Stage: "plan",
                     Key: "plan.ladder_animated_thinned",
                     Message: $"Animated complexity — thinned to every-other rung "
@@ -145,7 +145,7 @@ public class LadderGenerator : ILadderGenerator
         {
             // Keep all — grain requires denser bitrate exploration.
             decisions.Add(
-                new DecisionLog(
+                new(
                     Stage: "plan",
                     Key: "plan.ladder_grainy_full",
                     Message: $"Grainy complexity — retaining all {candidates.Count} fitting rung(s). "
@@ -164,7 +164,7 @@ public class LadderGenerator : ILadderGenerator
             int nativeBitrate = InterpolateNativeBitrate(reference.Codec, source);
             candidates.Insert(
                 0,
-                new TableRung(
+                new(
                     Width: source.Width,
                     Height: source.Height,
                     H264BitrateKbps: nativeBitrate

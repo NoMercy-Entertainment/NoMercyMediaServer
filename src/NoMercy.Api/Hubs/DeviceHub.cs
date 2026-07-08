@@ -119,15 +119,15 @@ public sealed class DeviceHub : ConnectionHub
     {
         User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
-            return new WakeResult("not_owned");
+            return new("not_owned");
 
         if (!Ulid.TryParse(deviceId, out Ulid id))
-            return new WakeResult("not_owned");
+            return new("not_owned");
 
         await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
         Device? device = await ctx.Devices.FindAsync(id);
         if (device is null || device.OwnerUserId != user.Id)
-            return new WakeResult("not_owned");
+            return new("not_owned");
 
         if (_busRegistry.IsOnline(device.Id))
         {
@@ -135,25 +135,25 @@ public sealed class DeviceHub : ConnectionHub
                 device.Id,
                 new { type = "wake_for_music", session_id = Guid.NewGuid().ToString() }
             );
-            return new WakeResult(sent ? "wake_sent" : "no_route");
+            return new(sent ? "wake_sent" : "no_route");
         }
 
-        return new WakeResult("cast_fallback");
+        return new("cast_fallback");
     }
 
     public async Task<WakeResult> WakeForVideo(string deviceId)
     {
         User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
-            return new WakeResult("not_owned");
+            return new("not_owned");
 
         if (!Ulid.TryParse(deviceId, out Ulid id))
-            return new WakeResult("not_owned");
+            return new("not_owned");
 
         await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
         Device? device = await ctx.Devices.FindAsync(id);
         if (device is null || device.OwnerUserId != user.Id)
-            return new WakeResult("not_owned");
+            return new("not_owned");
 
         if (_busRegistry.IsOnline(device.Id))
         {
@@ -161,10 +161,10 @@ public sealed class DeviceHub : ConnectionHub
                 device.Id,
                 new { type = "wake_for_video", session_id = Guid.NewGuid().ToString() }
             );
-            return new WakeResult(sent ? "wake_sent" : "no_route");
+            return new(sent ? "wake_sent" : "no_route");
         }
 
-        return new WakeResult("cast_fallback");
+        return new("cast_fallback");
     }
 
     public async Task<List<DeviceDropNoticeDto>> PendingNotices()

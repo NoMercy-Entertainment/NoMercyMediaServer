@@ -116,7 +116,7 @@ public class EncodingResultTests
 
         EncodingResult enriched = original with
         {
-            Stats = new EncodeStats(
+            Stats = new(
                 DurationSeconds: 60.0,
                 AvgFps: 30.0,
                 OutputBitrateKbps: 4000,
@@ -125,7 +125,7 @@ public class EncodingResultTests
             ),
             Artifacts =
             [
-                new OutputArtifact(
+                new(
                     "/out/a/master.m3u8",
                     1024L,
                     "abc123",

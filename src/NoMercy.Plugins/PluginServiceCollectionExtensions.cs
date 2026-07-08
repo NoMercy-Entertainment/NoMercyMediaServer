@@ -38,7 +38,7 @@ public static class PluginServiceCollectionExtensions
             IStorageDriver driver = sp.GetRequiredService<IStorageDriver>();
             IStorage storage = new LocalStorage(
                 driver,
-                new StoragePathGuard([pluginsPath], driver)
+                new([pluginsPath], driver)
             );
             return new PluginManager(eventBus, sp, logger, pluginsPath, storage, driver);
         });

@@ -106,7 +106,7 @@ public static class V1DriverBridgeSeed
         {
             string? rootPath = await ReadDriverRootPath(connection, driverId);
             if (!string.IsNullOrEmpty(rootPath))
-                result.Add(new AutoSeededFolder(folderId, rootPath));
+                result.Add(new(folderId, rootPath));
         }
 
         return result;

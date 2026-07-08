@@ -142,7 +142,7 @@ public class TransportTests
         LiveSessionIdleReaper reaper = new(
             service,
             managerMock.Object,
-            new LiveSessionLimits { IdleTimeoutMinutes = 5 },
+            new() { IdleTimeoutMinutes = 5 },
             NullLogger<LiveSessionIdleReaper>.Instance,
             transport
         );
@@ -171,7 +171,7 @@ public class TransportTests
         LiveSessionIdleReaper reaper = new(
             service,
             managerMock.Object,
-            new LiveSessionLimits { IdleTimeoutMinutes = 5 },
+            new() { IdleTimeoutMinutes = 5 },
             NullLogger<LiveSessionIdleReaper>.Instance
         );
 

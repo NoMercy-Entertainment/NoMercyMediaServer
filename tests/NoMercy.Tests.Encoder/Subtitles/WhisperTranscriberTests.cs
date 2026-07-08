@@ -126,7 +126,7 @@ public class WhisperTranscriberTests
             InputPath,
             0,
             "eng",
-            options_: new WhisperOptions(ModelPath: overridePath),
+            options_: new(ModelPath: overridePath),
             progress: null,
             ct: default
         );
@@ -242,7 +242,7 @@ public class WhisperTranscriberTests
             InputPath,
             0,
             "jpn",
-            options_: new WhisperOptions(ModelPath: ModelPath, TranslateToEnglish: true),
+            options_: new(ModelPath: ModelPath, TranslateToEnglish: true),
             progress: null,
             ct: default
         );
@@ -423,7 +423,7 @@ public class WhisperTranscriberTests
         storage.Setup(s => s.Exists(It.Is<string>(p => p.EndsWith(".srt")))).Returns(false);
         storage
             .Setup(s => s.AcquireLocalPath(It.IsAny<string>()))
-            .Returns<string>(p => new LocalPathLease(p));
+            .Returns<string>(p => new(p));
         Mock<IProcessRunner> processRunner = SuccessProcess();
 
         WhisperTranscriber transcriber = new(
@@ -586,7 +586,7 @@ public class WhisperTranscriberTests
         storage.Setup(s => s.Exists(It.Is<string>(p => p.EndsWith(".srt")))).Returns(true);
         storage
             .Setup(s => s.AcquireLocalPath(It.IsAny<string>()))
-            .Returns<string>(p => new LocalPathLease(p));
+            .Returns<string>(p => new(p));
         return storage;
     }
 

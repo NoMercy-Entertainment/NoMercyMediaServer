@@ -28,7 +28,7 @@ namespace NoMercy.OpticalMedia.Drives.Backends;
 public sealed class WindowsDriveBackend : IDriveBackend
 {
     private readonly Channel<DriveEvent> _events = Channel.CreateUnbounded<DriveEvent>(
-        new UnboundedChannelOptions { SingleReader = true, SingleWriter = true }
+        new() { SingleReader = true, SingleWriter = true }
     );
     private readonly ILogger<WindowsDriveBackend> _logger;
     private ManagementEventWatcher? _watcher;
@@ -42,7 +42,7 @@ public sealed class WindowsDriveBackend : IDriveBackend
                 + "WHERE TargetInstance ISA 'Win32_LogicalDisk' "
                 + "AND TargetInstance.DriveType = 5"
         );
-        _watcher = new ManagementEventWatcher(query);
+        _watcher = new(query);
         _watcher.EventArrived += OnDriveChanged;
         _watcher.Start();
     }
@@ -96,7 +96,7 @@ public sealed class WindowsDriveBackend : IDriveBackend
                 ? DriveEventType.DiscInserted
                 : DriveEventType.DiscEjected;
 
-            _events.Writer.TryWrite(new DriveEvent(eventType, drive));
+            _events.Writer.TryWrite(new(eventType, drive));
         }
         catch (Exception ex)
         {

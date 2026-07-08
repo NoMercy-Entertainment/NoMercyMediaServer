@@ -28,8 +28,8 @@ public class AudioCdIdentifierTests
             Titles: [],
             AudioTracks:
             [
-                new DiscTrack(1, null, null, TimeSpan.FromSeconds(180), 44100, 2),
-                new DiscTrack(2, null, null, TimeSpan.FromSeconds(210), 44100, 2),
+                new(1, null, null, TimeSpan.FromSeconds(180), 44100, 2),
+                new(2, null, null, TimeSpan.FromSeconds(210), 44100, 2),
             ],
             TotalDuration: TimeSpan.FromSeconds(390)
         );
@@ -40,8 +40,8 @@ public class AudioCdIdentifierTests
     )
     {
         tocReader ??= new NullTocReader();
-        discClient ??= new MusicBrainzDiscClient();
-        return new AudioCdIdentifier(tocReader, discClient, NullLogger<AudioCdIdentifier>.Instance);
+        discClient ??= new();
+        return new(tocReader, discClient, NullLogger<AudioCdIdentifier>.Instance);
     }
 
     // ── CanHandle ──────────────────────────────────────────────────────────

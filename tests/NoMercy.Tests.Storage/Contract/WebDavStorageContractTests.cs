@@ -44,7 +44,7 @@ public sealed class WebDavStorageContractTests(StorageBackendsFixture fixture)
             ),
             PreAuthenticate = true,
         };
-        return new HttpClient(handler, disposeHandler: true);
+        return new(handler, disposeHandler: true);
     }
 
     // -----------------------------------------------------------------------
@@ -92,7 +92,7 @@ public sealed class WebDavStorageContractTests(StorageBackendsFixture fixture)
             accumulated = string.IsNullOrEmpty(accumulated) ? segment : accumulated + "/" + segment;
 
             string url = fixture.WebDavBaseUrl + accumulated + "/";
-            using HttpRequestMessage mkcol = new(new HttpMethod("MKCOL"), url);
+            using HttpRequestMessage mkcol = new(new("MKCOL"), url);
             HttpResponseMessage response = await rawHttp.SendAsync(mkcol);
 
             if (
@@ -111,7 +111,7 @@ public sealed class WebDavStorageContractTests(StorageBackendsFixture fixture)
     {
         using HttpClient rawHttp = BuildRawHttp();
         string url = fixture.WebDavBaseUrl + relativePath.TrimStart('/');
-        using HttpRequestMessage propfind = new(new HttpMethod("PROPFIND"), url);
+        using HttpRequestMessage propfind = new(new("PROPFIND"), url);
         propfind.Headers.Add("Depth", "0");
         HttpResponseMessage response = await rawHttp.SendAsync(propfind);
         return response.StatusCode == HttpStatusCode.MultiStatus;
@@ -132,7 +132,7 @@ public sealed class WebDavStorageContractTests(StorageBackendsFixture fixture)
             // Enumerate top-level resources and DELETE each. Recursive deletes
             // on collections take the whole subtree.
             using HttpRequestMessage propfind = new(
-                new HttpMethod("PROPFIND"),
+                new("PROPFIND"),
                 fixture.WebDavBaseUrl
             );
             propfind.Headers.Add("Depth", "1");
@@ -153,7 +153,7 @@ public sealed class WebDavStorageContractTests(StorageBackendsFixture fixture)
             {
                 string href = m.Groups[1].Value;
                 // Skip the root itself.
-                Uri full = new(new Uri(fixture.WebDavBaseUrl), href);
+                Uri full = new(new(fixture.WebDavBaseUrl), href);
                 if (full.AbsoluteUri.TrimEnd('/') == fixture.WebDavBaseUrl.TrimEnd('/'))
                     continue;
 

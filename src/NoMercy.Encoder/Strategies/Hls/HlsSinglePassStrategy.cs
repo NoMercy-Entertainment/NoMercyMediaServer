@@ -58,7 +58,7 @@ public class HlsSinglePassStrategy(
             string hdr = video.IsHdrOutput ? " HDR" : string.Empty;
 
             tasks.Add(
-                new DecomposedTask(
+                new(
                     TaskId: $"{groupTag}-video-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
@@ -79,7 +79,7 @@ public class HlsSinglePassStrategy(
             string lang = audio.Language ?? "und";
 
             tasks.Add(
-                new DecomposedTask(
+                new(
                     TaskId: $"{groupTag}-audio-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
@@ -98,7 +98,7 @@ public class HlsSinglePassStrategy(
             string lang = sub.Language ?? "und";
 
             tasks.Add(
-                new DecomposedTask(
+                new(
                     TaskId: $"{groupTag}-sub-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
@@ -114,7 +114,7 @@ public class HlsSinglePassStrategy(
         if (plan.Thumbnails is not null)
         {
             tasks.Add(
-                new DecomposedTask(
+                new(
                     TaskId: $"{groupTag}-thumbs",
                     ParentJobId: 0,
                     GroupTag: groupTag,
@@ -134,7 +134,7 @@ public class HlsSinglePassStrategy(
             {
                 ChapterInfo chapter = plan.Chapters[i];
                 tasks.Add(
-                    new DecomposedTask(
+                    new(
                         TaskId: $"{groupTag}-chapter-{i}",
                         ParentJobId: 0,
                         GroupTag: groupTag,

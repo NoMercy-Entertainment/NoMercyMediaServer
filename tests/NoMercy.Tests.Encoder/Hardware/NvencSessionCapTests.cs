@@ -28,7 +28,7 @@ public class NvencSessionCapTests
         foreach (int cap in capsPerGpu)
         {
             gpus.Add(
-                new GpuDevice(
+                new(
                     Vendor: GpuVendor.Nvidia,
                     Name: "Test GPU",
                     VramMb: 8192,

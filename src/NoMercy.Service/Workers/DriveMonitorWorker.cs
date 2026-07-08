@@ -57,7 +57,7 @@ public class DriveMonitorWorker(IDriveMonitor driveMonitor, ILogger<DriveMonitor
                     _ = EventBusProvider.Current.PublishAsync(
                         new DriveStateChangedEvent
                         {
-                            DriveStateData = new DriveStatePayload(
+                            DriveStateData = new(
                                 Method: methodName,
                                 Drive: evt.Drive.Path,
                                 VolumeLabel: evt.Drive.Label,

@@ -38,7 +38,7 @@ public static class V2ProfileFactory
         LadderConfig? ladder = null;
         if (autoLadder)
         {
-            ladder = new LadderConfig { Mode = LadderMode.Auto };
+            ladder = new() { Mode = LadderMode.Auto };
         }
         else if (videoProfiles.Count > 1)
         {
@@ -63,7 +63,7 @@ public static class V2ProfileFactory
                 })
                 .ToArray();
 
-            ladder = new LadderConfig { Mode = LadderMode.Manual, Rungs = rungs };
+            ladder = new() { Mode = LadderMode.Manual, Rungs = rungs };
         }
 
         AudioOutput[] audio = audioProfiles.Select(MapAudio).ToArray();
@@ -75,7 +75,7 @@ public static class V2ProfileFactory
 
         EncodeMode mode = ParseEncodeMode(encodeMode);
 
-        return new EncodingProfile(
+        return new(
             Id: id,
             Name: name,
             Container: c,
@@ -136,7 +136,7 @@ public static class V2ProfileFactory
                 ? v.CustomArguments.ToDictionary(c => c.key, c => c.Val)
                 : null;
 
-        return new VideoOutput(
+        return new(
             Policy: StreamPolicy.Transcode,
             Codec: codec,
             Width: v.Width,
@@ -179,7 +179,7 @@ public static class V2ProfileFactory
                 ? a.CustomArguments.ToDictionary(c => c.key, c => c.Val)
                 : null;
 
-        return new AudioOutput(
+        return new(
             Policy: StreamPolicy.Transcode,
             Codec: codec,
             BitrateKbps: bitrate,
@@ -215,7 +215,7 @@ public static class V2ProfileFactory
                 ? s.CustomArguments.ToDictionary(c => c.key, c => c.Val)
                 : null;
 
-        return new SubtitleOutput(
+        return new(
             Policy: SubtitlePolicy.Extract,
             Codec: codec,
             AllowedLanguages: s.AllowedLanguages,

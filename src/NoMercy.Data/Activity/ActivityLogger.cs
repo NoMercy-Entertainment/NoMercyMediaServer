@@ -48,7 +48,7 @@ public class ActivityLogger : IActivityLogger
         CancellationToken ct = default
     ) =>
         WriteAsync(
-            new ActivityLog
+            new()
             {
                 Category = ActivityCategory.Auth,
                 Type = type,
@@ -69,7 +69,7 @@ public class ActivityLogger : IActivityLogger
         CancellationToken ct = default
     ) =>
         WriteAsync(
-            new ActivityLog
+            new()
             {
                 Category = ActivityCategory.Connection,
                 Type = type,
@@ -89,7 +89,7 @@ public class ActivityLogger : IActivityLogger
         CancellationToken ct = default
     ) =>
         WriteAsync(
-            new ActivityLog
+            new()
             {
                 Category = ActivityCategory.Playback,
                 Type = type,
@@ -112,7 +112,7 @@ public class ActivityLogger : IActivityLogger
         CancellationToken ct = default
     ) =>
         WriteAsync(
-            new ActivityLog
+            new()
             {
                 Category = ActivityCategory.Configuration,
                 Type = type,
@@ -142,7 +142,7 @@ public class ActivityLogger : IActivityLogger
         CancellationToken ct = default
     ) =>
         WriteAsync(
-            new ActivityLog
+            new()
             {
                 Category = ActivityCategory.Failure,
                 Type = type,

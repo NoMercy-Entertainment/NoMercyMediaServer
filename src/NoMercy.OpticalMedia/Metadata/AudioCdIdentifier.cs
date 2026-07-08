@@ -160,7 +160,7 @@ public sealed class AudioCdIdentifier(
                 : $"{artistCredit} — {release.Title}";
 
             candidates.Add(
-                new DiscCandidate(
+                new(
                     Source: "musicbrainz",
                     StableId: release.Id.ToString(),
                     Title: fullTitle,
@@ -178,7 +178,7 @@ public sealed class AudioCdIdentifier(
         double topConfidence = ranked.Length > 0 ? ranked[0].Confidence : 0;
         bool autoApply = topConfidence >= AutoApplyThreshold && releaseCount == 1;
 
-        return new DiscIdentification(
+        return new(
             Kind: MediaKind.Music,
             Candidates: ranked,
             TopConfidence: topConfidence,
@@ -208,7 +208,7 @@ public sealed class AudioCdIdentifier(
         {
             string artistCredit = FormatArtistCredit(track.ArtistCredit);
             mappings.Add(
-                new TrackMapping(
+                new(
                     TrackIndex: track.Position,
                     RecordingMbid: track.Recording.Id,
                     Title: track.Title,

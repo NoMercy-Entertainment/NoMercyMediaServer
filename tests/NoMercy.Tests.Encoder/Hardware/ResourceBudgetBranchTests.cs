@@ -441,7 +441,7 @@ public class ResourceBudgetBranchTests
 
         Action act = () =>
             budget.Acquire(
-                new ResourceRequirement(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 1),
+                new(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 1),
                 TimeSpan.FromMilliseconds(50)
             );
 
@@ -464,7 +464,7 @@ public class ResourceBudgetBranchTests
 
         Action act = () =>
             budget.Acquire(
-                new ResourceRequirement(GpuDeviceKey: gpu.Name, GpuSlots: 2, CpuThreads: 0),
+                new(GpuDeviceKey: gpu.Name, GpuSlots: 2, CpuThreads: 0),
                 TimeSpan.FromMilliseconds(50)
             );
 
@@ -485,7 +485,7 @@ public class ResourceBudgetBranchTests
 
         Action act = () =>
             budget.Acquire(
-                new ResourceRequirement(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 0),
+                new(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 0),
                 TimeSpan.FromMilliseconds(50)
             );
 
@@ -503,7 +503,7 @@ public class ResourceBudgetBranchTests
         ResourceBudget budget = new([gpu], cpuCores: 4);
 
         ResourceLease lease = budget.Acquire(
-            new ResourceRequirement(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 1)
+            new(GpuDeviceKey: gpu.Name, GpuSlots: 1, CpuThreads: 1)
         );
 
         lease.Should().NotBeNull();

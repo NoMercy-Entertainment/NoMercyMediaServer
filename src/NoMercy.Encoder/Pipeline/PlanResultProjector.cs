@@ -45,7 +45,7 @@ public class PlanResultProjector : IPlanResultProjector
         HardwareBindings hardware = new(PrimaryGpu: null, DecoderHandle: null);
         IReadOnlyList<DecisionLog> decisions = context.DecisionsOrNoOp.Snapshot();
 
-        return new PlanResult(strategy, variants, subtitles, hardware, decisions);
+        return new(strategy, variants, subtitles, hardware, decisions);
     }
 
     // ------------------------------------------------------------------
@@ -98,7 +98,7 @@ public class PlanResultProjector : IPlanResultProjector
             {
                 AudioOutputPlan a = output.AudioOutputs[ai];
                 audio.Add(
-                    new AudioTarget(
+                    new(
                         SourceIndex: ai,
                         Codec: a.EncoderName,
                         Channels: a.Channels,
@@ -109,7 +109,7 @@ public class PlanResultProjector : IPlanResultProjector
             }
 
             variants.Add(
-                new VariantPlan(
+                new(
                     VariantId: variantId,
                     Video: video,
                     Audio: audio,
@@ -159,7 +159,7 @@ public class PlanResultProjector : IPlanResultProjector
             };
 
             subtitles.Add(
-                new SubtitlePlan(
+                new(
                     SourceIndex: s.SourceIndex,
                     Codec: s.OutputCodec.ToString(),
                     Language: s.Language,

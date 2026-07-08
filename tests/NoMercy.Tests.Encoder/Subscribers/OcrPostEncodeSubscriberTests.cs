@@ -38,7 +38,7 @@ public class OcrPostEncodeSubscriberTests
             )
             .ToList();
 
-        return new MediaInfo(
+        return new(
             FilePath: "/out/test.m3u8",
             Format: "mpegts",
             Duration: TimeSpan.FromMinutes(60),
@@ -76,7 +76,7 @@ public class OcrPostEncodeSubscriberTests
         OcrPostEncodeSubscriber subscriber = Build(options, bus, analyzer, ocr);
 
         await subscriber.OnEncodingCompleted(
-            new EncodingCompletedEvent
+            new()
             {
                 JobId = 1,
                 OutputPath = "/out/x.m3u8",
@@ -111,10 +111,10 @@ public class OcrPostEncodeSubscriberTests
             )
             .ReturnsAsync(new SubtitleTrack("/out/sub.vtt", "eng", SubtitleCodecType.WebVtt, 10));
 
-        OcrPostEncodeSubscriber subscriber = Build(new EncoderOptions(), bus, analyzer, ocr);
+        OcrPostEncodeSubscriber subscriber = Build(new(), bus, analyzer, ocr);
 
         await subscriber.OnEncodingCompleted(
-            new EncodingCompletedEvent
+            new()
             {
                 JobId = 7,
                 OutputPath = "/out/master.m3u8",
@@ -147,10 +147,10 @@ public class OcrPostEncodeSubscriberTests
             .Setup(a => a.AnalyzeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(BuildMediaInfo("subrip", "ass"));
 
-        OcrPostEncodeSubscriber subscriber = Build(new EncoderOptions(), bus, analyzer, ocr);
+        OcrPostEncodeSubscriber subscriber = Build(new(), bus, analyzer, ocr);
 
         await subscriber.OnEncodingCompleted(
-            new EncodingCompletedEvent
+            new()
             {
                 JobId = 7,
                 OutputPath = "/out/master.m3u8",
@@ -169,10 +169,10 @@ public class OcrPostEncodeSubscriberTests
         Mock<IMediaAnalyzer> analyzer = new();
         Mock<ISubtitleOcrEngine> ocr = new();
 
-        OcrPostEncodeSubscriber subscriber = Build(new EncoderOptions(), bus, analyzer, ocr);
+        OcrPostEncodeSubscriber subscriber = Build(new(), bus, analyzer, ocr);
 
         await subscriber.OnEncodingCompleted(
-            new EncodingCompletedEvent
+            new()
             {
                 JobId = 7,
                 OutputPath = "/out/movie.mp4",

@@ -59,11 +59,11 @@ public class TwoPassStatsFileTests
             .ReturnsAsync(
                 (EncodingRequest _, IProgressObserver? _, CancellationToken _) =>
                     failPass
-                        ? new EncodingResult(
+                        ? new(
                             Success: false,
                             OutputPath: string.Empty,
                             Duration: TimeSpan.Zero,
-                            Error: new EncodingError(
+                            Error: new(
                                 EncodingErrorKind.Unknown,
                                 "simulated failure",
                                 null,

@@ -29,7 +29,7 @@ public class InboxClassifierTests
     {
         probe ??= new Mock<IInboxMetadataProbe>().Object;
         tagReader ??= new Mock<IInboxAudioTagReader>().Object;
-        return new InboxClassifier(probe, tagReader);
+        return new(probe, tagReader);
     }
 
     private static Mock<IInboxMetadataProbe> EmptyProbe()

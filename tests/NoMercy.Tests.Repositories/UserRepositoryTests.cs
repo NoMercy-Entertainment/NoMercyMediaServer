@@ -38,7 +38,7 @@ public class UserRepositoryTests : IDisposable
         // mis-targeted LibraryUser write would satisfy the FK and surface as a
         // wrong-owner row rather than a constraint failure.
         _context.Users.Add(
-            new User
+            new()
             {
                 Id = ActingUserId,
                 Email = "admin@nomercy.tv",

@@ -107,13 +107,13 @@ public class BufferAdaptiveServiceTests
         ILiveQualitySelector? qualitySelector = null
     )
     {
-        BufferManager bufferManager = new(new LiveSessionLimits());
+        BufferManager bufferManager = new(new());
         SpeedIndex speedIndex = new(new());
         Mock<IResourceBudget> budgetMock = new();
 
         ILiveQualitySelector selector = qualitySelector ?? Mock.Of<ILiveQualitySelector>();
 
-        return new BufferAdaptiveService(
+        return new(
             streamingService,
             selector,
             bufferManager,
@@ -141,7 +141,7 @@ public class BufferAdaptiveServiceTests
 
         // Simulate 40 s transcoded, 0 s reported — buffer = 40 s (above suspend threshold of 30)
         session.PushSegment(
-            new Segment(0, TimeSpan.Zero, TimeSpan.FromSeconds(40), "/tmp/seg0.ts", 1000)
+            new(0, TimeSpan.Zero, TimeSpan.FromSeconds(40), "/tmp/seg0.ts", 1000)
         );
 
         BufferAdaptiveService service = BuildService(streamingService);
@@ -169,7 +169,7 @@ public class BufferAdaptiveServiceTests
 
         // Simulate 10 s transcoded, 0 s reported — buffer = 10 s (below resume threshold of 15)
         session.PushSegment(
-            new Segment(0, TimeSpan.Zero, TimeSpan.FromSeconds(10), "/tmp/seg0.ts", 1000)
+            new(0, TimeSpan.Zero, TimeSpan.FromSeconds(10), "/tmp/seg0.ts", 1000)
         );
 
         bool runnerSpawned = false;
@@ -219,7 +219,7 @@ public class BufferAdaptiveServiceTests
 
         // Simulate 4 s of buffer — triggers DropQuality (below 5 s threshold)
         session.PushSegment(
-            new Segment(0, TimeSpan.Zero, TimeSpan.FromSeconds(4), "/tmp/seg0.ts", 1000)
+            new(0, TimeSpan.Zero, TimeSpan.FromSeconds(4), "/tmp/seg0.ts", 1000)
         );
         // Report 0 position so BufferAhead = 4 s
 
@@ -262,7 +262,7 @@ public class BufferAdaptiveServiceTests
 
         // 20 s buffered — within the healthy range
         session.PushSegment(
-            new Segment(0, TimeSpan.Zero, TimeSpan.FromSeconds(20), "/tmp/seg0.ts", 1000)
+            new(0, TimeSpan.Zero, TimeSpan.FromSeconds(20), "/tmp/seg0.ts", 1000)
         );
 
         BufferAdaptiveService service = BuildService(streamingService);
@@ -290,7 +290,7 @@ public class BufferAdaptiveServiceTests
 
         // Mark as complete so it drains
         session.PushSegment(
-            new Segment(0, TimeSpan.Zero, TimeSpan.FromSeconds(40), "/tmp/seg0.ts", 1000)
+            new(0, TimeSpan.Zero, TimeSpan.FromSeconds(40), "/tmp/seg0.ts", 1000)
         );
         session.Complete();
 

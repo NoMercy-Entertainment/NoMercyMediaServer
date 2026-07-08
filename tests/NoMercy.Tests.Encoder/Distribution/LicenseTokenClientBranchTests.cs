@@ -37,7 +37,7 @@ public class LicenseTokenClientBranchTests
     [Fact]
     public async Task RequestAsync_500_returns_NetworkError()
     {
-        ILicenseTokenClient sut = MakeClient(_ => new HttpResponseMessage(
+        ILicenseTokenClient sut = MakeClient(_ => new(
             HttpStatusCode.InternalServerError
         ));
 
@@ -51,7 +51,7 @@ public class LicenseTokenClientBranchTests
     [Fact]
     public async Task RequestAsync_502_returns_NetworkError()
     {
-        ILicenseTokenClient sut = MakeClient(_ => new HttpResponseMessage(
+        ILicenseTokenClient sut = MakeClient(_ => new(
             HttpStatusCode.BadGateway
         ));
 
@@ -75,7 +75,7 @@ public class LicenseTokenClientBranchTests
                 scopes = new[] { "encode" },
             }
         );
-        ILicenseTokenClient sut = MakeClient(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        ILicenseTokenClient sut = MakeClient(_ => new(HttpStatusCode.OK)
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json"),
         });
@@ -98,7 +98,7 @@ public class LicenseTokenClientBranchTests
                 scopes = new[] { "encode" },
             }
         );
-        ILicenseTokenClient sut = MakeClient(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        ILicenseTokenClient sut = MakeClient(_ => new(HttpStatusCode.OK)
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json"),
         });
@@ -120,7 +120,7 @@ public class LicenseTokenClientBranchTests
                 scopes = new[] { "encode" },
             }
         );
-        ILicenseTokenClient sut = MakeClient(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        ILicenseTokenClient sut = MakeClient(_ => new(HttpStatusCode.OK)
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json"),
         });
@@ -139,7 +139,7 @@ public class LicenseTokenClientBranchTests
         string body = JsonSerializer.Serialize(
             new { secret = "abc", expires_at = DateTime.UtcNow.AddHours(1) }
         );
-        ILicenseTokenClient sut = MakeClient(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        ILicenseTokenClient sut = MakeClient(_ => new(HttpStatusCode.OK)
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json"),
         });
@@ -169,7 +169,7 @@ public class LicenseTokenClientBranchTests
     [Fact]
     public async Task IntrospectAsync_non_200_returns_inactive_with_descriptive_message()
     {
-        ILicenseTokenClient sut = MakeClient(_ => new HttpResponseMessage(
+        ILicenseTokenClient sut = MakeClient(_ => new(
             HttpStatusCode.InternalServerError
         ));
 
@@ -209,7 +209,7 @@ public class LicenseTokenClientBranchTests
                 : requestBody.Contains("\"token\":\"t2\"") ? "t2"
                 : "t3";
             callCounts[tokenKey] = callCounts.GetValueOrDefault(tokenKey) + 1;
-            return new HttpResponseMessage(HttpStatusCode.OK)
+            return new(HttpStatusCode.OK)
             {
                 Content = new StringContent(body, Encoding.UTF8, "application/json"),
             };
@@ -237,7 +237,7 @@ public class LicenseTokenClientBranchTests
         ILicenseTokenClient sut = MakeClient(_ =>
         {
             Interlocked.Increment(ref callCount);
-            return new HttpResponseMessage(HttpStatusCode.InternalServerError);
+            return new(HttpStatusCode.InternalServerError);
         });
 
         await sut.IntrospectAsync("token", CancellationToken.None);
@@ -257,7 +257,7 @@ public class LicenseTokenClientBranchTests
             req =>
             {
                 capturedAuth = req.Headers.Authorization?.ToString();
-                return new HttpResponseMessage(HttpStatusCode.Unauthorized);
+                return new(HttpStatusCode.Unauthorized);
             },
             accessToken: null
         );
@@ -275,7 +275,7 @@ public class LicenseTokenClientBranchTests
             req =>
             {
                 capturedAuth = req.Headers.Authorization?.ToString();
-                return new HttpResponseMessage(HttpStatusCode.Unauthorized);
+                return new(HttpStatusCode.Unauthorized);
             },
             accessToken: "   "
         );
@@ -293,7 +293,7 @@ public class LicenseTokenClientBranchTests
             req =>
             {
                 capturedAuth = req.Headers.Authorization?.ToString();
-                return new HttpResponseMessage(HttpStatusCode.Unauthorized);
+                return new(HttpStatusCode.Unauthorized);
             },
             accessToken: "the-keycloak-token"
         );
@@ -311,7 +311,7 @@ public class LicenseTokenClientBranchTests
     )
     {
         FakeHandler fake = new(handler);
-        HttpClient http = new(fake) { BaseAddress = new Uri("https://api.nomercy.tv/") };
+        HttpClient http = new(fake) { BaseAddress = new("https://api.nomercy.tv/") };
         return new LicenseTokenClient(http, () => accessToken);
     }
 
