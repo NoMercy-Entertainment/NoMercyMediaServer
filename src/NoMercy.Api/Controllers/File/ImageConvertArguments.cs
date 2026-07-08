@@ -23,7 +23,7 @@ public class ImageConvertArguments
     public string? Type { get; set; }
 
     [JsonProperty("quality")]
-    public int Quality { get; set; } = 100;
+    public int? Quality { get; set; }
 
     [FromQuery(Name = "aspect_ratio")]
     [JsonProperty("aspect_ratio")]

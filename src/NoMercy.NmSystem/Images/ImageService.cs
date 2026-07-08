@@ -10,12 +10,11 @@
 // -----------------------------------------------------------------------------
 
 using HeyRed.ImageSharp.Heif.Formats.Avif;
+using ImageMagick;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
-using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-
 // Fully qualify SixLabors' Configuration: the sibling NoMercy.NmSystem.Configuration
 // namespace shadows the unqualified name from inside NoMercy.NmSystem.Images.
 using ImageSharpConfiguration = SixLabors.ImageSharp.Configuration;
@@ -24,13 +23,14 @@ namespace NoMercy.NmSystem.Images;
 
 public class ImageService : IImageService
 {
+    private const int DefaultAvifQuality = 75;
+
     public ImageService()
     {
+        // ImageSharp cannot encode AVIF (HeyRed.ImageSharp.Heif is decode-only);
+        // registering the format lets Parse resolve the "avif" extension and mime,
+        // while ResizeMagickNet routes actual AVIF encoding through Magick.NET.
         ImageSharpConfiguration.Default.ImageFormatsManager.AddImageFormat(AvifFormat.Instance);
-        ImageSharpConfiguration.Default.ImageFormatsManager.SetEncoder(
-            AvifFormat.Instance,
-            new PngEncoder()
-        );
     }
 
     public IImageFormat Parse(string format)
@@ -61,19 +61,35 @@ public class ImageService : IImageService
         string image,
         int? width,
         double? aspectRatio,
-        string? type
+        string? type,
+        int? quality
     )
     {
-        IImageFormat format = Parse(type ?? "png");
-
         if (!File.Exists(image))
             throw new("File not found");
 
+        IImageFormat format = Parse(type ?? "png");
+
+        return format is AvifFormat
+            ? EncodeAvif(image, width, aspectRatio, quality ?? DefaultAvifQuality)
+            : EncodeWithImageSharp(image, width, aspectRatio, format);
+    }
+
+    private static (byte[] data, string mimeType) EncodeWithImageSharp(
+        string image,
+        int? width,
+        double? aspectRatio,
+        IImageFormat format
+    )
+    {
         using Image<Rgba32> input = Image.Load<Rgba32>(image);
 
-        double ratio = aspectRatio ?? input.Height / (float)input.Width;
-        int targetWidth = width ?? input.Width;
-        int targetHeight = (int)(targetWidth * ratio);
+        (int targetWidth, int targetHeight) = TargetSize(
+            input.Width,
+            input.Height,
+            width,
+            aspectRatio
+        );
 
         input.Mutate(x => x.Resize(targetWidth, targetHeight));
 
@@ -81,5 +97,47 @@ public class ImageService : IImageService
         input.Save(memoryStream, format);
 
         return (memoryStream.ToArray(), format.MimeTypes.First());
+    }
+
+    private static (byte[] data, string mimeType) EncodeAvif(
+        string image,
+        int? width,
+        double? aspectRatio,
+        int quality
+    )
+    {
+        using MagickImage magick = new(image);
+
+        (int targetWidth, int targetHeight) = TargetSize(
+            (int)magick.Width,
+            (int)magick.Height,
+            width,
+            aspectRatio
+        );
+
+        MagickGeometry geometry = new((uint)targetWidth, (uint)targetHeight)
+        {
+            IgnoreAspectRatio = true,
+        };
+        magick.Resize(geometry);
+
+        magick.Format = MagickFormat.Avif;
+        magick.Quality = (uint)Math.Clamp(quality, 1, 100);
+
+        return (magick.ToByteArray(), AvifFormat.Instance.DefaultMimeType);
+    }
+
+    private static (int width, int height) TargetSize(
+        int sourceWidth,
+        int sourceHeight,
+        int? width,
+        double? aspectRatio
+    )
+    {
+        double ratio = aspectRatio ?? sourceHeight / (double)sourceWidth;
+        int targetWidth = width ?? sourceWidth;
+        int targetHeight = (int)(targetWidth * ratio);
+
+        return (targetWidth, targetHeight);
     }
 }

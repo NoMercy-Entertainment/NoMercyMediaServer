@@ -72,6 +72,7 @@
     <!-- Media & Encoding -->
     <PackageVersion Include="HeyRed.ImageSharp.Heif" Version="2.1.3" />
     <PackageVersion Include="LibHeif.Native" Version="1.15.1" />
+    <PackageVersion Include="Magick.NET-Q8-AnyCPU" Version="14.14.0" />
     <PackageVersion Include="MediaBrowser.Model.Signed" Version="3.0.647" />
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageVersion Include="SubtitlesParserV2" Version="2.4.0" />
