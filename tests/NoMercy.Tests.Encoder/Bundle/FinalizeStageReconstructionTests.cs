@@ -118,7 +118,7 @@ public class FinalizeStageReconstructionTests
         Mock<IFontExtractor> fontExtractorMock = new();
         fontExtractorMock
             .Setup(f => f.WriteFontManifestAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(0);
 
         BundleManifestWriter manifestWriter = new(storage);
         ReconstructionWriter reconstructionWriter = new();
@@ -203,7 +203,7 @@ public class FinalizeStageReconstructionTests
         Mock<IFontExtractor> fontExtractorMock = new();
         fontExtractorMock
             .Setup(f => f.WriteFontManifestAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(0);
 
         BundleManifestWriter manifestWriter = new(storage);
 

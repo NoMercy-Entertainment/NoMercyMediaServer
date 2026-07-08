@@ -471,7 +471,8 @@ public class BuildStage(
                 FfmpegCommand fontCommand = fontExtractor.BuildExtractionCommand(
                     options.FfmpegPath,
                     input.InputPath,
-                    input.OutputDirectory
+                    input.OutputDirectory,
+                    context.MediaInfo.Attachments
                 );
                 allCommands.Add(fontCommand);
             }
@@ -602,11 +603,7 @@ public class BuildStage(
                 new(
                     FilePath: outputFile,
                     VideoCodec: "libwebp",
-                    ExtraFlags: new()
-                    {
-                        ["-frames:v"] = "1",
-                        ["-vf"] = "scale=240:-2",
-                    }
+                    ExtraFlags: new() { ["-frames:v"] = "1", ["-vf"] = "scale=240:-2" }
                 )
             )
             .Build(ffmpegPath, outputDirectory);

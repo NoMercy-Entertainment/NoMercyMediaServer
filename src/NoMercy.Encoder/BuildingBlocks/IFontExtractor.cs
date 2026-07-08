@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Commands;
 
 namespace NoMercy.Encoder.BuildingBlocks;
@@ -18,8 +19,16 @@ public interface IFontExtractor
     FfmpegCommand BuildExtractionCommand(
         string ffmpegPath,
         string inputPath,
-        string outputDirectory
+        string outputDirectory,
+        IReadOnlyList<AttachmentInfo> attachments
     );
 
-    Task WriteFontManifestAsync(string outputDirectory, CancellationToken ct);
+    /// <summary>
+    /// Writes fonts.json and returns the number of font files it lists, so the
+    /// caller can verify every embedded font was extracted.
+    /// </summary>
+    Task<int> WriteFontManifestAsync(string outputDirectory, CancellationToken ct);
+
+    /// <summary>Counts how many of the source attachments are fonts.</summary>
+    int CountFontAttachments(IReadOnlyList<AttachmentInfo> attachments);
 }

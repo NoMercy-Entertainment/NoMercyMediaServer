@@ -103,7 +103,7 @@ public class FinalizeStageManifestTests
         Mock<IFontExtractor> fontExtractorMock = new();
         fontExtractorMock
             .Setup(f => f.WriteFontManifestAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(0);
 
         BundleManifestWriter manifestWriter = new(storage);
 

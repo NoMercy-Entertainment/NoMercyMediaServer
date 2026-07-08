@@ -80,7 +80,7 @@ public class FinalizeStageNotImplementedFlagsTests
         Mock<IFontExtractor> fontMock = new();
         fontMock
             .Setup(f => f.WriteFontManifestAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(0);
 
         FinalizeStage stage = new(
             chapterMock.Object,

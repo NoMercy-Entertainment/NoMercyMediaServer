@@ -110,8 +110,32 @@ public class FinalizeStage(
             if (derivatives.GenerateFontsJson)
             {
                 input.Progress?.OnStageStarted("Extracting fonts");
-                await fontExtractor.WriteFontManifestAsync(input.OutputDirectory, ct);
+                int fontsWritten = await fontExtractor.WriteFontManifestAsync(
+                    input.OutputDirectory,
+                    ct
+                );
                 input.Progress?.OnStageCompleted("Extracting fonts", TimeSpan.Zero);
+
+                // Completeness gate: a source with embedded fonts whose extraction
+                // came up short would render subtitles with missing glyphs. Fail
+                // the encode instead of publishing broken output — the orchestrator
+                // only publishes to the destination when the result is successful.
+                int expectedFonts = context.MediaInfo is null
+                    ? 0
+                    : fontExtractor.CountFontAttachments(context.MediaInfo.Attachments);
+
+                if (expectedFonts > 0 && fontsWritten < expectedFonts)
+                    return new StageFailure(
+                        new(
+                            EncodingErrorKind.Unknown,
+                            $"Font extraction incomplete: source has {expectedFonts} embedded font(s) "
+                                + $"but only {fontsWritten} were extracted. Subtitle rendering would be "
+                                + "missing fonts, so the output is not published.",
+                            null,
+                            Name,
+                            true
+                        )
+                    );
             }
             else
             {

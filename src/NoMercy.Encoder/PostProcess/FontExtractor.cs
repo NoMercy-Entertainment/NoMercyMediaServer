@@ -11,6 +11,7 @@
 
 using System.Text;
 using Newtonsoft.Json;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Commands;
 using NoMercy.Storage;
@@ -22,6 +23,7 @@ public class FontExtractor(IStorage storage) : IFontExtractor
     private static readonly HashSet<string> FontExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".ttf",
+        ".ttc",
         ".otf",
         ".woff",
         ".woff2",
@@ -34,39 +36,62 @@ public class FontExtractor(IStorage storage) : IFontExtractor
         ".look",
     };
 
-    // FFmpeg dumps attachments via -dump_attachment:t "" which is a pre-input flag.
+    // FFmpeg dumps attachments via -dump_attachment, a pre-input flag. Passing an
+    // explicit, sanitized output filename per attachment stream — rather than the
+    // bulk -dump_attachment:t "" form, which reuses each attachment's embedded
+    // filename — stops a single attachment whose embedded name ffmpeg rejects as
+    // "unsafe" (e.g. one containing spaces) from aborting the whole dump and
+    // dropping every remaining font. Subtitle rendering matches fonts by their
+    // internal family name, not the on-disk filename, so the rename is safe.
     // The standard builder does not model pre-input attachment flags, so we build
     // the argument list directly to keep the contract explicit and simple.
     public FfmpegCommand BuildExtractionCommand(
         string ffmpegPath,
         string inputPath,
-        string outputDirectory
+        string outputDirectory,
+        IReadOnlyList<AttachmentInfo> attachments
     )
     {
         string fontDir = storage.CombinePath(outputDirectory, "fonts");
 
-        string[] args =
-        [
-            "-y",
-            "-hide_banner",
-            "-dump_attachment:t",
-            "",
-            "-i",
-            inputPath,
-            "-f",
-            "null",
-            "-",
-        ];
+        List<string> args = ["-y", "-hide_banner"];
 
-        return new(ffmpegPath, args, fontDir);
+        HashSet<string> usedNames = new(StringComparer.OrdinalIgnoreCase);
+        foreach (AttachmentInfo attachment in attachments)
+        {
+            args.Add($"-dump_attachment:{attachment.Index}");
+            args.Add(ResolveSafeAttachmentName(attachment, usedNames));
+        }
+
+        args.Add("-i");
+        args.Add(inputPath);
+        args.Add("-f");
+        args.Add("null");
+        args.Add("-");
+
+        return new(ffmpegPath, args.ToArray(), fontDir);
     }
 
-    public async Task WriteFontManifestAsync(string outputDirectory, CancellationToken ct)
+    public int CountFontAttachments(IReadOnlyList<AttachmentInfo> attachments)
+    {
+        int count = 0;
+        foreach (AttachmentInfo attachment in attachments)
+            if (attachment.Filename is { } name && IsFontExtension(name))
+                count++;
+        return count;
+    }
+
+    /// <summary>
+    /// Writes fonts.json (and moves any LUT attachments to luts/). Returns the
+    /// number of font files written to the manifest so the finalize stage can
+    /// verify every embedded font was extracted before publishing.
+    /// </summary>
+    public async Task<int> WriteFontManifestAsync(string outputDirectory, CancellationToken ct)
     {
         string fontDir = storage.CombinePath(outputDirectory, "fonts");
 
         if (!storage.Exists(fontDir))
-            return;
+            return 0;
 
         IReadOnlyList<StorageEntry> allDumped = storage
             .List(fontDir, "*", recursive: false)
@@ -76,7 +101,7 @@ public class FontExtractor(IStorage storage) : IFontExtractor
         if (allDumped.Count == 0)
         {
             storage.DeleteDirectory(fontDir, recursive: false);
-            return;
+            return 0;
         }
 
         List<StorageEntry> fontFiles = allDumped
@@ -96,7 +121,7 @@ public class FontExtractor(IStorage storage) : IFontExtractor
                 || storage.List(fontDir, "*", recursive: false).All(e => e.IsDirectory)
             )
                 storage.DeleteDirectory(fontDir, recursive: false);
-            return;
+            return 0;
         }
 
         List<AssetEntry> entries = fontFiles
@@ -112,6 +137,46 @@ public class FontExtractor(IStorage storage) : IFontExtractor
             Encoding.UTF8.GetBytes(json),
             ct
         );
+
+        return fontFiles.Count;
+    }
+
+    // FFmpeg writes each attachment relative to the command working directory
+    // (fonts/). Build a sanitized, collision-free filename that preserves the
+    // original extension so WriteFontManifestAsync can still classify it as a
+    // font or LUT after extraction.
+    private static string ResolveSafeAttachmentName(
+        AttachmentInfo attachment,
+        HashSet<string> usedNames
+    )
+    {
+        string original = attachment.Filename ?? $"attachment_{attachment.Index}";
+        int dot = original.LastIndexOf('.');
+        string stem = dot < 0 ? original : original[..dot];
+        string ext = dot < 0 ? string.Empty : original[dot..];
+
+        string safeStem = Sanitize(stem);
+        if (safeStem.Length == 0)
+            safeStem = $"attachment_{attachment.Index}";
+
+        string candidate = safeStem + Sanitize(ext);
+        if (usedNames.Add(candidate))
+            return candidate;
+
+        // Two attachments sanitized to the same name — disambiguate by index.
+        string deduped = $"{safeStem}_{attachment.Index}{Sanitize(ext)}";
+        usedNames.Add(deduped);
+        return deduped;
+    }
+
+    private static string Sanitize(string value)
+    {
+        StringBuilder builder = new(value.Length);
+        foreach (char character in value)
+            builder.Append(
+                char.IsLetterOrDigit(character) || character is '.' or '-' or '_' ? character : '_'
+            );
+        return builder.ToString();
     }
 
     private async Task MoveLutsAndWriteManifestAsync(
@@ -137,9 +202,7 @@ public class FontExtractor(IStorage storage) : IFontExtractor
             await storage.WriteAsync(destination, data, ct);
             storage.Delete(lutFile.Path);
 
-            lutEntries.Add(
-                new(File: $"luts/{fileName}", MimeType: "application/octet-stream")
-            );
+            lutEntries.Add(new(File: $"luts/{fileName}", MimeType: "application/octet-stream"));
         }
 
         string lutsJson = JsonConvert.SerializeObject(lutEntries, Formatting.Indented);
@@ -171,6 +234,7 @@ public class FontExtractor(IStorage storage) : IFontExtractor
         return ext switch
         {
             ".ttf" => "application/x-font-truetype",
+            ".ttc" => "font/collection",
             ".otf" => "application/x-font-opentype",
             ".woff" => "font/woff",
             ".woff2" => "font/woff2",
