@@ -163,6 +163,7 @@ public class TasksController(
             .QueueJobs.Where(j => j.Queue == "encoder")
             .OrderByDescending(j => j.Priority)
             .ThenBy(j => j.CreatedAt)
+            .ThenBy(j => j.Id)
             .ToImmutableList();
 
         List<VideoEncodeJob> encoderJobs = jobs.Select(job =>
@@ -492,6 +493,7 @@ public class TasksController(
             .QueueJobs.Where(j => j.Queue == request.QueueName)
             .OrderByDescending(j => j.Priority)
             .ThenBy(j => j.CreatedAt)
+            .ThenBy(j => j.Id)
             .ToListAsync();
 
         // Split into running (reserved) and pending.
