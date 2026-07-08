@@ -179,9 +179,16 @@ public partial class FileManager
             ),
             // Chapters = JsonConvert.SerializeObject(item.FFprobe?.Chapters ?? []),
             Chapters = "",
+            // Derive languages from the encoded audio tracks (the audio_<lang>_<codec>
+            // dirs parsed into metadata.Audio), not the source ffprobe: a scan skips
+            // ffprobe on remote drivers, so item.FFprobe is empty over NFS and this
+            // column came out blank. The encoded tracks are the authoritative set of
+            // playable languages anyway.
             Languages = JsonConvert.SerializeObject(
-                item.FFprobe?.AudioStreams.Select(stream => stream.Language)
-                    .Where(stream => stream != null && stream != "und")
+                (metadata.Audio ?? [])
+                    .Select(audio => audio.Language)
+                    .Where(language => !string.IsNullOrEmpty(language) && language != "und")
+                    .Distinct()
             ),
             Quality = (item.FFprobe?.VideoStreams.FirstOrDefault()?.Width.ToString()).OrEmpty(),
             Subtitles = JsonConvert.SerializeObject(subtitles),
