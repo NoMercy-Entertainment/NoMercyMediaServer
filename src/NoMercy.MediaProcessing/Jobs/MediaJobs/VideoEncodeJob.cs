@@ -253,28 +253,13 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             {
                 Log.LogError(ex, "Video encode task failed");
 
-                if (EventBusProvider.IsConfigured)
-                {
-                    await EventBusProvider.Current.PublishAsync(
-                        new EncodingStageChangedEvent
-                        {
-                            JobId = fileMetadata.Id,
-                            Status = "failed",
-                            Title = fileMetadata.Title,
-                            Message = ex.Message,
-                        }
-                    );
-
-                    await EventBusProvider.Current.PublishAsync(
-                        new EncodingFailedEvent
-                        {
-                            JobId = fileMetadata.Id,
-                            InputPath = InputFile,
-                            ErrorMessage = ex.Message,
-                            ExceptionType = ex.GetType().Name,
-                        }
-                    );
-                }
+                await EncoderCardTerminator.PublishFailedAsync(
+                    fileMetadata.Id,
+                    fileMetadata.Title,
+                    InputFile,
+                    ex.Message,
+                    ex.GetType().Name
+                );
 
                 throw;
             }
@@ -294,26 +279,43 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         // and even at Verbose it bombards the console. The state-transition
         // logs further down already announce real progress.
 
-        switch (state.Phase)
+        try
         {
-            case CoordinatorPhase.WaitPass1:
-                await HandleWaitPass1Async(state);
-                break;
+            switch (state.Phase)
+            {
+                case CoordinatorPhase.WaitPass1:
+                    await HandleWaitPass1Async(state);
+                    break;
 
-            case CoordinatorPhase.WaitChildren:
-                await HandleWaitChildrenAsync(state);
-                break;
+                case CoordinatorPhase.WaitChildren:
+                    await HandleWaitChildrenAsync(state);
+                    break;
 
-            case CoordinatorPhase.Finalize:
-                await HandleFinalizeAsync(state);
-                break;
+                case CoordinatorPhase.Finalize:
+                    await HandleFinalizeAsync(state);
+                    break;
 
-            default:
-                Log.LogWarning(
-                    "[VideoEncodeJob] Unknown coordinator phase '{Phase}' — completing job",
-                    state.Phase
-                );
-                break;
+                default:
+                    Log.LogWarning(
+                        "[VideoEncodeJob] Unknown coordinator phase '{Phase}' — completing job",
+                        state.Phase
+                    );
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            // A phase that throws after children have reported progress strands
+            // the dashboard card on its last message. Clear it before the
+            // exception propagates to the queue's failure handling.
+            await EncoderCardTerminator.PublishFailedAsync(
+                Id.ToInt(),
+                string.Empty,
+                InputFile,
+                ex.Message,
+                ex.GetType().Name
+            );
+            throw;
         }
     }
 
@@ -620,18 +622,13 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                 failedCount
             );
 
-            if (EventBusProvider.IsConfigured)
-            {
-                await EventBusProvider.Current.PublishAsync(
-                    new EncodingStageChangedEvent
-                    {
-                        JobId = fileMetadata.Id,
-                        Status = "failed",
-                        Title = fileMetadata.Title,
-                        Message = $"{failedCount} rung(s) failed",
-                    }
-                );
-            }
+            await EncoderCardTerminator.PublishFailedAsync(
+                fileMetadata.Id,
+                fileMetadata.Title,
+                InputFile,
+                $"{failedCount} rung(s) failed",
+                "FinalizeChildFailed"
+            );
 
             (IReadOnlyList<string> failedDescriptors, string? lastError) = SummarizeFailures(
                 outcomes.Where(o => !o.Success).ToList()
@@ -746,6 +743,14 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                     lastError: err,
                     attemptsMade: 0,
                     ct: CancellationToken.None
+                );
+
+                await EncoderCardTerminator.PublishFailedAsync(
+                    fileMetadata.Id,
+                    fileMetadata.Title,
+                    InputFile,
+                    err,
+                    "FinalizeFailed"
                 );
 
                 return;
