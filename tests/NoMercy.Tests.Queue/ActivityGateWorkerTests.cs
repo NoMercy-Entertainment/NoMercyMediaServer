@@ -108,22 +108,40 @@ public class ActivityGateWorkerTests : IDisposable
 
         QueueWorker worker = new(_jobQueue, "library", activityGate: gate);
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(1));
+        // Signal completion off the worker's own event rather than a fixed
+        // sleep: under coverage instrumentation the defer poll + reserve +
+        // execute is far slower, and a wall-clock window flakes. The cap is
+        // generous; the assertion is that the event fired, not that it fired fast.
+        TaskCompletionSource jobDone = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        worker.WorkCompleted += (_, _) => jobDone.TrySetResult();
 
-        _ = Task.Run(async () =>
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(30));
+
+        // Run the worker on its own task — StartAsync's loop blocks between
+        // reservations, so it must not run on the test thread.
+        Task workerTask = Task.Run(async () =>
         {
-            await Task.Delay(100, cts.Token);
-            gate.Defer = false;
+            try
+            {
+                await worker.StartAsync(cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected once the token fires.
+            }
         });
 
-        try
-        {
-            await worker.StartAsync(cts.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            // Expected once the token fires.
-        }
+        // Let the worker defer at least once, then lift the gate.
+        await Task.Delay(100);
+        gate.Defer = false;
+
+        Task finished = await Task.WhenAny(jobDone.Task, Task.Delay(TimeSpan.FromSeconds(20)));
+        finished
+            .Should()
+            .Be(jobDone.Task, "the worker must reserve and execute the job once the gate clears");
+
+        await cts.CancelAsync();
+        await workerTask;
 
         // Job was reserved, executed, and deleted once the gate cleared.
         int jobCount = _context.QueueJobs.Count();
