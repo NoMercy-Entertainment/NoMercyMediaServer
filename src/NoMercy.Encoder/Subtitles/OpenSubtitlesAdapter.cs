@@ -156,7 +156,11 @@ public class OpenSubtitlesAdapter(
                     IsTrustedUploader: isTrusted,
                     Fps: fps,
                     DownloadUrl: r.SubDownloadLink ?? string.Empty,
-                    Format: NormalizeFormat(r.SubFormat)
+                    Format: NormalizeFormat(r.SubFormat),
+                    FileName: r.SubFileName,
+                    ReleaseName: r.MovieReleaseName,
+                    HearingImpaired: r.SubHearingImpaired == "1",
+                    Uploader: r.UserNickName
                 )
             );
         }

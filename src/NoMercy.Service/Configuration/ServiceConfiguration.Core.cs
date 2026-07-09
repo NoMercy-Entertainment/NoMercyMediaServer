@@ -592,6 +592,10 @@ public static partial class ServiceConfiguration
         // Subtitle acquisition — OpenSubtitlesProvider lives in MediaProcessing so
         // it can reference both NoMercy.Encoder (interface) and NoMercy.Providers (XML-RPC).
         services.AddSingleton<Encoder.Subtitles.IOpenSubtitlesProvider, OpenSubtitlesProvider>();
+        services.AddSingleton<
+            Encoder.Subtitles.IOpenSubtitlesAdapter,
+            Encoder.Subtitles.OpenSubtitlesAdapter
+        >();
 
         services.AddLocalization(options => options.ResourcesPath = "Resources");
         services.AddScoped<ILocalizer, Localizer>();

@@ -23,5 +23,9 @@ public record SubtitleCandidate(
     bool IsTrustedUploader,
     double? Fps,
     string DownloadUrl,
-    string Format
+    string Format,
+    string? FileName = null,
+    string? ReleaseName = null,
+    bool HearingImpaired = false,
+    string? Uploader = null
 );

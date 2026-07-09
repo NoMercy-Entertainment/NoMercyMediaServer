@@ -23,7 +23,11 @@ public record OpenSubtitlesSearchResult(
     string? MovieFPS,
     string? SubDownloadLink,
     string? SubFormat,
-    string? MatchedBy
+    string? MatchedBy,
+    string? SubFileName = null,
+    string? MovieReleaseName = null,
+    string? SubHearingImpaired = null,
+    string? UserNickName = null
 );
 
 /// <summary>
