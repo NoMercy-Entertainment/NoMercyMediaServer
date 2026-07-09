@@ -12,6 +12,7 @@
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Encoder;
 using NoMercy.Database.Models.Libraries;
@@ -43,7 +44,6 @@ using Serilog.Events;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 using QueueJobDispatcher = NoMercyQueue.JobDispatcher;
 
-using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 /// <summary>
@@ -143,7 +143,11 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         {
             presets = presets.Where(preset => preset.Id == PresetId.Value).ToList();
             if (presets.Count == 0)
-                Log.LogWarning("[VideoEncodeJob] PresetId {Value} not found in folder {FolderId} — no presets to run", PresetId.Value, FolderId);
+                Log.LogWarning(
+                    "[VideoEncodeJob] PresetId {Value} not found in folder {FolderId} — no presets to run",
+                    PresetId.Value,
+                    FolderId
+                );
         }
 
         if (presets.Count == 0)
@@ -169,13 +173,21 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                 }
                 catch (Exception ex)
                 {
-                    Log.LogWarning("Skipping preset '{Name}' ({Id}): resolve failed — {Message}", preset.Name, preset.Id, ex.Message);
+                    Log.LogWarning(
+                        "Skipping preset '{Name}' ({Id}): resolve failed — {Message}",
+                        preset.Name,
+                        preset.Id,
+                        ex.Message
+                    );
                     continue;
                 }
 
                 if (encodingProfile.Video is null && encodingProfile.Audio.Length == 0)
                 {
-                    Log.LogWarning("Skipping preset {Name}: no video or audio outputs configured", preset.Name);
+                    Log.LogWarning(
+                        "Skipping preset {Name}: no video or audio outputs configured",
+                        preset.Name
+                    );
                     continue;
                 }
 
@@ -297,7 +309,10 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                 break;
 
             default:
-                Log.LogWarning("[VideoEncodeJob] Unknown coordinator phase '{Phase}' — completing job", state.Phase);
+                Log.LogWarning(
+                    "[VideoEncodeJob] Unknown coordinator phase '{Phase}' — completing job",
+                    state.Phase
+                );
                 break;
         }
     }
@@ -319,7 +334,11 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         if (!allPass1Done)
         {
             int doneCount = pass1TaskIds.Count(tid => completedTaskIds.Contains(tid));
-            Log.LogInformation("[VideoEncodeJob] WaitPass1: {DoneCount}/{Length} Pass1 tasks done — re-enqueueing", doneCount, pass1TaskIds.Length);
+            Log.LogInformation(
+                "[VideoEncodeJob] WaitPass1: {DoneCount}/{Length} Pass1 tasks done — re-enqueueing",
+                doneCount,
+                pass1TaskIds.Length
+            );
             ReEnqueueSelf(state with { Phase = CoordinatorPhase.WaitPass1 });
             return;
         }
@@ -405,7 +424,11 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             );
         }
 
-        Log.LogTrace("[VideoEncodeJob] WaitPass1 complete — dispatched {Length} Pass2 + {Length2} other tasks. Transitioning to WaitChildren.", pass2TaskIds.Length, otherTaskIds.Length);
+        Log.LogTrace(
+            "[VideoEncodeJob] WaitPass1 complete — dispatched {Length} Pass2 + {Length2} other tasks. Transitioning to WaitChildren.",
+            pass2TaskIds.Length,
+            otherTaskIds.Length
+        );
 
         ReEnqueueSelf(
             state with
@@ -451,7 +474,13 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                 // routine progress doesn't pollute Info-level dashboards.
                 if (doneCount != state.LastLoggedDoneCount)
                 {
-                    Log.LogTrace("[VideoEncodeJob] WaitChildren: bundle {CurrentBundleIndex}/{Length}, {DoneCount}/{Length2} streams done", state.CurrentBundleIndex + 1, bundles.Length, doneCount, currentBundleTaskIds.Length);
+                    Log.LogTrace(
+                        "[VideoEncodeJob] WaitChildren: bundle {CurrentBundleIndex}/{Length}, {DoneCount}/{Length2} streams done",
+                        state.CurrentBundleIndex + 1,
+                        bundles.Length,
+                        doneCount,
+                        currentBundleTaskIds.Length
+                    );
                 }
                 ReEnqueueSelf(
                     state with
@@ -466,7 +495,13 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             int nextIndex = state.CurrentBundleIndex + 1;
             if (nextIndex < bundles.Length)
             {
-                Log.LogInformation("[VideoEncodeJob] Bundle {CurrentBundleIndex}/{Length} complete. Dispatching bundle {NextIndex}/{Length2}.", state.CurrentBundleIndex + 1, bundles.Length, nextIndex + 1, bundles.Length);
+                Log.LogInformation(
+                    "[VideoEncodeJob] Bundle {CurrentBundleIndex}/{Length} complete. Dispatching bundle {NextIndex}/{Length2}.",
+                    state.CurrentBundleIndex + 1,
+                    bundles.Length,
+                    nextIndex + 1,
+                    bundles.Length
+                );
                 DispatchSingleBundle(
                     bundles[nextIndex],
                     state.PresetId,
@@ -486,7 +521,10 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                 return;
             }
 
-            Log.LogInformation("[VideoEncodeJob] All {Length} bundles complete. Transitioning to Finalize.", bundles.Length);
+            Log.LogInformation(
+                "[VideoEncodeJob] All {Length} bundles complete. Transitioning to Finalize.",
+                bundles.Length
+            );
             // Finalize is one-shot post-encode work — fire immediately so the
             // library refresh doesn't wait out a full poll interval.
             ReEnqueueSelf(state with { Phase = CoordinatorPhase.Finalize }, TimeSpan.Zero);
@@ -503,7 +541,11 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             int doneCount = nonPass1TaskIds.Count(tid => completedTaskIds.Contains(tid));
             if (doneCount != state.LastLoggedDoneCount)
             {
-                Log.LogTrace("[VideoEncodeJob] WaitChildren: {DoneCount}/{Length} tasks done", doneCount, nonPass1TaskIds.Length);
+                Log.LogTrace(
+                    "[VideoEncodeJob] WaitChildren: {DoneCount}/{Length} tasks done",
+                    doneCount,
+                    nonPass1TaskIds.Length
+                );
             }
             ReEnqueueSelf(
                 state with
@@ -515,7 +557,9 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             return;
         }
 
-        Log.LogTrace("[VideoEncodeJob] WaitChildren complete — all tasks done. Transitioning to Finalize.");
+        Log.LogTrace(
+            "[VideoEncodeJob] WaitChildren complete — all tasks done. Transitioning to Finalize."
+        );
         ReEnqueueSelf(state with { Phase = CoordinatorPhase.Finalize }, TimeSpan.Zero);
     }
 
@@ -551,7 +595,10 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
         if (folder is null)
         {
-            Log.LogWarning("[VideoEncodeJob] Finalize: folder {FolderId} not found — aborting post-encode", FolderId);
+            Log.LogWarning(
+                "[VideoEncodeJob] Finalize: folder {FolderId} not found — aborting post-encode",
+                FolderId
+            );
             return;
         }
 
@@ -568,7 +615,10 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
 
         if (failedCount > 0)
         {
-            Log.LogWarning("[VideoEncodeJob] Finalize: {FailedCount} task(s) failed — skipping post-encode", failedCount);
+            Log.LogWarning(
+                "[VideoEncodeJob] Finalize: {FailedCount} task(s) failed — skipping post-encode",
+                failedCount
+            );
 
             if (EventBusProvider.IsConfigured)
             {
@@ -622,7 +672,11 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             || !Directory.EnumerateFiles(tempDir, "*.m3u8", SearchOption.AllDirectories).Any()
         )
         {
-            Log.LogError("[VideoEncodeJob] Finalize: tempDir '{TempDir}' missing or empty. Cannot finalize GroupTag={GroupTag}.", tempDir, state.GroupTag);
+            Log.LogError(
+                "[VideoEncodeJob] Finalize: tempDir '{TempDir}' missing or empty. Cannot finalize GroupTag={GroupTag}.",
+                tempDir,
+                state.GroupTag
+            );
             return;
         }
 
@@ -648,7 +702,11 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             }
             catch (Exception ex)
             {
-                Log.LogWarning("[VideoEncodeJob] Finalize: cannot resolve preset {PresetId} — {Message}", state.PresetId, ex.Message);
+                Log.LogWarning(
+                    "[VideoEncodeJob] Finalize: cannot resolve preset {PresetId} — {Message}",
+                    state.PresetId,
+                    ex.Message
+                );
                 return;
             }
         }
@@ -673,7 +731,11 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                     publishResult.Error?.Message
                     ?? publishResult.EnrichedError?.Message
                     ?? "finalize-only pass failed with no details";
-                Log.LogError("[VideoEncodeJob] Coordinator finalize failed for GroupTag={GroupTag}: {Err}", state.GroupTag, err);
+                Log.LogError(
+                    "[VideoEncodeJob] Coordinator finalize failed for GroupTag={GroupTag}: {Err}",
+                    state.GroupTag,
+                    err
+                );
 
                 await new IncompleteEncodeRecorder().RecordAsync(
                     context,
@@ -691,7 +753,11 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         }
         catch (Exception ex)
         {
-            Log.LogError("[VideoEncodeJob] Coordinator finalize threw for GroupTag={GroupTag}: {Message}", state.GroupTag, ex.Message);
+            Log.LogError(
+                "[VideoEncodeJob] Coordinator finalize threw for GroupTag={GroupTag}: {Message}",
+                state.GroupTag,
+                ex.Message
+            );
             throw;
         }
 
@@ -722,7 +788,10 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             );
         }
 
-        Log.LogInformation("[VideoEncodeJob] Finalize complete for GroupTag={GroupTag}", state.GroupTag);
+        Log.LogInformation(
+            "[VideoEncodeJob] Finalize complete for GroupTag={GroupTag}",
+            state.GroupTag
+        );
     }
 
     // ------------------------------------------------------------------
@@ -774,7 +843,11 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         int parentJobId = _selfJobId;
         string groupTag = tasks[0].GroupTag;
 
-        Log.LogTrace("[VideoEncodeJob] Decomposed into {Length} child tasks (groupTag={GroupTag})", tasks.Length, groupTag);
+        Log.LogTrace(
+            "[VideoEncodeJob] Decomposed into {Length} child tasks (groupTag={GroupTag})",
+            tasks.Length,
+            groupTag
+        );
 
         QueueJobDispatcher dispatcher = GetDispatcher();
 
@@ -805,7 +878,10 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                 );
             }
 
-            Log.LogInformation("[VideoEncodeJob] Dispatched {Length} Pass1 tasks. Transitioning to WaitPass1.", pass1Tasks.Length);
+            Log.LogInformation(
+                "[VideoEncodeJob] Dispatched {Length} Pass1 tasks. Transitioning to WaitPass1.",
+                pass1Tasks.Length
+            );
 
             ReEnqueueSelf(
                 new(
@@ -846,7 +922,11 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                 groupTag: groupTag
             );
 
-            Log.LogInformation("[VideoEncodeJob] Dispatched bundle 1/{Length} covering {Length2} streams. Sequential dispatch — bundle N+1 fires on bundle N completion. Transitioning to WaitChildren.", bundles.Length, tasks.Length);
+            Log.LogInformation(
+                "[VideoEncodeJob] Dispatched bundle 1/{Length} covering {Length2} streams. Sequential dispatch — bundle N+1 fires on bundle N completion. Transitioning to WaitChildren.",
+                bundles.Length,
+                tasks.Length
+            );
 
             ReEnqueueSelf(
                 new(
@@ -1323,7 +1403,13 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             );
         }
 
-        Log.LogInformation("Encoded {InputFile} → {OutputPath} in {TotalSeconds:F1}s ({Unknown})", InputFile, result.OutputPath, result.Duration.TotalSeconds, result.Metrics?.EncoderUsed ?? "unknown");
+        Log.LogInformation(
+            "Encoded {InputFile} → {OutputPath} in {TotalSeconds:F1}s ({Unknown})",
+            InputFile,
+            result.OutputPath,
+            result.Duration.TotalSeconds,
+            result.Metrics?.EncoderUsed ?? "unknown"
+        );
 
         await PublishStageAsync(fileMetadata, "Recording encoding history");
         await RecordEncodingHistoryAsync(context, preset, result, InputFile, StorageDriver);
@@ -1454,7 +1540,11 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         }
         catch (Exception ex)
         {
-            Log.LogWarning("Could not analyze {InputPath} for OCR: {Message}", inputPath, ex.Message);
+            Log.LogWarning(
+                "Could not analyze {InputPath} for OCR: {Message}",
+                inputPath,
+                ex.Message
+            );
             return;
         }
 
@@ -1490,11 +1580,22 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                     SubtitleCodecType.WebVtt,
                     CancellationToken.None
                 );
-                Log.LogInformation("OCR {Language} → {FilePath} ({CueCount} cues)", language, track.FilePath, track.CueCount);
+                Log.LogInformation(
+                    "OCR {Language} → {FilePath} ({CueCount} cues)",
+                    language,
+                    track.FilePath,
+                    track.CueCount
+                );
             }
             catch (Exception ex)
             {
-                Log.LogWarning("OCR failed for {InputPath} stream {Index} ({Language}): {Message}", inputPath, stream.Index, language, ex.Message);
+                Log.LogWarning(
+                    "OCR failed for {InputPath} stream {Index} ({Language}): {Message}",
+                    inputPath,
+                    stream.Index,
+                    language,
+                    ex.Message
+                );
             }
         }
     }
