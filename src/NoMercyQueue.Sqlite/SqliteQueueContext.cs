@@ -36,6 +36,8 @@ public class SqliteQueueContext : IQueueContext
                 .Where(j => currentJobId == null)
                 .Where(j => j.Queue == name)
                 .OrderByDescending(j => j.Priority)
+                .ThenBy(j => j.CreatedAt)
+                .ThenBy(j => j.Id)
                 .FirstOrDefault()
     );
 

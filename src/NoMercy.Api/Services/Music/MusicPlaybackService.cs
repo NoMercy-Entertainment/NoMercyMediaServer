@@ -56,10 +56,27 @@ public class MusicPlaybackService
     private readonly ConcurrentDictionary<Guid, Timer> _broadcastTimers = new();
     private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _stateLocks = new();
     private readonly ConcurrentDictionary<Guid, byte> _playbackStartsInFlight = new();
+
+    // Fingerprint of the last MusicPlayerState broadcast actually sent per user —
+    // see ShouldCoalesceBroadcast, which drops a redundant repeat of it.
+    private readonly ConcurrentDictionary<Guid, BroadcastFingerprint> _lastBroadcastFingerprints =
+        new();
     private const int TimerInterval = 100;
     private const int CrossfadeLeewayMs = 10000; // Send PrepareCrossfade 10s before track end (gives time to buffer)
     private const int BroadcastDebounceMs = 150;
     private const int MinPlayTimeForRecordMs = 10_000;
+
+    // Window within which two broadcasts for the same user, same track, same
+    // play/pause state, and the same second-granularity position are treated
+    // as the redundant echo of one real state change rather than two distinct
+    // ones — collapsing the bursts the many ungated UpdatePlaybackState call
+    // sites (StartPlayback, HandleTrackCompletion, ApplyItemLikeAsync, command
+    // handlers, ...) can produce within milliseconds of each other. This is a
+    // volume reduction only: out-of-order delivery is corrected by
+    // MusicPlayerState.Seq, not by this window, so it stays short and
+    // conservative — when unsure, UpdatePlaybackState emits.
+    private const int BroadcastCoalesceWindowMs = 50;
+    private const int BroadcastTimeBucketMs = 1000;
 
     // Both the Android and web clients throttle position reports to roughly once
     // every 5s while playing (MusicHubAdapter/MusicPlayerEventBridge on Android,
@@ -516,12 +533,23 @@ public class MusicPlaybackService
         MusicPlayerState? broadcastState = null;
         if (state is not null)
         {
+            long nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+            if (ShouldCoalesceBroadcast(user.Id, state, nowMs))
+                return;
+
             // Same instant for both: Timestamp predates ServerTimeMs and some
             // clients may already key off it, so it stays; ServerTimeMs is the
             // new clock-sync reference every broadcast emit carries.
-            long nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             state.Timestamp = nowMs;
             state.ServerTimeMs = nowMs;
+
+            // Per-user monotonic, clock-anchored sequence stamped fresh on
+            // every emit that reaches here — see MusicPlayerStateManager.NextSeq
+            // and MusicPlayerState.Seq. Lets a client drop a broadcast that
+            // arrives out of order instead of racing it against one it already
+            // applied.
+            state.Seq = _stateManager.NextSeq(user.Id);
 
             // Broadcast a lyric-stripped queue projection, never the stored
             // state — see MusicPlayerState.CloneForBroadcast for why queue-item
@@ -545,6 +573,47 @@ public class MusicPlaybackService
 
         await _clientMessenger.SendTo("MusicPlayerState", "musicHub", user.Id, payload);
     }
+
+    /// <summary>
+    /// Drops a MusicPlayerState broadcast that is the redundant echo of the one
+    /// immediately before it for this user: same track, same play/pause state,
+    /// same second-granularity position, within
+    /// <see cref="BroadcastCoalesceWindowMs"/> of the previous emit. Only
+    /// volume is reduced here — out-of-order correctness is carried entirely by
+    /// <see cref="MusicPlayerState.Seq"/>, so this stays conservative and never
+    /// coalesces across a real change or a wider time gap.
+    /// </summary>
+    private bool ShouldCoalesceBroadcast(Guid userId, MusicPlayerState state, long nowMs)
+    {
+        BroadcastFingerprint fingerprint = new(
+            state.CurrentItem?.Id,
+            state.PlayState,
+            state.Time / BroadcastTimeBucketMs,
+            nowMs
+        );
+
+        if (
+            _lastBroadcastFingerprints.TryGetValue(
+                userId,
+                out BroadcastFingerprint previousFingerprint
+            )
+            && previousFingerprint.ItemId == fingerprint.ItemId
+            && previousFingerprint.PlayState == fingerprint.PlayState
+            && previousFingerprint.TimeBucket == fingerprint.TimeBucket
+            && nowMs - previousFingerprint.AtMs < BroadcastCoalesceWindowMs
+        )
+            return true;
+
+        _lastBroadcastFingerprints[userId] = fingerprint;
+        return false;
+    }
+
+    private readonly record struct BroadcastFingerprint(
+        Guid? ItemId,
+        bool PlayState,
+        int TimeBucket,
+        long AtMs
+    );
 
     internal async Task PublishStartedEventAsync(Guid userId, MusicPlayerState state)
     {

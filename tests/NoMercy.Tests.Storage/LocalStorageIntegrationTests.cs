@@ -92,6 +92,30 @@ public class LocalStorageIntegrationTests : IDisposable
     }
 
     [Fact]
+    public void GetFullPath_resolves_scope_relative_key_under_library_root_not_process_cwd()
+    {
+        // Guards the local-library scan/move regression: a scope-relative folder
+        // key ("Anime/Anime/Show") must resolve under the configured library root.
+        // Resolving it through the raw driver instead of the facade produced the
+        // bug — LocalStorageDriver.GetFullPath is a bare Path.GetFullPath that
+        // canonicalizes against the process CWD (/app in the container), so the key
+        // resolved outside the library root and every local rescan found zero files.
+        Directory.CreateDirectory(Path.Combine(_root, "Anime", "Anime"));
+        IStorage storage = _storage;
+
+        string viaFacade = storage.GetFullPath("Anime/Anime");
+        viaFacade.Should().StartWith(_root);
+        Directory.Exists(viaFacade).Should().BeTrue();
+        storage.Exists("Anime/Anime").Should().BeTrue();
+
+        // The trap the scan fell into: the raw driver is root-blind and resolves
+        // relative to the process CWD, not the library root.
+        string viaDriver = storage.Driver.GetFullPath("Anime/Anime");
+        viaDriver.Should().NotBe(viaFacade);
+        Directory.Exists(viaDriver).Should().BeFalse();
+    }
+
+    [Fact]
     public async Task DeleteAsync_removes_file_then_no_op_on_missing()
     {
         string path = Path.Combine(_root, "to-delete.bin");
