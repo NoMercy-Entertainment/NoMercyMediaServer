@@ -134,27 +134,38 @@ public class UserDataController(
 
     [HttpGet]
     [Route("favorites")]
-    public async Task<IActionResult> Favorites([FromQuery] FavoriteRequest body)
+    [ResponseCache(NoStore = true)]
+    public async Task<IActionResult> Favorites(CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!AuthPolicy.IsAllowed(User))
             return UnauthenticatedResponse("You do not have permission to view favorites");
 
-        if (!TryParseFavoriteIds(body, out int? intId, out Ulid? ulidId))
-            return BadRequestResponse("Invalid id for the requested type");
+        string language = Language();
+        string country = Country();
 
-        UserData? userData = await userDataRepository.GetUserDataSingleAsync(
+        FavoritesData favorites = await homeRepository.GetFavoritesAsync(
             userId,
-            body.Type,
-            intId,
-            ulidId
+            language,
+            country,
+            ct
         );
 
-        if (userData is null)
-            return NotFoundResponse("Item not found");
+        List<NmCardDto> cards =
+        [
+            .. favorites.Movies.Select(movie => new NmCardDto(movie, country)),
+            .. favorites.TvShows.Select(tv => new NmCardDto(tv, country)),
+            .. favorites.Collections.Select(collection => new NmCardDto(collection, country)),
+            .. favorites.Specials.Select(special => new NmCardDto(special, country)),
+        ];
 
         return Ok(
-            new StatusResponseDto<string> { Status = "ok", Message = "Item marked as favorite" }
+            new CarouselResponseDto<NmCardDto>
+            {
+                Data = cards
+                    .OrderBy(card => card.Title, StringComparer.OrdinalIgnoreCase)
+                    .DistinctBy(item => item.Link),
+            }
         );
     }
 

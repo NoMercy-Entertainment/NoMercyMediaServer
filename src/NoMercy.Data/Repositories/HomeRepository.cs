@@ -15,6 +15,8 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
+using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
 using NoMercy.NmSystem.Domain;
 
@@ -367,6 +369,112 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
             .ToListAsync(ct);
 
         return userData.ToHashSet();
+    }
+
+    /// <summary>
+    /// Loads the current user's favorited video media — movies, tv shows,
+    /// collections and specials — from the per-user like join tables
+    /// (<c>MovieUser</c>/<c>TvUser</c>/<c>CollectionUser</c>/<c>SpecialUser</c>).
+    /// Each entity is hydrated with exactly the includes its
+    /// <c>NmCardDto</c> constructor needs; the caller maps and merges.
+    /// Queries run sequentially against the shared context — favorites lists
+    /// are small, and EF's DbContext is not safe for concurrent use.
+    /// </summary>
+    public async Task<FavoritesData> GetFavoritesAsync(
+        Guid userId,
+        string language,
+        string country,
+        CancellationToken ct = default
+    )
+    {
+        List<Movie> movies = await context
+            .Movies.AsNoTracking()
+            .Where(movie => movie.MovieUser.Any(mu => mu.UserId == userId))
+            .Include(movie => movie.Translations.Where(t => t.Iso6391 == language))
+            .Include(movie =>
+                movie.Images.Where(image => image.Type == "logo" && image.Iso6391 == "en").Take(1)
+            )
+            .Include(movie => movie.VideoFiles)
+            .Include(movie =>
+                movie
+                    .CertificationMovies.Where(c =>
+                        c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country
+                    )
+                    .Take(1)
+            )
+                .ThenInclude(c => c.Certification)
+            .ToListAsync(ct);
+
+        List<Tv> tvShows = await context
+            .Tvs.AsNoTracking()
+            .Where(tv => tv.TvUser.Any(tu => tu.UserId == userId))
+            .Include(tv => tv.Translations.Where(t => t.Iso6391 == language))
+            .Include(tv =>
+                tv.Images.Where(image => image.Type == "logo" && image.Iso6391 == "en").Take(1)
+            )
+            .Include(tv => tv.Episodes.Where(episode => episode.SeasonNumber > 0))
+                .ThenInclude(episode => episode.VideoFiles)
+            .Include(tv =>
+                tv.CertificationTvs.Where(c =>
+                        c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country
+                    )
+                    .Take(1)
+            )
+                .ThenInclude(c => c.Certification)
+            .ToListAsync(ct);
+
+        List<Collection> collections = await context
+            .Collections.AsNoTracking()
+            .Where(collection => collection.CollectionUser.Any(cu => cu.UserId == userId))
+            .Include(collection => collection.Translations.Where(t => t.Iso6391 == language))
+            .Include(collection =>
+                collection
+                    .Images.Where(image => image.Type == "logo" && image.Iso6391 == "en")
+                    .Take(1)
+            )
+            .Include(collection => collection.CollectionMovies)
+                .ThenInclude(collectionMovie => collectionMovie.Movie)
+                    .ThenInclude(movie => movie.VideoFiles)
+            .Include(collection => collection.CollectionMovies)
+                .ThenInclude(collectionMovie => collectionMovie.Movie)
+                    .ThenInclude(movie =>
+                        movie
+                            .CertificationMovies.Where(c =>
+                                c.Certification.Iso31661 == "US"
+                                || c.Certification.Iso31661 == country
+                            )
+                            .Take(1)
+                    )
+                        .ThenInclude(c => c.Certification)
+            .ToListAsync(ct);
+
+        List<Special> specials = await context
+            .Specials.AsNoTracking()
+            .AsSplitQuery()
+            .Where(special => special.SpecialUser.Any(su => su.UserId == userId))
+            .Include(special => special.Items)
+                .ThenInclude(item => item.Movie)
+                    .ThenInclude(m => m!.VideoFiles)
+            .Include(special => special.Items)
+                .ThenInclude(item => item.Movie)
+                    .ThenInclude(m =>
+                        m!
+                            .CertificationMovies.Where(c =>
+                                c.Certification.Iso31661 == "US"
+                                || c.Certification.Iso31661 == country
+                            )
+                            .Take(1)
+                    )
+                        .ThenInclude(c => c.Certification)
+            .Include(special => special.Items)
+                .ThenInclude(item => item.Episode)
+                    .ThenInclude(e => e!.VideoFiles)
+            .Include(special => special.Items)
+                .ThenInclude(item => item.Episode)
+                    .ThenInclude(e => e!.Tv)
+            .ToListAsync(ct);
+
+        return new(movies, tvShows, collections, specials);
     }
 
     public Task<HashSet<Image>> GetScreensaverImagesAsync(
