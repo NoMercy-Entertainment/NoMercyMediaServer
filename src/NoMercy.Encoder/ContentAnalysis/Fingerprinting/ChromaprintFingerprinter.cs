@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Progress;
+using NoMercy.NmSystem.Monitoring;
 using NoMercy.Storage;
 
 namespace NoMercy.Encoder.ContentAnalysis.Fingerprinting;
@@ -29,12 +30,21 @@ namespace NoMercy.Encoder.ContentAnalysis.Fingerprinting;
 /// its internal 11025 Hz mono rate. Users rarely need sub-second marker
 /// precision for intros, so we treat FrameDuration as a constant rather
 /// than reading it back from ffmpeg.
+///
+/// This is the fire-and-forget path both <c>IntroDetectSubscriber</c> and
+/// <c>IntroDetectionSubscriber</c> funnel through, and the worst NAS-read
+/// offender among background jobs — each call reads up to a few minutes of
+/// audio per episode. It yields to active playback via
+/// <see cref="MediaActivityMonitor.WaitForIdleAsync"/> before touching the
+/// source file, so it never competes with a streaming segment serve for the
+/// same NFS mount.
 /// </summary>
 public class ChromaprintFingerprinter(
     EncoderOptions options,
     IProcessRunner processRunner,
     IStorage storage,
     ILogger<ChromaprintFingerprinter> logger,
+    MediaActivityMonitor activityMonitor,
     IAnalysisProgressObserver? progress = null
 ) : IAudioFingerprinter
 {
@@ -43,6 +53,8 @@ public class ChromaprintFingerprinter(
     private static readonly TimeSpan ChromaprintFrameDuration = TimeSpan.FromSeconds(
         2048.0 / 11025.0
     );
+
+    private static readonly TimeSpan MaxIdleWait = TimeSpan.FromMinutes(5);
 
     public async Task<AudioFingerprint> FingerprintAsync(
         string filePath,
@@ -53,6 +65,10 @@ public class ChromaprintFingerprinter(
         string jobId = Guid.NewGuid().ToString("N");
         IAnalysisProgressObserver observer = progress ?? NullAnalysisProgressObserver.Instance;
         observer.Report(jobId, "fingerprint", 0, "fingerprinting");
+
+        // Defer to active playback (never longer than MaxIdleWait) before
+        // reading from the source file — see MediaActivityMonitor.
+        await activityMonitor.WaitForIdleAsync(MaxIdleWait, ct).ConfigureAwait(false);
 
         await using LocalPathLease inputLease = storage.AcquireLocalPath(filePath);
         List<string> args = ["-v", "error", "-nostdin"];

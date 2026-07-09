@@ -14,6 +14,7 @@ using Moq;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.ContentAnalysis.Fingerprinting;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.NmSystem.Monitoring;
 using NoMercy.Tests.Encoder.Storage;
 
 namespace NoMercy.Tests.Encoder.ContentAnalysis;
@@ -96,7 +97,8 @@ public class ChromaprintFingerprinterTests
             _options,
             runner.Object,
             TestStorageFactory.CreateLocal(),
-            NullLogger<ChromaprintFingerprinter>.Instance
+            NullLogger<ChromaprintFingerprinter>.Instance,
+            new MediaActivityMonitor()
         );
 
         FingerprintWindow window = new(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(300));
@@ -144,7 +146,8 @@ public class ChromaprintFingerprinterTests
             _options,
             runner.Object,
             TestStorageFactory.CreateLocal(),
-            NullLogger<ChromaprintFingerprinter>.Instance
+            NullLogger<ChromaprintFingerprinter>.Instance,
+            new MediaActivityMonitor()
         );
 
         FingerprintWindow window = new(TimeSpan.FromMinutes(-4), TimeSpan.FromMinutes(4));
@@ -175,7 +178,8 @@ public class ChromaprintFingerprinterTests
             _options,
             runner.Object,
             TestStorageFactory.CreateLocal(),
-            NullLogger<ChromaprintFingerprinter>.Instance
+            NullLogger<ChromaprintFingerprinter>.Instance,
+            new MediaActivityMonitor()
         );
 
         AudioFingerprint result = await fp.FingerprintAsync(

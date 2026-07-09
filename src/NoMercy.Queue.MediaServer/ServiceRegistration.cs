@@ -10,9 +10,11 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NoMercy.NmSystem.Configuration;
+using NoMercy.NmSystem.Monitoring;
 using NoMercy.Queue.MediaServer.Configuration;
 using NoMercy.Resources;
 using NoMercyQueue;
@@ -28,6 +30,11 @@ public static class ServiceRegistration
     {
         services.AddSingleton<IQueueContext>(_ => new EfQueueContextAdapter());
         services.AddSingleton<IConfigurationStore, MediaConfigurationStore>();
+
+        // TryAdd so this shares the same instance as the encoder's own
+        // default registration (see AddNoMercyEncoder) regardless of call order.
+        services.TryAddSingleton<MediaActivityMonitor>();
+        services.AddSingleton<IWorkerActivityGate, MediaPlaybackActivityGate>();
         services.AddSingleton(sp =>
         {
             EncoderResourceConfig resources = sp.GetRequiredService<
@@ -49,6 +56,7 @@ public static class ServiceRegistration
             NmSystem.Lifecycle.IServerPhaseTracker? phaseTracker =
                 sp.GetService<NmSystem.Lifecycle.IServerPhaseTracker>();
             IResourceBudget? resourceBudget = sp.GetService<IResourceBudget>();
+            IWorkerActivityGate? activityGate = sp.GetService<IWorkerActivityGate>();
             RuntimeServerSettings rs = sp.GetRequiredService<RuntimeServerSettings>();
             QueueConfiguration configuration = new()
             {
@@ -96,6 +104,7 @@ public static class ServiceRegistration
                 phaseTracker,
                 resourceBudget,
                 resourceAwareQueues,
+                activityGate,
                 queueReadyStages
             );
         });

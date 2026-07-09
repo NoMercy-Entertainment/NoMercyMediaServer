@@ -17,6 +17,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 using MimeMapping;
+using NoMercy.NmSystem.Monitoring;
 using NoMercy.Storage;
 
 namespace NoMercy.Api.Middleware;
@@ -60,7 +61,11 @@ public class DynamicStaticFilesMiddleware(
         ".opus",
     };
 
-    public async Task InvokeAsync(HttpContext context, IStorageFactory storageFactory)
+    public async Task InvokeAsync(
+        HttpContext context,
+        IStorageFactory storageFactory,
+        MediaActivityMonitor activityMonitor
+    )
     {
         if (!context.Request.Path.HasValue)
         {
@@ -192,6 +197,11 @@ public class DynamicStaticFilesMiddleware(
                 context.Response.Headers.Location = presigned.ToString();
                 return;
             }
+
+            // Every playlist/segment/subtitle fetch counts as playback activity —
+            // background NAS-heavy jobs (scans/imports/extras) defer while this
+            // keeps landing, see MediaPlaybackActivityGate.
+            activityMonitor.Touch();
 
             // Time-to-first-byte on the server: everything before the stream loop
             // (factory resolve + Exists + presigned probe + Size + OpenRead).
