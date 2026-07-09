@@ -217,7 +217,20 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
                 Allowed = true,
                 Manage = true,
             };
-            mediaContext.Users.Add(testUser);
+            // A second, unrelated-but-allowed identity — impersonated via
+            // HttpClientAuthExtensions.AsSecondaryUser() — so ownership-isolation
+            // tests (e.g. UserPlaylistsControllerTests) exercise a real 404 from
+            // the endpoint's own ownership check, not a 403 from MediaAccess.
+            User secondaryTestUser = new()
+            {
+                Id = TestAuthHandler.SecondaryUserId,
+                Email = TestAuthHandler.SecondaryUserEmail,
+                Name = TestAuthHandler.SecondaryUserName,
+                Owner = false,
+                Allowed = true,
+                Manage = false,
+            };
+            mediaContext.Users.AddRange(testUser, secondaryTestUser);
             mediaContext.SaveChanges();
         }
 

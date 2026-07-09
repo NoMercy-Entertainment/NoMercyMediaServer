@@ -23,6 +23,12 @@ public static class TestAuthDefaults
     public const string AuthenticationScheme = "TestScheme";
     public const string TestAuthHeader = "X-Test-Auth";
     public const string Deny = "deny";
+
+    // Lets a request impersonate a second, distinct identity (see
+    // TestAuthHandler.SecondaryUserId) for ownership-isolation tests, without
+    // giving every other test — which never sends this header — any different
+    // behavior than before.
+    public const string TestUserIdHeader = "X-Test-User-Id";
 }
 
 public class TestAuthHandler(
@@ -34,6 +40,16 @@ public class TestAuthHandler(
     public static Guid DefaultUserId { get; } = Guid.Parse("37d03e60-7b0a-4246-a85b-a5618966a383");
     public static string DefaultUserName { get; } = "Test User";
     public static string DefaultUserEmail { get; } = "test@nomercy.tv";
+
+    // A second, distinct seeded user (see NoMercyApiFactory.SeedMediaData) so
+    // ownership-isolation tests (e.g. "user B gets 404 on user A's playlist")
+    // can impersonate a real, allowed-but-unrelated identity via
+    // TestAuthDefaults.TestUserIdHeader instead of the single fixed identity
+    // every other controller test in this fixture relies on.
+    public static Guid SecondaryUserId { get; } =
+        Guid.Parse("8f2c1a90-4b3d-4e7a-9c1f-6d2e8a5b3c71");
+    public static string SecondaryUserName { get; } = "Secondary Test User";
+    public static string SecondaryUserEmail { get; } = "test-secondary@nomercy.tv";
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
@@ -48,6 +64,19 @@ public class TestAuthHandler(
         Guid userId = DefaultUserId;
         string userName = DefaultUserName;
         string userEmail = DefaultUserEmail;
+
+        if (
+            Request.Headers.TryGetValue(
+                TestAuthDefaults.TestUserIdHeader,
+                out StringValues userIdHeader
+            )
+            && userIdHeader.ToString() == SecondaryUserId.ToString()
+        )
+        {
+            userId = SecondaryUserId;
+            userName = SecondaryUserName;
+            userEmail = SecondaryUserEmail;
+        }
 
         Claim[] claims =
         [

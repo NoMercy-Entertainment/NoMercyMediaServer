@@ -410,6 +410,127 @@ public class UserPlaylistRepositoryTests : IDisposable
 
     #endregion
 
+    #region Playlist metadata — Owns/Get/Update/Delete
+
+    [Fact]
+    public async Task OwnsPlaylistAsync_ReturnsTrue_ForOwner_False_ForOtherUserOrUnknownId()
+    {
+        Guid playlistId = await _repository.CreatePlaylistAsync(SeedConstants.UserId, "Mix");
+
+        Assert.True(await _repository.OwnsPlaylistAsync(playlistId, SeedConstants.UserId));
+        Assert.False(await _repository.OwnsPlaylistAsync(playlistId, OtherUserId));
+        Assert.False(await _repository.OwnsPlaylistAsync(Guid.NewGuid(), SeedConstants.UserId));
+    }
+
+    [Fact]
+    public async Task GetPlaylistAsync_ReturnsMetadata_ForOwner_Null_ForOtherUser()
+    {
+        Guid playlistId = await _repository.CreatePlaylistAsync(
+            SeedConstants.UserId,
+            "Mix",
+            "a description",
+            "/cover.jpg"
+        );
+
+        UserPlaylistDetail? detail = await _repository.GetPlaylistAsync(
+            playlistId,
+            SeedConstants.UserId
+        );
+
+        Assert.NotNull(detail);
+        Assert.Equal(playlistId, detail!.Id);
+        Assert.Equal("Mix", detail.Name);
+        Assert.Equal("a description", detail.Description);
+        Assert.Equal("/cover.jpg", detail.Cover);
+
+        Assert.Null(await _repository.GetPlaylistAsync(playlistId, OtherUserId));
+    }
+
+    [Fact]
+    public async Task UpdatePlaylistAsync_AppliesOnlyProvidedFields()
+    {
+        Guid playlistId = await _repository.CreatePlaylistAsync(
+            SeedConstants.UserId,
+            "Original Name",
+            "Original description",
+            "/original.jpg"
+        );
+
+        // Only Name is provided — Description and Cover must be left untouched.
+        bool updated = await _repository.UpdatePlaylistAsync(
+            playlistId,
+            SeedConstants.UserId,
+            name: "Renamed",
+            description: null,
+            cover: null
+        );
+
+        Assert.True(updated);
+
+        UserPlaylistDetail? detail = await _repository.GetPlaylistAsync(
+            playlistId,
+            SeedConstants.UserId
+        );
+        Assert.NotNull(detail);
+        Assert.Equal("Renamed", detail!.Name);
+        Assert.Equal("Original description", detail.Description);
+        Assert.Equal("/original.jpg", detail.Cover);
+    }
+
+    [Fact]
+    public async Task UpdatePlaylistAsync_ReturnsFalse_WhenCallerDoesNotOwnPlaylist()
+    {
+        Guid playlistId = await _repository.CreatePlaylistAsync(SeedConstants.UserId, "Mix");
+
+        bool updated = await _repository.UpdatePlaylistAsync(
+            playlistId,
+            OtherUserId,
+            name: "Hijacked",
+            description: null,
+            cover: null
+        );
+
+        Assert.False(updated);
+
+        UserPlaylistDetail? detail = await _repository.GetPlaylistAsync(
+            playlistId,
+            SeedConstants.UserId
+        );
+        Assert.Equal("Mix", detail!.Name);
+    }
+
+    [Fact]
+    public async Task DeletePlaylistAsync_RemovesPlaylistAndCascadesItems()
+    {
+        Guid playlistId = await _repository.CreatePlaylistAsync(SeedConstants.UserId, "Mix");
+        PlaylistItem item = (
+            await _repository.AddItemAsync(
+                playlistId,
+                SeedConstants.UserId,
+                PlaylistItemRef.ForMovie(129)
+            )
+        )!;
+
+        bool deleted = await _repository.DeletePlaylistAsync(playlistId, SeedConstants.UserId);
+
+        Assert.True(deleted);
+        Assert.Null(await _context.Playlists.FirstOrDefaultAsync(p => p.Id == playlistId));
+        Assert.Null(await _context.PlaylistItems.FirstOrDefaultAsync(pi => pi.Id == item.Id));
+    }
+
+    [Fact]
+    public async Task DeletePlaylistAsync_ReturnsFalse_WhenCallerDoesNotOwnPlaylist()
+    {
+        Guid playlistId = await _repository.CreatePlaylistAsync(SeedConstants.UserId, "Mix");
+
+        bool deleted = await _repository.DeletePlaylistAsync(playlistId, OtherUserId);
+
+        Assert.False(deleted);
+        Assert.NotNull(await _context.Playlists.FirstOrDefaultAsync(p => p.Id == playlistId));
+    }
+
+    #endregion
+
     /// <summary>
     /// Proves the additive PlaylistItem schema/model change didn't disturb the
     /// existing music-only Playlist/PlaylistTrack read path: a legacy playlist

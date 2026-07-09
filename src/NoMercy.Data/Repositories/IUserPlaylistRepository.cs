@@ -87,10 +87,44 @@ public interface IUserPlaylistRepository
         string country,
         CancellationToken ct = default
     );
+
+    /// <summary>True if the playlist exists and is owned by <paramref name="userId"/>.</summary>
+    Task<bool> OwnsPlaylistAsync(Guid playlistId, Guid userId, CancellationToken ct = default);
+
+    /// <summary>The playlist's own metadata (no items). Returns null if not owned/found.</summary>
+    Task<UserPlaylistDetail?> GetPlaylistAsync(
+        Guid playlistId,
+        Guid userId,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
+    /// Partially updates a playlist the caller owns — only non-null arguments are
+    /// applied, so callers can PATCH a subset of Name/Description/Cover. Returns
+    /// false if the caller doesn't own the playlist.
+    /// </summary>
+    Task<bool> UpdatePlaylistAsync(
+        Guid playlistId,
+        Guid userId,
+        string? name,
+        string? description,
+        string? cover,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
+    /// Deletes a playlist the caller owns. Its PlaylistItems cascade-delete via the
+    /// FK_PlaylistItems_Playlists_PlaylistId ON DELETE CASCADE constraint. Returns
+    /// false if the caller doesn't own the playlist.
+    /// </summary>
+    Task<bool> DeletePlaylistAsync(Guid playlistId, Guid userId, CancellationToken ct = default);
 }
 
 /// <summary>The caller's own playlist, projected to just enough to render a list of cards.</summary>
 public record UserPlaylistSummary(Guid Id, string Name, string? Cover, int ItemCount);
+
+/// <summary>The caller's own playlist metadata, without items.</summary>
+public record UserPlaylistDetail(Guid Id, string Name, string? Description, string? Cover);
 
 /// <summary>
 /// A single, type-safe reference to the one piece of media a new

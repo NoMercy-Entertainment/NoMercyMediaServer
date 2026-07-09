@@ -281,4 +281,87 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
             .OrderBy(pi => pi.Order)
             .ToListAsync(ct);
     }
+
+    public async Task<bool> OwnsPlaylistAsync(
+        Guid playlistId,
+        Guid userId,
+        CancellationToken ct = default
+    )
+    {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
+        return await context.Playlists.AnyAsync(p => p.Id == playlistId && p.UserId == userId, ct);
+    }
+
+    public async Task<UserPlaylistDetail?> GetPlaylistAsync(
+        Guid playlistId,
+        Guid userId,
+        CancellationToken ct = default
+    )
+    {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
+        Playlist? playlist = await context
+            .Playlists.AsNoTracking()
+            .Where(p => p.Id == playlistId && p.UserId == userId)
+            .FirstOrDefaultAsync(ct);
+
+        return playlist is null
+            ? null
+            : new UserPlaylistDetail(
+                playlist.Id,
+                playlist.Name,
+                playlist.Description,
+                playlist.Cover
+            );
+    }
+
+    public async Task<bool> UpdatePlaylistAsync(
+        Guid playlistId,
+        Guid userId,
+        string? name,
+        string? description,
+        string? cover,
+        CancellationToken ct = default
+    )
+    {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
+        Playlist? playlist = await context
+            .Playlists.Where(p => p.Id == playlistId && p.UserId == userId)
+            .FirstOrDefaultAsync(ct);
+
+        if (playlist is null)
+            return false;
+
+        if (name is not null)
+            playlist.Name = name;
+        if (description is not null)
+            playlist.Description = description;
+        if (cover is not null)
+            playlist.Cover = cover;
+
+        await context.SaveChangesAsync(ct);
+
+        return true;
+    }
+
+    public async Task<bool> DeletePlaylistAsync(
+        Guid playlistId,
+        Guid userId,
+        CancellationToken ct = default
+    )
+    {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
+        // PlaylistItems cascade-delete via FK_PlaylistItems_Playlists_PlaylistId
+        // ON DELETE CASCADE (see AddPlaylistItem migration) — the same
+        // ExecuteDeleteAsync-on-Playlists pattern MusicRepository.DeletePlaylistAsync
+        // already relies on for the legacy music playlist's PlaylistTrack children.
+        int deleted = await context
+            .Playlists.Where(p => p.Id == playlistId && p.UserId == userId)
+            .ExecuteDeleteAsync(ct);
+
+        return deleted > 0;
+    }
 }

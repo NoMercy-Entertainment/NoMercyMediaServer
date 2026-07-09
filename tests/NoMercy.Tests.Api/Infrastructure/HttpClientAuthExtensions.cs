@@ -26,4 +26,20 @@ public static class HttpClientAuthExtensions
         client.DefaultRequestHeaders.CacheControl = new() { NoCache = true };
         return client;
     }
+
+    /// <summary>
+    /// Authenticates as TestAuthHandler.SecondaryUserId — a second, distinct,
+    /// allowed seeded user — for ownership-isolation tests against data owned by
+    /// the default test identity.
+    /// </summary>
+    public static HttpClient AsSecondaryUser(this HttpClient client)
+    {
+        client.DefaultRequestHeaders.Remove(TestAuthDefaults.TestAuthHeader);
+        client.DefaultRequestHeaders.Remove(TestAuthDefaults.TestUserIdHeader);
+        client.DefaultRequestHeaders.Add(
+            TestAuthDefaults.TestUserIdHeader,
+            TestAuthHandler.SecondaryUserId.ToString()
+        );
+        return client;
+    }
 }
