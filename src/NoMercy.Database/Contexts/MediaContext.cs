@@ -132,6 +132,21 @@ public class MediaContext : DbContext
             .HasForeignKey(t => t.MetadataId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // PlaylistItem is owned by its Playlist: deleting a user's playlist should
+        // remove its items, not orphan/block on them. No inverse collection nav is
+        // declared on Playlist (kept untouched for the legacy music playlist path),
+        // so this is configured one-directionally via WithMany().
+        // PlaylistItem's other FKs (Movie/Tv/Episode) already cascade automatically
+        // via the cascadeParents rule further below; Track/Special are left at the
+        // default Restrict, matching the existing PlaylistTrack.TrackId/
+        // SpecialItem.SpecialId posture elsewhere in this schema.
+        modelBuilder
+            .Entity<PlaylistItem>()
+            .HasOne(pi => pi.Playlist)
+            .WithMany()
+            .HasForeignKey(pi => pi.PlaylistId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         modelBuilder
             .Model.GetEntityTypes()
             .SelectMany(t => t.GetProperties())
@@ -309,6 +324,7 @@ public class MediaContext : DbContext
         ConfigureColorPaletteIndexes(modelBuilder);
         ConfigureImageForeignKeyIndexes(modelBuilder);
         ConfigureCreditForeignKeyIndexes(modelBuilder);
+        ConfigurePlaylistItemForeignKeyIndexes(modelBuilder);
 
         modelBuilder.Entity<InboxItem>().Property(i => i.CandidatesJson).HasMaxLength(int.MaxValue);
         modelBuilder
@@ -381,6 +397,7 @@ public class MediaContext : DbContext
     public virtual DbSet<Notification> Notifications { get; init; }
     public virtual DbSet<Person> People { get; init; }
     public virtual DbSet<Playlist> Playlists { get; init; }
+    public virtual DbSet<PlaylistItem> PlaylistItems { get; init; }
     public virtual DbSet<Recommendation> Recommendations { get; init; }
     public virtual DbSet<Role> Roles { get; init; }
     public virtual DbSet<RunningTask> RunningTasks { get; init; }
@@ -423,6 +440,31 @@ public class MediaContext : DbContext
     public virtual DbSet<EncodeTaskOutcome> EncodeTaskOutcomes { get; init; }
     public virtual DbSet<IncompleteEncode> IncompleteEncodes { get; init; }
     public virtual DbSet<InboxItem> InboxItems { get; init; }
+
+    // PlaylistItem is polymorphic: exactly one of its five owner-FK columns is set per
+    // row, so every column is NULL on at least 4/5 of the table (the same sparse-FK
+    // shape as ConfigureImageForeignKeyIndexes/ConfigureCreditForeignKeyIndexes below —
+    // a plain index over a mostly-NULL column is non-selective and SQLite falls back to
+    // a full table scan). Filtering each index to its non-NULL rows keeps every kind
+    // lookup a seek regardless of how the playlist's content mix skews.
+    private static void ConfigurePlaylistItemForeignKeyIndexes(ModelBuilder modelBuilder)
+    {
+        (string Column, string Name)[] foreignKeyIndexes =
+        [
+            (nameof(PlaylistItem.MovieId), "IX_PlaylistItems_MovieId"),
+            (nameof(PlaylistItem.TvId), "IX_PlaylistItems_TvId"),
+            (nameof(PlaylistItem.EpisodeId), "IX_PlaylistItems_EpisodeId"),
+            (nameof(PlaylistItem.TrackId), "IX_PlaylistItems_TrackId"),
+            (nameof(PlaylistItem.SpecialId), "IX_PlaylistItems_SpecialId"),
+        ];
+
+        foreach ((string column, string name) in foreignKeyIndexes)
+            modelBuilder
+                .Entity<PlaylistItem>()
+                .HasIndex(column)
+                .HasDatabaseName(name)
+                .HasFilter($"{column} IS NOT NULL");
+    }
 
     private static void ConfigureImageForeignKeyIndexes(ModelBuilder modelBuilder)
     {
