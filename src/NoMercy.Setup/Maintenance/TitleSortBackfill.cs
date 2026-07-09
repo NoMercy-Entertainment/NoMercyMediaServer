@@ -19,42 +19,60 @@ using Serilog.Events;
 namespace NoMercy.Setup.Maintenance;
 
 /// <summary>
-/// Fills the music <c>TitleSort</c> column for rows imported before the column
-/// existed. Runs deferred after boot, processes in batches, and is idempotent:
-/// it only touches rows where <c>TitleSort</c> is still null and always writes a
-/// non-null value, so a finished library is a single no-op query on later boots.
+/// Reconciles the music <c>TitleSort</c> column with the current
+/// <see cref="TitleSortHelper"/> algorithm. Runs deferred after boot in batches
+/// and recomputes each row's sort key, writing only where the stored value has
+/// drifted (a null from a pre-column import, or a value produced by an older
+/// algorithm). This is what propagates a TitleSort rule change to an already
+/// imported library — filling only nulls left every existing row stale. Once a
+/// library matches the current algorithm every batch is a no-op write, so later
+/// boots settle to plain reads.
 /// </summary>
 public static class TitleSortBackfill
 {
     private const int BatchSize = 1000;
 
-    public static async Task RunAsync(CancellationToken ct = default)
+    public static Task RunAsync(CancellationToken ct = default) =>
+        RunAsync(static () => new MediaContext(), ct);
+
+    public static async Task RunAsync(
+        Func<MediaContext> contextFactory,
+        CancellationToken ct = default
+    )
     {
         try
         {
-            int artists = await BackfillArtistsAsync(ct);
-            int albums = await BackfillAlbumsAsync(ct);
+            int artists = await ReconcileArtistsAsync(contextFactory, ct);
+            int albums = await ReconcileAlbumsAsync(contextFactory, ct);
 
             if (artists > 0 || albums > 0)
                 Logger.Setup(
-                    $"TitleSort backfill complete: {artists} artists, {albums} albums",
+                    $"TitleSort reconcile complete: {artists} artists, {albums} albums updated",
                     LogEventLevel.Information
                 );
         }
         catch (Exception e)
         {
-            Logger.Setup($"TitleSort backfill failed: {e.Message}", LogEventLevel.Warning);
+            Logger.Setup($"TitleSort reconcile failed: {e.Message}", LogEventLevel.Warning);
         }
     }
 
-    private static async Task<int> BackfillArtistsAsync(CancellationToken ct)
+    private static async Task<int> ReconcileArtistsAsync(
+        Func<MediaContext> contextFactory,
+        CancellationToken ct
+    )
     {
-        int total = 0;
+        int updated = 0;
+        int offset = 0;
         while (!ct.IsCancellationRequested)
         {
-            await using MediaContext context = new();
+            await using MediaContext context = contextFactory();
+            // Offset paging over a stable Id order: the recompute mutates only
+            // TitleSort, never Id, so rows never shift between pages. Guid cursor
+            // comparison does not translate on SQLite, hence Skip/Take here.
             List<Artist> batch = await context
-                .Artists.Where(artist => artist.TitleSort == null)
+                .Artists.OrderBy(artist => artist.Id)
+                .Skip(offset)
                 .Take(BatchSize)
                 .ToListAsync(ct);
 
@@ -62,23 +80,35 @@ public static class TitleSortBackfill
                 break;
 
             foreach (Artist artist in batch)
-                artist.TitleSort = artist.Name.TitleSort();
+            {
+                string sort = artist.Name.TitleSort();
+                if (artist.TitleSort != sort)
+                {
+                    artist.TitleSort = sort;
+                    updated++;
+                }
+            }
 
             await context.SaveChangesAsync(ct);
-            total += batch.Count;
+            offset += batch.Count;
         }
 
-        return total;
+        return updated;
     }
 
-    private static async Task<int> BackfillAlbumsAsync(CancellationToken ct)
+    private static async Task<int> ReconcileAlbumsAsync(
+        Func<MediaContext> contextFactory,
+        CancellationToken ct
+    )
     {
-        int total = 0;
+        int updated = 0;
+        int offset = 0;
         while (!ct.IsCancellationRequested)
         {
-            await using MediaContext context = new();
+            await using MediaContext context = contextFactory();
             List<Album> batch = await context
-                .Albums.Where(album => album.TitleSort == null)
+                .Albums.OrderBy(album => album.Id)
+                .Skip(offset)
                 .Take(BatchSize)
                 .ToListAsync(ct);
 
@@ -86,12 +116,19 @@ public static class TitleSortBackfill
                 break;
 
             foreach (Album album in batch)
-                album.TitleSort = album.Name.TitleSort();
+            {
+                string sort = album.Name.TitleSort();
+                if (album.TitleSort != sort)
+                {
+                    album.TitleSort = sort;
+                    updated++;
+                }
+            }
 
             await context.SaveChangesAsync(ct);
-            total += batch.Count;
+            offset += batch.Count;
         }
 
-        return total;
+        return updated;
     }
 }
