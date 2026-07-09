@@ -667,6 +667,20 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             );
     }
 
+    public async Task<int> UpdateVideoFileSubtitlesAsync(
+        Ulid videoFileId,
+        string subtitlesJson,
+        CancellationToken ct = default
+    )
+    {
+        return await context
+            .VideoFiles.Where(vf => vf.Id == videoFileId)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(vf => vf.Subtitles, subtitlesJson),
+                ct
+            );
+    }
+
     public async Task DeleteVideoFilesAndMetadataByMovieIdAsync(int movieId)
     {
         List<Ulid> metadataIds = await context

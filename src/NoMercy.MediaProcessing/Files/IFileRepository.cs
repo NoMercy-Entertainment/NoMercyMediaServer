@@ -33,6 +33,11 @@ public interface IFileRepository
         string newHostFolder,
         string newFilename
     );
+    Task<int> UpdateVideoFileSubtitlesAsync(
+        Ulid videoFileId,
+        string subtitlesJson,
+        CancellationToken ct = default
+    );
     Task DeleteVideoFilesAndMetadataByMovieIdAsync(int movieId);
     Task DeleteVideoFilesAndMetadataByTvIdAsync(int tvId);
 
