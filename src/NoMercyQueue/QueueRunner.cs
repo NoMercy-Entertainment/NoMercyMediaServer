@@ -50,7 +50,11 @@ public class QueueRunner
     private readonly NoMercy.NmSystem.Lifecycle.IServerPhaseTracker? _phaseTracker;
     private readonly IResourceBudget? _resourceBudget;
     private readonly IReadOnlySet<string> _resourceAwareQueues;
-    private readonly IReadOnlyDictionary<string, NoMercy.NmSystem.Lifecycle.BootStage> _queueReadyStages;
+    private readonly IWorkerActivityGate? _activityGate;
+    private readonly IReadOnlyDictionary<
+        string,
+        NoMercy.NmSystem.Lifecycle.BootStage
+    > _queueReadyStages;
 
     /// <summary>
     /// Static accessor for non-DI code paths (jobs, logic classes).
@@ -74,6 +78,7 @@ public class QueueRunner
         NoMercy.NmSystem.Lifecycle.IServerPhaseTracker? phaseTracker = null,
         IResourceBudget? resourceBudget = null,
         IReadOnlySet<string>? resourceAwareQueues = null,
+        IWorkerActivityGate? activityGate = null,
         IReadOnlyDictionary<string, NoMercy.NmSystem.Lifecycle.BootStage>? queueReadyStages = null
     )
     {
@@ -82,6 +87,7 @@ public class QueueRunner
         _phaseTracker = phaseTracker;
         _resourceBudget = resourceBudget;
         _resourceAwareQueues = resourceAwareQueues ?? new HashSet<string>();
+        _activityGate = activityGate;
         _queueReadyStages =
             queueReadyStages ?? new Dictionary<string, NoMercy.NmSystem.Lifecycle.BootStage>();
         _logger = loggerFactory.CreateLogger<QueueRunner>();
@@ -206,6 +212,7 @@ public class QueueRunner
             phaseTracker: _phaseTracker,
             resourceBudget: budget,
             resourceAwareQueues: _resourceAwareQueues,
+            activityGate: _activityGate,
             readyStage: _queueReadyStages.TryGetValue(
                 name,
                 out NoMercy.NmSystem.Lifecycle.BootStage stage
@@ -351,13 +358,17 @@ public class QueueRunner
         // queues, which also wait on Hardware detection) reports as paused while
         // that extra stage is still pending. This surfaces the startup hold in
         // the dashboard without persisting it as a user-initiated pause.
-        if (_queueReadyStages.TryGetValue(name, out NoMercy.NmSystem.Lifecycle.BootStage readyStage))
+        if (
+            _queueReadyStages.TryGetValue(name, out NoMercy.NmSystem.Lifecycle.BootStage readyStage)
+        )
         {
             NoMercy.NmSystem.Lifecycle.BootStage extra =
                 readyStage & ~NoMercy.NmSystem.Lifecycle.BootStage.All;
-            if (extra != NoMercy.NmSystem.Lifecycle.BootStage.None
+            if (
+                extra != NoMercy.NmSystem.Lifecycle.BootStage.None
                 && _phaseTracker is { } pt
-                && !pt.IsComplete(extra))
+                && !pt.IsComplete(extra)
+            )
                 return true;
         }
 

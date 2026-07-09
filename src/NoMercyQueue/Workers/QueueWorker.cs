@@ -30,6 +30,7 @@ public class QueueWorker(
     IServerPhaseTracker? phaseTracker = null,
     IResourceBudget? resourceBudget = null,
     IReadOnlySet<string>? resourceAwareQueues = null,
+    IWorkerActivityGate? activityGate = null,
     BootStage readyStage = BootStage.All
 )
 {
@@ -90,6 +91,20 @@ public class QueueWorker(
 
         while (_isRunning && !stopToken.IsCancellationRequested)
         {
+            // Playback-activity gate: while a user is actively streaming, defer
+            // reserving new jobs for NAS-read-heavy queues (library/file/import/
+            // extras) so segment serves don't compete with background scans for
+            // the same NFS mount. Nothing is reserved or released here — this
+            // runs BEFORE ReserveJob, so it never disturbs the resource-budget
+            // gate or dequeue ordering below.
+            if (activityGate is not null && activityGate.ShouldDefer(name))
+            {
+                if (stopToken.WaitHandle.WaitOne(activityGate.DeferInterval))
+                    break;
+
+                continue;
+            }
+
             QueueJobModel? job = queue.ReserveJob(name, _currentJobId);
 
             if (job != null)
