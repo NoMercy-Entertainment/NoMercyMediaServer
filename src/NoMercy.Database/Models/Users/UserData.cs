@@ -77,4 +77,7 @@ public class UserData : Timestamps
     [JsonProperty("video_file_id")]
     public Ulid VideoFileId { get; set; }
     public VideoFile VideoFile { get; set; } = null!;
+
+    [JsonProperty("removed_from_continue_watching")]
+    public bool RemovedFromContinueWatching { get; set; }
 }

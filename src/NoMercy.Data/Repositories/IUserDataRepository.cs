@@ -32,4 +32,9 @@ public interface IUserDataRepository
     );
 
     Task<int> DeleteUserDataAsync(List<UserData> userData, CancellationToken ct = default);
+
+    Task<int> HideFromContinueWatchingAsync(
+        IEnumerable<UserData> userData,
+        CancellationToken ct = default
+    );
 }

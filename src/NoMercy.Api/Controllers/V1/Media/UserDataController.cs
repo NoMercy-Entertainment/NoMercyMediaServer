@@ -99,7 +99,7 @@ public class UserDataController(
 
         logger.LogInformation("{UserData}", userData);
 
-        await userDataRepository.DeleteUserDataAsync(userData);
+        await userDataRepository.HideFromContinueWatchingAsync(userData);
 
         await eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["continue-watching"] });
 

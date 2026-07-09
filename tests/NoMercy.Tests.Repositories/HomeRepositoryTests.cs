@@ -197,6 +197,33 @@ public class HomeRepositoryTests : IDisposable
         Assert.Empty(result);
     }
 
+    [Fact]
+    public async Task GetContinueWatchingAsync_ExcludesRowsHiddenFromContinueWatching()
+    {
+        // Hide both movie 129 rows the way UserDataController.RemoveContinue does —
+        // the rows must stay in the table, only disappear from the carousel query.
+        List<UserData> movieRows = await _context
+            .UserData.Where(ud => ud.MovieId == 129)
+            .ToListAsync();
+        foreach (UserData row in movieRows)
+            row.RemovedFromContinueWatching = true;
+        await _context.SaveChangesAsync();
+
+        HashSet<UserData> result = await _repository.GetContinueWatchingAsync(
+            SeedConstants.UserId,
+            "en",
+            "US"
+        );
+
+        Assert.Single(result);
+        Assert.DoesNotContain(result, ud => ud.MovieId == 129);
+        Assert.Contains(result, ud => ud.TvId == 1399);
+
+        // The hidden rows must still exist for the recommendation engine.
+        int survivingRows = await _context.UserData.CountAsync(ud => ud.MovieId == 129);
+        Assert.Equal(2, survivingRows);
+    }
+
     public void Dispose()
     {
         _context.Database.EnsureDeleted();
