@@ -15,7 +15,7 @@ using NoMercy.Data.Repositories;
 namespace NoMercy.Api.DTOs.Playlists;
 
 /// <summary>
-/// One of the caller's user-created mixed-media playlists, as a summary card
+/// One of the caller's user-created, video-only playlists, as a summary card
 /// (GET /api/v1/playlists and the POST /api/v1/playlists create response).
 /// </summary>
 public record UserPlaylistSummaryDto

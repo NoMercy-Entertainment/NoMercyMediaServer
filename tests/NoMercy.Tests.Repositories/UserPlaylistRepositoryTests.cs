@@ -22,12 +22,14 @@ using NoMercy.Tests.Repositories.Infrastructure;
 namespace NoMercy.Tests.Repositories;
 
 /// <summary>
-/// Coverage for the new mixed-media user playlist slice (task 10 foundation):
-/// PlaylistItem schema + UserPlaylistRepository. Deliberately shares the same
-/// seeded DB shape as the existing music playlist tests to prove this addition
-/// is additive — <see cref="ExistingMusicPlaylist_PlaylistTrackPath_StillWorks"/>
-/// exercises the untouched MusicRepository.Playlists.cs read path against a
-/// database that also contains PlaylistItem rows.
+/// Coverage for the user-created, VIDEO-ONLY playlist slice: the UserPlaylist
+/// container entity + PlaylistItem schema + UserPlaylistRepository. Backed by
+/// its own UserPlaylists table — entirely separate from, and never touching,
+/// the music-only Playlist/PlaylistTrack tables/read path owned by
+/// MusicRepository.Playlists.cs. <see cref="ExistingMusicPlaylist_PlaylistTrackPath_StillWorks"/>
+/// proves both directions of that separation: the legacy music playlist round
+/// trips correctly through MusicRepository, and it never surfaces through
+/// UserPlaylistRepository.
 /// </summary>
 [Trait("Category", "Unit")]
 public class UserPlaylistRepositoryTests : IDisposable
@@ -87,23 +89,25 @@ public class UserPlaylistRepositoryTests : IDisposable
     {
         Guid playlistId = await _repository.CreatePlaylistAsync(
             SeedConstants.UserId,
-            "My Mixed Playlist",
+            "My Video Playlist",
             "a description",
             "/cover.jpg"
         );
 
-        Playlist? saved = await _context.Playlists.FirstOrDefaultAsync(p => p.Id == playlistId);
+        UserPlaylist? saved = await _context.UserPlaylists.FirstOrDefaultAsync(p =>
+            p.Id == playlistId
+        );
         Assert.NotNull(saved);
-        Assert.Equal("My Mixed Playlist", saved!.Name);
+        Assert.Equal("My Video Playlist", saved!.Name);
         Assert.Equal("a description", saved.Description);
         Assert.Equal("/cover.jpg", saved.Cover);
         Assert.Equal(SeedConstants.UserId, saved.UserId);
     }
 
     [Fact]
-    public async Task AddItemAsync_MovieEpisodeAndTrack_AreReturnedInOrder_WithCorrectKind()
+    public async Task AddItemAsync_MovieEpisodeAndSpecial_AreReturnedInOrder_WithCorrectKind()
     {
-        Track track = SeedTrack("Do I Wanna Know?");
+        Special special = SeedSpecial();
 
         Guid playlistId = await _repository.CreatePlaylistAsync(SeedConstants.UserId, "Mix");
 
@@ -117,18 +121,18 @@ public class UserPlaylistRepositoryTests : IDisposable
             SeedConstants.UserId,
             PlaylistItemRef.ForEpisode(62085)
         );
-        PlaylistItem? trackItem = await _repository.AddItemAsync(
+        PlaylistItem? specialItem = await _repository.AddItemAsync(
             playlistId,
             SeedConstants.UserId,
-            PlaylistItemRef.ForTrack(track.Id)
+            PlaylistItemRef.ForSpecial(special.Id)
         );
 
         Assert.NotNull(movieItem);
         Assert.NotNull(episodeItem);
-        Assert.NotNull(trackItem);
+        Assert.NotNull(specialItem);
         Assert.Equal(0, movieItem!.Order);
         Assert.Equal(1, episodeItem!.Order);
-        Assert.Equal(2, trackItem!.Order);
+        Assert.Equal(2, specialItem!.Order);
 
         List<PlaylistItem>? items = await _repository.GetPlaylistItemsAsync(
             playlistId,
@@ -149,9 +153,9 @@ public class UserPlaylistRepositoryTests : IDisposable
         Assert.Equal("Pilot", items[1].Episode?.Title);
         Assert.Equal(1399, items[1].Episode?.Tv.Id);
 
-        Assert.Equal(PlaylistItemKind.Track, items[2].Kind);
-        Assert.Equal(track.Id, items[2].TrackId);
-        Assert.Equal("Do I Wanna Know?", items[2].Track?.Name);
+        Assert.Equal(PlaylistItemKind.Special, items[2].Kind);
+        Assert.Equal(special.Id, items[2].SpecialId);
+        Assert.Equal("Test Special", items[2].Special?.Title);
     }
 
     [Fact]
@@ -212,7 +216,7 @@ public class UserPlaylistRepositoryTests : IDisposable
 
         Assert.Null(result);
         Assert.Empty(
-            await _context.PlaylistItems.Where(pi => pi.PlaylistId == playlistId).ToListAsync()
+            await _context.PlaylistItems.Where(pi => pi.UserPlaylistId == playlistId).ToListAsync()
         );
     }
 
@@ -514,7 +518,7 @@ public class UserPlaylistRepositoryTests : IDisposable
         bool deleted = await _repository.DeletePlaylistAsync(playlistId, SeedConstants.UserId);
 
         Assert.True(deleted);
-        Assert.Null(await _context.Playlists.FirstOrDefaultAsync(p => p.Id == playlistId));
+        Assert.Null(await _context.UserPlaylists.FirstOrDefaultAsync(p => p.Id == playlistId));
         Assert.Null(await _context.PlaylistItems.FirstOrDefaultAsync(pi => pi.Id == item.Id));
     }
 
@@ -526,16 +530,18 @@ public class UserPlaylistRepositoryTests : IDisposable
         bool deleted = await _repository.DeletePlaylistAsync(playlistId, OtherUserId);
 
         Assert.False(deleted);
-        Assert.NotNull(await _context.Playlists.FirstOrDefaultAsync(p => p.Id == playlistId));
+        Assert.NotNull(await _context.UserPlaylists.FirstOrDefaultAsync(p => p.Id == playlistId));
     }
 
     #endregion
 
     /// <summary>
-    /// Proves the additive PlaylistItem schema/model change didn't disturb the
-    /// existing music-only Playlist/PlaylistTrack read path: a legacy playlist
-    /// created and read purely through PlaylistTrack (never touching
-    /// PlaylistItem) still round-trips correctly via MusicRepository.
+    /// Proves the video-only UserPlaylist/PlaylistItem schema shares zero tables
+    /// with the existing music-only Playlist/PlaylistTrack read path: a legacy
+    /// music playlist created and read purely through PlaylistTrack still
+    /// round-trips correctly via MusicRepository (direction one), and it never
+    /// surfaces through UserPlaylistRepository — the video-only endpoint's own
+    /// user (direction two, the leak the original implementation had).
     /// </summary>
     [Fact]
     public async Task ExistingMusicPlaylist_PlaylistTrackPath_StillWorks()
@@ -563,12 +569,12 @@ public class UserPlaylistRepositoryTests : IDisposable
         Assert.Single(tracks);
         Assert.Equal("Legacy Track", tracks[0].Track.Name);
 
-        // And it carries zero PlaylistItem rows — the two item models are independent.
-        Assert.Empty(
-            await _context
-                .PlaylistItems.Where(pi => pi.PlaylistId == legacyPlaylist.Id)
-                .ToListAsync()
-        );
+        // Direction two: the same user's video-only playlist list is empty — the
+        // music playlist never appears there, because the two features share no
+        // table (UserPlaylists is a distinct table from Playlists, and there is
+        // no UserPlaylist row with the music playlist's id).
+        Assert.Empty(await _repository.GetUserPlaylistsAsync(SeedConstants.UserId));
+        Assert.False(await _context.UserPlaylists.AnyAsync(p => p.Id == legacyPlaylist.Id));
     }
 
     public void Dispose()

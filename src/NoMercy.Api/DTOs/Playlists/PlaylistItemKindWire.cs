@@ -16,11 +16,12 @@ namespace NoMercy.Api.DTOs.Playlists;
 /// <summary>
 /// Wire-format (lowercase, API-contract) mapping for <see cref="PlaylistItemKind"/>.
 /// Kept separate from the enum's own name so the JSON contract ("movie", "tv",
-/// "episode", "track", "special") never silently changes just because a C#
-/// member gets renamed, and so it never collides with the unrelated "type"
+/// "episode", "special") never silently changes just because a C# member gets
+/// renamed, and so it never collides with the unrelated "type"
 /// route-discriminator strings NmCardDto/CardData already use (which, for
 /// specials, is the legacy plural "specials" — a different field for a
-/// different purpose).
+/// different purpose). Deliberately VIDEO-ONLY — there is no "track" kind;
+/// music has its own separate playlist feature this DTO never touches.
 /// </summary>
 public static class PlaylistItemKindWire
 {
@@ -30,7 +31,6 @@ public static class PlaylistItemKindWire
             PlaylistItemKind.Movie => "movie",
             PlaylistItemKind.Tv => "tv",
             PlaylistItemKind.Episode => "episode",
-            PlaylistItemKind.Track => "track",
             PlaylistItemKind.Special => "special",
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
         };
@@ -47,9 +47,6 @@ public static class PlaylistItemKindWire
                 return true;
             case "episode":
                 kind = PlaylistItemKind.Episode;
-                return true;
-            case "track":
-                kind = PlaylistItemKind.Track;
                 return true;
             case "special":
                 kind = PlaylistItemKind.Special;

@@ -14,7 +14,7 @@ using Newtonsoft.Json;
 namespace NoMercy.Api.DTOs.Playlists;
 
 /// <summary>
-/// A single user-created mixed-media playlist with its ordered items
+/// A single user-created, video-only playlist with its ordered items
 /// (GET /api/v1/playlists/{id}).
 /// </summary>
 public record UserPlaylistDetailDto

@@ -12,7 +12,6 @@
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
-using NoMercy.Database.Models.Music;
 using NoMercy.Database.Models.Playlists;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.NmSystem.Extensions;
@@ -20,17 +19,15 @@ using NoMercy.NmSystem.Extensions;
 namespace NoMercy.Api.DTOs.Playlists;
 
 /// <summary>
-/// One entry of a mixed-media playlist, rendered as a single unified card shape
-/// regardless of <see cref="Kind"/>. Deliberately NOT a reuse of NmCardDto/
-/// TrackRowData: movie/tv/episode/special share NmCardDto's shape closely, but
-/// track needs album/artist-derived cover art and a differently-formatted
-/// duration, and episode has no NmCardDto constructor at all. A unified DTO
-/// lets a client render one mixed list (map over items switching on `kind`)
-/// and route each item to the right player from a single field:
-/// - <see cref="PlayLink"/> under "/music/..." → MusicHub / music player.
-/// - <see cref="PlayLink"/> anywhere else (or null → not playable yet) → VideoHub
-///   / video player, matching the "/{type}/{id}/watch" convention NmCardDto and
-///   CardData already use.
+/// One entry of a VIDEO-ONLY playlist, rendered as a single unified card shape
+/// regardless of <see cref="Kind"/>. Deliberately NOT a reuse of NmCardDto:
+/// movie/tv/episode/special share NmCardDto's shape closely, but episode has
+/// no NmCardDto constructor at all. A unified DTO lets a client render one
+/// list (map over items switching on `kind`) and route every item to the
+/// video player from a single field: <see cref="PlayLink"/> (or null → not
+/// playable yet) always resolves to a "/{type}/{id}/watch" route, matching
+/// the convention NmCardDto and CardData already use. There is no music
+/// branch — this feature never contains a track.
 /// </summary>
 public record PlaylistItemCardDto
 {
@@ -38,11 +35,11 @@ public record PlaylistItemCardDto
     [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
-    /// <summary>movie | tv | episode | track | special.</summary>
+    /// <summary>movie | tv | episode | special.</summary>
     [JsonProperty("kind")]
     public string Kind { get; set; } = string.Empty;
 
-    /// <summary>The underlying Movie/Tv/Episode/Track/Special id, stringified (types vary by kind).</summary>
+    /// <summary>The underlying Movie/Tv/Episode/Special id, stringified (types vary by kind).</summary>
     [JsonProperty("media_id")]
     public string MediaId { get; set; } = string.Empty;
 
@@ -61,9 +58,6 @@ public record PlaylistItemCardDto
     [JsonProperty("backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty("cover")]
-    public string? Cover { get; set; }
-
     [JsonProperty("color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
@@ -74,7 +68,7 @@ public record PlaylistItemCardDto
     [JsonProperty("duration")]
     public int? Duration { get; set; }
 
-    /// <summary>The item's detail-page link (e.g. /movie/123, /tv/1399, /music/tracks/{id}).</summary>
+    /// <summary>The item's detail-page link (e.g. /movie/123, /tv/1399).</summary>
     [JsonProperty("link")]
     public Uri Link { get; set; } = null!;
 
@@ -88,7 +82,6 @@ public record PlaylistItemCardDto
             PlaylistItemKind.Movie => FromMovie(item),
             PlaylistItemKind.Tv => FromTv(item),
             PlaylistItemKind.Episode => FromEpisode(item),
-            PlaylistItemKind.Track => FromTrack(item),
             PlaylistItemKind.Special => FromSpecial(item),
             _ => throw new ArgumentOutOfRangeException(
                 nameof(item),
@@ -181,36 +174,6 @@ public record PlaylistItemCardDto
                     UriKind.Relative
                 )
                 : null,
-        };
-    }
-
-    private static PlaylistItemCardDto FromTrack(PlaylistItem item)
-    {
-        Track track =
-            item.Track ?? throw new InvalidOperationException("PlaylistItem.Track not loaded");
-        string? cover =
-            track.AlbumTrack.FirstOrDefault()?.Album.Cover
-            ?? track.ArtistTrack.FirstOrDefault()?.Artist.Cover;
-
-        // A track's own detail route doubles as its play trigger — the web app
-        // treats a click on a /music/tracks/{id} link as "start playback", the
-        // same convention TrackRowData/MusicCardData already rely on.
-        Uri trackLink = new($"/music/tracks/{track.Id}", UriKind.Relative);
-
-        return new()
-        {
-            Id = item.Id.ToString(),
-            Kind = PlaylistItemKind.Track.ToWireString(),
-            MediaId = track.Id.ToString(),
-            Order = item.Order,
-            Title = track.Name,
-            Cover = cover is not null ? $"/images/music{cover}" : null,
-            ColorPalette =
-                track.AlbumTrack.FirstOrDefault()?.Album.ColorPalette
-                ?? track.ArtistTrack.FirstOrDefault()?.Artist.ColorPalette,
-            Duration = track.Duration.ToSeconds(),
-            Link = trackLink,
-            PlayLink = trackLink,
         };
     }
 

@@ -19,10 +19,17 @@ using Xunit;
 namespace NoMercy.Tests.Api.Playlists;
 
 /// <summary>
-/// Covers api/v1/playlists — user-created, ordered, mixed-media playlists.
-/// Movie 129 ("Spirited Away") and episode 62085 ("Pilot", Breaking Bad) are
-/// pre-seeded WITH video files (playable); track TrackId1 is a seeded music
-/// track. See NoMercyApiFactory.SeedMediaData.
+/// Covers api/v1/playlists — user-created, ordered, VIDEO-ONLY playlists
+/// (movies + tv shows + episodes + specials — never music tracks). Movie 129
+/// ("Spirited Away") and episode 62085 ("Pilot", Breaking Bad) are pre-seeded
+/// WITH video files (playable); special NoMercyApiFactory.FavoriteSpecialId is
+/// a seeded special. See NoMercyApiFactory.SeedMediaData.
+///
+/// <see cref="Index_DoesNotReturnMusicPlaylist"/> is the leak-regression test:
+/// NoMercyApiFactory.PlaylistId1 is a music playlist owned by the same default
+/// test user this fixture's "_authed" client represents — proving it never
+/// appears here is what distinguishes this slice's separate-container design
+/// from the original (rejected) design that reused the music Playlist table.
 /// </summary>
 [Trait("Category", "Playlists")]
 public class UserPlaylistsControllerTests : IClassFixture<NoMercyApiFactory>
@@ -92,6 +99,35 @@ public class UserPlaylistsControllerTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Fact]
+    public async Task Index_DoesNotReturnMusicPlaylist()
+    {
+        // NoMercyApiFactory.PlaylistId1 is a MUSIC playlist owned by the very
+        // same user this client authenticates as — it must never surface on
+        // the video-only endpoint, proving the two features share no table.
+        HttpResponseMessage response = await _authed.GetAsync(BaseUrl);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using JsonDocument doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("data")
+            .EnumerateArray()
+            .Select(p => p.GetProperty("id").GetString())
+            .Should()
+            .NotContain(NoMercyApiFactory.PlaylistId1.ToString());
+    }
+
+    [Fact]
+    public async Task Show_ReturnsNotFound_ForMusicPlaylistId()
+    {
+        // Even knowing the music playlist's id, it must 404 on this endpoint —
+        // it lives in a different table this controller never queries.
+        HttpResponseMessage response = await _authed.GetAsync(
+            $"{BaseUrl}/{NoMercyApiFactory.PlaylistId1}"
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
     public async Task Create_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await PostAsync(
@@ -128,6 +164,22 @@ public class UserPlaylistsControllerTests : IClassFixture<NoMercyApiFactory>
             _authed,
             $"{BaseUrl}/{playlistId}/items",
             new { kind = "song", media_id = "129" }
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task AddItem_ReturnsBadRequest_ForTrackKind()
+    {
+        // "track" was a valid kind before this feature was made video-only —
+        // it must now be rejected the same as any other unknown kind.
+        Guid playlistId = await CreatePlaylistAsync("Track Kind Rejected Playlist");
+
+        HttpResponseMessage response = await PostAsync(
+            _authed,
+            $"{BaseUrl}/{playlistId}/items",
+            new { kind = "track", media_id = NoMercyApiFactory.TrackId1.ToString() }
         );
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -176,9 +228,9 @@ public class UserPlaylistsControllerTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task FullLifecycle_CreateAddItemsGetEditReorderRemoveDelete()
     {
-        Guid playlistId = await CreatePlaylistAsync("Mixed Media Test Playlist");
+        Guid playlistId = await CreatePlaylistAsync("Video Playlist Test");
 
-        // Add movie (playable), episode (playable), track — in that order.
+        // Add movie (playable), episode (playable), special — in that order.
         (
             await PostAsync(
                 _authed,
@@ -203,7 +255,7 @@ public class UserPlaylistsControllerTests : IClassFixture<NoMercyApiFactory>
             await PostAsync(
                 _authed,
                 $"{BaseUrl}/{playlistId}/items",
-                new { kind = "track", media_id = NoMercyApiFactory.TrackId1.ToString() }
+                new { kind = "special", media_id = NoMercyApiFactory.FavoriteSpecialId.ToString() }
             )
         )
             .StatusCode.Should()
@@ -222,7 +274,7 @@ public class UserPlaylistsControllerTests : IClassFixture<NoMercyApiFactory>
         items
             .Select(i => i.GetProperty("kind").GetString())
             .Should()
-            .Equal("movie", "episode", "track");
+            .Equal("movie", "episode", "special");
 
         JsonElement movieItem = items[0];
         movieItem.GetProperty("media_id").GetString().Should().Be("129");
@@ -237,32 +289,28 @@ public class UserPlaylistsControllerTests : IClassFixture<NoMercyApiFactory>
             .Should()
             .Be("/tv/1399/watch?season=1&episode=1");
 
-        JsonElement trackItem = items[2];
-        trackItem
+        JsonElement specialItem = items[2];
+        specialItem
             .GetProperty("media_id")
             .GetString()
             .Should()
-            .Be(NoMercyApiFactory.TrackId1.ToString());
-        trackItem
+            .Be(NoMercyApiFactory.FavoriteSpecialId.ToString());
+        specialItem.GetProperty("title").GetString().Should().Be("Test Special");
+        specialItem
             .GetProperty("play_link")
             .GetString()
             .Should()
-            .Be($"/music/tracks/{NoMercyApiFactory.TrackId1}");
-        trackItem
-            .GetProperty("link")
-            .GetString()
-            .Should()
-            .Be(trackItem.GetProperty("play_link").GetString());
+            .Be($"/specials/{NoMercyApiFactory.FavoriteSpecialId}/watch");
 
         string movieItemId = movieItem.GetProperty("id").GetString()!;
         string episodeItemId = episodeItem.GetProperty("id").GetString()!;
-        string trackItemId = trackItem.GetProperty("id").GetString()!;
+        string specialItemId = specialItem.GetProperty("id").GetString()!;
 
         // Edit metadata (partial update — only name).
         HttpResponseMessage edit = await PatchAsync(
             _authed,
             $"{BaseUrl}/{playlistId}",
-            new { name = "Renamed Mixed Playlist" }
+            new { name = "Renamed Video Playlist" }
         );
         edit.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -275,13 +323,13 @@ public class UserPlaylistsControllerTests : IClassFixture<NoMercyApiFactory>
             .GetProperty("name")
             .GetString()
             .Should()
-            .Be("Renamed Mixed Playlist");
+            .Be("Renamed Video Playlist");
 
-        // Reorder: track, episode, movie.
+        // Reorder: special, episode, movie.
         HttpResponseMessage reorder = await PutAsync(
             _authed,
             $"{BaseUrl}/{playlistId}/items/order",
-            new { ordered_item_ids = new[] { trackItemId, episodeItemId, movieItemId } }
+            new { ordered_item_ids = new[] { specialItemId, episodeItemId, movieItemId } }
         );
         reorder.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -295,11 +343,11 @@ public class UserPlaylistsControllerTests : IClassFixture<NoMercyApiFactory>
             .EnumerateArray()
             .Select(i => i.GetProperty("kind").GetString())
             .Should()
-            .Equal("track", "episode", "movie");
+            .Equal("special", "episode", "movie");
 
-        // Remove the track item.
+        // Remove the special item.
         HttpResponseMessage remove = await _authed.DeleteAsync(
-            $"{BaseUrl}/{playlistId}/items/{trackItemId}"
+            $"{BaseUrl}/{playlistId}/items/{specialItemId}"
         );
         remove.StatusCode.Should().Be(HttpStatusCode.OK);
 

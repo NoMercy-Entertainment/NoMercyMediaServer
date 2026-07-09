@@ -14,13 +14,14 @@ using NoMercy.Database.Models.Playlists;
 namespace NoMercy.Data.Repositories;
 
 /// <summary>
-/// User-created, ordered, mixed-media playlists (movies + tv episodes + music
-/// tracks + specials in one list). Reuses the existing <c>Playlist</c> table as
-/// the container and attaches <see cref="PlaylistItem"/> children — entirely
-/// additive alongside the legacy music-only Playlist/PlaylistTrack read path
-/// owned by MusicRepository.Playlists.cs, which this repository never touches.
-/// Every method enforces playlist ownership (playlist.UserId == the caller's
-/// userId) before reading or mutating anything.
+/// User-created, ordered, VIDEO-ONLY playlists (movies + tv shows + episodes +
+/// specials). Backed by its own <see cref="UserPlaylist"/> container
+/// entity/table and attaches <see cref="PlaylistItem"/> children — entirely
+/// separate from, and never touching, the music-only Playlist/PlaylistTrack
+/// read path owned by MusicRepository.Playlists.cs. No table is shared between
+/// the two features. Every method enforces playlist ownership
+/// (playlist.UserId == the caller's userId) before reading or mutating
+/// anything.
 /// </summary>
 public interface IUserPlaylistRepository
 {
@@ -77,7 +78,7 @@ public interface IUserPlaylistRepository
     /// <summary>
     /// The playlist's items in order, hydrated enough to render a card and start
     /// playback (title/poster/backdrop fields on the linked Movie/Tv/Episode/
-    /// Track/Special, plus video files for playable kinds). Returns null if the
+    /// Special, plus video files for playable kinds). Returns null if the
     /// caller doesn't own the playlist (vs an empty list for an owned, empty one).
     /// </summary>
     Task<List<PlaylistItem>?> GetPlaylistItemsAsync(
@@ -114,8 +115,8 @@ public interface IUserPlaylistRepository
 
     /// <summary>
     /// Deletes a playlist the caller owns. Its PlaylistItems cascade-delete via the
-    /// FK_PlaylistItems_Playlists_PlaylistId ON DELETE CASCADE constraint. Returns
-    /// false if the caller doesn't own the playlist.
+    /// FK_PlaylistItems_UserPlaylists_UserPlaylistId ON DELETE CASCADE constraint.
+    /// Returns false if the caller doesn't own the playlist.
     /// </summary>
     Task<bool> DeletePlaylistAsync(Guid playlistId, Guid userId, CancellationToken ct = default);
 }
@@ -139,7 +140,6 @@ public readonly record struct PlaylistItemRef
     public int? MovieId { get; }
     public int? TvId { get; }
     public int? EpisodeId { get; }
-    public Guid? TrackId { get; }
     public Ulid? SpecialId { get; }
 
     private PlaylistItemRef(
@@ -147,7 +147,6 @@ public readonly record struct PlaylistItemRef
         int? movieId = null,
         int? tvId = null,
         int? episodeId = null,
-        Guid? trackId = null,
         Ulid? specialId = null
     )
     {
@@ -155,7 +154,6 @@ public readonly record struct PlaylistItemRef
         MovieId = movieId;
         TvId = tvId;
         EpisodeId = episodeId;
-        TrackId = trackId;
         SpecialId = specialId;
     }
 
@@ -166,9 +164,6 @@ public readonly record struct PlaylistItemRef
 
     public static PlaylistItemRef ForEpisode(int episodeId) =>
         new(PlaylistItemKind.Episode, episodeId: episodeId);
-
-    public static PlaylistItemRef ForTrack(Guid trackId) =>
-        new(PlaylistItemKind.Track, trackId: trackId);
 
     public static PlaylistItemRef ForSpecial(Ulid specialId) =>
         new(PlaylistItemKind.Special, specialId: specialId);

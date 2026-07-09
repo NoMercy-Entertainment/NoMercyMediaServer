@@ -24,11 +24,13 @@ using NoMercy.NmSystem.Extensions;
 namespace NoMercy.Api.Controllers.V1.Playlists;
 
 /// <summary>
-/// User-created, ordered, mixed-media playlists (movies + tv shows + episodes +
-/// music tracks + specials in one list). Deliberately routed at the top-level
-/// "api/v{version}/playlists" — NOT under "/music/" — so it never collides with
-/// NoMercy.Api.Controllers.V1.Music.PlaylistsController, the separate music-only
-/// Playlist/PlaylistTrack feature this controller never touches. Every action is
+/// User-created, ordered, VIDEO-ONLY playlists (movies + tv shows + episodes +
+/// specials in one list — never music tracks). Deliberately routed at the
+/// top-level "api/v{version}/playlists" — NOT under "/music/" — so it never
+/// collides with NoMercy.Api.Controllers.V1.Music.PlaylistsController, the
+/// separate music-only Playlist/PlaylistTrack feature this controller never
+/// touches. The two features share no table, so a music playlist can never
+/// appear in this controller's responses and vice versa. Every action is
 /// scoped to the caller's own playlists via IUserPlaylistRepository's
 /// ownership-checked methods.
 /// </summary>
@@ -197,9 +199,7 @@ public class UserPlaylistsController(IUserPlaylistRepository userPlaylistReposit
             return NotFoundResponse("Playlist not found");
 
         if (!PlaylistItemKindWire.TryParse(request.Kind, out PlaylistItemKind kind))
-            return BadRequestResponse(
-                "Invalid kind. Expected one of: movie, tv, episode, track, special"
-            );
+            return BadRequestResponse("Invalid kind. Expected one of: movie, tv, episode, special");
 
         PlaylistItemRef? itemRef = BuildItemRef(kind, request.MediaId);
         if (itemRef is null)
@@ -284,8 +284,8 @@ public class UserPlaylistsController(IUserPlaylistRepository userPlaylistReposit
 
     /// <summary>
     /// Parses <paramref name="mediaId"/> to the id type <paramref name="kind"/>
-    /// expects (int for movie/tv/episode, Guid for track, Ulid for special).
-    /// Returns null on a type mismatch so the caller can 400 instead of 500.
+    /// expects (int for movie/tv/episode, Ulid for special). Returns null on a
+    /// type mismatch so the caller can 400 instead of 500.
     /// </summary>
     private static PlaylistItemRef? BuildItemRef(PlaylistItemKind kind, string mediaId)
     {
@@ -300,10 +300,6 @@ public class UserPlaylistsController(IUserPlaylistRepository userPlaylistReposit
             case PlaylistItemKind.Episode:
                 return int.TryParse(mediaId, out int episodeId)
                     ? PlaylistItemRef.ForEpisode(episodeId)
-                    : null;
-            case PlaylistItemKind.Track:
-                return Guid.TryParse(mediaId, out Guid trackId)
-                    ? PlaylistItemRef.ForTrack(trackId)
                     : null;
             case PlaylistItemKind.Special:
                 return Ulid.TryParse(mediaId, out Ulid specialId)
