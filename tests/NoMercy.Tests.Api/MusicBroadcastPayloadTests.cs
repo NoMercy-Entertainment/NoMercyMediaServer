@@ -305,4 +305,74 @@ public class MusicBroadcastPayloadTests
         Assert.NotNull(artist.ColorPalette);
         Assert.NotNull(artist.Description);
     }
+
+    // ── Queue window ──────────────────────────────────────────────────────────
+    // A whole-genre queue is ~8k tracks; serializing all of them into every ~5s
+    // broadcast cost ~2s per emit and made play/pause land seconds late. The
+    // broadcast carries only a window: the next N upcoming + last M played. The
+    // server keeps the full lists for auto-advance/previous.
+
+    [Fact]
+    public void CloneForBroadcast_WindowsPlaylistToUpcomingCap()
+    {
+        List<PlaylistTrackDto> longPlaylist = Enumerable
+            .Range(0, 250)
+            .Select(_ => MakeTrackWithLyrics())
+            .ToList();
+        MusicPlayerState state = new()
+        {
+            CurrentItem = MakeTrackWithLyrics(),
+            Playlist = longPlaylist,
+            Backlog = [],
+            CurrentList = new("/music/genres/x", UriKind.Relative),
+        };
+
+        MusicPlayerState broadcast = state.CloneForBroadcast();
+
+        Assert.Equal(100, broadcast.Playlist.Count);
+        // Front-anchored: the window is the first 100 upcoming tracks, in order.
+        Assert.Equal(
+            longPlaylist.Take(100).Select(track => track.Id),
+            broadcast.Playlist.Select(track => track.Id)
+        );
+        // The server's own stored playlist is never truncated.
+        Assert.Equal(250, state.Playlist.Count);
+    }
+
+    [Fact]
+    public void CloneForBroadcast_WindowsBacklogToMostRecentCap()
+    {
+        List<PlaylistTrackDto> longBacklog = Enumerable
+            .Range(0, 80)
+            .Select(_ => MakeTrackWithLyrics())
+            .ToList();
+        MusicPlayerState state = new()
+        {
+            CurrentItem = MakeTrackWithLyrics(),
+            Playlist = [],
+            Backlog = longBacklog,
+            CurrentList = new("/music/genres/x", UriKind.Relative),
+        };
+
+        MusicPlayerState broadcast = state.CloneForBroadcast();
+
+        Assert.Equal(20, broadcast.Backlog.Count);
+        // Back-anchored: the window is the last 20 played tracks, in order.
+        Assert.Equal(
+            longBacklog.TakeLast(20).Select(track => track.Id),
+            broadcast.Backlog.Select(track => track.Id)
+        );
+        Assert.Equal(80, state.Backlog.Count);
+    }
+
+    [Fact]
+    public void CloneForBroadcast_KeepsQueueWholeWhenUnderTheWindow()
+    {
+        MusicPlayerState state = MakeStateWithQueueLyrics();
+
+        MusicPlayerState broadcast = state.CloneForBroadcast();
+
+        Assert.Equal(state.Playlist.Count, broadcast.Playlist.Count);
+        Assert.Equal(state.Backlog.Count, broadcast.Backlog.Count);
+    }
 }
