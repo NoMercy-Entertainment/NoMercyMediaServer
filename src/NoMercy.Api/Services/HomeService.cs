@@ -399,7 +399,7 @@ public class HomeService(
                     .WithNavigation(prevId, nextId)
                     .WithTitle($"Latest in {lib.Title}")
                     .WithMoreLink(lib.MoreLink)
-                    .WithItems(lib.Items.Select(item => Component.Card(item).WithWatch().Build()))
+                    .WithItems(lib.Items.Select(item => Component.Card(item).Build()))
                     .Build()
             );
         }
@@ -425,7 +425,7 @@ public class HomeService(
                     .WithNavigation(prevId, nextId)
                     .WithTitle(genre.Title)
                     .WithMoreLink(genre.MoreLink)
-                    .WithItems(genre.Items.Select(item => Component.Card(item).WithWatch().Build()))
+                    .WithItems(genre.Items.Select(item => Component.Card(item).Build()))
                     .Build()
             );
         }
@@ -658,7 +658,7 @@ public class HomeService(
                             tvsAndMovies.TvData,
                             tvsAndMovies.MovieData,
                             country,
-                            watch: true
+                            watch: false
                         )
                     )
                     .Where(c => c != null)
@@ -691,9 +691,7 @@ public class HomeService(
                     .WithId($"genre_{genre.Id}")
                     .WithTitle(genre.Title)
                     .WithMoreLink(genre.MoreLink)
-                    .WithItems(
-                        genre.Items.Take(6).Select(item => Component.Card(item).WithWatch().Build())
-                    )
+                    .WithItems(genre.Items.Take(6).Select(item => Component.Card(item).Build()))
                     .Build()
             );
         }
