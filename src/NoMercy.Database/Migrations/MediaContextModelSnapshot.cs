@@ -3274,6 +3274,113 @@ namespace NoMercy.Database.Migrations
                     b.ToTable("Roles");
                 });
 
+            modelBuilder.Entity("NoMercy.Database.Models.Playlists.PlaylistItem", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int?>("EpisodeId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("MovieId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SpecialId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("TvId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<Guid>("UserPlaylistId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EpisodeId")
+                        .HasDatabaseName("IX_PlaylistItems_EpisodeId")
+                        .HasFilter("EpisodeId IS NOT NULL");
+
+                    b.HasIndex("MovieId")
+                        .HasDatabaseName("IX_PlaylistItems_MovieId")
+                        .HasFilter("MovieId IS NOT NULL");
+
+                    b.HasIndex("SpecialId")
+                        .HasDatabaseName("IX_PlaylistItems_SpecialId")
+                        .HasFilter("SpecialId IS NOT NULL");
+
+                    b.HasIndex("TvId")
+                        .HasDatabaseName("IX_PlaylistItems_TvId")
+                        .HasFilter("TvId IS NOT NULL");
+
+                    b.HasIndex("UserPlaylistId", "Order");
+
+                    b.ToTable("PlaylistItems", t =>
+                        {
+                            t.HasTrigger("update_PlaylistItems_updated_at");
+                        });
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.Playlists.UserPlaylist", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Cover")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(4096)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserPlaylists", t =>
+                        {
+                            t.HasTrigger("update_UserPlaylists_updated_at");
+                        });
+                });
+
             modelBuilder.Entity("NoMercy.Database.Models.Queue.RunningTask", b =>
                 {
                     b.Property<string>("Id")
@@ -4422,6 +4529,9 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<int?>("Rating")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RemovedFromContinueWatching")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("SpecialId")
@@ -5665,6 +5775,56 @@ namespace NoMercy.Database.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("GuestStar");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.Playlists.PlaylistItem", b =>
+                {
+                    b.HasOne("NoMercy.Database.Models.TvShows.Episode", "Episode")
+                        .WithMany()
+                        .HasForeignKey("EpisodeId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
+                        .WithMany()
+                        .HasForeignKey("MovieId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("NoMercy.Database.Models.TvShows.Special", "Special")
+                        .WithMany()
+                        .HasForeignKey("SpecialId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NoMercy.Database.Models.TvShows.Tv", "Tv")
+                        .WithMany()
+                        .HasForeignKey("TvId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("NoMercy.Database.Models.Playlists.UserPlaylist", "UserPlaylist")
+                        .WithMany()
+                        .HasForeignKey("UserPlaylistId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Episode");
+
+                    b.Navigation("Movie");
+
+                    b.Navigation("Special");
+
+                    b.Navigation("Tv");
+
+                    b.Navigation("UserPlaylist");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.Playlists.UserPlaylist", b =>
+                {
+                    b.HasOne("NoMercy.Database.Models.Users.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.TvShows.CertificationTv", b =>

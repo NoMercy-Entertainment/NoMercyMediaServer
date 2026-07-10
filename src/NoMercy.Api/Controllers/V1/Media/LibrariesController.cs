@@ -116,6 +116,24 @@ public class LibrariesController(
                 ct
             );
         });
+        Task<FavoritesData> favoritesTask = Task.Run(async () =>
+        {
+            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+            return await new HomeRepository(ctx, contextFactory).GetFavoritesAsync(
+                userId,
+                language,
+                country,
+                ct
+            );
+        });
+        Task<List<UserPlaylistSummary>> myListsTask = Task.Run(async () =>
+        {
+            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+            return await new UserPlaylistRepository(contextFactory).GetUserPlaylistsAsync(
+                userId,
+                ct
+            );
+        });
 
         await Task.WhenAll(
             librariesTask,
@@ -123,7 +141,9 @@ public class LibrariesController(
             collectionsTask,
             specialsTask,
             randomTvTask,
-            randomMovieTask
+            randomMovieTask,
+            favoritesTask,
+            myListsTask
         );
 
         List<Library> libraries = librariesTask.Result;
@@ -132,6 +152,39 @@ public class LibrariesController(
         List<SpecialCardDto> specials = specialsTask.Result;
         HomeTvCardDto? tv = randomTvTask.Result;
         HomeMovieCardDto? movie = randomMovieTask.Result;
+        FavoritesData favorites = favoritesTask.Result;
+        List<UserPlaylistSummary> myLists = myListsTask.Result;
+
+        List<NmCardDto> favoriteCards =
+        [
+            .. favorites.Movies.Select(favoriteMovie => new NmCardDto(favoriteMovie, country)),
+            .. favorites.TvShows.Select(favoriteTv => new NmCardDto(favoriteTv, country)),
+            .. favorites.Collections.Select(favoriteCollection => new NmCardDto(
+                favoriteCollection,
+                country
+            )),
+            .. favorites.Specials.Select(favoriteSpecial => new NmCardDto(
+                favoriteSpecial,
+                country
+            )),
+        ];
+        favoriteCards = favoriteCards
+            .OrderBy(card => card.Title, StringComparer.OrdinalIgnoreCase)
+            .DistinctBy(card => card.Link)
+            .ToList();
+
+        List<NmCardDto> myListCards = myLists
+            .Select(summary => new NmCardDto
+            {
+                Id = summary.Id,
+                Title = summary.Name,
+                Poster = summary.Cover,
+                Link = new($"/lists/{summary.Id}", UriKind.Relative),
+                Type = "playlist",
+                NumberOfItems = summary.ItemCount,
+                HaveItems = summary.ItemCount,
+            })
+            .ToList();
 
         // Fetch library data in parallel - each task gets its own DbContext for thread safety
         Library[] nonMusicLibraries = libraries.Where(lib => lib.Type != "music").ToArray();
@@ -196,6 +249,24 @@ public class LibrariesController(
                 }
             );
         }
+
+        list.Add(
+            new()
+            {
+                Title = "Favorites",
+                MoreLink = new("/favorites", UriKind.Relative),
+                Items = favoriteCards,
+            }
+        );
+
+        list.Add(
+            new()
+            {
+                Title = "My Lists",
+                MoreLink = new("/lists", UriKind.Relative),
+                Items = myListCards,
+            }
+        );
 
         list.Add(
             new()
@@ -326,13 +397,33 @@ public class LibrariesController(
                 ct
             );
         });
+        Task<FavoritesData> favoritesTask = Task.Run(async () =>
+        {
+            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+            return await new HomeRepository(ctx, contextFactory).GetFavoritesAsync(
+                userId,
+                language,
+                country,
+                ct
+            );
+        });
+        Task<List<UserPlaylistSummary>> myListsTask = Task.Run(async () =>
+        {
+            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+            return await new UserPlaylistRepository(contextFactory).GetUserPlaylistsAsync(
+                userId,
+                ct
+            );
+        });
 
         await Task.WhenAll(
             librariesTask,
             collectionsTask,
             specialsTask,
             randomTvTask,
-            randomMovieTask
+            randomMovieTask,
+            favoritesTask,
+            myListsTask
         );
 
         List<Library> libraries = librariesTask.Result;
@@ -340,6 +431,39 @@ public class LibrariesController(
         List<SpecialCardDto> specials = specialsTask.Result;
         HomeTvCardDto? tv = randomTvTask.Result;
         HomeMovieCardDto? movie = randomMovieTask.Result;
+        FavoritesData favorites = favoritesTask.Result;
+        List<UserPlaylistSummary> myLists = myListsTask.Result;
+
+        List<NmCardDto> favoriteCards =
+        [
+            .. favorites.Movies.Select(favoriteMovie => new NmCardDto(favoriteMovie, country)),
+            .. favorites.TvShows.Select(favoriteTv => new NmCardDto(favoriteTv, country)),
+            .. favorites.Collections.Select(favoriteCollection => new NmCardDto(
+                favoriteCollection,
+                country
+            )),
+            .. favorites.Specials.Select(favoriteSpecial => new NmCardDto(
+                favoriteSpecial,
+                country
+            )),
+        ];
+        favoriteCards = favoriteCards
+            .OrderBy(card => card.Title, StringComparer.OrdinalIgnoreCase)
+            .DistinctBy(card => card.Link)
+            .ToList();
+
+        List<NmCardDto> myListCards = myLists
+            .Select(summary => new NmCardDto
+            {
+                Id = summary.Id,
+                Title = summary.Name,
+                Poster = summary.Cover,
+                Link = new($"/lists/{summary.Id}", UriKind.Relative),
+                Type = "playlist",
+                NumberOfItems = summary.ItemCount,
+                HaveItems = summary.ItemCount,
+            })
+            .ToList();
 
         // Fetch library data in parallel - each task gets its own DbContext for thread safety
         Task<(
@@ -397,6 +521,26 @@ public class LibrariesController(
                 }
             );
         }
+
+        list.Add(
+            new()
+            {
+                Id = "library_favorites",
+                Title = "Favorites",
+                MoreLink = new("/favorites", UriKind.Relative),
+                Items = favoriteCards,
+            }
+        );
+
+        list.Add(
+            new()
+            {
+                Id = "library_lists",
+                Title = "My Lists",
+                MoreLink = new("/lists", UriKind.Relative),
+                Items = myListCards,
+            }
+        );
 
         list.Add(
             new()

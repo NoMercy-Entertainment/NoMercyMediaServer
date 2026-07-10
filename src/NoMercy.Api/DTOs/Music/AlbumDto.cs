@@ -153,4 +153,21 @@ public class AlbumDto
 
         AlbumArtist = isAlbumArtist ? artists.FirstOrDefault()?.Key : null;
     }
+
+    /// <summary>
+    /// A copy for the per-broadcast queue projection with the fields no client
+    /// renders from a nested queue-entry album nulled out: the album
+    /// <c>color_palette</c> (a full swatch graph) and <c>description</c> (an
+    /// unbounded bio). Mirrors the queue-entry lyric strip in
+    /// <see cref="MusicPlayerState.CloneForBroadcast"/> — together they are the
+    /// bulk of the wire weight a long queue re-broadcasts every ~5s. Returns a
+    /// throwaway shallow copy; the stored DTO is never mutated.
+    /// </summary>
+    public AlbumDto ForBroadcastQueueEntry()
+    {
+        AlbumDto copy = (AlbumDto)MemberwiseClone();
+        copy.ColorPalette = null;
+        copy.Description = null;
+        return copy;
+    }
 }

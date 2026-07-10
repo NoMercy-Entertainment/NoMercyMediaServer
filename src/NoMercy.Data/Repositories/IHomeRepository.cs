@@ -12,6 +12,8 @@
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
+using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
 
 namespace NoMercy.Data.Repositories;
@@ -26,6 +28,18 @@ public record HomeParallelData(
 );
 
 public record HomeTvsAndMoviesData(List<HomeTvCardDto> TvData, List<HomeMovieCardDto> MovieData);
+
+/// <summary>
+/// Raw entities behind a user's favorited video media, grouped by type. The
+/// controller maps each list to <c>NmCardDto</c> — the Data layer never
+/// references API-layer DTOs.
+/// </summary>
+public record FavoritesData(
+    List<Movie> Movies,
+    List<Tv> TvShows,
+    List<Collection> Collections,
+    List<Special> Specials
+);
 
 public interface IHomeRepository
 {
@@ -46,6 +60,13 @@ public interface IHomeRepository
     );
 
     Task<HashSet<UserData>> GetContinueWatchingAsync(
+        Guid userId,
+        string language,
+        string country,
+        CancellationToken ct = default
+    );
+
+    Task<FavoritesData> GetFavoritesAsync(
         Guid userId,
         string language,
         string country,

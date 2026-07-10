@@ -166,6 +166,34 @@ public class UserDataRepositoryTests : IDisposable
         }
     }
 
+    [Fact]
+    public async Task HideFromContinueWatchingAsync_SetsFlag_WithoutDeletingRow()
+    {
+        await using MediaContext context = await _factory.CreateDbContextAsync();
+        UserData target = await context.UserData.FirstAsync(ud => ud.MovieId == 129);
+
+        int affected = await _repository.HideFromContinueWatchingAsync(new[] { target });
+
+        affected.Should().Be(1);
+
+        await using MediaContext verify = await _factory.CreateDbContextAsync();
+        UserData? hidden = await verify.UserData.FirstOrDefaultAsync(ud => ud.Id == target.Id);
+
+        // The row must survive — recommendations still read Time/Rating from it.
+        hidden.Should().NotBeNull();
+        hidden!.RemovedFromContinueWatching.Should().BeTrue();
+        hidden.Time.Should().Be(target.Time);
+        hidden.LastPlayedDate.Should().Be(target.LastPlayedDate);
+    }
+
+    [Fact]
+    public async Task HideFromContinueWatchingAsync_ReturnsZero_WhenGivenNoRows()
+    {
+        int affected = await _repository.HideFromContinueWatchingAsync([]);
+
+        affected.Should().Be(0);
+    }
+
     public void Dispose()
     {
         _connection.Dispose();

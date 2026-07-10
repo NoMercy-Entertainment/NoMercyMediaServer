@@ -247,7 +247,11 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
                     MovieFPS: members.GetValueOrDefault("MovieFPS"),
                     SubDownloadLink: members.GetValueOrDefault("SubDownloadLink"),
                     SubFormat: members.GetValueOrDefault("SubFormat"),
-                    MatchedBy: members.GetValueOrDefault("MatchedBy") ?? matchedBy
+                    MatchedBy: members.GetValueOrDefault("MatchedBy") ?? matchedBy,
+                    SubFileName: members.GetValueOrDefault("SubFileName"),
+                    MovieReleaseName: members.GetValueOrDefault("MovieReleaseName"),
+                    SubHearingImpaired: members.GetValueOrDefault("SubHearingImpaired"),
+                    UserNickName: members.GetValueOrDefault("UserNickName")
                 );
             }
         }

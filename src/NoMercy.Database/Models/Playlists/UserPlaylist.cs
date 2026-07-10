@@ -1,0 +1,52 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+
+namespace NoMercy.Database.Models.Playlists;
+
+/// <summary>
+/// A user-created, ordered, VIDEO-ONLY playlist (movies, tv shows, episodes and
+/// specials). This is its own container entity/table — deliberately NOT the
+/// music-only <see cref="Music.Playlist"/> table (which stays reserved for
+/// PlaylistTrack), NOT <see cref="Movies.Collection"/> (TMDB franchise
+/// groupings) and NOT <see cref="TvShows.Special"/> (admin-curated). Owns a
+/// set of <see cref="PlaylistItem"/> rows via <c>PlaylistItem.UserPlaylistId</c>;
+/// there is no shared table with the music playlist feature, so neither can
+/// appear in the other's query results.
+/// </summary>
+[PrimaryKey(nameof(Id))]
+[Index(nameof(UserId))]
+public class UserPlaylist : Timestamps
+{
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    [JsonProperty("id")]
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    [JsonProperty("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [MaxLength(4096)]
+    [JsonProperty("description")]
+    public string? Description { get; set; }
+
+    [JsonProperty("cover")]
+    public string? Cover { get; set; }
+
+    [JsonProperty("user_id")]
+    public Guid UserId { get; set; }
+
+    [JsonProperty("user")]
+    public User User { get; set; } = null!;
+}

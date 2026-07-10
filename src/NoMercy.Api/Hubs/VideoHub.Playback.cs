@@ -136,6 +136,7 @@ public partial class VideoHub
                         Subtitle = udi.Subtitle,
                         SubtitleType = udi.SubtitleType,
                         LastPlayedDate = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                        RemovedFromContinueWatching = false,
                     }
             )
             .RunAsync();

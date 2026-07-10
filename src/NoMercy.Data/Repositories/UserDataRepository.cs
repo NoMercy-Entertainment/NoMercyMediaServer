@@ -55,6 +55,24 @@ public class UserDataRepository(IDbContextFactory<MediaContext> contextFactory)
         return await context.SaveChangesAsync(ct);
     }
 
+    public async Task<int> HideFromContinueWatchingAsync(
+        IEnumerable<UserData> userData,
+        CancellationToken ct = default
+    )
+    {
+        List<Ulid> ids = userData.Select(data => data.Id).ToList();
+        if (ids.Count == 0)
+            return 0;
+
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
+            .UserData.Where(data => ids.Contains(data.Id))
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(data => data.RemovedFromContinueWatching, true),
+                ct
+            );
+    }
+
     private IQueryable<UserData>? BuildQuery(
         MediaContext context,
         Guid userId,

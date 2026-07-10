@@ -37,7 +37,7 @@ public class HomeServiceConcurrencyTests : IDisposable
         MediaContext mainContext = await _factory.CreateDbContextAsync();
         HomeRepository homeRepository = new(mainContext, _factory);
         LibraryRepository libraryRepository = new(_factory);
-        HomeService service = new(homeRepository, libraryRepository, _factory);
+        HomeService service = new(homeRepository, libraryRepository);
 
         Exception? exception = await Record.ExceptionAsync(async () =>
         {
@@ -54,7 +54,7 @@ public class HomeServiceConcurrencyTests : IDisposable
         MediaContext mainContext = await _factory.CreateDbContextAsync();
         HomeRepository homeRepository = new(mainContext, _factory);
         LibraryRepository libraryRepository = new(_factory);
-        HomeService service = new(homeRepository, libraryRepository, _factory);
+        HomeService service = new(homeRepository, libraryRepository);
 
         for (int i = 0; i < 3; i++)
         {

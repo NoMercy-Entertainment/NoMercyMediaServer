@@ -15,6 +15,7 @@ global using NoMercy.Database.Models.Media;
 global using NoMercy.Database.Models.Movies;
 global using NoMercy.Database.Models.Music;
 global using NoMercy.Database.Models.People;
+global using NoMercy.Database.Models.Playlists;
 global using NoMercy.Database.Models.Queue;
 global using NoMercy.Database.Models.TvShows;
 global using NoMercy.Database.Models.Users;

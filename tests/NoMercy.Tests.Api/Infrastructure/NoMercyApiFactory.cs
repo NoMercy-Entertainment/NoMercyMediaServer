@@ -167,6 +167,9 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
     public static readonly Guid PlaylistId1 = Guid.Parse("44444444-4444-4444-4444-444444444444");
     public static readonly Guid MusicGenreId1 = Guid.Parse("55555555-5555-5555-5555-555555555555");
 
+    public static readonly int FavoriteCollectionId = 900001;
+    public static readonly Ulid FavoriteSpecialId = Ulid.NewUlid();
+
     private static void EnsureDirectoriesAndSeedDatabase()
     {
         foreach (string path in AppFiles.AllPaths())
@@ -214,7 +217,20 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
                 Allowed = true,
                 Manage = true,
             };
-            mediaContext.Users.Add(testUser);
+            // A second, unrelated-but-allowed identity — impersonated via
+            // HttpClientAuthExtensions.AsSecondaryUser() — so ownership-isolation
+            // tests (e.g. UserPlaylistsControllerTests) exercise a real 404 from
+            // the endpoint's own ownership check, not a 403 from MediaAccess.
+            User secondaryTestUser = new()
+            {
+                Id = TestAuthHandler.SecondaryUserId,
+                Email = TestAuthHandler.SecondaryUserEmail,
+                Name = TestAuthHandler.SecondaryUserName,
+                Owner = false,
+                Allowed = true,
+                Manage = false,
+            };
+            mediaContext.Users.AddRange(testUser, secondaryTestUser);
             mediaContext.SaveChanges();
         }
 
@@ -575,6 +591,37 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             new() { ArtistId = ArtistId1, UserId = TestAuthHandler.DefaultUserId }
         );
         context.TrackUser.Add(new() { TrackId = TrackId1, UserId = TestAuthHandler.DefaultUserId });
+
+        context.SaveChanges();
+
+        // Step 8: A collection and a special so GET /userData/favorites has all four
+        // video media types (movie, tv, collection, special) to browse, not just movie/tv.
+        Collection favoriteCollection = new()
+        {
+            Id = FavoriteCollectionId,
+            Title = "Test Collection",
+            TitleSort = "test collection",
+            LibraryId = MovieLibraryId,
+            Parts = 1,
+        };
+        context.Collections.Add(favoriteCollection);
+
+        Special favoriteSpecial = new() { Id = FavoriteSpecialId, Title = "Test Special" };
+        context.Specials.Add(favoriteSpecial);
+
+        context.SaveChanges();
+
+        context.CollectionMovie.Add(new(FavoriteCollectionId, movie1.Id));
+        context.SpecialItems.Add(new() { SpecialId = FavoriteSpecialId, MovieId = movie1.Id });
+
+        context.SaveChanges();
+
+        // Favorite movie 129, tv 1399, the collection and the special so
+        // GET /userData/favorites has one of each type to browse.
+        context.MovieUser.Add(new(movie1.Id, TestAuthHandler.DefaultUserId));
+        context.TvUser.Add(new(show1.Id, TestAuthHandler.DefaultUserId));
+        context.CollectionUser.Add(new(FavoriteCollectionId, TestAuthHandler.DefaultUserId));
+        context.SpecialUser.Add(new(FavoriteSpecialId, TestAuthHandler.DefaultUserId));
 
         context.SaveChanges();
     }

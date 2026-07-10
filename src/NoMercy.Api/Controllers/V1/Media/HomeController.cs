@@ -113,16 +113,18 @@ public partial class HomeController : BaseController
                 await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
                 List<Movie> libraryMovies = [];
                 await foreach (
-                    Movie movie in libraryRepository.GetLibraryMovies(
-                        context,
-                        userId,
-                        library.Id,
-                        language,
-                        UiLimits.MaximumCardsInCarousel,
-                        request.Page,
-                        m => m.CreatedAt,
-                        "desc"
-                    )
+                    Movie movie in libraryRepository
+                        .GetLibraryMovies(
+                            context,
+                            userId,
+                            library.Id,
+                            language,
+                            UiLimits.MaximumCardsInCarousel,
+                            request.Page,
+                            m => m.CreatedAt,
+                            "desc"
+                        )
+                        .WithCancellation(ct)
                 )
                 {
                     libraryMovies.Add(movie);
@@ -130,16 +132,18 @@ public partial class HomeController : BaseController
 
                 List<Tv> libraryShows = [];
                 await foreach (
-                    Tv tv in libraryRepository.GetLibraryShows(
-                        context,
-                        userId,
-                        library.Id,
-                        language,
-                        UiLimits.MaximumCardsInCarousel,
-                        request.Page,
-                        m => m.CreatedAt,
-                        "desc"
-                    )
+                    Tv tv in libraryRepository
+                        .GetLibraryShows(
+                            context,
+                            userId,
+                            library.Id,
+                            language,
+                            UiLimits.MaximumCardsInCarousel,
+                            request.Page,
+                            m => m.CreatedAt,
+                            "desc"
+                        )
+                        .WithCancellation(ct)
                 )
                 {
                     libraryShows.Add(tv);

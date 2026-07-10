@@ -18,8 +18,8 @@ using NoMercy.Database.Models.Users;
 using NoMercy.Events;
 using NoMercy.Events.Playback;
 using NoMercy.Networking.Messaging;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
@@ -291,12 +291,11 @@ public class VideoPlaybackService
                 state.CurrentItem.PlaylistType == MediaTypes.MovieMediaType
                     ? state.CurrentItem.TmdbId
                     : null,
-            TvId =
-                state.CurrentItem.PlaylistType
+            TvId = state.CurrentItem.PlaylistType
                 is MediaTypes.TvMediaType
                     or MediaTypes.AnimeMediaType
-                    ? state.CurrentItem.TmdbId
-                    : null,
+                ? state.CurrentItem.TmdbId
+                : null,
             CollectionId =
                 state.CurrentItem.PlaylistType == MediaTypes.CollectionMediaType
                     ? int.Parse(state.CurrentItem.PlaylistId)
@@ -362,6 +361,7 @@ public class VideoPlaybackService
                         Subtitle = udi.Subtitle,
                         SubtitleType = udi.SubtitleType,
                         LastPlayedDate = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                        RemovedFromContinueWatching = false,
                     }
             )
             .RunAsync();

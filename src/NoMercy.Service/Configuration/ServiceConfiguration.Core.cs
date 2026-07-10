@@ -476,6 +476,7 @@ public static partial class ServiceConfiguration
         services.AddScoped<ISpecialRepository, SpecialRepository>();
         services.AddScoped<ITvShowRepository, TvShowRepository>();
         services.AddScoped<IUserDataRepository, UserDataRepository>();
+        services.AddScoped<IUserPlaylistRepository, UserPlaylistRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IImageRepository, ImageRepository>();
         services.AddScoped<IVideoFileRepository, VideoFileRepository>();
@@ -592,6 +593,10 @@ public static partial class ServiceConfiguration
         // Subtitle acquisition — OpenSubtitlesProvider lives in MediaProcessing so
         // it can reference both NoMercy.Encoder (interface) and NoMercy.Providers (XML-RPC).
         services.AddSingleton<Encoder.Subtitles.IOpenSubtitlesProvider, OpenSubtitlesProvider>();
+        services.AddSingleton<
+            Encoder.Subtitles.IOpenSubtitlesAdapter,
+            Encoder.Subtitles.OpenSubtitlesAdapter
+        >();
 
         services.AddLocalization(options => options.ResourcesPath = "Resources");
         services.AddScoped<ILocalizer, Localizer>();

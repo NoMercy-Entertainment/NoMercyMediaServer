@@ -37,18 +37,31 @@ using Xunit;
 
 namespace NoMercy.Tests.Api;
 
-// Regression coverage for the live incident: a music session sat PAUSED with its
-// active device set to a TV whose app process was killed. The liveness sweep
-// (MusicPlaybackService.IsActiveDeviceStale) only acts while PlayState is
-// playing, so a wedged paused session survived forever and every command from
-// other devices relayed into a void. The fix is authority-level: MusicHub's
-// OnDisconnectedAsync now releases (or ends) the session the moment the
-// connection belonging to the CURRENT active device actually disconnects,
-// regardless of play state — graceful release while playing, clean
-// item:null end while paused/idle. These tests build a real MusicHub against
-// the app's actual DI-configured singletons (MusicPlayerStateManager,
-// MusicActiveDeviceRegistry, ConnectedClients) via NoMercyApiFactory, mocking
-// only the SignalR plumbing a live connection would normally supply.
+// Regression coverage for two live incidents on the same OnDisconnectedAsync path:
+//
+// 1) A music session sat PAUSED with its active device set to a TV whose app
+//    process was killed. The liveness sweep (MusicPlaybackService.IsActiveDeviceStale)
+//    only acts while PlayState is playing, so a wedged paused session survived
+//    forever and every command from other devices relayed into a void. Fixed by
+//    having OnDisconnectedAsync release (or end) the session the moment the
+//    connection belonging to the CURRENT active device actually disconnects,
+//    regardless of play state.
+//
+// 2) That first fix over-corrected: it ended the session outright (item:null)
+//    whenever the disconnecting active device had been paused, even when OTHER
+//    devices were still connected and could have resumed the exact spot it left
+//    off. A user switching from a paused TV to a phone saw the whole session
+//    vanish — the KMP client renders a null CurrentItem as a hard stop, not a
+//    pause. The fix: graceful release (keep CurrentItem/Playlist/Backlog, just
+//    clear PlayState + DeviceId) applies whenever ANY other device remains
+//    connected, whether the vanished device was playing or paused. Item:null
+//    end-of-session is now reserved for the case no device remains at all
+//    (connectedDevices.Count == 0), which is a separate branch entirely.
+//
+// These tests build a real MusicHub against the app's actual DI-configured
+// singletons (MusicPlayerStateManager, MusicActiveDeviceRegistry, ConnectedClients)
+// via NoMercyApiFactory, mocking only the SignalR plumbing a live connection would
+// normally supply.
 [Trait("Category", "Characterization")]
 public class MusicHubActiveDeviceDisconnectTests : IClassFixture<NoMercyApiFactory>
 {
@@ -108,10 +121,7 @@ public class MusicHubActiveDeviceDisconnectTests : IClassFixture<NoMercyApiFacto
         AuthManager authManager = _factory.Services.GetRequiredService<AuthManager>();
 
         MusicDeviceManager musicDeviceManager = new(new());
-        MusicPlaylistManager musicPlaylistManager = new(
-            new MusicRepository(contextFactory),
-            new()
-        );
+        MusicPlaylistManager musicPlaylistManager = new(new MusicRepository(contextFactory), new());
         DeviceBusRegistry busRegistry = new(contextFactory, Mock.Of<IHubContext<DeviceHub>>());
         CastSessionTokenService castTokenService = new(authManager, new AuthTokenStore());
 
@@ -175,7 +185,7 @@ public class MusicHubActiveDeviceDisconnectTests : IClassFixture<NoMercyApiFacto
     }
 
     [Fact]
-    public async Task LastConnectionOfActiveDevice_Disconnects_WhilePaused_EndsSessionCleanly()
+    public async Task LastConnectionOfActiveDevice_Disconnects_WhilePaused_OtherDeviceConnected_ReleasesActive_ButSessionSurvives()
     {
         Guid userId = Guid.NewGuid();
         User user = SeedTestUser(userId);
@@ -189,6 +199,70 @@ public class MusicHubActiveDeviceDisconnectTests : IClassFixture<NoMercyApiFacto
         Client phoneClient = MakeClient(userId, phoneDeviceId);
         Client tvClient = MakeClient(userId, tvDeviceId, "tv");
         connectedClients.Clients[phoneConnectionId] = phoneClient;
+        connectedClients.Clients[tvConnectionId] = tvClient;
+
+        MusicPlayerStateManager stateManager =
+            _factory.Services.GetRequiredService<MusicPlayerStateManager>();
+        MusicActiveDeviceRegistry registry =
+            _factory.Services.GetRequiredService<MusicActiveDeviceRegistry>();
+
+        PlaylistTrackDto currentTrack = MakeTrack();
+        MusicPlayerState state = new()
+        {
+            DeviceId = tvDeviceId,
+            PlayState = false, // paused when the TV vanished
+            CurrentItem = currentTrack,
+            Playlist = [MakeTrack()],
+            Backlog = [MakeTrack()],
+            CurrentList = new("/music/albums/test", UriKind.Relative),
+        };
+        stateManager.UpdateState(userId, state);
+        registry.Set(userId, tvClient);
+
+        try
+        {
+            MusicHub hub = CreateHub(tvConnectionId, userId);
+
+            await hub.OnDisconnectedAsync(null);
+
+            stateManager.TryGetValue(userId, out MusicPlayerState? after).Should().BeTrue();
+            // Graceful release: the phone is still connected and could resume this
+            // exact spot, so the session must survive — a paused active device
+            // vanishing must not read as "stop" on every remaining device.
+            after!.CurrentItem.Should().Be(currentTrack);
+            after.Playlist.Should().HaveCount(1);
+            after.Backlog.Should().HaveCount(1);
+            after.PlayState.Should().BeFalse();
+            after.DeviceId.Should().BeNull();
+            after.Actions.Disallows.Resuming.Should().BeFalse();
+            after.Actions.Disallows.Pausing.Should().BeTrue();
+
+            // The dead TV must no longer be recorded as active — the very next
+            // claim from any device (including the still-connected phone) must
+            // be free to become active.
+            registry.TryGet(userId, out Device? active).Should().BeFalse();
+        }
+        finally
+        {
+            connectedClients.Clients.TryRemove(phoneConnectionId, out _);
+            connectedClients.Clients.TryRemove(tvConnectionId, out _);
+            stateManager.RemoveState(userId);
+            registry.Remove(userId);
+            UserCache.Current.RemoveUser(user);
+        }
+    }
+
+    [Fact]
+    public async Task LastConnectionOfActiveDevice_Disconnects_WhilePaused_NoOtherDevicesConnected_EndsSessionCleanly()
+    {
+        Guid userId = Guid.NewGuid();
+        User user = SeedTestUser(userId);
+
+        string tvConnectionId = Guid.NewGuid().ToString();
+        string tvDeviceId = $"tv-{Guid.NewGuid()}";
+
+        ConnectedClients connectedClients = _factory.GetConnectedClients();
+        Client tvClient = MakeClient(userId, tvDeviceId, "tv");
         connectedClients.Clients[tvConnectionId] = tvClient;
 
         MusicPlayerStateManager stateManager =
@@ -210,28 +284,19 @@ public class MusicHubActiveDeviceDisconnectTests : IClassFixture<NoMercyApiFacto
 
         try
         {
+            // No other device connected — this is the ONLY live connection for
+            // this user, so the connectedDevices.Count == 0 branch owns teardown.
             MusicHub hub = CreateHub(tvConnectionId, userId);
 
             await hub.OnDisconnectedAsync(null);
 
-            stateManager.TryGetValue(userId, out MusicPlayerState? after).Should().BeTrue();
-            after!.CurrentItem.Should().BeNull();
-            after.PlayState.Should().BeFalse();
-            after.DeviceId.Should().BeNull();
-            after.Playlist.Should().BeEmpty();
-            after.Backlog.Should().BeEmpty();
-            after.Actions.Disallows.Resuming.Should().BeTrue();
-            after.Actions.Disallows.Pausing.Should().BeTrue();
-            after.Actions.Disallows.Stopping.Should().BeTrue();
+            stateManager.TryGetValue(userId, out MusicPlayerState? after).Should().BeFalse();
+            after.Should().BeNull();
 
-            // The dead TV must no longer be recorded as active — the very next
-            // claim from any device (including the still-connected phone) must
-            // be free to become active.
             registry.TryGet(userId, out Device? active).Should().BeFalse();
         }
         finally
         {
-            connectedClients.Clients.TryRemove(phoneConnectionId, out _);
             connectedClients.Clients.TryRemove(tvConnectionId, out _);
             stateManager.RemoveState(userId);
             registry.Remove(userId);

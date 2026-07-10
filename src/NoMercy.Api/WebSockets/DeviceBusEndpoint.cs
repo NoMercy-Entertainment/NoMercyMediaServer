@@ -22,6 +22,7 @@ using NoMercy.Api.Services.Music;
 using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
+using NoMercy.Networking.Messaging;
 
 namespace NoMercy.Api.WebSockets;
 
@@ -33,6 +34,7 @@ public sealed class DeviceBusEndpoint(
     DeviceBusRegistry registry,
     MusicPlayerStateManager musicPlayerStateManager,
     MusicPlaybackService musicPlaybackService,
+    ConnectedClients connectedClients,
     ILogger<DeviceBusEndpoint> logger
 ) : ControllerBase
 {
@@ -145,8 +147,20 @@ public sealed class DeviceBusEndpoint(
                         device.DeviceId,
                         StringComparison.OrdinalIgnoreCase
                     )
+                    && !IsStillOnMusicHub(connectedClients, device.DeviceId)
                 )
                 {
+                    // device-bus is a secondary wake/status channel (30s ping cadence,
+                    // TV-only, independent OkHttp socket) with its own reconnect churn —
+                    // it going down is NOT proof the device stopped playing. MusicHub's own
+                    // OnDisconnectedAsync already owns "is the active device really gone"
+                    // for playback purposes, complete with the KMP double-connect survivor
+                    // guard (see its otherConnectionForDeviceSurvives check). Clearing the
+                    // active claim here too, unconditionally, meant a bare device-bus blip
+                    // (a transient LAN hiccup, an OS-throttled background socket, mDNS churn
+                    // from another device on the network coming online) paused a device that
+                    // was still fully connected — and still playing — on MusicHub the whole
+                    // time. Only fall through when MusicHub agrees the device is gone too.
                     logger.LogInformation(
                         "Active music device {DeviceName} disconnected from device-bus — clearing active",
                         device.Name
@@ -169,6 +183,23 @@ public sealed class DeviceBusEndpoint(
                 await registry.Unregister(device.Id);
             }
         }
+    }
+
+    /// <summary>
+    /// True when <paramref name="deviceId"/> still has a live MusicHub connection —
+    /// the authoritative "is this device actually still around for playback purposes"
+    /// signal, independent of this device-bus socket's own lifecycle. See the call
+    /// site in <see cref="Pump"/> for why device-bus going down must never be treated
+    /// as proof of that on its own. Internal + static (rather than an instance
+    /// method closing over the injected <see cref="ConnectedClients"/>) so it is
+    /// directly unit-testable without standing up a live WebSocket.
+    /// </summary>
+    internal static bool IsStillOnMusicHub(ConnectedClients connectedClients, string deviceId)
+    {
+        return connectedClients.Clients.Values.Any(c =>
+            c.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase)
+            && c.Endpoint.Contains("musicHub", StringComparison.OrdinalIgnoreCase)
+        );
     }
 
     private async Task<Device?> HandleHello(JsonElement root, User user, WebSocket ws)
