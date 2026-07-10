@@ -519,15 +519,15 @@
   </Entry>
   <Entry>
     <Key>Successfully retrieved {0} special.</Key>
-    <Value lang="nl">Successfully retrieved {0} special.</Value>
+    <Value lang="nl">Special {0} succesvol opgehaald.</Value>
   </Entry>
   <Entry>
     <Key>The owner cannot be deleted</Key>
-    <Value lang="nl">The owner cannot be deleted</Value>
+    <Value lang="nl">De eigenaar kan niet worden verwijderd</Value>
   </Entry>
   <Entry>
     <Key>All failed jobs have been queued for retry</Key>
-    <Value lang="nl">All failed jobs have been queued for retry</Value>
+    <Value lang="nl">Alle mislukte taken zijn in de wachtrij geplaatst voor opnieuw proberen</Value>
   </Entry>
   <Entry>
     <Key>Artists starting with #</Key>
@@ -539,35 +539,35 @@
   </Entry>
   <Entry>
     <Key>Artists starting with A</Key>
-    <Value lang="nl">Artists starting with A</Value>
+    <Value lang="nl">Artiesten beginnend met A</Value>
   </Entry>
   <Entry>
     <Key>Artists starting with E</Key>
-    <Value lang="nl">Artists starting with E</Value>
+    <Value lang="nl">Artiesten beginnend met E</Value>
   </Entry>
   <Entry>
     <Key>Albums starting with D</Key>
-    <Value lang="nl">Albums starting with D</Value>
+    <Value lang="nl">Albums beginnend met D</Value>
   </Entry>
   <Entry>
     <Key>Artists starting with B</Key>
-    <Value lang="nl">Artists starting with B</Value>
+    <Value lang="nl">Artiesten beginnend met B</Value>
   </Entry>
   <Entry>
     <Key>Artists starting with C</Key>
-    <Value lang="nl">Artists starting with C</Value>
+    <Value lang="nl">Artiesten beginnend met C</Value>
   </Entry>
   <Entry>
     <Key>Albums starting with E</Key>
-    <Value lang="nl">Albums starting with E</Value>
+    <Value lang="nl">Albums beginnend met E</Value>
   </Entry>
   <Entry>
     <Key>Encoder queue paused</Key>
-    <Value lang="nl">Encoder queue paused</Value>
+    <Value lang="nl">Encoder wachtrij gepauzeerd</Value>
   </Entry>
   <Entry>
     <Key>Encoder queue resumed</Key>
-    <Value lang="nl">Encoder queue resumed</Value>
+    <Value lang="nl">Encoder wachtrij hervat</Value>
   </Entry>
   <Entry>
     <Key>Remove from continue watching</Key>
@@ -575,71 +575,71 @@
   </Entry>
   <Entry>
     <Key>Invalid backend_type 'floppy'. Allowed values: local, smb, nfs, s3, r2.</Key>
-    <Value lang="nl">Invalid backend_type 'floppy'. Allowed values: local, smb, nfs, s3, r2.</Value>
+    <Value lang="nl">Ongeldige backend_type 'floppy'. Toegestane waarden: local, smb, nfs, s3, r2.</Value>
   </Entry>
   <Entry>
     <Key>driver_config.endpoint is required for 'r2' (set to your R2 endpoint URL).</Key>
-    <Value lang="nl">driver_config.endpoint is required for 'r2' (set to your R2 endpoint URL).</Value>
+    <Value lang="nl">driver_config.endpoint is vereist voor 'r2' (stel uw R2 eindpunt-URL in).</Value>
   </Entry>
   <Entry>
     <Key>Invalid driver_type 'banana'. Allowed values: local, smb, nfs, s3, r2, webdav.</Key>
-    <Value lang="nl">Invalid driver_type 'banana'. Allowed values: local, smb, nfs, s3, r2, webdav.</Value>
+    <Value lang="nl">Ongeldige driver_type 'banana'. Toegestane waarden: local, smb, nfs, s3, r2, webdav.</Value>
   </Entry>
   <Entry>
     <Key>config.rootPath must be a non-empty string for 'local'.</Key>
-    <Value lang="nl">config.rootPath must be a non-empty string for 'local'.</Value>
+    <Value lang="nl">config.rootPath moet een niet-lege tekenreeks zijn voor 'local'.</Value>
   </Entry>
   <Entry>
     <Key>driver_id is required.</Key>
-    <Value lang="nl">driver_id is required.</Value>
+    <Value lang="nl">driver_id is vereist.</Value>
   </Entry>
   <Entry>
     <Key>Something went wrong adding the folder</Key>
-    <Value lang="nl">Something went wrong adding the folder</Value>
+    <Value lang="nl">Er ging iets mis bij het toevoegen van de map</Value>
   </Entry>
   <Entry>
     <Key>A driver named 'Media' already exists.</Key>
-    <Value lang="nl">A driver named 'Media' already exists.</Value>
+    <Value lang="nl">Een stuurprogramma met de naam 'Media' bestaat al.</Value>
   </Entry>
   <Entry>
     <Key>You do not have permission to create drivers</Key>
-    <Value lang="nl">You do not have permission to create drivers</Value>
+    <Value lang="nl">Je hebt geen toestemming om stuurprogramma's te maken</Value>
   </Entry>
   <Entry>
     <Key>Folder not found</Key>
-    <Value lang="nl">Folder not found</Value>
+    <Value lang="nl">Map niet gevonden</Value>
   </Entry>
   <Entry>
     <Key>Something went wrong deleting the library folder</Key>
-    <Value lang="nl">Something went wrong deleting the library folder</Value>
+    <Value lang="nl">Er ging iets mis bij het verwijderen van de bibliotheekmap</Value>
   </Entry>
   <Entry>
     <Key>You do not have permission to view users</Key>
-    <Value lang="nl">You do not have permission to view users</Value>
+    <Value lang="nl">Je hebt geen toestemming om gebruikers te bekijken</Value>
   </Entry>
   <Entry>
     <Key>Device not found</Key>
-    <Value lang="nl">Device not found</Value>
+    <Value lang="nl">Apparaat niet gevonden</Value>
   </Entry>
   <Entry>
     <Key>Artists: #</Key>
-    <Value lang="nl">Artists: #</Value>
+    <Value lang="nl">Artiesten: #</Value>
   </Entry>
   <Entry>
     <Key>Artists: D</Key>
-    <Value lang="nl">Artists: D</Value>
+    <Value lang="nl">Artiesten: D</Value>
   </Entry>
   <Entry>
     <Key>Artists: L</Key>
-    <Value lang="nl">Artists: L</Value>
+    <Value lang="nl">Artiesten: L</Value>
   </Entry>
   <Entry>
     <Key>Movie is adult which is not allowed by the server configuration</Key>
-    <Value lang="nl">Movie is adult which is not allowed by the server configuration</Value>
+    <Value lang="nl">Film is voor volwassenen wat niet is toegestaan door de serverconfiguratie</Value>
   </Entry>
   <Entry>
     <Key>Person is adult which is not allowed by the server configuration</Key>
-    <Value lang="nl">Person is adult which is not allowed by the server configuration</Value>
+    <Value lang="nl">Persoon is voor volwassenen wat niet is toegestaan door de serverconfiguratie</Value>
   </Entry>
   <Entry>
     <Key>Albums: #</Key>
@@ -651,114 +651,118 @@
   </Entry>
   <Entry>
     <Key>Artists: A</Key>
-    <Value lang="nl">Artists: A</Value>
+    <Value lang="nl">Artiesten: A</Value>
   </Entry>
   <Entry>
     <Key>Artists: B</Key>
-    <Value lang="nl">Artists: B</Value>
+    <Value lang="nl">Artiesten: B</Value>
   </Entry>
   <Entry>
     <Key>Artists: C</Key>
-    <Value lang="nl">Artists: C</Value>
+    <Value lang="nl">Artiesten: C</Value>
   </Entry>
   <Entry>
     <Key>Artists: E</Key>
-    <Value lang="nl">Artists: E</Value>
+    <Value lang="nl">Artiesten: E</Value>
   </Entry>
   <Entry>
     <Key>Artists: F</Key>
-    <Value lang="nl">Artists: F</Value>
+    <Value lang="nl">Artiesten: F</Value>
   </Entry>
   <Entry>
     <Key>Artists: G</Key>
-    <Value lang="nl">Artists: G</Value>
+    <Value lang="nl">Artiesten: G</Value>
   </Entry>
   <Entry>
     <Key>Artists: H</Key>
-    <Value lang="nl">Artists: H</Value>
+    <Value lang="nl">Artiesten: H</Value>
   </Entry>
   <Entry>
     <Key>Artists: I</Key>
-    <Value lang="nl">Artists: I</Value>
+    <Value lang="nl">Artiesten: I</Value>
   </Entry>
   <Entry>
     <Key>Artists: J</Key>
-    <Value lang="nl">Artists: J</Value>
+    <Value lang="nl">Artiesten: J</Value>
   </Entry>
   <Entry>
     <Key>Artists: K</Key>
-    <Value lang="nl">Artists: K</Value>
+    <Value lang="nl">Artiesten: K</Value>
   </Entry>
   <Entry>
     <Key>Artists: M</Key>
-    <Value lang="nl">Artists: M</Value>
+    <Value lang="nl">Artiesten: M</Value>
   </Entry>
   <Entry>
     <Key>Artists: N</Key>
-    <Value lang="nl">Artists: N</Value>
+    <Value lang="nl">Artiesten: N</Value>
   </Entry>
   <Entry>
     <Key>Artists: O</Key>
-    <Value lang="nl">Artists: O</Value>
+    <Value lang="nl">Artiesten: O</Value>
   </Entry>
   <Entry>
     <Key>Artists: P</Key>
-    <Value lang="nl">Artists: P</Value>
+    <Value lang="nl">Artiesten: P</Value>
   </Entry>
   <Entry>
     <Key>Artists: Q</Key>
-    <Value lang="nl">Artists: Q</Value>
+    <Value lang="nl">Artiesten: Q</Value>
   </Entry>
   <Entry>
     <Key>Artists: R</Key>
-    <Value lang="nl">Artists: R</Value>
+    <Value lang="nl">Artiesten: R</Value>
   </Entry>
   <Entry>
     <Key>Artists: S</Key>
-    <Value lang="nl">Artists: S</Value>
+    <Value lang="nl">Artiesten: S</Value>
   </Entry>
   <Entry>
     <Key>Artists: T</Key>
-    <Value lang="nl">Artists: T</Value>
+    <Value lang="nl">Artiesten: T</Value>
   </Entry>
   <Entry>
     <Key>Artists: U</Key>
-    <Value lang="nl">Artists: U</Value>
+    <Value lang="nl">Artiesten: U</Value>
   </Entry>
   <Entry>
     <Key>Artists: V</Key>
-    <Value lang="nl">Artists: V</Value>
+    <Value lang="nl">Artiesten: V</Value>
   </Entry>
   <Entry>
     <Key>Artists: W</Key>
-    <Value lang="nl">Artists: W</Value>
+    <Value lang="nl">Artiesten: W</Value>
   </Entry>
   <Entry>
     <Key>Artists: X</Key>
-    <Value lang="nl">Artists: X</Value>
+    <Value lang="nl">Artiesten: X</Value>
   </Entry>
   <Entry>
     <Key>Artists: Y</Key>
-    <Value lang="nl">Artists: Y</Value>
+    <Value lang="nl">Artiesten: Y</Value>
   </Entry>
   <Entry>
     <Key>Artists: Z</Key>
-    <Value lang="nl">Artists: Z</Value>
+    <Value lang="nl">Artiesten: Z</Value>
   </Entry>
   <Entry>
     <Key>You do not have permission to view screensaver</Key>
-    <Value lang="nl">You do not have permission to view screensaver</Value>
+    <Value lang="nl">Je hebt geen toestemming om screensaver te bekijken</Value>
   </Entry>
   <Entry>
     <Key>You do not have permission to view the inbox</Key>
-    <Value lang="nl">You do not have permission to view the inbox</Value>
+    <Value lang="nl">Je hebt geen toestemming om het postvak IN te bekijken</Value>
   </Entry>
   <Entry>
     <Key>Internal Server Error.</Key>
-    <Value lang="nl">Internal Server Error.</Value>
+    <Value lang="nl">Interne serverfout.</Value>
   </Entry>
   <Entry>
     <Key>Not Found.</Key>
-    <Value lang="nl">Not Found.</Value>
+    <Value lang="nl">Niet gevonden.</Value>
+  </Entry>
+  <Entry>
+    <Key>Found {0} subtitle(s)</Key>
+    <Value lang="nl">Gevonden {0} ondertitel(s)</Value>
   </Entry>
 </I18N>
