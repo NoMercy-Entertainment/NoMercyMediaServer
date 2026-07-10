@@ -182,7 +182,6 @@ public partial class MusicHub : ConnectionHub
 
         bool stopPlayback = false;
         bool wasCurrentDevice = false;
-        bool wasPlayingOnDisconnect = false;
         Ulid stoppedDeviceId = Ulid.Empty;
         Guid stoppedTrackId = Guid.Empty;
         string? stoppedTitle = null;
@@ -218,7 +217,6 @@ public partial class MusicHub : ConnectionHub
 
                         stopPlayback = true;
                         wasCurrentDevice = true;
-                        wasPlayingOnDisconnect = state.PlayState;
                         stoppedDeviceId = client.Id;
                         stoppedTrackId = state.CurrentItem?.Id ?? Guid.Empty;
                         stoppedTitle = state.CurrentItem?.Name;
@@ -259,74 +257,47 @@ public partial class MusicHub : ConnectionHub
                     _activeDeviceRegistry.RemoveIfMatches(user.Id, stoppedClientDeviceId);
                 }
 
-                if (wasPlayingOnDisconnect)
+                // Graceful release regardless of whether the vanished device was mid-play
+                // or already paused: this branch only runs when connectedDevices.Count > 0
+                // (the connectedDevices.Count == 0 branch above owns genuine session-end),
+                // so another device is still around and may want to resume the exact spot
+                // this one left off. Ending the session outright here — as a prior revision
+                // did for the "already paused" case — wiped CurrentItem/Backlog/Playlist on
+                // every remaining device the instant a paused active device disconnected,
+                // which the KMP client renders as a hard stop (MusicHubAdapter.stop() on a
+                // null item), not a pause. The session survives so a reconnect or another
+                // device can claim it, but nobody owns it anymore. Clearing DeviceId here —
+                // not just the MusicActiveDeviceRegistry entry above — is what lets the very
+                // next command from ANY connected device win active; leaving it set is
+                // exactly the divergence MusicActiveDeviceRegistry's own doc comment warns
+                // about (the registry says "no active device" while MusicPlayerState.DeviceId
+                // still names the device that just vanished), which is what wedged every
+                // other device's command into a void during the live incident this fixes.
+                playerState.PlayState = false;
+                playerState.DeviceId = null;
+                playerState.Actions = new()
                 {
-                    // Graceful release: the session survives so a reconnect or another
-                    // device can claim it, but nobody owns it anymore. Clearing DeviceId
-                    // here — not just the MusicActiveDeviceRegistry entry above — is what
-                    // lets the very next command from ANY connected device win active;
-                    // leaving it set is exactly the divergence MusicActiveDeviceRegistry's
-                    // own doc comment warns about (the registry says "no active device"
-                    // while MusicPlayerState.DeviceId still names the device that just
-                    // vanished), which is what wedged every other device's command into a
-                    // void during the live incident this fixes.
-                    playerState.PlayState = false;
-                    playerState.DeviceId = null;
-                    playerState.Actions = new()
+                    Disallows = new()
                     {
-                        Disallows = new()
-                        {
-                            Pausing = true,
-                            Resuming = false,
-                            Previous =
-                                playerState.CurrentItem == null || playerState.Backlog.Count <= 1,
-                            Next =
-                                playerState.CurrentItem == null
-                                || (
-                                    playerState.Playlist.IndexOf(playerState.CurrentItem)
-                                        >= playerState.Playlist.Count - 1
-                                    && playerState.Repeat == "off"
-                                ),
-                            Seeking = false,
-                            Stopping = false,
-                            Muting = false,
-                            TogglingShuffle = false,
-                            TogglingRepeatContext = false,
-                            TogglingRepeatTrack = false,
-                        },
-                    };
-                }
-                else
-                {
-                    // Already paused/idle when the active device vanished — nobody is
-                    // mid-listen waiting for a resume signal, so end the session cleanly
-                    // instead of leaving a paused-forever ghost no device can ever claim.
-                    // Matches EndStaleActiveSessionAsync's item:null broadcast contract so
-                    // every mirror hides the mini-player.
-                    playerState.CurrentItem = null;
-                    playerState.PlayState = false;
-                    playerState.SetPosition(0);
-                    playerState.Backlog = [];
-                    playerState.Playlist = [];
-                    playerState.CurrentList = new("", UriKind.Relative);
-                    playerState.DeviceId = null;
-                    playerState.Actions = new()
-                    {
-                        Disallows = new()
-                        {
-                            Previous = true,
-                            Next = true,
-                            Resuming = true,
-                            Pausing = true,
-                            Seeking = true,
-                            Stopping = true,
-                            Muting = true,
-                            TogglingShuffle = true,
-                            TogglingRepeatContext = true,
-                            TogglingRepeatTrack = true,
-                        },
-                    };
-                }
+                        Pausing = true,
+                        Resuming = false,
+                        Previous =
+                            playerState.CurrentItem == null || playerState.Backlog.Count <= 1,
+                        Next =
+                            playerState.CurrentItem == null
+                            || (
+                                playerState.Playlist.IndexOf(playerState.CurrentItem)
+                                    >= playerState.Playlist.Count - 1
+                                && playerState.Repeat == "off"
+                            ),
+                        Seeking = false,
+                        Stopping = false,
+                        Muting = false,
+                        TogglingShuffle = false,
+                        TogglingRepeatContext = false,
+                        TogglingRepeatTrack = false,
+                    },
+                };
             }
         }
 
