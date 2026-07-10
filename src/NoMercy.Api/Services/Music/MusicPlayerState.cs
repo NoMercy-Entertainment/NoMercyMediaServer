@@ -160,25 +160,41 @@ public class MusicPlayerState
 
     /// <summary>
     /// A lightweight serialization projection for the client broadcast: every
-    /// queue entry (<see cref="Playlist"/> and <see cref="Backlog"/>) drops its
-    /// <see cref="PlaylistTrackDto.Lyrics"/>. No client renders lyrics from a
-    /// queue item — lyrics are shown only for the current track, and both the
-    /// Android and web clients also fetch the current track's lyrics from the
-    /// REST lyrics endpoint — so a full lyric sheet per queued track is pure
-    /// wire weight. On a long queue that bloats every position broadcast
-    /// (throttled to ~5s, so each one carries the whole playlist + backlog)
-    /// enough that its flush and the receiving device's parse block prompt
-    /// delivery of the next command: the measured cause of remote-action lag.
-    /// <see cref="CurrentItem"/> keeps its lyrics for instant render. The stored
-    /// state is never mutated — this returns a throwaway shallow copy whose
-    /// queue lists hold lyric-stripped record copies (so a queue entry that
-    /// shares a reference with <see cref="CurrentItem"/> cannot strip it).
+    /// queue entry (<see cref="Playlist"/> and <see cref="Backlog"/>) drops the
+    /// three fields no client renders from a queue row — the track
+    /// <see cref="PlaylistTrackDto.Lyrics"/> sheet, the track
+    /// <see cref="PlaylistTrackDto.ColorPalette"/> swatch graph, and the same
+    /// palette plus the unbounded description on each nested
+    /// <see cref="PlaylistTrackDto.Album"/> / <see cref="PlaylistTrackDto.Artist"/>
+    /// entry. A queue row shows only cover, name, and album/artist names; the
+    /// current track's own theming comes from <see cref="CurrentItem"/> (kept
+    /// whole) and each list screen fetches its palette from REST. On a long
+    /// queue (e.g. a whole genre) every position broadcast — throttled to ~5s,
+    /// so each one carries the entire playlist + backlog — otherwise re-sends a
+    /// palette-and-lyric graph per track. That multi-MB payload's flush, and the
+    /// receiving device's re-parse of it every tick, is the measured cause of
+    /// remote-action lag and, on a memory-tight client, of GC thrash that kills
+    /// the playback service and forces an activity restart. The stored state is
+    /// never mutated — this returns a throwaway shallow copy whose queue lists
+    /// hold stripped record copies (so a queue entry that shares a reference
+    /// with <see cref="CurrentItem"/> cannot strip it), and the nested album/
+    /// artist copies are fresh clones so their in-place null-outs never reach
+    /// the stored DTOs.
     /// </summary>
     public MusicPlayerState CloneForBroadcast()
     {
         MusicPlayerState copy = (MusicPlayerState)MemberwiseClone();
-        copy.Playlist = Playlist.Select(track => track with { Lyrics = null }).ToList();
-        copy.Backlog = Backlog.Select(track => track with { Lyrics = null }).ToList();
+        copy.Playlist = Playlist.Select(StripQueueEntry).ToList();
+        copy.Backlog = Backlog.Select(StripQueueEntry).ToList();
         return copy;
     }
+
+    private static PlaylistTrackDto StripQueueEntry(PlaylistTrackDto track) =>
+        track with
+        {
+            Lyrics = null,
+            ColorPalette = null,
+            Album = track.Album.Select(album => album.ForBroadcastQueueEntry()).ToList(),
+            Artist = track.Artist.Select(artist => artist.ForBroadcastQueueEntry()).ToList(),
+        };
 }

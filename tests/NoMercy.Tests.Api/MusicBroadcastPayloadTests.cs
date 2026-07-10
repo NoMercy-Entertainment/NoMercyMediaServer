@@ -9,8 +9,10 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Newtonsoft.Json.Linq;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Api.Services.Music;
+using NoMercy.Database;
 using NoMercy.Database.Models.Music;
 using Xunit;
 
@@ -143,5 +145,164 @@ public class MusicBroadcastPayloadTests
             state.Backlog.Select(track => track.Id),
             broadcast.Backlog.Select(track => track.Id)
         );
+    }
+
+    // ── Palette + description strip ───────────────────────────────────────────
+    // On a long queue (e.g. a whole genre) the palette graph is the dominant
+    // wire weight the ~5s broadcast otherwise re-sends per track. A memory-tight
+    // client re-parses the whole blob every tick and thrashes GC to the point
+    // the playback service dies and the activity restarts — so the broadcast
+    // projection drops the track palette AND the palette + unbounded description
+    // on every nested album/artist, exactly as it already drops lyrics.
+
+    private static AlbumDto MakeAlbumDtoWithHeavyFields()
+    {
+        Album album = new() { Id = Guid.NewGuid(), Name = "Test Album" };
+        return new(album, "US")
+        {
+            ColorPalette = JToken.Parse("[\"#ffffff\",\"#000000\"]"),
+            Description = "an album bio no queue row renders",
+        };
+    }
+
+    private static ArtistDto MakeArtistDtoWithHeavyFields()
+    {
+        Artist artist = new() { Id = Guid.NewGuid(), Name = "Test Artist" };
+        ArtistTrack artistTrack = new()
+        {
+            Artist = artist,
+            ArtistId = artist.Id,
+            TrackId = Guid.NewGuid(),
+        };
+        return new(artistTrack, "US")
+        {
+            ColorPalette = JToken.Parse("[\"#ffffff\"]"),
+            Description = "an artist bio no queue row renders",
+        };
+    }
+
+    private static PlaylistTrackDto MakeTrackWithHeavyQueueFields()
+    {
+        PlaylistTrackDto dto = MakeTrackWithLyrics();
+        dto.ColorPalette = new ColorPalette();
+        dto.Album = [MakeAlbumDtoWithHeavyFields()];
+        dto.Artist = [MakeArtistDtoWithHeavyFields()];
+        return dto;
+    }
+
+    private static MusicPlayerState MakeStateWithHeavyQueue()
+    {
+        PlaylistTrackDto current = MakeTrackWithHeavyQueueFields();
+        return new()
+        {
+            DeviceId = "device-abc",
+            CurrentItem = current,
+            Backlog = [MakeTrackWithHeavyQueueFields(), current],
+            Playlist = [MakeTrackWithHeavyQueueFields(), MakeTrackWithHeavyQueueFields()],
+            CurrentList = new("/music/genres/x", UriKind.Relative),
+        };
+    }
+
+    [Fact]
+    public void CloneForBroadcast_StripsTrackColorPaletteFromEveryQueueEntry()
+    {
+        MusicPlayerState state = MakeStateWithHeavyQueue();
+
+        MusicPlayerState broadcast = state.CloneForBroadcast();
+
+        Assert.All(broadcast.Playlist, track => Assert.Null(track.ColorPalette));
+        Assert.All(broadcast.Backlog, track => Assert.Null(track.ColorPalette));
+    }
+
+    [Fact]
+    public void CloneForBroadcast_StripsNestedAlbumAndArtistPaletteAndDescription()
+    {
+        MusicPlayerState state = MakeStateWithHeavyQueue();
+
+        MusicPlayerState broadcast = state.CloneForBroadcast();
+
+        foreach (PlaylistTrackDto track in broadcast.Playlist.Concat(broadcast.Backlog))
+        {
+            Assert.All(
+                track.Album,
+                album =>
+                {
+                    Assert.Null(album.ColorPalette);
+                    Assert.Null(album.Description);
+                }
+            );
+            Assert.All(
+                track.Artist,
+                artist =>
+                {
+                    Assert.Null(artist.ColorPalette);
+                    Assert.Null(artist.Description);
+                }
+            );
+        }
+    }
+
+    [Fact]
+    public void CloneForBroadcast_KeepsCurrentItemPaletteGraph()
+    {
+        MusicPlayerState state = MakeStateWithHeavyQueue();
+
+        MusicPlayerState broadcast = state.CloneForBroadcast();
+
+        Assert.NotNull(broadcast.CurrentItem);
+        Assert.NotNull(broadcast.CurrentItem!.ColorPalette);
+        Assert.All(broadcast.CurrentItem.Album, album => Assert.NotNull(album.ColorPalette));
+        Assert.All(broadcast.CurrentItem.Artist, artist => Assert.NotNull(artist.ColorPalette));
+    }
+
+    [Fact]
+    public void CloneForBroadcast_DoesNotMutateStoredPaletteGraph()
+    {
+        MusicPlayerState state = MakeStateWithHeavyQueue();
+
+        state.CloneForBroadcast();
+
+        Assert.All(
+            state.Playlist,
+            track =>
+            {
+                Assert.NotNull(track.ColorPalette);
+                Assert.All(track.Album, album => Assert.NotNull(album.ColorPalette));
+                Assert.All(track.Artist, artist => Assert.NotNull(artist.ColorPalette));
+            }
+        );
+    }
+
+    [Fact]
+    public void AlbumDto_ForBroadcastQueueEntry_NullsPaletteAndDescription_PreservesIdentity()
+    {
+        AlbumDto album = MakeAlbumDtoWithHeavyFields();
+
+        AlbumDto stripped = album.ForBroadcastQueueEntry();
+
+        Assert.Null(stripped.ColorPalette);
+        Assert.Null(stripped.Description);
+        Assert.Equal(album.Id, stripped.Id);
+        Assert.Equal(album.Name, stripped.Name);
+        Assert.Equal(album.Link, stripped.Link);
+        // The source DTO the server keeps is never mutated.
+        Assert.NotNull(album.ColorPalette);
+        Assert.NotNull(album.Description);
+    }
+
+    [Fact]
+    public void ArtistDto_ForBroadcastQueueEntry_NullsPaletteAndDescription_PreservesIdentity()
+    {
+        ArtistDto artist = MakeArtistDtoWithHeavyFields();
+
+        ArtistDto stripped = artist.ForBroadcastQueueEntry();
+
+        Assert.Null(stripped.ColorPalette);
+        Assert.Null(stripped.Description);
+        Assert.Equal(artist.Id, stripped.Id);
+        Assert.Equal(artist.Name, stripped.Name);
+        Assert.Equal(artist.Link, stripped.Link);
+        Assert.NotNull(artist.ColorPalette);
+        Assert.NotNull(artist.Description);
     }
 }
