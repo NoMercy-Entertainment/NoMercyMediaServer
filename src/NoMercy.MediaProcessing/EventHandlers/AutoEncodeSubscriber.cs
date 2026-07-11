@@ -20,35 +20,48 @@ using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.Storage;
+using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.MediaProcessing.EventHandlers;
 
 /// <summary>
-/// Consumer video-archiver workflow: when a newly-scanned movie or episode
+/// Opt-in video-archiver workflow: when a newly-scanned movie or episode
 /// lands in a library folder that has an <c>EncodingPresetFolder</c> (V2)
-/// link, automatically queue a <c>VideoEncodeJob</c> for each video file
-/// that hasn't been encoded yet.
+/// link, queue a <c>VideoEncodeJob</c> for each video file that hasn't been
+/// encoded yet — but only when the operator has explicitly turned on
+/// auto-encode-on-scan via <see cref="AutoEncodeOnScanKey"/>.
+///
+/// The flag defaults OFF. A preset link on a folder means "this is the
+/// preset to use when I encode", not "re-encode everything the moment it is
+/// scanned"; conflating the two silently doubled operators' disk usage by
+/// writing a full HLS ladder alongside every original. Auto-encode is now a
+/// deliberate dashboard choice, so an existing preset assignment never
+/// triggers an encode on its own.
 ///
 /// The dispatch gate reads the same V2 <c>EncodingPresetFolders</c> table
 /// <see cref="NoMercy.MediaProcessing.Jobs.MediaJobs.VideoEncodeJob"/> resolves
 /// its presets from, so a folder that VideoEncodeJob would actually encode is
-/// exactly the folder this subscriber dispatches for — no split-brain between
-/// the legacy V1 <c>EncoderProfileFolder</c> table and the V2 executor. V1
-/// stays around for the dashboard/backfill paths; it just no longer gates the
-/// live auto-encode decision.
+/// exactly the folder this subscriber dispatches for.
 ///
 /// Skips files whose expected encoded output directory already exists so
-/// rescans don't re-encode. Folders without a preset link are a no-op —
-/// users can still manage encoding by hand through the dashboard.
+/// rescans don't re-encode.
 /// </summary>
 public class AutoEncodeSubscriber(
     IEventBus eventBus,
     ILogger<AutoEncodeSubscriber> logger,
     IStorage storage,
     IDbContextFactory<MediaContext> contextFactory,
-    JobDispatcher dispatcher
+    JobDispatcher dispatcher,
+    IConfigurationStore configurationStore
 ) : IHostedService
 {
+    /// <summary>
+    /// Configuration key gating the whole auto-encode-on-scan behavior.
+    /// Absent or anything other than "true" (case-insensitive) keeps it off,
+    /// so a fresh install and every existing server stay opt-in by default.
+    /// </summary>
+    internal const string AutoEncodeOnScanKey = "encoder.auto_encode_on_scan";
+
     private readonly List<IDisposable> _subscriptions = [];
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -77,8 +90,20 @@ public class AutoEncodeSubscriber(
         return Task.CompletedTask;
     }
 
+    private bool IsAutoEncodeEnabled()
+    {
+        return string.Equals(
+            configurationStore.GetValue(AutoEncodeOnScanKey),
+            "true",
+            StringComparison.OrdinalIgnoreCase
+        );
+    }
+
     private async Task HandleAsync(MediaFilesScannedEvent evt, CancellationToken ct)
     {
+        if (!IsAutoEncodeEnabled())
+            return;
+
         try
         {
             await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);

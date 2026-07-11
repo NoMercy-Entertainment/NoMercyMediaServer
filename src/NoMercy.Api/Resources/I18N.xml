@@ -765,12 +765,4 @@
     <Key>Found {0} subtitle(s)</Key>
     <Value lang="nl">Gevonden {0} ondertitel(s)</Value>
   </Entry>
-  <Entry>
-    <Key>Internal Server Error.</Key>
-    <Value lang="nl">Internal Server Error.</Value>
-  </Entry>
-  <Entry>
-    <Key>Not Found.</Key>
-    <Value lang="nl">Not Found.</Value>
-  </Entry>
 </I18N>

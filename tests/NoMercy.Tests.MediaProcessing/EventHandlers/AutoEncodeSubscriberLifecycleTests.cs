@@ -24,6 +24,7 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Validation;
+using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.Tests.MediaProcessing.EventHandlers;
 
@@ -45,6 +46,16 @@ public class AutoEncodeSubscriberLifecycleTests
     {
         IStorageDriver driver = new LocalStorageDriver();
         return new LocalStorage(driver, new([], driver));
+    }
+
+    // Auto-encode-on-scan is opt-in (commit 6868e83d added the IConfigurationStore
+    // gate). Enable it so the dispatch legs exercise the folder/preset logic rather
+    // than short-circuiting on the gate.
+    private static IConfigurationStore EnabledConfigStore()
+    {
+        Mock<IConfigurationStore> store = new();
+        store.Setup(configuration => configuration.GetValue(It.IsAny<string>())).Returns("true");
+        return store.Object;
     }
 
     private static IDbContextFactory<MediaContext> ContextFactory(out SqliteConnection connection)
@@ -87,7 +98,8 @@ public class AutoEncodeSubscriberLifecycleTests
             NullLogger<AutoEncodeSubscriber>.Instance,
             NoOpStorage(),
             ContextFactory(out SqliteConnection connection),
-            dispatcher.Object
+            dispatcher.Object,
+            EnabledConfigStore()
         );
 
         await subscriber.StartAsync(CancellationToken.None);
@@ -112,7 +124,8 @@ public class AutoEncodeSubscriberLifecycleTests
             NullLogger<AutoEncodeSubscriber>.Instance,
             NoOpStorage(),
             ContextFactory(out SqliteConnection connection),
-            dispatcher.Object
+            dispatcher.Object,
+            EnabledConfigStore()
         );
 
         await subscriber.StartAsync(CancellationToken.None);
@@ -133,7 +146,8 @@ public class AutoEncodeSubscriberLifecycleTests
             NullLogger<AutoEncodeSubscriber>.Instance,
             NoOpStorage(),
             ContextFactory(out SqliteConnection connection),
-            dispatcher.Object
+            dispatcher.Object,
+            EnabledConfigStore()
         );
 
         for (int i = 0; i < 3; i++)
@@ -165,7 +179,8 @@ public class AutoEncodeSubscriberLifecycleTests
             NullLogger<AutoEncodeSubscriber>.Instance,
             NoOpStorage(),
             factory,
-            dispatcher.Object
+            dispatcher.Object,
+            EnabledConfigStore()
         );
         await subscriber.StartAsync(CancellationToken.None);
 
@@ -207,7 +222,8 @@ public class AutoEncodeSubscriberLifecycleTests
             NullLogger<AutoEncodeSubscriber>.Instance,
             NoOpStorage(),
             factory,
-            dispatcher.Object
+            dispatcher.Object,
+            EnabledConfigStore()
         );
         await subscriber.StartAsync(CancellationToken.None);
 
@@ -243,7 +259,8 @@ public class AutoEncodeSubscriberLifecycleTests
             NullLogger<AutoEncodeSubscriber>.Instance,
             NoOpStorage(),
             factory,
-            dispatcher.Object
+            dispatcher.Object,
+            EnabledConfigStore()
         );
         await subscriber.StartAsync(CancellationToken.None);
 

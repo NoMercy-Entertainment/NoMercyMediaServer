@@ -370,6 +370,24 @@ public class DynamicStaticFilesMiddleware(
             end = Math.Min(start + initialProbeChunkSize - 1, fileLength - 1);
         }
 
+        // Clamp an explicit end that runs past EOF, then reject any range that is
+        // still unsatisfiable. ContentRangeHeaderValue's ctor throws
+        // ArgumentOutOfRangeException on start<0 or start>end — a zero-length segment
+        // (end becomes fileLength-1 = -1) or a start seeked at/after the segment's EOF.
+        // Without this it surfaced as an unhandled 500 the player retried in a tight
+        // loop (spamming [DynamicStaticFiles] exceptions for one bad .m4s segment).
+        if (end > fileLength - 1)
+            end = fileLength - 1;
+
+        if (start < 0 || start > end)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
+            context.Response.Headers.ContentRange = new ContentRangeHeaderValue(
+                fileLength
+            ).ToString();
+            return;
+        }
+
         long length = end - start + 1;
 
         context.Response.StatusCode = (int)HttpStatusCode.PartialContent;
