@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
+using NoMercy.Networking.Devices;
 using NoMercyQueue.Core;
 using NoMercyQueue.Core.Interfaces;
 
@@ -22,6 +23,7 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
 {
     private readonly IDbContextFactory<MediaContext> _contextFactory;
     private readonly ILogger<DeviceDropRuleCronJob> _logger;
+    private readonly IDeviceListChangeNotifier? _changeNotifier;
 
     private static readonly TimeSpan GraceWindow = TimeSpan.FromHours(1);
     private static readonly TimeSpan EFuseWindow = TimeSpan.FromHours(24);
@@ -32,11 +34,13 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
 
     public DeviceDropRuleCronJob(
         IDbContextFactory<MediaContext> contextFactory,
-        ILogger<DeviceDropRuleCronJob> logger
+        ILogger<DeviceDropRuleCronJob> logger,
+        IDeviceListChangeNotifier? changeNotifier = null
     )
     {
         _contextFactory = contextFactory;
         _logger = logger;
+        _changeNotifier = changeNotifier;
     }
 
     public async Task ExecuteAsync(string parameters, CancellationToken cancellationToken = default)
@@ -159,6 +163,18 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
         await context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Dropped {Count} devices from registry", toDrop.Count);
+
+        // The registry just changed (rows disowned) — push a fresh device list to
+        // each affected owner so their pickers drop the stale entry immediately.
+        // Without this the client keeps the last-pushed list (which still contains
+        // the now-dropped duplicate) until an unrelated connect/disconnect triggers
+        // the next broadcast — the root cause of a TV lingering twice in the picker.
+        if (_changeNotifier is not null)
+        {
+            List<Guid> affectedOwners = notices.Select(n => n.UserId).Distinct().ToList();
+            foreach (Guid ownerId in affectedOwners)
+                await _changeNotifier.BroadcastChange(ownerId);
+        }
     }
 
     private static DateTime? MaxOf(DateTime? a, DateTime? b) =>
