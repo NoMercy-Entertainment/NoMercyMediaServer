@@ -34,6 +34,7 @@ using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.MediaProcessing.Movies;
 using NoMercy.MediaProcessing.People;
+using NoMercy.MediaProcessing.Reclaim;
 using NoMercy.MediaProcessing.Seasons;
 using NoMercy.MediaProcessing.Shows;
 using NoMercy.MediaProcessing.Subtitles;
@@ -428,6 +429,7 @@ public static partial class ServiceConfiguration
             NoMercy.MediaProcessing.Files.Parsing.IFilenameParserPipeline,
             NoMercy.MediaProcessing.Files.Parsing.FilenameParserPipeline
         >();
+        services.AddSingleton<IReclaimScanService, ReclaimScanService>();
         services.AddScoped<FilesystemRepository>();
         services.AddScoped<LanguageRepository>();
         services.AddScoped<CollectionRepository>();
