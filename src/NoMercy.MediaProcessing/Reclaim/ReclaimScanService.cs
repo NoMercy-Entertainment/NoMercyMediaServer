@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
@@ -110,7 +111,11 @@ public sealed class ReclaimScanService : IReclaimScanService
 
         State = ReclaimScanState.Scanning;
 
-        _ = Task.Run(() => RunScanAsync(ct), CancellationToken.None);
+        // The scan is detached from the caller's request lifetime: it must keep
+        // running to completion even after the triggering HTTP request returns
+        // and its token cancels, so the background chain always runs under
+        // CancellationToken.None rather than the caller's ct.
+        _ = Task.Run(() => RunScanAsync(CancellationToken.None), CancellationToken.None);
 
         return Task.CompletedTask;
     }
@@ -194,25 +199,22 @@ public sealed class ReclaimScanService : IReclaimScanService
                 continue;
             }
 
-            bool isProtected = group.Any(row =>
-                row.Filename.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase)
-            );
-
-            VideoFileScanRow servedRow =
-                group.FirstOrDefault(row =>
-                    row.Filename.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase)
-                ) ?? firstRow;
-
+            bool isProtected;
+            VideoFileScanRow servedRow;
             IReadOnlyList<FolderEntry> entries;
             try
             {
+                isProtected = group.Any(row => IsServedPlaylist(row.Filename));
+
+                servedRow = group.FirstOrDefault(row => IsServedPlaylist(row.Filename)) ?? firstRow;
+
                 entries = _listFolderEntries(folderId, driverId, hostFolder);
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(
                     ex,
-                    "[ReclaimScanService] Could not list {HostFolder} — skipping",
+                    "[ReclaimScanService] Could not process {HostFolder} — skipping",
                     hostFolder
                 );
                 continue;
@@ -288,7 +290,16 @@ public sealed class ReclaimScanService : IReclaimScanService
     private TimeSpan ResolvePartialStaleAfter()
     {
         string? raw = _configurationStore.GetValue(PartialStaleHoursKey);
-        if (!string.IsNullOrWhiteSpace(raw) && double.TryParse(raw, out double hours) && hours > 0)
+        if (
+            !string.IsNullOrWhiteSpace(raw)
+            && double.TryParse(
+                raw,
+                NumberStyles.Float | NumberStyles.AllowThousands,
+                CultureInfo.InvariantCulture,
+                out double hours
+            )
+            && hours > 0
+        )
             return TimeSpan.FromHours(hours);
 
         return TimeSpan.FromHours(DefaultPartialStaleHours);
@@ -345,6 +356,10 @@ public sealed class ReclaimScanService : IReclaimScanService
         int idx = trimmed.LastIndexOf('/');
         return idx < 0 ? trimmed : trimmed[(idx + 1)..];
     }
+
+    private static bool IsServedPlaylist(string? filename) =>
+        !string.IsNullOrEmpty(filename)
+        && filename.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase);
 
     private static string DeterministicId(string hostFolder)
     {

@@ -500,6 +500,116 @@ public class ReclaimScanServiceTests
     }
 
     [Fact]
+    public async Task StartScanAsync_NoOverride_UsesRealStorageLister_MapsFolderDriverAndHostFolder()
+    {
+        Ulid folderId = Ulid.NewUlid();
+        Ulid driverId = Ulid.NewUlid();
+        const string HostFolder = "movies/Real Storage Movie (2020)";
+
+        IDbContextFactory<MediaContext> factory = ContextFactory(
+            out SqliteConnection connection,
+            context =>
+            {
+                Seed(
+                    context,
+                    new Folder
+                    {
+                        Id = folderId,
+                        Path = HostFolder,
+                        DriverId = driverId,
+                    }
+                );
+                Seed(
+                    context,
+                    new Movie
+                    {
+                        Id = 100,
+                        Title = "Real Storage Movie",
+                        TitleSort = "real storage movie",
+                        LibraryId = Ulid.NewUlid(),
+                    }
+                );
+                Seed(
+                    context,
+                    new VideoFile
+                    {
+                        Id = Ulid.NewUlid(),
+                        Filename = "movie.mkv",
+                        Folder = HostFolder,
+                        HostFolder = HostFolder,
+                        Share = folderId.ToString(),
+                        MovieId = 100,
+                    }
+                );
+            }
+        );
+        using SqliteConnection _ = connection;
+
+        List<StorageEntry> storageEntries =
+        [
+            new(
+                $"{HostFolder}/movie.mkv",
+                false,
+                4_000_000_000,
+                DateTimeOffset.UtcNow.AddDays(-30)
+            ),
+            new($"{HostFolder}/movie.NoMercy.m3u8", false, 500, DateTimeOffset.UtcNow.AddDays(-1)),
+            new(
+                $"{HostFolder}/video_1920x1080_SDR",
+                true,
+                1_500_000_000,
+                DateTimeOffset.UtcNow.AddDays(-1)
+            ),
+            new($"{HostFolder}/audio_eng", true, 200_000_000, DateTimeOffset.UtcNow.AddDays(-1)),
+        ];
+
+        Mock<IStorage> storage = new();
+        storage.Setup(s => s.List(HostFolder, null, false)).Returns(storageEntries);
+        storage
+            .Setup(s => s.GetName(It.IsAny<string>()))
+            .Returns(
+                (string path) =>
+                {
+                    int idx = path.LastIndexOf('/');
+                    return idx < 0 ? path : path[(idx + 1)..];
+                }
+            );
+
+        Mock<IStorageFactory> storageFactory = new();
+        storageFactory.Setup(f => f.For(folderId, driverId, string.Empty)).Returns(storage.Object);
+
+        ReclaimScanService service = new(
+            factory,
+            storageFactory.Object,
+            new StubConfigurationStore(),
+            NullLogger<ReclaimScanService>.Instance
+        );
+
+        await service.StartScanAsync(CancellationToken.None);
+        await WaitUntilNotScanningAsync(service);
+
+        storageFactory.Verify(f => f.For(folderId, driverId, string.Empty), Times.Once);
+        storage.Verify(s => s.List(HostFolder, null, false), Times.Once);
+
+        service.State.Should().Be(ReclaimScanState.Completed);
+        service.Latest.Should().NotBeNull();
+        service.Latest!.Items.Should().HaveCount(1);
+        ReclaimableItem item = service.Latest.Items[0];
+        item.Title.Should().Be("Real Storage Movie");
+        item.MediaType.Should().Be("movie");
+        item.Folder.Should().Be(HostFolder);
+        item.ServedCopy.Should().Be("movie.mkv");
+        item.Kind.Should().Be(ReclaimKind.ReclaimableHls);
+        item.ReclaimableBytes.Should().Be(500 + 1_500_000_000 + 200_000_000);
+        item.TargetPaths.Should()
+            .BeEquivalentTo([
+                $"{HostFolder}/video_1920x1080_SDR",
+                $"{HostFolder}/audio_eng",
+                $"{HostFolder}/movie.NoMercy.m3u8",
+            ]);
+    }
+
+    [Fact]
     public async Task StartScanAsync_UnparseableShare_SkipsFolderWithoutCrashingScan()
     {
         const string HostFolder = "movies/Bad Share Movie (2018)";
