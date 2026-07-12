@@ -1,0 +1,37 @@
+# Maintainer: NoMercy Entertainment <support@nomercy.tv>
+pkgname=nomercy
+pkgver={{VERSION}}
+pkgrel=1
+pkgdesc="NoMercy MediaServer - complete installation"
+arch=('x86_64')
+url="https://nomercy.tv"
+license=('custom')
+depends=('glibc')
+
+package() {
+  install -dm755 "$pkgdir/opt/nomercy"
+  cp -a "$startdir/payload/." "$pkgdir/opt/nomercy/"
+  chmod 755 "$pkgdir/opt/nomercy/NoMercyMediaServer"
+  chmod 755 "$pkgdir/opt/nomercy/NoMercyApp"
+  chmod 755 "$pkgdir/opt/nomercy/NoMercyLauncher"
+  chmod 755 "$pkgdir/opt/nomercy/nomercy"
+
+  install -dm755 "$pkgdir/usr/bin"
+  ln -s /opt/nomercy/NoMercyMediaServer "$pkgdir/usr/bin/nomercymediaserver"
+  ln -s /opt/nomercy/NoMercyApp "$pkgdir/usr/bin/nomercyapp"
+  ln -s /opt/nomercy/NoMercyLauncher "$pkgdir/usr/bin/nomercylauncher"
+  ln -s /opt/nomercy/nomercy "$pkgdir/usr/bin/nomercy"
+
+  install -dm755 "$pkgdir/usr/share/applications"
+  for df in NoMercy-MediaServer.desktop NoMercy-MediaServer-Service.desktop NoMercy-App.desktop; do
+    if [ -f "$startdir/assets/${df}" ]; then
+      install -m644 "$startdir/assets/${df}" "$pkgdir/usr/share/applications/"
+    fi
+  done
+
+  install -dm755 "$pkgdir/usr/share/icons/hicolor/scalable/apps"
+  install -m644 "$startdir/assets/icon.png" "$pkgdir/usr/share/icons/hicolor/scalable/apps/NoMercy-MediaServer.png"
+
+  install -dm755 "$pkgdir/usr/share/licenses/nomercy"
+  echo "Proprietary software. All rights reserved." > "$pkgdir/usr/share/licenses/nomercy/LICENSE"
+}
