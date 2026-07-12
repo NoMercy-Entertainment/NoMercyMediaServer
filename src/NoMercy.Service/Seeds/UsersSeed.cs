@@ -11,14 +11,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using NoMercy.Database.Models.Libraries;
-using NoMercy.Database.Models.Users;
-using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.Configuration;
-using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Service.Seeds.Dto;
 using NoMercy.Storage;
 using Serilog.Events;
 
@@ -26,7 +19,20 @@ namespace NoMercy.Service.Seeds;
 
 public static class UsersSeed
 {
-    public static async Task Init(this MediaContext dbContext, IStorage storage, string? accessToken)
+    /// <summary>
+    /// First-boot seed only: populates an empty Users table from the current
+    /// server-users list. Ongoing reconciliation (invites accepted after this
+    /// server already has users, revocation of removed/declined users) is the
+    /// job of <see cref="IServerUserSyncService"/> via the recurring
+    /// <c>ServerUserSyncCronJob</c> — this seed intentionally never re-runs once
+    /// any user exists locally.
+    /// </summary>
+    public static async Task Init(
+        this MediaContext dbContext,
+        IStorage storage,
+        string? accessToken,
+        IServerUserSyncService? syncService = null
+    )
     {
         try
         {
@@ -36,100 +42,10 @@ public static class UsersSeed
 
             Logger.Setup("Adding Users", LogEventLevel.Verbose);
 
-            Dictionary<string, string> queryParams = new()
-            {
-                ["id"] = Info.DeviceId.ToString(),
-                ["with_self"] = "true",
-            };
+            IServerUserSyncService service =
+                syncService ?? new ServerUserSyncService(new ServerUserApiClient());
 
-            string? token = accessToken;
-            if (string.IsNullOrEmpty(token))
-            {
-                Logger.Setup(
-                    "Skipping user seed — no auth token (will retry via DegradedModeRecovery)",
-                    LogEventLevel.Warning
-                );
-                return;
-            }
-
-            GenericHttpClient authClient = new(ExternalServicesConfig.Current.ApiServerBaseUrl, 10, 0);
-            authClient.SetDefaultHeaders(ExternalServicesConfig.Current.UserAgent, token);
-            string response = await authClient.SendAndReadAsync(
-                HttpMethod.Get,
-                "server-users",
-                null,
-                queryParams
-            );
-
-            if (response == null)
-                throw new("Failed to get Server info");
-
-            ServerUserDtoData[] serverUsers = response.FromJson<ServerUserDto>()?.Data ?? [];
-
-            Logger.Setup($"Found {serverUsers.Length} users", LogEventLevel.Verbose);
-
-            User[] users = serverUsers
-                // Skip rows whose UserId can't be parsed — a single bad row
-                // from the upstream API used to abort the whole seed via
-                // FormatException, leaving the server with no users at all.
-                .Where(serverUser => Guid.TryParse(serverUser.UserId, out _))
-                .Select(serverUser => new User
-                {
-                    Id = Guid.Parse(serverUser.UserId),
-                    Email = serverUser.Email,
-                    Name = serverUser.Name,
-                    Allowed = true,
-                    AudioTranscoding = serverUser.Enabled,
-                    NoTranscoding = serverUser.Enabled,
-                    VideoTranscoding = serverUser.Enabled,
-                    Owner = serverUser.IsOwner,
-                })
-                .ToArray();
-
-            await dbContext
-                .Users.UpsertRange(users)
-                .On(v => new { v.Id })
-                .WhenMatched(
-                    (us, ui) =>
-                        new()
-                        {
-                            Id = ui.Id,
-                            Email = ui.Email,
-                            Name = ui.Name,
-                            Allowed = ui.Allowed,
-                            Manage = us.Manage,
-                            AudioTranscoding = ui.AudioTranscoding,
-                            NoTranscoding = ui.NoTranscoding,
-                            VideoTranscoding = ui.VideoTranscoding,
-                            Owner = ui.Owner,
-                        }
-                )
-                .RunAsync();
-
-            if (!storage.Exists(AppFiles.LibrariesSeedFile))
-                return;
-
-            Library[] libraries =
-                storage
-                    .ReadAllTextAsync(AppFiles.LibrariesSeedFile, CancellationToken.None)
-                    .Result.FromJson<Library[]>()
-                ?? [];
-
-            List<LibraryUser> libraryUsers = [];
-
-            foreach (User user in users.ToList())
-            {
-                foreach (Library library in libraries.ToList())
-                    libraryUsers.Add(new() { LibraryId = library.Id, UserId = user.Id });
-
-                await dbContext
-                    .LibraryUser.UpsertRange(libraryUsers)
-                    .On(v => new { v.LibraryId, v.UserId })
-                    .WhenMatched(
-                        (lus, lui) => new() { LibraryId = lui.LibraryId, UserId = lui.UserId }
-                    )
-                    .RunAsync();
-            }
+            await service.SyncAsync(dbContext, storage, accessToken);
         }
         catch (Exception e)
         {

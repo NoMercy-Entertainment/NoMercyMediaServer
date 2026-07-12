@@ -61,6 +61,7 @@ using NoMercy.Providers.Lyrics;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Queue.MediaServer;
 using NoMercy.Service.Extensions;
+using NoMercy.Service.Seeds;
 using NoMercy.Service.Workers;
 using NoMercy.Setup.Auth;
 using NoMercy.Setup.Boot;
@@ -275,6 +276,11 @@ public static partial class ServiceConfiguration
         services.AddSingleton<IFfProbeService>(FfProbeService.Current);
         services.AddSingleton<IStartupManager>(StartupManager.Current);
         services.AddSingleton<IMediaAuthorizationPolicy, MediaAuthorizationPolicy>();
+
+        // Server-users sync (invite/removal reconciliation) — used by the
+        // first-boot UsersSeed and by the recurring ServerUserSyncCronJob.
+        services.AddSingleton<IServerUserApiClient, ServerUserApiClient>();
+        services.AddSingleton<IServerUserSyncService, ServerUserSyncService>();
 
         // Update checker + periodic background check
         services.AddSingleton<IUpdateChecker, UpdateChecker>();
