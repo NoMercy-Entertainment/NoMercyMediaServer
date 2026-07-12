@@ -150,7 +150,7 @@ public class ReclaimDeleteTests
                     folderId,
                     driverId,
                     HostFolder,
-                    "movie.mkv",
+                    "/movie.mkv",
                     movieId: 1,
                     movieTitle: "Reclaimable Movie"
                 )
@@ -237,7 +237,7 @@ public class ReclaimDeleteTests
                     folderId,
                     driverId,
                     HostFolder,
-                    "movie.mkv",
+                    "/movie.mkv",
                     movieId: 2,
                     movieTitle: "Race Condition Movie"
                 )
@@ -273,7 +273,9 @@ public class ReclaimDeleteTests
         item.TargetPaths.Should().Contain($"{HostFolder}/movie.NoMercy.m3u8");
 
         // Simulate the race: between scan and delete, the served copy pointer moved to the
-        // exact file the stale snapshot marked as a reclaim target.
+        // exact file the stale snapshot marked as a reclaim target. Production stores
+        // VideoFile.Filename with a leading slash — use that real format, not a bare leaf,
+        // so this test cannot stay green against a guard that stopped normalizing it.
         await using (
             MediaContext mutateContext = await factory.CreateDbContextAsync(CancellationToken.None)
         )
@@ -281,7 +283,7 @@ public class ReclaimDeleteTests
             VideoFile row = await mutateContext.VideoFiles.SingleAsync(v =>
                 v.HostFolder == HostFolder
             );
-            row.Filename = "movie.NoMercy.m3u8";
+            row.Filename = "/movie.NoMercy.m3u8";
             await mutateContext.SaveChangesAsync();
         }
 
@@ -299,6 +301,96 @@ public class ReclaimDeleteTests
     }
 
     [Fact]
+    public async Task DeleteItemAsync_OriginalNoLongerOnDisk_AbortsAndDeletesNothing()
+    {
+        Ulid folderId = Ulid.NewUlid();
+        Ulid driverId = Ulid.NewUlid();
+        const string HostFolder = "movies/Vanished Original Movie (2019)";
+
+        IDbContextFactory<MediaContext> factory = ContextFactory(
+            out SqliteConnection connection,
+            context =>
+                SeedMovieVideoFile(
+                    context,
+                    folderId,
+                    driverId,
+                    HostFolder,
+                    "/movie.mkv",
+                    movieId: 6,
+                    movieTitle: "Vanished Original Movie"
+                )
+        );
+        using SqliteConnection _ = connection;
+
+        // At scan time the original was still on disk alongside the HLS ladder — a
+        // legitimate ReclaimableHls snapshot item.
+        List<FolderEntry> scanEntries =
+        [
+            new("movie.mkv", false, 4_000_000_000, DateTimeOffset.UtcNow.AddDays(-30)),
+            new("movie.NoMercy.m3u8", false, 500, DateTimeOffset.UtcNow.AddDays(-1)),
+            new("video_1920x1080_SDR", true, 1_500_000_000, DateTimeOffset.UtcNow.AddDays(-1)),
+            new("audio_eng", true, 200_000_000, DateTimeOffset.UtcNow.AddDays(-1)),
+        ];
+
+        // Between scan and delete the original was removed from disk (e.g. a concurrent
+        // delete or a not-yet-rescanned VideoFile row pointing at a gone file). Only the
+        // HLS master + ladder remain — this folder is no longer ReclaimableHls, it is the
+        // last playable copy's only remnant and must not be touched.
+        List<StorageEntry> freshEntries =
+        [
+            new($"{HostFolder}/movie.NoMercy.m3u8", false, 500, DateTimeOffset.UtcNow.AddDays(-1)),
+            new(
+                $"{HostFolder}/video_1920x1080_SDR",
+                true,
+                1_500_000_000,
+                DateTimeOffset.UtcNow.AddDays(-1)
+            ),
+            new($"{HostFolder}/audio_eng", true, 200_000_000, DateTimeOffset.UtcNow.AddDays(-1)),
+        ];
+
+        Mock<IStorage> storage = new(MockBehavior.Strict);
+        storage.Setup(s => s.List(HostFolder, null, false)).Returns(freshEntries);
+        storage
+            .Setup(s => s.GetName(It.IsAny<string>()))
+            .Returns(
+                (string path) =>
+                {
+                    int idx = path.LastIndexOf('/');
+                    return idx < 0 ? path : path[(idx + 1)..];
+                }
+            );
+
+        Mock<IStorageFactory> storageFactory = new();
+        storageFactory.Setup(f => f.For(folderId, driverId, string.Empty)).Returns(storage.Object);
+
+        ReclaimScanService service = new(
+            factory,
+            storageFactory.Object,
+            new StubConfigurationStore(),
+            NullLogger<ReclaimScanService>.Instance,
+            (_, _, _) => scanEntries
+        );
+
+        await service.StartScanAsync(CancellationToken.None);
+        await WaitUntilNotScanningAsync(service);
+
+        service.Latest.Should().NotBeNull();
+        service.Latest!.Items.Should().HaveCount(1);
+        ReclaimableItem item = service.Latest.Items[0];
+
+        Func<Task> act = async () => await service.DeleteItemAsync(item.Id, CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+
+        storage.Verify(s => s.Delete(It.IsAny<string>()), Times.Never);
+        storage.Verify(s => s.DeleteDirectory(It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+
+        service.Latest.Items.Should().HaveCount(1);
+        service.Latest.Items[0].Id.Should().Be(item.Id);
+        service.Latest.TotalReclaimableBytes.Should().Be(item.ReclaimableBytes);
+    }
+
+    [Fact]
     public async Task DeleteItemAsync_UnknownId_ThrowsKeyNotFound()
     {
         Ulid folderId = Ulid.NewUlid();
@@ -313,7 +405,7 @@ public class ReclaimDeleteTests
                     folderId,
                     driverId,
                     HostFolder,
-                    "movie.mkv",
+                    "/movie.mkv",
                     movieId: 3,
                     movieTitle: "Known Movie"
                 )
@@ -369,7 +461,7 @@ public class ReclaimDeleteTests
                     staleFolderId,
                     staleDriverId,
                     StaleHostFolder,
-                    "movie.mkv",
+                    "/movie.mkv",
                     movieId: 4,
                     movieTitle: "Stale Partial Movie"
                 );
@@ -378,7 +470,7 @@ public class ReclaimDeleteTests
                     revivedFolderId,
                     revivedDriverId,
                     RevivedHostFolder,
-                    "movie.mkv",
+                    "/movie.mkv",
                     movieId: 5,
                     movieTitle: "Revived Partial Movie"
                 );

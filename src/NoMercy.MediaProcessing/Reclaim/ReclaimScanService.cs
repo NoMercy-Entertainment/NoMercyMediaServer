@@ -149,11 +149,59 @@ public sealed class ReclaimScanService : IReclaimScanService
             recursive: false
         );
 
-        long freedBytes = DeleteTargets(storage, freshEntries, item.TargetPaths);
+        ReclaimClassification fresh = ClassifyFreshFolderState(
+            storage,
+            freshEntries,
+            dbInfo.Value.Rows
+        );
 
-        RemoveItemFromSnapshot(itemId, item.ReclaimableBytes);
+        if (fresh.Kind != ReclaimKind.ReclaimableHls)
+        {
+            _logger.LogWarning(
+                "[ReclaimScanService] Folder {Folder} is no longer reclaimable-HLS (now {Kind}) — refusing to delete item {ItemId}",
+                item.Folder,
+                fresh.Kind,
+                item.Id
+            );
+            throw new InvalidOperationException(
+                $"Folder '{item.Folder}' is no longer reclaimable — original missing or folder now protected."
+            );
+        }
+
+        IReadOnlyList<string> confirmedTargets = fresh
+            .TargetNames.Select(name => StoragePathHelpers.Combine(item.Folder, name))
+            .ToList();
+
+        long freedBytes = DeleteTargets(storage, freshEntries, confirmedTargets);
+
+        RemoveItemFromSnapshot(itemId);
 
         return freedBytes;
+    }
+
+    private ReclaimClassification ClassifyFreshFolderState(
+        IStorage storage,
+        IReadOnlyList<StorageEntry> freshEntries,
+        IReadOnlyList<VideoFileScanRow> freshRows
+    )
+    {
+        bool isProtected = freshRows.Any(row => IsServedPlaylist(row.Filename));
+
+        List<FolderEntry> freshFolderEntries = freshEntries
+            .Select(entry => new FolderEntry(
+                storage.GetName(entry.Path),
+                entry.IsDirectory,
+                entry.SizeBytes,
+                entry.LastModified
+            ))
+            .ToList();
+
+        return ReclaimClassifier.Classify(
+            freshFolderEntries,
+            isProtected,
+            DateTimeOffset.UtcNow,
+            ResolvePartialStaleAfter()
+        );
     }
 
     public async Task<(int count, long bytes)> SweepPartialsAsync(CancellationToken ct)
@@ -279,7 +327,7 @@ public sealed class ReclaimScanService : IReclaimScanService
         return freedBytes;
     }
 
-    private void RemoveItemFromSnapshot(string itemId, long reclaimableBytes)
+    private void RemoveItemFromSnapshot(string itemId)
     {
         lock (_gate)
         {
@@ -292,7 +340,7 @@ public sealed class ReclaimScanService : IReclaimScanService
             _latest = _latest with
             {
                 Items = remaining,
-                TotalReclaimableBytes = _latest.TotalReclaimableBytes - reclaimableBytes,
+                TotalReclaimableBytes = remaining.Sum(candidate => candidate.ReclaimableBytes),
             };
         }
     }
@@ -375,21 +423,14 @@ public sealed class ReclaimScanService : IReclaimScanService
             if (_latest is null)
                 return;
 
-            List<PartialJunkItem> remaining = [];
-            long removedBytes = 0;
-
-            foreach (PartialJunkItem partial in _latest.PartialJunk)
-            {
-                if (sweptFolders.Contains(partial.Folder))
-                    removedBytes += partial.Bytes;
-                else
-                    remaining.Add(partial);
-            }
+            List<PartialJunkItem> remaining = _latest
+                .PartialJunk.Where(partial => !sweptFolders.Contains(partial.Folder))
+                .ToList();
 
             _latest = _latest with
             {
                 PartialJunk = remaining,
-                TotalPartialJunkBytes = _latest.TotalPartialJunkBytes - removedBytes,
+                TotalPartialJunkBytes = remaining.Sum(partial => partial.Bytes),
             };
         }
     }
