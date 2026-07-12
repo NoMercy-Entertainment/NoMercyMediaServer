@@ -238,14 +238,37 @@ public partial class PlatformHardwareDetector(
         return devices;
     }
 
-    private async Task<IReadOnlyList<GpuDevice>> DetectLinuxGpusAsync(CancellationToken ct)
+    /// <summary>
+    /// Internal (not private) so <c>NoMercy.Tests.Encoder</c> can exercise
+    /// the Linux detection path directly on any host OS via
+    /// <c>InternalsVisibleTo</c>, instead of being gated behind the
+    /// <see cref="RuntimeInformation"/> check in <see cref="DetectGpusAsync"/>.
+    /// </summary>
+    internal async Task<IReadOnlyList<GpuDevice>> DetectLinuxGpusAsync(CancellationToken ct)
     {
-        // Check for render nodes first — no /dev/dri means no GPU acceleration
+        // NVENC does not require a DRM render node — only the VAAPI/QSV path
+        // used by Intel/AMD genuinely needs /dev/dri. Probe NVIDIA via
+        // nvidia-smi independently of /dev/dri so the common Docker case is
+        // detected: nvidia-container-toolkit's `--gpus all` mounts
+        // /dev/nvidia0, /dev/nvidiactl, /dev/nvidia-uvm but never /dev/dri.
+        // The old dri-gated early return silently dropped NVENC there and
+        // fell back to CPU-only encoding.
+        List<GpuDevice> nvidiaDevices = await DetectNvidiaGpusAsync(ct).ConfigureAwait(false);
+
         bool hasDri = storage.Exists("/dev/dri");
+
         if (!hasDri)
         {
-            logger.LogInformation("No /dev/dri found — no GPU acceleration available");
-            return [];
+            if (nvidiaDevices.Count > 0)
+                logger.LogInformation(
+                    "NVIDIA GPU detected via nvidia-smi without /dev/dri — NVENC available (nvidia-container-toolkit Docker case)"
+                );
+            else
+                logger.LogInformation(
+                    "No /dev/dri and no NVIDIA GPU found via nvidia-smi — no GPU acceleration available"
+                );
+
+            return nvidiaDevices;
         }
 
         ProcessResult result = await processRunner.RunAsync("lspci", ["-nn"], null, ct);
@@ -253,10 +276,10 @@ public partial class PlatformHardwareDetector(
         if (!result.IsSuccess)
         {
             logger.LogWarning("lspci failed (exit {Code}): {Err}", result.ExitCode, result.StdErr);
-            return [];
+            return nvidiaDevices;
         }
 
-        List<GpuDevice> devices = [];
+        List<GpuDevice> devices = [.. nvidiaDevices];
 
         foreach (string line in result.StdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries))
         {
@@ -267,10 +290,81 @@ public partial class PlatformHardwareDetector(
 
             string name = match.Groups["name"].Value.Trim();
 
+            // Already captured this card via nvidia-smi (which gives real
+            // VRAM + driver version) — don't double-count it from lspci.
+            if (nvidiaDevices.Count > 0 && ClassifyVendor(name) == GpuVendor.Nvidia)
+                continue;
+
             // Linux lspci doesn't report VRAM — estimate from name or use 0
             long vramMb = EstimateVramFromName(name);
 
             GpuDevice? device = await BuildGpuDeviceAsync(name, vramMb).ConfigureAwait(false);
+            if (device is not null)
+                devices.Add(device);
+        }
+
+        return devices;
+    }
+
+    /// <summary>
+    /// Probes NVIDIA GPUs via <c>nvidia-smi</c> — the correct NVIDIA signal
+    /// on Linux, since NVENC does not require a DRM render node the way
+    /// VAAPI does. <c>Av1CapabilityProbe</c> already shells nvidia-smi for
+    /// compute_cap, so nvidia-smi availability is the established NVIDIA
+    /// detection signal in this codebase.
+    /// </summary>
+    private async Task<List<GpuDevice>> DetectNvidiaGpusAsync(CancellationToken ct)
+    {
+        ProcessResult result;
+        try
+        {
+            result = await processRunner
+                .RunAsync(
+                    "nvidia-smi",
+                    [
+                        "--query-gpu=name,memory.total,driver_version",
+                        "--format=csv,noheader,nounits",
+                    ],
+                    null,
+                    ct
+                )
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogDebug(ex, "nvidia-smi not available — skipping NVIDIA NVENC probe");
+            return [];
+        }
+
+        if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.StdOut))
+        {
+            // Secondary hint: NVIDIA device nodes exist but nvidia-smi failed
+            // (driver mismatch, missing binary in a minimal container, etc).
+            // Log it — this is the "GPU is there but we can't see it" case.
+            if (storage.Exists("/dev/nvidia0") || storage.Exists("/dev/nvidiactl"))
+                logger.LogWarning(
+                    "NVIDIA device nodes present (/dev/nvidia0 or /dev/nvidiactl) but nvidia-smi query failed (exit {Code}) — NVENC detection skipped. Verify the NVIDIA driver / nvidia-smi is available inside the container.",
+                    result.ExitCode
+                );
+
+            return [];
+        }
+
+        List<GpuDevice> devices = [];
+
+        foreach (string line in result.StdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            string[] parts = line.Split(',');
+            string name = parts[0].Trim();
+            if (string.IsNullOrWhiteSpace(name))
+                continue;
+
+            long vramMb = parts.Length >= 2 && long.TryParse(parts[1].Trim(), out long mb) ? mb : 0;
+            string? driverVersion =
+                parts.Length >= 3 && !string.IsNullOrWhiteSpace(parts[2]) ? parts[2].Trim() : null;
+
+            GpuDevice? device = await BuildGpuDeviceAsync(name, vramMb, driverVersion)
+                .ConfigureAwait(false);
             if (device is not null)
                 devices.Add(device);
         }
