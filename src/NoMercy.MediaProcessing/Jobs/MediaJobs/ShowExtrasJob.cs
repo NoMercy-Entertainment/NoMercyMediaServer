@@ -66,17 +66,28 @@ public class ShowExtrasJob : AbstractMediaExraDataJob<TmdbTvShowAppends>
             LoggerFactory.CreateLogger<PersonManager>()
         );
 
-        await personManager.Store(Storage);
+        // Each Store* call fetches from TMDB and/or writes to storage (NFS in
+        // production) — bounded so a stall fails the job instead of hanging it
+        // and holding an `extras` worker slot forever. See
+        // JobOperationTimeoutExtensions for why per-call rather than
+        // per-token cancellation.
+        await personManager.Store(Storage).WithTimeout(nameof(PersonManager.Store));
 
-        await showManager.StoreImages(Storage);
-        await showManager.StoreSimilar(Storage);
-        await showManager.StoreRecommendations(Storage);
-        await showManager.StoreAlternativeTitles(Storage);
-        await showManager.StoreWatchProviders(Storage);
-        await showManager.StoreVideos(Storage);
-        await showManager.StoreNetworks(Storage);
-        await showManager.StoreCompanies(Storage);
-        await showManager.StoreKeywords(Storage);
+        await showManager.StoreImages(Storage).WithTimeout(nameof(ShowManager.StoreImages));
+        await showManager.StoreSimilar(Storage).WithTimeout(nameof(ShowManager.StoreSimilar));
+        await showManager
+            .StoreRecommendations(Storage)
+            .WithTimeout(nameof(ShowManager.StoreRecommendations));
+        await showManager
+            .StoreAlternativeTitles(Storage)
+            .WithTimeout(nameof(ShowManager.StoreAlternativeTitles));
+        await showManager
+            .StoreWatchProviders(Storage)
+            .WithTimeout(nameof(ShowManager.StoreWatchProviders));
+        await showManager.StoreVideos(Storage).WithTimeout(nameof(ShowManager.StoreVideos));
+        await showManager.StoreNetworks(Storage).WithTimeout(nameof(ShowManager.StoreNetworks));
+        await showManager.StoreCompanies(Storage).WithTimeout(nameof(ShowManager.StoreCompanies));
+        await showManager.StoreKeywords(Storage).WithTimeout(nameof(ShowManager.StoreKeywords));
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(

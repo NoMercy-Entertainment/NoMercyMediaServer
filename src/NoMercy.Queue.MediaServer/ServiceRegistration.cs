@@ -119,6 +119,13 @@ public static class ServiceRegistration
         // yet — ordering here is host-startup order, not registration order.
         services.AddHostedService<OrphanJobRecoveryHostedService>();
 
+        // Stuck-reservation reaper — runs periodically for the lifetime of the
+        // process so a job that hangs mid-flight (not just one interrupted by
+        // a crash) doesn't hold its queue slot forever. Encoder queues are
+        // excluded by design; see the class doc for why a wall-clock cutoff is
+        // unsafe for them.
+        services.AddHostedService<StuckReservationReaperHostedService>();
+
         return services;
     }
 }

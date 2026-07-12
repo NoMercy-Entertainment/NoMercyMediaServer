@@ -33,6 +33,15 @@ namespace NoMercy.Queue.MediaServer;
 /// has already burned a prior attempt beyond that single reservation
 /// (<c>Attempts &gt; 1</c>) is a repeat offender and moves to FailedJobs so it
 /// can't retry forever.
+///
+/// This is a one-shot pass: nothing runs yet when the host boots, so a 30s
+/// wall-clock cutoff applied to every queue (encoder included) is safe here.
+/// Once the server is up, reclaiming a stuck reservation is no longer
+/// unconditionally safe for long-running jobs — see
+/// <see cref="StuckReservationReaperHostedService"/>, which runs the same
+/// <see cref="OrphanRecoveryTriage"/> logic periodically but only against an
+/// allow-list of queues known to finish in seconds-to-minutes (encoder AND
+/// library/import are excluded — see that class for why).
 /// </summary>
 public class OrphanJobRecoveryHostedService(
     IServiceScopeFactory scopeFactory,
@@ -40,8 +49,7 @@ public class OrphanJobRecoveryHostedService(
 ) : BackgroundService
 {
     private static readonly TimeSpan OrphanCutoff = TimeSpan.FromSeconds(30);
-    private const string InterruptedReason = "job.interrupted_no_checkpoint";
-    private static readonly string[] EncoderQueues =
+    internal static readonly string[] EncoderQueues =
     [
         QueueNames.Encoder,
         QueueNames.EncoderGpu,
@@ -70,65 +78,29 @@ public class OrphanJobRecoveryHostedService(
                 return;
             }
 
-            int failed = 0;
-            int requeued = 0;
-            int resumable = 0;
-
-            foreach (QueueJobModel orphan in orphans)
-            {
-                bool isEncoderJob = EncoderQueues.Contains(orphan.Queue);
-
-                if (isEncoderJob && checkpointLookup is not null)
-                {
-                    bool hasCheckpoint = await checkpointLookup.HasCheckpointAsync(
-                        orphan.Payload,
-                        cancellationToken
-                    );
-
-                    if (hasCheckpoint)
-                    {
-                        orphan.Attempts = 0;
-                        orphan.ReservedAt = null;
-                        context.UpdateJob(orphan);
-                        resumable++;
-                        continue;
-                    }
-                }
-
-                if (orphan.Attempts > 1)
-                {
-                    context.AddFailedJobAndRemoveJob(
-                        new()
-                        {
-                            Uuid = Guid.NewGuid(),
-                            Connection = "default",
-                            Queue = orphan.Queue,
-                            Payload = orphan.Payload,
-                            Exception = InterruptedReason,
-                            FailedAt = DateTime.UtcNow,
-                        },
-                        orphan
-                    );
-                    failed++;
-                }
-                else
-                {
-                    orphan.Attempts = (byte)Math.Max(0, orphan.Attempts - 1);
-                    orphan.ReservedAt = null;
-                    context.UpdateJob(orphan);
-                    requeued++;
-                }
-            }
-
-            context.SaveChanges();
+            OrphanTriageResult result = await OrphanRecoveryTriage
+                .RunAsync(
+                    context,
+                    checkpointLookup,
+                    orphans,
+                    EncoderQueues.ToHashSet(),
+                    // Boot-pass behavior is unchanged: nothing was running when
+                    // the host came up, so a genuine first-time orphan gets its
+                    // attempt refunded for one free clean retry.
+                    refundAttemptOnRequeue: true,
+                    deadLetterReasonFactory: null,
+                    onReclaimed: null,
+                    cancellationToken: cancellationToken
+                )
+                .ConfigureAwait(false);
 
             logger.LogInformation(
                 "Orphan recovery: scanned {Total} orphan job(s); {Failed} moved to FailedJobs ({Reason}); {Requeued} left for retry; {Resumable} re-queued for checkpoint resume",
                 orphans.Count,
-                failed,
-                InterruptedReason,
-                requeued,
-                resumable
+                result.Failed,
+                OrphanRecoveryTriage.InterruptedReason,
+                result.Requeued,
+                result.Resumable
             );
         }
         catch (Exception ex)
