@@ -183,7 +183,7 @@ public class InboxRoutingServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ResolveDestinations_FolderWithoutProfile_IsExcluded()
+    public async Task ResolveDestinations_FolderWithoutProfile_IsIncluded()
     {
         Library library = new()
         {
@@ -194,7 +194,21 @@ public class InboxRoutingServiceTests : IDisposable
         _context.Libraries.Add(library);
         _context.SaveChanges();
 
-        SeedFolderWithoutProfile(library);
+        Folder folder = SeedFolderWithoutProfile(library);
+
+        InboxRoutingService service = MakeService();
+        List<InboxDestination> results = await service.ResolveDestinations("movie", _context);
+
+        results.Should().HaveCount(1);
+        results[0].LibraryId.Should().Be(library.Id);
+        results[0].FolderId.Should().Be(folder.Id);
+        results[0].ProfileId.Should().Be(Ulid.Empty);
+    }
+
+    [Fact]
+    public async Task ResolveDestinations_TypeMismatchedLibrary_IsExcluded()
+    {
+        SeedLibraryWithProfile("tv");
 
         InboxRoutingService service = MakeService();
         List<InboxDestination> results = await service.ResolveDestinations("movie", _context);
@@ -597,6 +611,63 @@ public class InboxRoutingServiceTests : IDisposable
                 ),
             Times.Never
         );
+    }
+
+    // -----------------------------------------------------------------------
+    // ExecuteAuto — profile-less destination: TargetProfileId is null, not Ulid.Empty
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task ExecuteAuto_ProfileLessDestination_SetsTargetProfileIdToNull()
+    {
+        Library library = new()
+        {
+            Id = Ulid.NewUlid(),
+            Title = "movie library no profile",
+            Type = "movie",
+        };
+        _context.Libraries.Add(library);
+        _context.SaveChanges();
+
+        Folder folder = SeedFolderWithoutProfile(library);
+
+        InboxRoutingService service = MakeService();
+
+        CandidateMatch candidate = MakeCandidate("tmdb", "603", "The Matrix");
+        InboxDestination destination = new()
+        {
+            LibraryId = library.Id,
+            FolderId = folder.Id,
+            ProfileId = Ulid.Empty,
+            DriverId = folder.DriverId,
+            FolderPath = folder.Path,
+        };
+
+        InboxItem item = new()
+        {
+            Id = Ulid.NewUlid(),
+            SourcePath = "inbox/The Matrix (1999).mkv",
+            DriverId = folder.DriverId,
+            DetectedType = "movie",
+            Confidence = "high",
+            Status = "Routing",
+            Candidates = [candidate],
+        };
+
+        RouteOutcome outcome = new()
+        {
+            Mode = "auto",
+            Destination = destination,
+            Item = item,
+        };
+
+        await service.ExecuteAuto(outcome, _context);
+
+        item.TargetProfileId.Should().BeNull();
+
+        InboxItem? persisted = await _context.InboxItems.FindAsync(item.Id);
+        persisted.Should().NotBeNull();
+        persisted!.TargetProfileId.Should().BeNull();
     }
 
     // -----------------------------------------------------------------------

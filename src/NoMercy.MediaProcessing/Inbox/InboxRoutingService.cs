@@ -32,8 +32,11 @@ public class InboxRoutingService
 
     /// <summary>
     /// Resolves valid destinations for the given detected media type.
-    /// A destination is valid when: a Library.Type == detectedType, the library
-    /// has a Folder, and that Folder has >= 1 EncoderProfileFolder.
+    /// A destination is valid when a Library.Type == detectedType and the
+    /// library has a Folder. Encoder-profile presence is no longer a routing
+    /// requirement: auto-encode is a per-library decision gated separately
+    /// (see <see cref="NoMercy.MediaProcessing.EventHandlers.AutoEncodeSubscriber"/>),
+    /// so a type-matching folder with no V1 EncoderProfileFolder still routes.
     /// Fetches flat then groups client-side to respect the SQLite no-APPLY rule.
     /// </summary>
     public async Task<List<InboxDestination>> ResolveDestinations(
@@ -47,10 +50,7 @@ public class InboxRoutingService
             .Include(f => f.EncoderProfileFolder)
             .Include(f => f.FolderLibraries)
                 .ThenInclude(fl => fl.Library)
-            .Where(f =>
-                f.FolderLibraries.Any(fl => fl.Library.Type == detectedType)
-                && f.EncoderProfileFolder.Any()
-            )
+            .Where(f => f.FolderLibraries.Any(fl => fl.Library.Type == detectedType))
             .ToListAsync(ct);
 
         List<InboxDestination> destinations = [];
@@ -66,15 +66,12 @@ public class InboxRoutingService
 
             EncoderProfileFolder? profileFolder = folder.EncoderProfileFolder.FirstOrDefault();
 
-            if (profileFolder is null)
-                continue;
-
             destinations.Add(
                 new()
                 {
                     LibraryId = folderLibrary.LibraryId,
                     FolderId = folder.Id,
-                    ProfileId = profileFolder.EncoderProfileId,
+                    ProfileId = profileFolder?.EncoderProfileId ?? Ulid.Empty,
                     DriverId = folder.DriverId,
                     FolderPath = folder.Path,
                 }
@@ -234,7 +231,7 @@ public class InboxRoutingService
         item.Status = "Imported";
         item.TargetLibraryId = destination.LibraryId;
         item.TargetFolderId = destination.FolderId;
-        item.TargetProfileId = destination.ProfileId;
+        item.TargetProfileId = destination.ProfileId == Ulid.Empty ? null : destination.ProfileId;
         item.SelectedMatch = match;
 
         if (context.Entry(item).State == EntityState.Detached)

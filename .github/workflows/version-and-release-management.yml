@@ -25,9 +25,21 @@ jobs:
 
       - name: Get latest tag
         id: get-tag
-        uses: WyriHaximus/github-action-get-previous-tag@v2
-        with:
-          fallback: v0.1.201
+        run: |
+          # Global latest semver tag across the WHOLE repo, not an ancestry-based
+          # `git describe`. Ancestry lookup resolves to whatever tag is reachable
+          # from THIS ref's history, which on dev (never tag-resynced after
+          # master-only releases) can be several versions behind the true latest
+          # published release. Bumping from a stale ancestor recomputes a version
+          # that already has a real GitHub Release + ghcr.io image, and the
+          # create-release job's "already exists -> edit/clobber" path then
+          # overwrites that historical release.
+          LATEST_TAG=$(git tag -l 'v*' | sed 's/^v//' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG="0.1.201"
+          fi
+          echo "tag=v$LATEST_TAG" >> "$GITHUB_OUTPUT"
+          echo "Global latest tag: v$LATEST_TAG"
 
       - name: Check for source changes
         id: check-changes

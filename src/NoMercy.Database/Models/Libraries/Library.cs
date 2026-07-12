@@ -41,6 +41,14 @@ public class Library : Timestamps
     [JsonProperty("auto_refresh_interval")]
     public int AutoRefreshInterval { get; set; }
 
+    [Column("AutoEncodeOnScan")]
+    [JsonProperty("auto_encode_on_scan")]
+    public bool AutoEncodeOnScan { get; set; }
+
+    [Column("EncodePresetId")]
+    [JsonProperty("encode_preset_id")]
+    public Ulid? EncodePresetId { get; set; }
+
     [JsonProperty("order")]
     public int? Order { get; set; }
 

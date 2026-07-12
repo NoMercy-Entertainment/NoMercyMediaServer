@@ -18,6 +18,7 @@ using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Lifecycle;
 using NoMercy.NmSystem.Status;
 using NoMercy.Setup.Auth;
 using NoMercy.Setup.Boot;
@@ -64,6 +65,7 @@ public class DegradedModeStartupTests
         Assert.False(deferred.NetworkDiscovered);
         Assert.False(deferred.Registered);
         Assert.False(deferred.SeedsRun);
+        Assert.False(deferred.BinariesReady);
         Assert.False(deferred.AllCompleted);
     }
 
@@ -77,6 +79,7 @@ public class DegradedModeStartupTests
             NetworkDiscovered = true,
             SeedsRun = true,
             Registered = true,
+            BinariesReady = true,
             AllCompleted = true,
         };
 
@@ -85,6 +88,7 @@ public class DegradedModeStartupTests
         Assert.True(deferred.NetworkDiscovered);
         Assert.True(deferred.SeedsRun);
         Assert.True(deferred.Registered);
+        Assert.True(deferred.BinariesReady);
         Assert.True(deferred.AllCompleted);
     }
 
@@ -497,5 +501,64 @@ public class CloudflareFallbackTests
 
         // The cache should gracefully handle missing files
         Assert.False(File.Exists(cacheFile));
+    }
+}
+
+// Regression for the "ffmpeg download failure permanently wedges the encoder
+// queues" bug: a deferred "Binaries" startup task previously had no path back
+// to BootStage.Binaries at all. DegradedModeRecovery.TryProvisionBinariesAsync
+// is the retry step the background recovery loop calls every backoff tick;
+// these tests exercise it directly (isolated NOMERCY_APP_PATH per test) rather
+// than waiting through the loop's real 30s+ backoff schedule.
+public class DegradedModeBinaryProvisioningTests : IDisposable
+{
+    private readonly string _tempAppPath;
+    private readonly string? _previousAppPath;
+
+    public DegradedModeBinaryProvisioningTests()
+    {
+        _previousAppPath = Environment.GetEnvironmentVariable("NOMERCY_APP_PATH");
+        _tempAppPath = Path.Combine(Path.GetTempPath(), "nm-binprov-" + Guid.NewGuid());
+        Directory.CreateDirectory(_tempAppPath);
+        Environment.SetEnvironmentVariable("NOMERCY_APP_PATH", _tempAppPath);
+
+        ServerPhaseTracker.ResetSharedForTests();
+    }
+
+    public void Dispose()
+    {
+        ServerPhaseTracker.ResetSharedForTests();
+        Environment.SetEnvironmentVariable("NOMERCY_APP_PATH", _previousAppPath);
+
+        try
+        {
+            if (Directory.Exists(_tempAppPath))
+                Directory.Delete(_tempAppPath, recursive: true);
+        }
+        catch (IOException)
+        {
+            // Best-effort scratch-dir cleanup — the static Logger may still hold a
+            // handle open on a log file it wrote under this temp AppPath. Leaving
+            // an orphaned temp directory behind is harmless; failing the test over
+            // cleanup is not.
+        }
+    }
+
+    [Fact]
+    public async Task TryProvisionBinariesAsync_MarksBinariesReady_WhenFfmpegAlreadyOnDisk()
+    {
+        // Simulates a retry tick after ffmpeg landed on disk (either this attempt's
+        // own download or a previous one) — provisioning must not re-download, and
+        // must flip both the DTO flag and BootStage.Binaries so encoder queues unblock.
+        Directory.CreateDirectory(AppFiles.FfmpegFolder);
+        await File.WriteAllTextAsync(AppFiles.FfmpegPath, "fake-ffmpeg-binary");
+
+        ServerPhaseTracker tracker = ServerPhaseTracker.Shared();
+        DeferredTasks tasks = new();
+
+        await DegradedModeRecovery.TryProvisionBinariesAsync(tasks);
+
+        Assert.True(tasks.BinariesReady);
+        Assert.True(tracker.IsComplete(BootStage.Binaries));
     }
 }

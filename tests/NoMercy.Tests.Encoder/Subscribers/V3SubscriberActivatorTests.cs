@@ -52,10 +52,6 @@ public class V3SubscriberActivatorTests
     {
         ServiceProvider provider = BuildProvider();
 
-        AutoEncodeSubscriber autoEncode1 = provider.GetRequiredService<AutoEncodeSubscriber>();
-        AutoEncodeSubscriber autoEncode2 = provider.GetRequiredService<AutoEncodeSubscriber>();
-        autoEncode1.Should().BeSameAs(autoEncode2);
-
         IntroDetectSubscriber intro1 = provider.GetRequiredService<IntroDetectSubscriber>();
         IntroDetectSubscriber intro2 = provider.GetRequiredService<IntroDetectSubscriber>();
         intro1.Should().BeSameAs(intro2);
@@ -89,7 +85,6 @@ public class V3SubscriberActivatorTests
 
         // Subscribers should be alive — resolving them after start returns the
         // same instance the activator pulled.
-        provider.GetRequiredService<AutoEncodeSubscriber>().Should().NotBeNull();
         provider.GetRequiredService<IntroDetectSubscriber>().Should().NotBeNull();
         provider.GetRequiredService<OcrPostEncodeSubscriber>().Should().NotBeNull();
         provider.GetRequiredService<CropDetectSubscriber>().Should().NotBeNull();

@@ -11,6 +11,7 @@
 
 using NoMercy.MediaProcessing.Jobs.ChangesJobs;
 using NoMercy.Queue.MediaServer.Jobs;
+using NoMercy.Service.Jobs;
 using NoMercyQueue.Extensions;
 
 namespace NoMercy.Service.Configuration;
@@ -23,5 +24,6 @@ public static partial class ServiceConfiguration
         services.AddCronJob<ActivityLogRetentionCronJob>("activity-log-retention");
         services.AddCronJob<TmdbChangesCronJob>("tmdb-changes-sync");
         services.AddCronJob<DeviceDropRuleCronJob>("device-drop-rule-job");
+        services.AddCronJob<ServerUserSyncCronJob>("server-user-sync");
     }
 }

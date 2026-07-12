@@ -473,12 +473,10 @@ public static class ServiceCollectionExtensions
 
         // V3 event-bus subscribers — registered as singletons so the activator
         // can resolve them once at start-up (their constructors subscribe to
-        // the event bus). Coexists with the legacy MediaProcessing subscribers
-        // — V3 AutoEncode is dormant until EncoderOptions.WatchedFolderProfiles
-        // is populated, so default installs see no behaviour change. Each
-        // subscriber has its own opt-out flag on EncoderOptions for hard
-        // disable.
-        services.AddSingleton<AutoEncodeSubscriber>();
+        // the event bus). Auto-encode dispatch lives solely in
+        // NoMercy.MediaProcessing.EventHandlers.AutoEncodeSubscriber, gated
+        // per-library. Each subscriber here has its own opt-out flag on
+        // EncoderOptions for hard disable.
         services.AddSingleton<IntroDetectSubscriber>();
         services.AddSingleton<OcrPostEncodeSubscriber>();
         services.AddSingleton<CropDetectSubscriber>();

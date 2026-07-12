@@ -17,7 +17,6 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Events;
 using NoMercy.Events.Library;
-using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.Storage;
 using NoMercyQueue.Core.Interfaces;
@@ -28,20 +27,23 @@ namespace NoMercy.MediaProcessing.EventHandlers;
 /// Opt-in video-archiver workflow: when a newly-scanned movie or episode
 /// lands in a library folder that has an <c>EncodingPresetFolder</c> (V2)
 /// link, queue a <c>VideoEncodeJob</c> for each video file that hasn't been
-/// encoded yet — but only when the operator has explicitly turned on
-/// auto-encode-on-scan via <see cref="AutoEncodeOnScanKey"/>.
+/// encoded yet — but only when the owning <see cref="Library"/> has
+/// <see cref="Library.AutoEncodeOnScan"/> turned on and a
+/// <see cref="Library.EncodePresetId"/> assigned.
 ///
-/// The flag defaults OFF. A preset link on a folder means "this is the
-/// preset to use when I encode", not "re-encode everything the moment it is
-/// scanned"; conflating the two silently doubled operators' disk usage by
-/// writing a full HLS ladder alongside every original. Auto-encode is now a
-/// deliberate dashboard choice, so an existing preset assignment never
-/// triggers an encode on its own.
+/// The flag defaults OFF per library. A preset link on a folder means "this
+/// is the preset to use when I encode", not "re-encode everything the
+/// moment it is scanned"; conflating the two silently doubled operators'
+/// disk usage by writing a full HLS ladder alongside every original.
+/// Auto-encode is a deliberate per-library dashboard choice, so an existing
+/// preset assignment never triggers an encode on its own — and when it does
+/// trigger, only <see cref="Library.EncodePresetId"/> runs, not every
+/// preset linked to the folder.
 ///
-/// The dispatch gate reads the same V2 <c>EncodingPresetFolders</c> table
-/// <see cref="NoMercy.MediaProcessing.Jobs.MediaJobs.VideoEncodeJob"/> resolves
-/// its presets from, so a folder that VideoEncodeJob would actually encode is
-/// exactly the folder this subscriber dispatches for.
+/// The folder-selection gate reads the same V2 <c>EncodingPresetFolders</c>
+/// table <see cref="NoMercy.MediaProcessing.Jobs.MediaJobs.VideoEncodeJob"/>
+/// resolves its presets from, so a folder that VideoEncodeJob would actually
+/// encode is exactly the folder this subscriber dispatches for.
 ///
 /// Skips files whose expected encoded output directory already exists so
 /// rescans don't re-encode.
@@ -51,8 +53,7 @@ public class AutoEncodeSubscriber(
     ILogger<AutoEncodeSubscriber> logger,
     IStorage storage,
     IDbContextFactory<MediaContext> contextFactory,
-    JobDispatcher dispatcher,
-    IConfigurationStore configurationStore
+    IJobDispatcher dispatcher
 ) : IHostedService
 {
     /// <summary>
@@ -108,8 +109,39 @@ public class AutoEncodeSubscriber(
         {
             await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
 
+            Library? library = await context
+                .Libraries.AsNoTracking()
+                .FirstOrDefaultAsync(l => l.Id == evt.LibraryId, ct);
+
+            if (library is null)
+            {
+                logger.LogDebug(
+                    "Auto-encode skipped: library {LibraryId} not found",
+                    evt.LibraryId
+                );
+                return;
+            }
+
+            if (!library.AutoEncodeOnScan)
+            {
+                logger.LogDebug(
+                    "Auto-encode-on-scan is off for library {LibraryId}; scan skipped",
+                    evt.LibraryId
+                );
+                return;
+            }
+
+            if (library.EncodePresetId is null)
+            {
+                logger.LogDebug(
+                    "Auto-encode-on-scan is on for library {LibraryId} but no encoding preset is assigned; scan skipped",
+                    evt.LibraryId
+                );
+                return;
+            }
+
             // All folders in this library that have a V2 encoding preset
-            // attached — same table VideoEncodeJob reads its presets from.
+            // attached — same table VideoEncodeJob resolves its presets from.
             List<Folder> folders = await context
                 .Folders.Include(f => f.EncodingPresetFolders)
                     .ThenInclude(link => link.Preset)
@@ -168,12 +200,15 @@ public class AutoEncodeSubscriber(
 
                 string filePath =
                     bestSource.HostFolder.TrimEnd('/') + "/" + bestSource.Filename.TrimStart('/');
-                dispatcher.DispatchJob<VideoEncodeJob>(
-                    evt.LibraryId,
-                    folder.Id,
-                    evt.MediaId.ToString(),
-                    filePath
-                );
+                VideoEncodeJob job = new()
+                {
+                    LibraryId = evt.LibraryId,
+                    FolderId = folder.Id,
+                    Id = evt.MediaId.ToString(),
+                    InputFile = filePath,
+                    PresetId = library.EncodePresetId.Value,
+                };
+                dispatcher.Dispatch(job, job.QueueName, job.Priority);
                 dispatched++;
             }
 

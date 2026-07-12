@@ -487,6 +487,10 @@ namespace NoMercy.Database.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("AutoEncodeOnScan")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("AutoEncodeOnScan");
+
                     b.Property<int>("AutoRefreshInterval")
                         .HasColumnType("INTEGER");
 
@@ -498,6 +502,10 @@ namespace NoMercy.Database.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("TEXT")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("EncodePresetId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("EncodePresetId");
 
                     b.Property<bool>("ExtractChapters")
                         .HasColumnType("INTEGER");

@@ -10,11 +10,15 @@
 // -----------------------------------------------------------------------------
 
 using System.IdentityModel.Tokens.Jwt;
-using NoMercy.NmSystem.Auth;
 using NoMercy.Networking.Discovery;
+using NoMercy.NmSystem.Auth;
+using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Lifecycle;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Auth;
 using NoMercy.Setup.Server;
+using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
 using Serilog.Events;
 
 namespace NoMercy.Setup.Boot;
@@ -77,6 +81,11 @@ public class DegradedModeRecovery : IDegradedModeRecovery
             }
 
             Logger.App("Network connectivity restored — executing deferred tasks");
+
+            if (!tasks.BinariesReady)
+            {
+                await TryProvisionBinariesAsync(tasks);
+            }
 
             if (!tasks.ApiKeysLoaded)
             {
@@ -168,17 +177,11 @@ public class DegradedModeRecovery : IDegradedModeRecovery
                 catch (InvalidOperationException e) when (e.Message.Contains("cooldown"))
                 {
                     // Cooldown active — will retry on next loop iteration
-                    Logger.App(
-                        $"Deferred registration deferred: {e.Message}",
-                        LogEventLevel.Debug
-                    );
+                    Logger.App($"Deferred registration deferred: {e.Message}", LogEventLevel.Debug);
                 }
                 catch (Exception e)
                 {
-                    Logger.App(
-                        $"Deferred registration failed: {e.Message}",
-                        LogEventLevel.Warning
-                    );
+                    Logger.App($"Deferred registration failed: {e.Message}", LogEventLevel.Warning);
                 }
             }
 
@@ -188,6 +191,7 @@ public class DegradedModeRecovery : IDegradedModeRecovery
                 && tasks.NetworkDiscovered
                 && tasks.SeedsRun
                 && tasks.Registered
+                && tasks.BinariesReady
             )
             {
                 tasks.AllCompleted = true;
@@ -195,6 +199,58 @@ public class DegradedModeRecovery : IDegradedModeRecovery
             }
 
             attempt++;
+        }
+    }
+
+    /// <summary>
+    /// Retries essential-binary provisioning (ffmpeg and friends) with the recovery
+    /// loop's backoff schedule. A transient failure on first boot (GitHub rate limit,
+    /// network blip, momentarily-empty release feed) must not permanently strand
+    /// <c>BootStage.Binaries</c> — encoding genuinely cannot run without ffmpeg, so this
+    /// keeps retrying rather than letting the encoder queues run without it. The stage
+    /// is marked complete the moment ffmpeg is actually found on disk, whether that is
+    /// because this attempt downloaded it or a previous attempt already had.
+    /// </summary>
+    /// <remarks>Internal (not private) so <c>NoMercy.Tests.Setup</c> can exercise the
+    /// ffmpeg-already-on-disk path directly instead of waiting through the loop's
+    /// real backoff delays.</remarks>
+    internal static async Task TryProvisionBinariesAsync(DeferredTasks tasks)
+    {
+        try
+        {
+            IStorageDriver driver = new LocalStorageDriver();
+            IStorage storage = new LocalStorage(driver, new([], driver));
+
+            if (storage.Exists(AppFiles.FfmpegPath))
+            {
+                tasks.BinariesReady = true;
+                ServerPhaseTracker.Current?.MarkComplete(BootStage.Binaries);
+                Logger.App("FFmpeg found on disk — Binaries boot stage marked complete");
+                return;
+            }
+
+            Logger.App(
+                "FFmpeg still not installed — retrying binary provisioning",
+                LogEventLevel.Warning
+            );
+
+            await new Binaries(driver, storage).DownloadAll();
+
+            if (storage.Exists(AppFiles.FfmpegPath))
+            {
+                tasks.BinariesReady = true;
+                ServerPhaseTracker.Current?.MarkComplete(BootStage.Binaries);
+                Logger.App(
+                    "Deferred binary provisioning succeeded — Binaries boot stage marked complete"
+                );
+            }
+        }
+        catch (Exception e)
+        {
+            Logger.App(
+                $"Deferred binary provisioning failed: {e.Message} — will retry",
+                LogEventLevel.Warning
+            );
         }
     }
 }

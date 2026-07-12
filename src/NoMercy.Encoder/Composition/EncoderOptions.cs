@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using System.Text;
-using NoMercy.Encoder.Profiles;
 using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Composition;
@@ -184,13 +183,6 @@ public class EncoderOptions
     // ── Background-subscriber toggles ──────────────────────────────────────
 
     /// <summary>
-    /// When true (default), <c>AutoEncodeSubscriber</c> fires an encode job
-    /// whenever new media files land in a folder mapped by
-    /// <see cref="WatchedFolderProfiles"/>.
-    /// </summary>
-    public bool EnableAutoEncodeSubscriber { get; set; } = true;
-
-    /// <summary>
     /// When true (default), <c>IntroDetectSubscriber</c> runs chromaprint
     /// fingerprinting + intro/outro detection after a library scan completes.
     /// </summary>
@@ -218,14 +210,6 @@ public class EncoderOptions
     /// inside the pipeline, not as a separate post-process event).
     /// </summary>
     public bool EnableCropDetectSubscriber { get; set; } = true;
-
-    /// <summary>
-    /// Maps absolute folder paths to the <see cref="EncodingProfile"/> that
-    /// should be applied when new files are detected in that folder.
-    /// Used by <c>AutoEncodeSubscriber</c>. Empty by default — auto-encode
-    /// is effectively disabled until at least one mapping is added.
-    /// </summary>
-    public Dictionary<string, EncodingProfile> WatchedFolderProfiles { get; } = [];
 
     /// <summary>
     /// Blu-ray / AACS / BD+ specific overrides.

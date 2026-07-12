@@ -189,12 +189,6 @@ public class EncoderOptionsTests
     // ── Subscriber toggles default ON ───────────────────────────────────────
 
     [Fact]
-    public void AutoEncodeSubscriber_DefaultsOn()
-    {
-        new EncoderOptions().EnableAutoEncodeSubscriber.Should().BeTrue();
-    }
-
-    [Fact]
     public void IntroDetectSubscriber_DefaultsOn()
     {
         new EncoderOptions().EnableIntroDetectSubscriber.Should().BeTrue();

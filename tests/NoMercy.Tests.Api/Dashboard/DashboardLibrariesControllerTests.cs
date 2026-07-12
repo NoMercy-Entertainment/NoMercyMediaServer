@@ -16,6 +16,7 @@ using System.Text.Json;
 using FluentAssertions;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Queue;
 using NoMercy.Database.Models.Storage;
 using NoMercy.Tests.Api.Infrastructure;
@@ -173,6 +174,67 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
         );
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task PatchLibrary_WithAutoEncodeFields_PersistsBothValues()
+    {
+        Ulid libraryId = await SeedIsolatedLibraryAsync();
+        Ulid presetId = await SeedEncodingPresetAsync();
+
+        HttpResponseMessage response = await PatchAsync(
+            _authed,
+            $"/api/v1/dashboard/libraries/{libraryId}",
+            new { autoEncodeOnScan = true, encodePresetId = presetId.ToString() }
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        Library reloaded = await LoadLibraryAsync(libraryId);
+        reloaded.AutoEncodeOnScan.Should().BeTrue();
+        reloaded.EncodePresetId.Should().Be(presetId);
+    }
+
+    [Fact]
+    public async Task PatchLibrary_OmittingAutoEncodeFields_LeavesExistingValuesUnchanged()
+    {
+        Ulid presetId = await SeedEncodingPresetAsync();
+        Ulid libraryId = await SeedIsolatedLibraryAsync(
+            autoEncodeOnScan: true,
+            encodePresetId: presetId
+        );
+
+        HttpResponseMessage response = await PatchAsync(
+            _authed,
+            $"/api/v1/dashboard/libraries/{libraryId}",
+            new { title = "Renamed only" }
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        Library reloaded = await LoadLibraryAsync(libraryId);
+        reloaded.Title.Should().Be("Renamed only");
+        reloaded.AutoEncodeOnScan.Should().BeTrue();
+        reloaded.EncodePresetId.Should().Be(presetId);
+    }
+
+    [Fact]
+    public async Task PatchLibrary_WithUnknownEncodePresetId_ReturnsNotFound_AndDoesNotChangeLibrary()
+    {
+        Ulid libraryId = await SeedIsolatedLibraryAsync();
+        Ulid unknownPresetId = Ulid.NewUlid();
+
+        HttpResponseMessage response = await PatchAsync(
+            _authed,
+            $"/api/v1/dashboard/libraries/{libraryId}",
+            new { autoEncodeOnScan = true, encodePresetId = unknownPresetId.ToString() }
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        Library reloaded = await LoadLibraryAsync(libraryId);
+        reloaded.AutoEncodeOnScan.Should().BeFalse();
+        reloaded.EncodePresetId.Should().BeNull();
     }
 
     [Fact]
@@ -340,7 +402,10 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
             .Be(0, "attaching an already-known folder must never dispatch a new scan");
     }
 
-    private static async Task<Ulid> SeedIsolatedLibraryAsync()
+    private static async Task<Ulid> SeedIsolatedLibraryAsync(
+        bool autoEncodeOnScan = false,
+        Ulid? encodePresetId = null
+    )
     {
         Ulid libraryId = Ulid.NewUlid();
 
@@ -352,11 +417,40 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
                 Title = $"Isolated Library {libraryId}",
                 Type = "movie",
                 Order = 99,
+                AutoEncodeOnScan = autoEncodeOnScan,
+                EncodePresetId = encodePresetId,
             }
         );
         await mediaContext.SaveChangesAsync();
 
         return libraryId;
+    }
+
+    private static async Task<Ulid> SeedEncodingPresetAsync()
+    {
+        Ulid presetId = Ulid.NewUlid();
+
+        await using MediaContext mediaContext = new();
+        mediaContext.EncodingPresets.Add(
+            new()
+            {
+                Id = presetId,
+                Name = $"Preset {presetId}",
+                ProfileJson = "{}",
+                IsBuiltIn = false,
+            }
+        );
+        await mediaContext.SaveChangesAsync();
+
+        return presetId;
+    }
+
+    private static async Task<Library> LoadLibraryAsync(Ulid libraryId)
+    {
+        await using MediaContext mediaContext = new();
+        Library? library = await mediaContext.Libraries.FindAsync(libraryId);
+        library.Should().NotBeNull("the library seeded for this test must still exist");
+        return library!;
     }
 
     private static int CountDispatchedLibraryScanJobs(Ulid libraryId)

@@ -243,18 +243,32 @@ public class ServerController(
                 return Ok(request);
             }
 
+            Ulid? encodePresetId = library.AutoEncodeOnScan ? library.EncodePresetId : null;
+
             foreach (AddFile file in request.Files)
             {
                 string filePath =
                     isRemoteDriver || isRemoteSource ? file.Path : Path.GetFullPath(file.Path);
 
-                jobDispatcher.DispatchJob<VideoEncodeJob>(
-                    library.Id,
-                    request.FolderId,
-                    file.Id,
-                    filePath,
-                    sourceDriverId
-                );
+                if (encodePresetId is { } presetId)
+                {
+                    VideoEncodeJob job = new()
+                    {
+                        LibraryId = library.Id,
+                        FolderId = request.FolderId,
+                        Id = file.Id,
+                        InputFile = filePath,
+                        SourceDriverId = sourceDriverId,
+                        PresetId = presetId,
+                    };
+                    jobDispatcher.Dispatch(job, job.QueueName, job.Priority);
+                }
+                else
+                {
+                    // FileRescanJob is the existing rescan mechanism that
+                    // indexes files without encoding.
+                    jobDispatcher.DispatchJob<FileRescanJob>(file.Id.ToInt(), library.Id);
+                }
             }
             return Ok(request);
         }

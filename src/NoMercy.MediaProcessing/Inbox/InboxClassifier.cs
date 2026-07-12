@@ -15,7 +15,7 @@ using NoMercy.Database.Models.Libraries;
 
 namespace NoMercy.MediaProcessing.Inbox;
 
-public sealed class InboxClassifier
+public sealed partial class InboxClassifier
 {
     private static readonly string[] AudioExtensions = [".mp3", ".flac", ".opus", ".wav", ".m4a"];
 
@@ -61,6 +61,12 @@ public sealed class InboxClassifier
         @"^\[[^\]]+\].*\s-\s\d{1,4}\s",
         RegexOptions.Compiled
     );
+
+    [GeneratedRegex(@"\.NoMercy\.m3u8$", RegexOptions.IgnoreCase)]
+    private static partial Regex FinishedHlsMasterPattern();
+
+    [GeneratedRegex(@"^(video_\d+x\d+(_.+)?|audio_[A-Za-z0-9_]+)$")]
+    private static partial Regex HlsLadderEntryPattern();
 
     private readonly IInboxMetadataProbe _probe;
     private readonly IInboxAudioTagReader _tagReader;
@@ -114,6 +120,23 @@ public sealed class InboxClassifier
             return "movie";
 
         return "unknown";
+    }
+
+    public static bool IsFinishedHls(IEnumerable<string> siblingNames)
+    {
+        bool hasMaster = false;
+        bool hasLadderEntry = false;
+
+        foreach (string name in siblingNames)
+        {
+            if (FinishedHlsMasterPattern().IsMatch(name))
+                hasMaster = true;
+
+            if (HlsLadderEntryPattern().IsMatch(name))
+                hasLadderEntry = true;
+        }
+
+        return hasMaster && hasLadderEntry;
     }
 
     // -----------------------------------------------------------------------
