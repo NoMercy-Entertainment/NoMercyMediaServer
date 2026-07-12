@@ -10,12 +10,12 @@
 // -----------------------------------------------------------------------------
 
 using System.Diagnostics;
-using NoMercy.NmSystem.Auth;
 using System.Reflection;
 using InfiniFrame;
 using InfiniFrame.Js.MessageHandlers;
 using InfiniFrame.WebServer;
 using NoMercy.App.EmbeddedStaticAssets;
+using NoMercy.NmSystem.Auth;
 using NoMercy.Setup.Auth;
 
 namespace NoMercy.App;
@@ -39,6 +39,17 @@ internal class Program
 
         InfiniFrameWebApplicationBuilder builder = InfiniFrameWebApplication.CreateBuilder(args);
 
+        // InfiniFrame's SetBrowserControlInitParameters is platform-shaped: on Windows
+        // (WebView2) it is a raw space-separated Chromium flag string, but on Linux
+        // (WebKitGTK) it is parsed as a JSON object of WebKitSettings property overrides
+        // via simdjson with no exception handling in the pinned InfiniFrame version — a
+        // non-JSON value like a Chromium flag string throws an uncaught simdjson_error and
+        // terminates the whole process. Remote-debugging-via-flag is Windows/WebView2-only
+        // here, so only pass it there; every other platform gets null (native no-op).
+        string? browserControlInitParameters = OperatingSystem.IsWindows()
+            ? "--remote-debugging-port=9222"
+            : null;
+
         IInfiniFrameWindowBuilder window = builder
             .Window.SetTemporaryFilesPath(browserDataPath)
             .Center()
@@ -50,7 +61,7 @@ internal class Program
             .SetUseOsDefaultSize(false)
             .SetMediaAutoplayEnabled(true)
             .SetMediaStreamEnabled(true)
-            .SetBrowserControlInitParameters("--remote-debugging-port=9222")
+            .SetBrowserControlInitParameters(browserControlInitParameters)
             .RegisterFullScreenWebMessageHandler()
             .RegisterOpenExternalTargetWebMessageHandler()
             .RegisterTitleChangedWebMessageHandler()
@@ -136,12 +147,12 @@ internal class Program
                     // Use the DI container from the web app if possible, but this is a middleware.
                     // For now, keep it simple as this is a separate process.
                     // Actually, AuthManager might need to be resolved from DI.
-                    
+
                     bool ok = await AuthManager.TryCompletePkceFromCallbackAsync(
                         code,
                         state,
                         redirectUri,
-                    context.RequestServices.GetService<IAuthTokenStore>()
+                        context.RequestServices.GetService<IAuthTokenStore>()
                     );
                     if (ok)
                     {
