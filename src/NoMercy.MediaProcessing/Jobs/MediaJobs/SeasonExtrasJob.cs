@@ -29,9 +29,7 @@ public class SeasonExtrasJob : AbstractShowExtraDataJob<TmdbSeasonAppends, strin
 {
     public SeasonExtrasJob() { }
 
-    public SeasonExtrasJob(
-        ILoggerFactory loggerFactory
-    )
+    public SeasonExtrasJob(ILoggerFactory loggerFactory)
         : base(loggerFactory) { }
 
     public override string QueueName => "extras";
@@ -49,7 +47,10 @@ public class SeasonExtrasJob : AbstractShowExtraDataJob<TmdbSeasonAppends, strin
             LoggerFactory.CreateLogger<SeasonManager>()
         );
 
-        PersonRepository personRepository = new(context, LoggerFactory.CreateLogger<PersonRepository>());
+        PersonRepository personRepository = new(
+            context,
+            LoggerFactory.CreateLogger<PersonRepository>()
+        );
         PersonManager personManager = new(
             personRepository,
             jobDispatcher,
@@ -58,10 +59,16 @@ public class SeasonExtrasJob : AbstractShowExtraDataJob<TmdbSeasonAppends, strin
 
         foreach (TmdbSeasonAppends season in Storage)
         {
-            await personManager.Store(season);
-
-            await seasonManager.StoreImages(Name, season);
-            await seasonManager.StoreTranslations(Name, season);
+            // Bounded so a stalled TMDB/NFS call fails this season's pass
+            // instead of hanging the whole job — see
+            // JobOperationTimeoutExtensions.
+            await personManager.Store(season).WithTimeout(nameof(PersonManager.Store));
+            await seasonManager
+                .StoreImages(Name, season)
+                .WithTimeout(nameof(SeasonManager.StoreImages));
+            await seasonManager
+                .StoreTranslations(Name, season)
+                .WithTimeout(nameof(SeasonManager.StoreTranslations));
         }
 
         Log.LogTrace("Show {Name}: Seasons: Images and Translations stored", Name);

@@ -29,9 +29,7 @@ public class EpisodeExtrasJob : AbstractShowExtraDataJob<TmdbEpisodeAppends, str
 {
     public EpisodeExtrasJob() { }
 
-    public EpisodeExtrasJob(
-        ILoggerFactory loggerFactory
-    )
+    public EpisodeExtrasJob(ILoggerFactory loggerFactory)
         : base(loggerFactory) { }
 
     public override string QueueName => "extras";
@@ -49,7 +47,10 @@ public class EpisodeExtrasJob : AbstractShowExtraDataJob<TmdbEpisodeAppends, str
             LoggerFactory.CreateLogger<EpisodeManager>()
         );
 
-        PersonRepository personRepository = new(context, LoggerFactory.CreateLogger<PersonRepository>());
+        PersonRepository personRepository = new(
+            context,
+            LoggerFactory.CreateLogger<PersonRepository>()
+        );
         PersonManager personManager = new(
             personRepository,
             jobDispatcher,
@@ -58,11 +59,22 @@ public class EpisodeExtrasJob : AbstractShowExtraDataJob<TmdbEpisodeAppends, str
 
         foreach (TmdbEpisodeAppends episode in Storage)
         {
-            await personManager.Store(episode);
-            await episodeManager.StoreTranslations(Name, episode);
-            await episodeManager.StoreImages(Name, episode);
+            // Bounded so a stalled TMDB/NFS call fails this episode's pass
+            // instead of hanging the whole job — see
+            // JobOperationTimeoutExtensions.
+            await personManager.Store(episode).WithTimeout(nameof(PersonManager.Store));
+            await episodeManager
+                .StoreTranslations(Name, episode)
+                .WithTimeout(nameof(EpisodeManager.StoreTranslations));
+            await episodeManager
+                .StoreImages(Name, episode)
+                .WithTimeout(nameof(EpisodeManager.StoreImages));
         }
 
-        Log.LogDebug("Show {Name}: Season {SeasonNumber} Episodes: Images and Translations stored", Name, Storage.FirstOrDefault()?.SeasonNumber);
+        Log.LogDebug(
+            "Show {Name}: Season {SeasonNumber} Episodes: Images and Translations stored",
+            Name,
+            Storage.FirstOrDefault()?.SeasonNumber
+        );
     }
 }
