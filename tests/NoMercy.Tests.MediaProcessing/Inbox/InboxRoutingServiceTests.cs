@@ -183,7 +183,7 @@ public class InboxRoutingServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ResolveDestinations_FolderWithoutProfile_IsExcluded()
+    public async Task ResolveDestinations_FolderWithoutProfile_IsIncluded()
     {
         Library library = new()
         {
@@ -194,7 +194,21 @@ public class InboxRoutingServiceTests : IDisposable
         _context.Libraries.Add(library);
         _context.SaveChanges();
 
-        SeedFolderWithoutProfile(library);
+        Folder folder = SeedFolderWithoutProfile(library);
+
+        InboxRoutingService service = MakeService();
+        List<InboxDestination> results = await service.ResolveDestinations("movie", _context);
+
+        results.Should().HaveCount(1);
+        results[0].LibraryId.Should().Be(library.Id);
+        results[0].FolderId.Should().Be(folder.Id);
+        results[0].ProfileId.Should().Be(Ulid.Empty);
+    }
+
+    [Fact]
+    public async Task ResolveDestinations_TypeMismatchedLibrary_IsExcluded()
+    {
+        SeedLibraryWithProfile("tv");
 
         InboxRoutingService service = MakeService();
         List<InboxDestination> results = await service.ResolveDestinations("movie", _context);
