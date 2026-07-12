@@ -62,22 +62,43 @@ public partial class PlatformHardwareDetector(
     {
         // Try wmic first (faster, works on every Windows 10/11 build through
         // 22H2). wmic is deprecated and removed by default on Windows 11
-        // 24H2+ — when wmic.exe is missing the runner returns an exit code
-        // and we fall back to PowerShell Get-CimInstance, which is always
-        // available. Without the fallback users on modern Windows see zero
-        // detected GPUs and the hardware benchmark only ever tests the CPU.
-        ProcessResult result = await processRunner.RunAsync(
-            "wmic",
-            [
-                "path",
-                "Win32_VideoController",
-                "get",
-                "Name,AdapterRAM,DriverVersion",
-                "/format:csv",
-            ],
-            null,
-            ct
-        );
+        // 24H2+ — when wmic.exe is missing, Process.Start throws a
+        // Win32Exception (the runner never gets to return a ProcessResult),
+        // so the launch itself must be guarded. Either way we fall back to
+        // PowerShell Get-CimInstance, which is always available. Without the
+        // fallback users on modern Windows see zero detected GPUs and the
+        // hardware benchmark only ever tests the CPU.
+        ProcessResult result;
+        try
+        {
+            result = await processRunner.RunAsync(
+                "wmic",
+                [
+                    "path",
+                    "Win32_VideoController",
+                    "get",
+                    "Name,AdapterRAM,DriverVersion",
+                    "/format:csv",
+                ],
+                null,
+                ct
+            );
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogInformation(
+                ex,
+                "wmic could not be launched (removed on Windows 11 24H2+) — falling back to PowerShell Get-CimInstance"
+            );
+            IReadOnlyList<GpuDevice> psDevicesOnLaunchFailure =
+                await DetectWindowsGpusViaPowerShellAsync(ct);
+            if (psDevicesOnLaunchFailure.Count > 0)
+                return psDevicesOnLaunchFailure;
+            logger.LogWarning(
+                "Both wmic and PowerShell GPU detection returned no devices on Windows. Hardware benchmark will run CPU-only."
+            );
+            return [];
+        }
 
         if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.StdOut))
         {

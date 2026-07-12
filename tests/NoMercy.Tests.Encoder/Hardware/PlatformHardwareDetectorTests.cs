@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -152,6 +153,52 @@ public class PlatformHardwareDetectorTests
         IReadOnlyList<GpuDevice> gpus = await detector.DetectGpusAsync();
 
         gpus.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task DetectGpus_Windows_WmicLaunchThrows_FallsBackToPowerShell()
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            return;
+
+        // Reproduces the Windows 11 24H2+ case where wmic.exe has been
+        // removed: Process.Start throws Win32Exception(2) before a
+        // ProcessResult is ever produced, instead of the runner returning a
+        // non-zero exit code.
+        _processRunner
+            .Setup(p =>
+                p.RunAsync(
+                    "wmic",
+                    It.IsAny<string[]>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ThrowsAsync(new Win32Exception(2, "The system cannot find the file specified"));
+
+        string powerShellOutput = "NVIDIA GeForce GTX 1060|6442450944|31.0.15.3667\n";
+
+        _processRunner
+            .Setup(p =>
+                p.RunAsync(
+                    "powershell",
+                    It.IsAny<string[]>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(new ProcessResult(0, powerShellOutput, "", TimeSpan.Zero));
+
+        _capabilities.Setup(c => c.HasEncoder("h264_nvenc")).Returns(true);
+        _capabilities.Setup(c => c.HasEncoder("hevc_nvenc")).Returns(true);
+
+        PlatformHardwareDetector detector = CreateDetector();
+        IReadOnlyList<GpuDevice> gpus = await detector.DetectGpusAsync();
+
+        gpus.Should().HaveCount(1);
+        gpus[0].Vendor.Should().Be(GpuVendor.Nvidia);
+        gpus[0].Name.Should().Contain("GTX 1060");
+        gpus[0].VramMb.Should().Be(6144);
     }
 
     [Fact]
