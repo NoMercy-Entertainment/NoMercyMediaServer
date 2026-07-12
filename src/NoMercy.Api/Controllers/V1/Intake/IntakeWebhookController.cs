@@ -107,18 +107,20 @@ public class IntakeWebhookController(
                 "The configured drop folder is not registered as an inbox library."
             );
 
-        if (EventBusProvider.IsConfigured)
-        {
-            await EventBusProvider.Current.PublishAsync(
-                new FileCreatedEvent
-                {
-                    FolderPath = ownedFolder.Folder.Path,
-                    LibraryId = ownedFolder.LibraryId,
-                    LibraryType = MediaTypes.InboxMediaType,
-                },
-                ct
+        if (!EventBusProvider.IsConfigured)
+            return ServiceUnavailableResponse(
+                "The event bus is not configured; the dropped file cannot be processed right now."
             );
-        }
+
+        await EventBusProvider.Current.PublishAsync(
+            new FileCreatedEvent
+            {
+                FolderPath = ownedFolder.Folder.Path,
+                LibraryId = ownedFolder.LibraryId,
+                LibraryType = MediaTypes.InboxMediaType,
+            },
+            ct
+        );
 
         return StatusCode(StatusCodes.Status202Accepted, new { status = "accepted" });
     }
@@ -139,11 +141,7 @@ public class IntakeWebhookController(
         string normalizedFolder = NormalizeForComparison(folderPath);
         string normalizedDrop = NormalizeForComparison(dropFolder);
 
-        return normalizedDrop.Equals(normalizedFolder, StringComparison.OrdinalIgnoreCase)
-            || normalizedDrop.StartsWith(
-                normalizedFolder + "/",
-                StringComparison.OrdinalIgnoreCase
-            );
+        return normalizedDrop.Equals(normalizedFolder, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string NormalizeForComparison(string path) =>

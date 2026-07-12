@@ -223,6 +223,41 @@ public class IntakeWebhookControllerTests : IClassFixture<NoMercyApiFactory>
             .BeFalse("no configured drop folder must never trigger the inbox pipeline");
     }
 
+    // ── drop folder is a subfolder of an inbox library folder (exact-match only) ─
+
+    [Fact]
+    public async Task Webhook_DropFolderIsSubfolderOfInboxLibraryFolder_Returns409AndPublishesNoEvent()
+    {
+        string libraryFolder = $"/media/intake-{Guid.NewGuid():N}";
+        string dropFolder = $"{libraryFolder}/incoming";
+        (Ulid libraryId, _) = SeedInboxLibrary(libraryFolder);
+
+        FakeIntakeSettings settings = new() { DropFolder = dropFolder, Token = CorrectToken };
+        HttpClient client = BuildClient(settings);
+        client.DefaultRequestHeaders.Add(TokenHeaderName, CorrectToken);
+
+        bool published = false;
+        using IDisposable subscription = EventBusProvider.Current.Subscribe<FileCreatedEvent>(
+            (_, _) =>
+            {
+                published = true;
+                return Task.CompletedTask;
+            }
+        );
+
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/v1/intake/webhook",
+            new { path = $"{dropFolder}/dropped.mkv" }
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        published
+            .Should()
+            .BeFalse(
+                "the drop folder must match an inbox library folder exactly; a subfolder must never trigger the inbox pipeline"
+            );
+    }
+
     // ── drop folder configured but not registered as an inbox library ───
 
     [Fact]

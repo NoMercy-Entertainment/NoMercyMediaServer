@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -34,8 +35,11 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 [ApiVersion(1.0)]
 [Authorize(Policy = "Moderator")]
 [Route("api/v{version:apiVersion}/dashboard/intake", Order = 10)]
-public class IntakeController(IIntakeSettings intakeSettings, MediaContext mediaContext)
-    : BaseController
+public class IntakeController(
+    IIntakeSettings intakeSettings,
+    MediaContext mediaContext,
+    ILogger<IntakeController> logger
+) : BaseController
 {
     private const string WebhookPath = "api/v1/intake/webhook";
     private const string WebhookHeader = "X-Intake-Token";
@@ -96,7 +100,14 @@ public class IntakeController(IIntakeSettings intakeSettings, MediaContext media
             // save — the webhook intake path works regardless of live watch status.
             LibraryFileWatcher.RefreshLibraryCache();
         }
-        catch { }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                exception,
+                "Failed to refresh the library watcher cache after updating the intake drop folder to {DropFolder}",
+                path
+            );
+        }
 
         return Ok(new { dropFolder = path });
     }
