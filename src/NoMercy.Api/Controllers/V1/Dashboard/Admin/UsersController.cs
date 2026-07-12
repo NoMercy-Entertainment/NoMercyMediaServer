@@ -178,6 +178,7 @@ public class UsersController(IUserRepository userRepository) : BaseController
 
     [HttpGet]
     [Route("{id:guid}/permissions")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> UserPermissions(Guid id)
     {
         if (User.IsSelf(id))
@@ -192,7 +193,6 @@ public class UsersController(IUserRepository userRepository) : BaseController
     }
 
     [HttpPatch("{id:guid}/permissions")]
-    [Authorize(Policy = "Owner")]
     public async Task<IActionResult> UserPermissionUpdate(
         Guid id,
         [FromBody] UserPermissionRequest request
