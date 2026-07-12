@@ -48,6 +48,13 @@ public static class DatabaseSeeder
 
         // Migrate Configuration data from media.db to app.db (one-time on update)
         await MigrateConfigurationData(appDbContext, storage);
+
+        // Resolve the server's stable identity BEFORE anything else reads
+        // Info.DeviceId (auth, registration, DNS, certs). Must run after the
+        // Configuration migration above so a pre-existing "device_identity_id"
+        // or "ssl_certificate" row carried over from media.db is visible to it.
+        Info.SetResolvedDeviceId(DeviceIdentityResolver.ResolveAndPersist(appDbContext));
+
         await appDbContext.DisposeAsync();
 
         // 2. MediaContext — content and metadata

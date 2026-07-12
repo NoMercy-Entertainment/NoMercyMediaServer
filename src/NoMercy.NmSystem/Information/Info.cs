@@ -24,7 +24,20 @@ public static class Info
     public static readonly DateTime StartTime = DateTime.UtcNow;
 
     private static readonly Lazy<Guid> LazyDeviceId = new(Software.GetDeviceId);
-    public static Guid DeviceId => LazyDeviceId.Value;
+    private static Guid? _resolvedDeviceId;
+
+    // Prefers the persisted/resolved server identity set by
+    // DeviceIdentityResolver during startup Phase 1 (before anything else
+    // observes DeviceId); falls back to the raw hardware fingerprint only if
+    // resolution never ran. Never reassign this to a fresh hardware value once
+    // set — that would break every already-registered server's DNS subdomain
+    // and certificate CN.
+    public static Guid DeviceId => _resolvedDeviceId ?? LazyDeviceId.Value;
+
+    public static void SetResolvedDeviceId(Guid id)
+    {
+        _resolvedDeviceId = id;
+    }
 
     private static readonly Lazy<string> LazyOs = new(() => RuntimeInformation.OSDescription);
     public static string Os => LazyOs.Value;
