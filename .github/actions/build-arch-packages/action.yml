@@ -74,11 +74,17 @@ runs:
         # (fakeroot, bsdtar) to produce a correctly-ordered archive with a
         # valid .PKGINFO/.MTREE — that guarantee is why this runs makepkg
         # itself inside Arch rather than hand-assembling the tarball.
-        docker run --rm -v "${BUILD_DIR}:/build" -w /build archlinux:base-devel bash -c '
+        # makepkg produces files owned by the in-container 'builder' uid; chown
+        # them back to the runner at the end so the host cleanup (rm -rf) and the
+        # post-job checkout cleanup can remove them without a permission error.
+        HOST_UID=$(id -u); HOST_GID=$(id -g)
+        docker run --rm -e HOST_UID -e HOST_GID -v "${BUILD_DIR}:/build" -w /build archlinux:base-devel bash -c '
           set -euo pipefail
+          pacman -Sy --noconfirm
           useradd -m builder
           chown -R builder:builder /build
           su builder -c "cd /build && makepkg -f --noconfirm"
+          chown -R "${HOST_UID}:${HOST_GID}" /build
         '
 
         pkg_file=$(ls "${BUILD_DIR}"/*.pkg.tar.zst | head -n1)
@@ -100,12 +106,14 @@ runs:
         # repo-add is the real Arch tool for sync-db generation — it produces
         # a valid nomercy.db.tar.gz (+ nomercy.db symlink) that pacman -Sy can
         # actually parse, unlike a hand-rolled text file.
-        docker run --rm -v "${OUT_DIR}:/repo" -w /repo archlinux:base-devel bash -c '
+        HOST_UID=$(id -u); HOST_GID=$(id -g)
+        docker run --rm -e HOST_UID -e HOST_GID -v "${OUT_DIR}:/repo" -w /repo archlinux:base-devel bash -c '
           set -euo pipefail
           pacman -Sy --noconfirm --needed pacman-contrib
           useradd -m builder
           chown -R builder:builder /repo
           su builder -c "cd /repo && repo-add nomercy.db.tar.gz *.pkg.tar.zst"
+          chown -R "${HOST_UID}:${HOST_GID}" /repo
         '
 
         echo "Created Arch repository:"

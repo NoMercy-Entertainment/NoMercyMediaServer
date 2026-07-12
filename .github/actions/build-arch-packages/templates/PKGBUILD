@@ -7,6 +7,10 @@ arch=('x86_64')
 url="https://nomercy.tv"
 license=('custom')
 depends=('glibc')
+# Prebuilt, already-stripped .NET binaries: no source, no debug symbols. Disable
+# makepkg's debug/strip passes so it doesn't emit gdb-add-index errors on the
+# runtime .so files or build a spurious nomercy-debug package.
+options=(!debug !strip)
 
 package() {
   install -dm755 "$pkgdir/opt/nomercy"
