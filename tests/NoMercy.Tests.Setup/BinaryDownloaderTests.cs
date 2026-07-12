@@ -459,6 +459,110 @@ public class BinaryDownloaderTests : IDisposable
     }
 
     [Fact]
+    public async Task Download_OwnedRepo_ManifestPresentNoSignatureAsset_FallsBackToDigest_Succeeds()
+    {
+        // Reproduces the real nomercy-ffmpeg v1.0.38 release shape: manifest.json is
+        // published but manifest.json.sig is not (the CI signing rollout has not
+        // reached that repo yet). This must be treated as "no signature to verify
+        // yet" and fall back to the GitHub digest cleanly — not as a signature that
+        // was checked and failed.
+        byte[] payload = Encoding.UTF8.GetBytes("ffmpeg-shaped payload, unsigned manifest");
+        string digest =
+            "sha256:" + Convert.ToHexString(SHA256.HashData(payload)).ToLowerInvariant();
+        string destPath = Path.Combine(_tempDir, "asset.bin");
+        string assetUrl = "https://example.com/asset.bin";
+        string manifestUrl = "https://example.com/manifest.json";
+
+        // Manifest hash is deliberately WRONG: an untrusted (unsigned) manifest must
+        // never be relied on for the hash, proving the digest fallback is what
+        // actually governs acceptance here.
+        ReleaseManifest manifest = new()
+        {
+            Version = "1.0.38",
+            Assets =
+            [
+                new()
+                {
+                    Name = "asset.bin",
+                    Sha256 = new('d', 64),
+                    Size = payload.Length,
+                },
+            ],
+        };
+
+        GithubReleaseResponse release = BuildRelease(
+            assetName: "asset.bin",
+            assetUrl: assetUrl,
+            sha256: null,
+            includeManifest: true,
+            manifestUrl: manifestUrl,
+            manifestSigUrl: null,
+            digest: digest
+        );
+
+        FakeHttpHandler handler = new();
+        handler.Register(assetUrl, payload);
+        handler.Register(
+            manifestUrl,
+            Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(manifest))
+        );
+
+        Binaries binaries = BuildBinaries(handler);
+
+        string result = await binaries.DownloadWithVerificationAsync(
+            "https://api.github.com/test",
+            "FFMpeg",
+            new(assetUrl),
+            destPath,
+            release,
+            "asset.bin",
+            enforceSignedManifest: true
+        );
+
+        result.Should().Be(destPath);
+        (await File.ReadAllBytesAsync(destPath)).Should().BeEquivalentTo(payload);
+    }
+
+    // -------------------------------------------------------------------------
+    // Empty/incomplete download: must abort before the file ever reaches the
+    // extraction step, not just log a warning and carry on.
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task Download_EmptyPayload_ThrowsAndLeavesNoTempOrDestFile()
+    {
+        // A response that completes with zero bytes (truncated connection,
+        // interrupted CDN transfer) must never leave a file behind for a later
+        // extraction step to pick up — this is the exact "extraction ran against
+        // a file that isn't really there" failure mode.
+        string destPath = Path.Combine(_tempDir, "asset.bin");
+        string assetUrl = "https://example.com/asset.bin";
+
+        GithubReleaseResponse release = BuildRelease("asset.bin", assetUrl, sha256: null);
+
+        FakeHttpHandler handler = new();
+        handler.Register(assetUrl, []);
+
+        Binaries binaries = BuildBinaries(handler);
+
+        Func<Task> act = () =>
+            binaries.DownloadWithVerificationAsync(
+                "https://api.github.com/test",
+                "asset",
+                new(assetUrl),
+                destPath,
+                release,
+                "asset.bin",
+                enforceSignedManifest: false
+            );
+
+        await act.Should().ThrowAsync<IOException>().WithMessage("*empty or missing*");
+
+        File.Exists(destPath).Should().BeFalse();
+        File.Exists(destPath + ".tmp").Should().BeFalse();
+    }
+
+    [Fact]
     public async Task Download_DigestMismatch_Throws()
     {
         // Universal integrity floor: bytes that don't match GitHub's asset digest are
