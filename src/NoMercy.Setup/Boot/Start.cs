@@ -79,7 +79,11 @@ public class Start
                     IStorage storage = new LocalStorage(driver, new([], driver));
                     return new Binaries(driver, storage).DownloadAll();
                 },
-                CanDefer: false,
+                // CanDefer:true — a transient provisioning failure (GitHub rate limit,
+                // momentarily-empty release feed, network blip) must not permanently wedge
+                // BootStage.Binaries with no recovery path. DegradedModeRecovery retries
+                // provisioning with backoff and marks the stage once ffmpeg is on disk.
+                CanDefer: true,
                 Phase: 2,
                 DependsOn: ["NetworkProbe"]
             ),
@@ -176,6 +180,7 @@ public class Start
                 NetworkDiscovered = runner.CompletedTasks.Contains("Networking"),
                 SeedsRun = true,
                 Registered = runner.CompletedTasks.Contains("Register"),
+                BinariesReady = runner.CompletedTasks.Contains("Binaries"),
             };
             if (recovery is not null)
                 _ = Task.Run(() => recovery.StartRecoveryLoop(deferred));

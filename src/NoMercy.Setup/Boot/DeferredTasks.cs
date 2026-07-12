@@ -18,5 +18,11 @@ public class DeferredTasks
     public bool NetworkDiscovered { get; set; }
     public bool Registered { get; set; }
     public bool SeedsRun { get; set; }
+
+    /// <summary>Every essential binary (ffmpeg, yt-dlp, etc.) is on disk. False when
+    /// the initial "Binaries" startup task deferred — <see cref="DegradedModeRecovery"/>
+    /// retries provisioning until this becomes true and marks <c>BootStage.Binaries</c>.</summary>
+    public bool BinariesReady { get; set; }
+
     public bool AllCompleted { get; set; }
 }
