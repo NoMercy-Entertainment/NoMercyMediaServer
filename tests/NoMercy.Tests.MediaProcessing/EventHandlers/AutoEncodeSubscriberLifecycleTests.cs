@@ -19,7 +19,6 @@ using NoMercy.Database.Models.Media;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.EventHandlers;
-using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
@@ -30,15 +29,17 @@ namespace NoMercy.Tests.MediaProcessing.EventHandlers;
 
 /// <summary>
 /// Lifecycle + dispatch-leg tests for <see cref="AutoEncodeSubscriber"/>. The
-/// subscriber now takes an injected <c>IDbContextFactory</c> and
-/// <c>JobDispatcher</c>, so the full scan-to-dispatch chain is assertable
-/// without the real queue infrastructure. These tests verify:
+/// subscriber takes an injected <c>IDbContextFactory</c> and
+/// <see cref="IJobDispatcher"/>, so the full scan-to-dispatch chain is
+/// assertable without the real queue infrastructure. These tests verify:
 /// - Start subscribes
 /// - Stop disposes subscriptions
 /// - Multiple Start/Stop cycles don't leak subscriptions
-/// - A scan event for a profile-mapped folder actually dispatches a
-///   VideoEncodeJob (the leg that used to be untestable)
-/// - A scan event for a library with no encoder-profile folder dispatches nothing
+/// - A scan event for a library with auto-encode-on-scan on and a preset
+///   assigned actually dispatches a VideoEncodeJob carrying that preset
+/// - A scan event for a library with auto-encode-on-scan off, or with no
+///   preset assigned, dispatches nothing
+/// - A scan event for a library with no encoder-preset folder dispatches nothing
 /// </summary>
 public class AutoEncodeSubscriberLifecycleTests
 {
@@ -46,16 +47,6 @@ public class AutoEncodeSubscriberLifecycleTests
     {
         IStorageDriver driver = new LocalStorageDriver();
         return new LocalStorage(driver, new([], driver));
-    }
-
-    // Auto-encode-on-scan is opt-in (commit 6868e83d added the IConfigurationStore
-    // gate). Enable it so the dispatch legs exercise the folder/preset logic rather
-    // than short-circuiting on the gate.
-    private static IConfigurationStore EnabledConfigStore()
-    {
-        Mock<IConfigurationStore> store = new();
-        store.Setup(configuration => configuration.GetValue(It.IsAny<string>())).Returns("true");
-        return store.Object;
     }
 
     private static IDbContextFactory<MediaContext> ContextFactory(out SqliteConnection connection)
@@ -92,20 +83,19 @@ public class AutoEncodeSubscriberLifecycleTests
     public async Task Start_SubscribesToMediaFilesScannedEvent()
     {
         InMemoryEventBus bus = new();
-        Mock<JobDispatcher> dispatcher = new();
+        Mock<IJobDispatcher> dispatcher = new();
         AutoEncodeSubscriber subscriber = new(
             bus,
             NullLogger<AutoEncodeSubscriber>.Instance,
             NoOpStorage(),
             ContextFactory(out SqliteConnection connection),
-            dispatcher.Object,
-            EnabledConfigStore()
+            dispatcher.Object
         );
 
         await subscriber.StartAsync(CancellationToken.None);
 
         // Publishing an event while subscribed should reach the handler without
-        // throwing. No folders match, so the handler returns early.
+        // throwing. No library exists for this id, so the handler returns early.
         await bus.PublishAsync(
             new MediaFilesScannedEvent { MediaId = -1, LibraryId = Ulid.NewUlid() }
         );
@@ -118,14 +108,13 @@ public class AutoEncodeSubscriberLifecycleTests
     public async Task Stop_DisposesSubscriptions_EventBusNoLongerCalls()
     {
         TrackingEventBus bus = new();
-        Mock<JobDispatcher> dispatcher = new();
+        Mock<IJobDispatcher> dispatcher = new();
         AutoEncodeSubscriber subscriber = new(
             bus,
             NullLogger<AutoEncodeSubscriber>.Instance,
             NoOpStorage(),
             ContextFactory(out SqliteConnection connection),
-            dispatcher.Object,
-            EnabledConfigStore()
+            dispatcher.Object
         );
 
         await subscriber.StartAsync(CancellationToken.None);
@@ -140,14 +129,13 @@ public class AutoEncodeSubscriberLifecycleTests
     public async Task MultipleStartStopCycles_DoNotLeakSubscriptions()
     {
         TrackingEventBus bus = new();
-        Mock<JobDispatcher> dispatcher = new();
+        Mock<IJobDispatcher> dispatcher = new();
         AutoEncodeSubscriber subscriber = new(
             bus,
             NullLogger<AutoEncodeSubscriber>.Instance,
             NoOpStorage(),
             ContextFactory(out SqliteConnection connection),
-            dispatcher.Object,
-            EnabledConfigStore()
+            dispatcher.Object
         );
 
         for (int i = 0; i < 3; i++)
@@ -170,17 +158,31 @@ public class AutoEncodeSubscriberLifecycleTests
         Ulid mediaId = Ulid.NewUlid();
 
         IDbContextFactory<MediaContext> factory = ContextFactory(out SqliteConnection connection);
-        int movieId = SeedPresetMappedMovie(factory, libraryId, mediaId, linkV1: false);
+        (int movieId, Ulid presetId) = SeedPresetMappedMovie(
+            factory,
+            libraryId,
+            mediaId,
+            linkV1: false
+        );
 
-        Mock<JobDispatcher> dispatcher = new();
+        List<VideoEncodeJob> dispatched = [];
+        Mock<IJobDispatcher> dispatcher = new();
+        dispatcher
+            .Setup(d => d.Dispatch(It.IsAny<IShouldQueue>(), It.IsAny<string>(), It.IsAny<int>()))
+            .Callback<IShouldQueue, string, int>(
+                (job, _, _) =>
+                {
+                    if (job is VideoEncodeJob encodeJob)
+                        dispatched.Add(encodeJob);
+                }
+            );
         InMemoryEventBus bus = new();
         AutoEncodeSubscriber subscriber = new(
             bus,
             NullLogger<AutoEncodeSubscriber>.Instance,
             NoOpStorage(),
             factory,
-            dispatcher.Object,
-            EnabledConfigStore()
+            dispatcher.Object
         );
         await subscriber.StartAsync(CancellationToken.None);
 
@@ -188,17 +190,15 @@ public class AutoEncodeSubscriberLifecycleTests
             new MediaFilesScannedEvent { MediaId = movieId, LibraryId = libraryId }
         );
 
-        dispatcher.Verify(
-            d =>
-                d.DispatchJob<VideoEncodeJob>(
-                    libraryId,
-                    It.IsAny<Ulid>(),
-                    movieId.ToString(),
-                    It.Is<string>(path => path.Contains("Movie.mkv"))
-                ),
-            Times.Once,
-            "a scan for a V2-preset-mapped folder must queue exactly one VideoEncodeJob"
-        );
+        dispatched
+            .Should()
+            .HaveCount(1, "a V2-preset-mapped folder must queue exactly one VideoEncodeJob");
+        dispatched[0].LibraryId.Should().Be(libraryId);
+        dispatched[0].Id.Should().Be(movieId.ToString());
+        dispatched[0].InputFile.Should().Contain("Movie.mkv");
+        dispatched[0]
+            .PresetId.Should()
+            .Be(presetId, "the job must run the library's assigned preset");
         connection.Dispose();
     }
 
@@ -207,23 +207,24 @@ public class AutoEncodeSubscriberLifecycleTests
     {
         // Regression pin for the V1/V2 split-brain fix: a folder that only
         // has a legacy EncoderProfileFolder (V1) link — no V2
-        // EncodingPresetFolder — must NOT dispatch. The live dispatch gate
-        // reads V2 exclusively now, matching what VideoEncodeJob executes.
+        // EncodingPresetFolder — must NOT dispatch even though the library
+        // has auto-encode-on-scan on and a preset assigned. The live
+        // dispatch gate reads V2 exclusively, matching what VideoEncodeJob
+        // executes.
         Ulid libraryId = Ulid.NewUlid();
         Ulid mediaId = Ulid.NewUlid();
 
         IDbContextFactory<MediaContext> factory = ContextFactory(out SqliteConnection connection);
         int movieId = SeedV1OnlyMappedMovie(factory, libraryId, mediaId);
 
-        Mock<JobDispatcher> dispatcher = new();
+        Mock<IJobDispatcher> dispatcher = new();
         InMemoryEventBus bus = new();
         AutoEncodeSubscriber subscriber = new(
             bus,
             NullLogger<AutoEncodeSubscriber>.Instance,
             NoOpStorage(),
             factory,
-            dispatcher.Object,
-            EnabledConfigStore()
+            dispatcher.Object
         );
         await subscriber.StartAsync(CancellationToken.None);
 
@@ -232,13 +233,7 @@ public class AutoEncodeSubscriberLifecycleTests
         );
 
         dispatcher.Verify(
-            d =>
-                d.DispatchJob<VideoEncodeJob>(
-                    It.IsAny<Ulid>(),
-                    It.IsAny<Ulid>(),
-                    It.IsAny<string>(),
-                    It.IsAny<string>()
-                ),
+            d => d.Dispatch(It.IsAny<IShouldQueue>(), It.IsAny<string>(), It.IsAny<int>()),
             Times.Never,
             "a V1-only link must not drive the V2 dispatch gate"
         );
@@ -251,40 +246,117 @@ public class AutoEncodeSubscriberLifecycleTests
         Ulid libraryId = Ulid.NewUlid();
 
         IDbContextFactory<MediaContext> factory = ContextFactory(out SqliteConnection connection);
+        SeedGateOnlyLibrary(factory, libraryId, autoEncodeOnScan: true, assignEncodePreset: true);
 
-        Mock<JobDispatcher> dispatcher = new();
+        Mock<IJobDispatcher> dispatcher = new();
         InMemoryEventBus bus = new();
         AutoEncodeSubscriber subscriber = new(
             bus,
             NullLogger<AutoEncodeSubscriber>.Instance,
             NoOpStorage(),
             factory,
-            dispatcher.Object,
-            EnabledConfigStore()
+            dispatcher.Object
         );
         await subscriber.StartAsync(CancellationToken.None);
 
         await bus.PublishAsync(new MediaFilesScannedEvent { MediaId = 1, LibraryId = libraryId });
 
         dispatcher.Verify(
-            d =>
-                d.DispatchJob<VideoEncodeJob>(
-                    It.IsAny<Ulid>(),
-                    It.IsAny<Ulid>(),
-                    It.IsAny<string>(),
-                    It.IsAny<string>()
-                ),
+            d => d.Dispatch(It.IsAny<IShouldQueue>(), It.IsAny<string>(), It.IsAny<int>()),
             Times.Never,
             "no encoding-preset folder link means no auto-encode"
         );
         connection.Dispose();
     }
 
-    private static int SeedPresetMappedMovie(
+    [Fact]
+    public async Task ScanEvent_ForLibraryWithAutoEncodeOnScanOff_DispatchesNothing()
+    {
+        // Per-library gate: a folder + preset link alone is not enough —
+        // AutoEncodeOnScan must be explicitly turned on for this library.
+        Ulid libraryId = Ulid.NewUlid();
+        Ulid mediaId = Ulid.NewUlid();
+
+        IDbContextFactory<MediaContext> factory = ContextFactory(out SqliteConnection connection);
+        (int movieId, _) = SeedPresetMappedMovie(
+            factory,
+            libraryId,
+            mediaId,
+            linkV1: false,
+            autoEncodeOnScan: false
+        );
+
+        Mock<IJobDispatcher> dispatcher = new();
+        InMemoryEventBus bus = new();
+        AutoEncodeSubscriber subscriber = new(
+            bus,
+            NullLogger<AutoEncodeSubscriber>.Instance,
+            NoOpStorage(),
+            factory,
+            dispatcher.Object
+        );
+        await subscriber.StartAsync(CancellationToken.None);
+
+        await bus.PublishAsync(
+            new MediaFilesScannedEvent { MediaId = movieId, LibraryId = libraryId }
+        );
+
+        dispatcher.Verify(
+            d => d.Dispatch(It.IsAny<IShouldQueue>(), It.IsAny<string>(), It.IsAny<int>()),
+            Times.Never,
+            "AutoEncodeOnScan defaults off and must not be bypassed by a preset-mapped folder"
+        );
+        connection.Dispose();
+    }
+
+    [Fact]
+    public async Task ScanEvent_ForLibraryWithAutoEncodeOnButNoPreset_DispatchesNothing()
+    {
+        // Per-library gate: AutoEncodeOnScan alone is not enough — the
+        // library needs an EncodePresetId to know which preset to run.
+        Ulid libraryId = Ulid.NewUlid();
+        Ulid mediaId = Ulid.NewUlid();
+
+        IDbContextFactory<MediaContext> factory = ContextFactory(out SqliteConnection connection);
+        (int movieId, _) = SeedPresetMappedMovie(
+            factory,
+            libraryId,
+            mediaId,
+            linkV1: false,
+            autoEncodeOnScan: true,
+            assignEncodePreset: false
+        );
+
+        Mock<IJobDispatcher> dispatcher = new();
+        InMemoryEventBus bus = new();
+        AutoEncodeSubscriber subscriber = new(
+            bus,
+            NullLogger<AutoEncodeSubscriber>.Instance,
+            NoOpStorage(),
+            factory,
+            dispatcher.Object
+        );
+        await subscriber.StartAsync(CancellationToken.None);
+
+        await bus.PublishAsync(
+            new MediaFilesScannedEvent { MediaId = movieId, LibraryId = libraryId }
+        );
+
+        dispatcher.Verify(
+            d => d.Dispatch(It.IsAny<IShouldQueue>(), It.IsAny<string>(), It.IsAny<int>()),
+            Times.Never,
+            "a library with no EncodePresetId must not auto-encode even with the flag on"
+        );
+        connection.Dispose();
+    }
+
+    private static (int MovieId, Ulid PresetId) SeedPresetMappedMovie(
         IDbContextFactory<MediaContext> factory,
         Ulid libraryId,
         Ulid mediaId,
-        bool linkV1
+        bool linkV1,
+        bool autoEncodeOnScan = true,
+        bool assignEncodePreset = true
     )
     {
         using MediaContext context = factory.CreateDbContext();
@@ -293,7 +365,22 @@ public class AutoEncodeSubscriberLifecycleTests
         Ulid folderId = Ulid.NewUlid();
         const string folderPath = "/media/movies";
 
-        Library library = new() { Id = libraryId, Title = "Movies" };
+        EncodingPreset preset = new()
+        {
+            Id = Ulid.NewUlid(),
+            Name = "Archive 1080p",
+            ProfileJson = "{}",
+            IsBuiltIn = false,
+        };
+        context.EncodingPresets.Add(preset);
+
+        Library library = new()
+        {
+            Id = libraryId,
+            Title = "Movies",
+            AutoEncodeOnScan = autoEncodeOnScan,
+            EncodePresetId = assignEncodePreset ? preset.Id : null,
+        };
         context.Libraries.Add(library);
 
         Folder folder = new()
@@ -305,14 +392,6 @@ public class AutoEncodeSubscriberLifecycleTests
         context.Folders.Add(folder);
         context.FolderLibrary.Add(new() { FolderId = folderId, LibraryId = libraryId });
 
-        EncodingPreset preset = new()
-        {
-            Id = Ulid.NewUlid(),
-            Name = "Archive 1080p",
-            ProfileJson = "{}",
-            IsBuiltIn = false,
-        };
-        context.EncodingPresets.Add(preset);
         context.EncodingPresetFolders.Add(
             new()
             {
@@ -346,7 +425,7 @@ public class AutoEncodeSubscriberLifecycleTests
         );
 
         context.SaveChanges();
-        return movieId;
+        return (movieId, preset.Id);
     }
 
     private static int SeedV1OnlyMappedMovie(
@@ -361,7 +440,13 @@ public class AutoEncodeSubscriberLifecycleTests
         Ulid folderId = Ulid.NewUlid();
         const string folderPath = "/media/movies";
 
-        Library library = new() { Id = libraryId, Title = "Movies" };
+        Library library = new()
+        {
+            Id = libraryId,
+            Title = "Movies",
+            AutoEncodeOnScan = true,
+            EncodePresetId = Ulid.NewUlid(),
+        };
         context.Libraries.Add(library);
 
         Folder folder = new()
@@ -395,6 +480,27 @@ public class AutoEncodeSubscriberLifecycleTests
 
         context.SaveChanges();
         return movieId;
+    }
+
+    private static void SeedGateOnlyLibrary(
+        IDbContextFactory<MediaContext> factory,
+        Ulid libraryId,
+        bool autoEncodeOnScan,
+        bool assignEncodePreset
+    )
+    {
+        using MediaContext context = factory.CreateDbContext();
+
+        Library library = new()
+        {
+            Id = libraryId,
+            Title = "Movies",
+            AutoEncodeOnScan = autoEncodeOnScan,
+            EncodePresetId = assignEncodePreset ? Ulid.NewUlid() : null,
+        };
+        context.Libraries.Add(library);
+
+        context.SaveChanges();
     }
 
     /// <summary>
