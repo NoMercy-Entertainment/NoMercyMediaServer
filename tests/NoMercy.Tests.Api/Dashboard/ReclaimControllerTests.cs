@@ -104,6 +104,82 @@ public class ReclaimControllerTests : IClassFixture<NoMercyApiFactory>
         root.GetProperty("items").GetArrayLength().Should().Be(0);
     }
 
+    // ── GET / before any scan, while a scan is in progress ────────────────
+
+    [Fact]
+    public async Task GetIndex_ScanningBeforeFirstScanCompletes_ReturnsScanningNotIdle()
+    {
+        FakeReclaimScanService fakeService = new() { State = ReclaimScanState.Scanning };
+        HttpClient client = BuildClient(fakeService).AsAuthenticated();
+
+        HttpResponseMessage response = await client.GetAsync("/api/v1/dashboard/reclaim");
+
+        string body = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+
+        using JsonDocument doc = JsonDocument.Parse(body);
+        JsonElement root = doc.RootElement;
+
+        root.GetProperty("status").GetString().Should().Be("Scanning");
+
+        JsonElement summary = root.GetProperty("summary");
+        summary.GetProperty("itemCount").GetInt32().Should().Be(0);
+        root.GetProperty("items").GetArrayLength().Should().Be(0);
+    }
+
+    // ── GET / paging — out-of-range pageIndex never overflows or 500s ────
+
+    [Fact]
+    public async Task GetIndex_PageIndexFarBeyondLastPage_ReturnsEmptyItemsNotFirstPage()
+    {
+        ReclaimableItem item = new(
+            Id: "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+            Title: "Test Movie",
+            MediaType: "movie",
+            Folder: "/media/movies/Test Movie",
+            ServedCopy: "master.m3u8",
+            Kind: ReclaimKind.ReclaimableHls,
+            TargetPaths: ["/media/movies/Test Movie/720p"],
+            ReclaimableBytes: 123456789L
+        );
+
+        ReclaimScanResult result = new(
+            Items: [item, item, item],
+            PartialJunk: [],
+            TotalReclaimableBytes: 123456789L,
+            TotalPartialJunkBytes: 0L
+        );
+
+        FakeReclaimScanService fakeService = new()
+        {
+            State = ReclaimScanState.Completed,
+            LastScannedAt = DateTimeOffset.UtcNow,
+            Latest = result,
+        };
+
+        HttpClient client = BuildClient(fakeService).AsAuthenticated();
+
+        HttpResponseMessage response = await client.GetAsync(
+            "/api/v1/dashboard/reclaim?pageIndex=5000000&pageSize=500"
+        );
+
+        string body = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+
+        using JsonDocument doc = JsonDocument.Parse(body);
+        JsonElement root = doc.RootElement;
+
+        root.GetProperty("status").GetString().Should().Be("Completed");
+        root.GetProperty("summary").GetProperty("itemCount").GetInt32().Should().Be(3);
+
+        JsonElement items = root.GetProperty("items");
+        items.ValueKind.Should().Be(JsonValueKind.Array);
+        items
+            .GetArrayLength()
+            .Should()
+            .Be(0, "an out-of-range page must be empty, never the first page");
+    }
+
     // ── POST /scan — 409 when a scan is already running ──────────────────
 
     [Fact]

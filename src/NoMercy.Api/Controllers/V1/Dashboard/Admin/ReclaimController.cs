@@ -63,7 +63,7 @@ public class ReclaimController(IReclaimScanService reclaimScanService) : BaseCon
             return Ok(
                 new
                 {
-                    status = ReclaimScanState.Idle.ToString(),
+                    status = reclaimScanService.State.ToString(),
                     lastScannedAt = reclaimScanService.LastScannedAt,
                     summary = new
                     {
@@ -77,11 +77,16 @@ public class ReclaimController(IReclaimScanService reclaimScanService) : BaseCon
             );
         }
 
-        ReclaimableItemDto[] items = latest
-            .Items.Skip(clampedPageIndex * clampedPageSize)
-            .Take(clampedPageSize)
-            .Select(item => new ReclaimableItemDto(item))
-            .ToArray();
+        long offset = (long)clampedPageIndex * clampedPageSize;
+
+        ReclaimableItemDto[] items =
+            offset >= latest.Items.Count
+                ? []
+                : latest
+                    .Items.Skip((int)offset)
+                    .Take(clampedPageSize)
+                    .Select(item => new ReclaimableItemDto(item))
+                    .ToArray();
 
         return Ok(
             new
@@ -120,16 +125,37 @@ public class ReclaimController(IReclaimScanService reclaimScanService) : BaseCon
         {
             return ConflictResponse(ex.Message);
         }
+        catch (Exception ex)
+        {
+            return InternalServerErrorResponse(
+                $"Failed to delete reclaimable item '{id}': {ex.Message}"
+            );
+        }
     }
 
     [HttpPost]
     [Route("sweep-partials")]
     public async Task<IActionResult> SweepPartials()
     {
-        (int count, long bytes) = await reclaimScanService.SweepPartialsAsync(
-            HttpContext.RequestAborted
-        );
+        try
+        {
+            (int count, long bytes) = await reclaimScanService.SweepPartialsAsync(
+                HttpContext.RequestAborted
+            );
 
-        return Ok(new { count, bytes });
+            return Ok(new { count, bytes });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFoundResponse(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return ConflictResponse(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return InternalServerErrorResponse($"Failed to sweep partial junk: {ex.Message}");
+        }
     }
 }
