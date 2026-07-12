@@ -124,6 +124,18 @@ public class UsersController(IUserRepository userRepository) : BaseController
         return Ok(new StatusResponseDto<string> { Status = "success", Message = "User deleted" });
     }
 
+    [HttpGet("{id:guid}")]
+    [Authorize(Policy = "Moderator")]
+    public async Task<IActionResult> Show(Guid id)
+    {
+        User? user = await userRepository.GetByIdWithLibrariesAsync(id);
+
+        if (user is null)
+            return NotFoundResponse("User not found");
+
+        return Ok(new DataResponseDto<PermissionsResponseItemDto> { Data = new(user) });
+    }
+
     [HttpGet]
     [Route("permissions")]
     [Authorize(Policy = "Owner")]
@@ -166,7 +178,6 @@ public class UsersController(IUserRepository userRepository) : BaseController
 
     [HttpGet]
     [Route("{id:guid}/permissions")]
-    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> UserPermissions(Guid id)
     {
         if (User.IsSelf(id))
@@ -181,6 +192,7 @@ public class UsersController(IUserRepository userRepository) : BaseController
     }
 
     [HttpPatch("{id:guid}/permissions")]
+    [Authorize(Policy = "Owner")]
     public async Task<IActionResult> UserPermissionUpdate(
         Guid id,
         [FromBody] UserPermissionRequest request

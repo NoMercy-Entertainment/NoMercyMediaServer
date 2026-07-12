@@ -89,6 +89,58 @@ public class UsersControllerTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Fact]
+    public async Task GetUserDetail_ReturnsUnauthorized_WhenAnonymous()
+    {
+        HttpResponseMessage response = await _unauthed.GetAsync(
+            $"/api/v1/dashboard/users/{TestAuthHandler.DefaultUserId}"
+        );
+
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task GetUserDetail_ReturnsNotFound_WhenUserDoesNotExist()
+    {
+        HttpResponseMessage response = await _authed.GetAsync(
+            $"/api/v1/dashboard/users/{Guid.NewGuid()}"
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task GetUserDetail_ReturnsOkWithUserShape_WhenUserExists()
+    {
+        HttpResponseMessage response = await _authed.GetAsync(
+            $"/api/v1/dashboard/users/{TestAuthHandler.SecondaryUserId}"
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        string body = await response.Content.ReadAsStringAsync();
+        using JsonDocument doc = JsonDocument.Parse(body);
+
+        doc.RootElement.TryGetProperty("data", out JsonElement data)
+            .Should()
+            .BeTrue("user detail response must have a 'data' property");
+        data.ValueKind.Should().Be(JsonValueKind.Object);
+
+        data.TryGetProperty("id", out JsonElement id).Should().BeTrue();
+        id.GetString().Should().Be(TestAuthHandler.SecondaryUserId.ToString());
+
+        data.TryGetProperty("name", out _).Should().BeTrue("user detail must expose 'name'");
+        data.TryGetProperty("email", out _).Should().BeTrue("user detail must expose 'email'");
+        data.TryGetProperty("owner", out _).Should().BeTrue("user detail must expose 'owner'");
+        data.TryGetProperty("allowed", out _).Should().BeTrue("user detail must expose 'allowed'");
+        data.TryGetProperty("library_user", out _)
+            .Should()
+            .BeTrue("user detail must expose 'library_user'");
+        data.TryGetProperty("libraries", out _)
+            .Should()
+            .BeTrue("user detail must expose 'libraries'");
+    }
+
+    [Fact]
     public async Task GetPermissions_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.GetAsync(
