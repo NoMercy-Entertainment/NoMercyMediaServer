@@ -77,8 +77,10 @@ runs:
         # makepkg produces files owned by the in-container 'builder' uid; chown
         # them back to the runner at the end so the host cleanup (rm -rf) and the
         # post-job checkout cleanup can remove them without a permission error.
-        HOST_UID=$(id -u); HOST_GID=$(id -g)
-        docker run --rm -e HOST_UID -e HOST_GID -v "${BUILD_DIR}:/build" -w /build archlinux:base-devel bash -c '
+        # The uid/gid are evaluated on the host and passed as explicit env values
+        # (the value-less `-e HOST_UID` form only forwards an already-exported var,
+        # which these are not — that left them unbound under the container's set -u).
+        docker run --rm -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" -v "${BUILD_DIR}:/build" -w /build archlinux:base-devel bash -c '
           set -euo pipefail
           pacman -Sy --noconfirm
           useradd -m builder
@@ -106,8 +108,7 @@ runs:
         # repo-add is the real Arch tool for sync-db generation — it produces
         # a valid nomercy.db.tar.gz (+ nomercy.db symlink) that pacman -Sy can
         # actually parse, unlike a hand-rolled text file.
-        HOST_UID=$(id -u); HOST_GID=$(id -g)
-        docker run --rm -e HOST_UID -e HOST_GID -v "${OUT_DIR}:/repo" -w /repo archlinux:base-devel bash -c '
+        docker run --rm -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" -v "${OUT_DIR}:/repo" -w /repo archlinux:base-devel bash -c '
           set -euo pipefail
           pacman -Sy --noconfirm --needed pacman-contrib
           useradd -m builder
