@@ -210,6 +210,18 @@ public sealed class ServerBootstrapper
             // selector has it on the first TLS handshake.
             _ = app.Services.GetRequiredService<ICertificateService>();
             Start.Certificate!.LoadFromDb();
+
+            // SetupState is a per-container singleton. BootOrchestrator.RunAsync
+            // already drove the OLD container's SetupState to Complete (that's
+            // what made needsSetupMode false) but that instance was just disposed
+            // with the container — the new container's SetupState starts fresh at
+            // Unauthenticated. Without this, SetupModeMiddleware would 503 every
+            // route on the new container even though auth + registration + the
+            // certificate we just acquired are all genuinely done. Restore the
+            // new container's SetupState to Complete to match the reality the
+            // orchestrator already established.
+            app.Services.GetRequiredService<SetupState>()
+                .DetermineInitialPhase(hasValidToken: true, isRegistered: true);
         }
 
         // Auth completed — seed auth-dependent data (users, library assignment, claims)

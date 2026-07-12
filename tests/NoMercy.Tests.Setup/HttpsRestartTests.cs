@@ -214,3 +214,70 @@ public class HttpToHttpsTransitionTests
         Assert.True(waitTask.IsCompleted);
     }
 }
+
+/// <summary>
+/// Reproduces the ServerBootstrapper container-rebuild bug: SetupState is registered
+/// as a per-container singleton (services.AddSingleton&lt;SetupState&gt;()), so when
+/// ServerBootstrapper disposes the WebApplication and calls WebHostFactory.Create
+/// again (the has-token-no-cert first-boot path — auth + registration already
+/// succeeded, a certificate was just acquired), the new container gets a brand new
+/// SetupState starting at SetupPhase.Unauthenticated. Without carrying the completed
+/// phase across, SetupModeMiddleware 503s every route on the new host even though
+/// setup genuinely finished on the old one.
+/// </summary>
+public class SetupStateSurvivesContainerRebuildTests
+{
+    [Fact]
+    public void NewContainerSetupState_WithoutRestore_IncorrectlyRequiresSetup()
+    {
+        // The OLD container's SetupState: BootOrchestrator.RunAsync drove this to
+        // Complete because auth succeeded and the server was already registered.
+        SetupState oldContainerState = new();
+        oldContainerState.DetermineInitialPhase(hasValidToken: true, isRegistered: true);
+        Assert.Equal(SetupPhase.Complete, oldContainerState.CurrentPhase);
+
+        // ServerBootstrapper disposes the app (and the old SetupState singleton with
+        // it) and calls WebHostFactory.Create again. DI hands the new container a
+        // FRESH SetupState — this is what a naive rebuild produces.
+        SetupState newContainerStateWithoutFix = new();
+
+        // This is the bug: the new container falsely believes setup is still required,
+        // even though the orchestrator already reached Complete on the old one.
+        Assert.True(newContainerStateWithoutFix.IsSetupRequired);
+    }
+
+    [Fact]
+    public void NewContainerSetupState_WithRestore_MatchesCompletedOrchestratorOutcome()
+    {
+        // Old container reaches Complete (orchestrator ran once, needsSetupMode came
+        // back false because auth succeeded).
+        SetupState oldContainerState = new();
+        oldContainerState.DetermineInitialPhase(hasValidToken: true, isRegistered: true);
+        Assert.False(oldContainerState.IsSetupRequired);
+
+        // Rebuild: new container, new SetupState singleton.
+        SetupState newContainerState = new();
+
+        // ServerBootstrapper's fix (the has-token-no-cert rebuild branch): restore the
+        // new container's SetupState to the phase the orchestrator already reached —
+        // hasValidToken/isRegistered are both true by construction at that call site
+        // (needsSetupMode was false, and EnsureHttpsCertificate() just returned true).
+        newContainerState.DetermineInitialPhase(hasValidToken: true, isRegistered: true);
+
+        Assert.Equal(SetupPhase.Complete, newContainerState.CurrentPhase);
+        Assert.False(newContainerState.IsSetupRequired);
+    }
+
+    [Fact]
+    public void NeedsSetupModeTrueRebuild_LeavesNewSetupStateRequiringSetup()
+    {
+        // The OTHER rebuild branch (needsSetupMode && hasCert, HTTPS -> HTTP-only for
+        // the setup flow) must NOT be forced to Complete — setup genuinely is not
+        // done yet, so the fresh container's SetupState should stay Unauthenticated
+        // and let the real interactive setup flow drive it forward.
+        SetupState newContainerState = new();
+
+        Assert.Equal(SetupPhase.Unauthenticated, newContainerState.CurrentPhase);
+        Assert.True(newContainerState.IsSetupRequired);
+    }
+}
