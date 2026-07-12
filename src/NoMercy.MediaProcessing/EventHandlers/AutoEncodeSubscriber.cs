@@ -94,10 +94,28 @@ public class AutoEncodeSubscriber(
                 .Libraries.AsNoTracking()
                 .FirstOrDefaultAsync(l => l.Id == evt.LibraryId, ct);
 
-            if (library is null || !library.AutoEncodeOnScan || library.EncodePresetId is null)
+            if (library is null)
+            {
+                logger.LogDebug(
+                    "Auto-encode skipped: library {LibraryId} not found",
+                    evt.LibraryId
+                );
+                return;
+            }
+
+            if (!library.AutoEncodeOnScan)
             {
                 logger.LogDebug(
                     "Auto-encode-on-scan is off for library {LibraryId}; scan skipped",
+                    evt.LibraryId
+                );
+                return;
+            }
+
+            if (library.EncodePresetId is null)
+            {
+                logger.LogDebug(
+                    "Auto-encode-on-scan is on for library {LibraryId} but no encoding preset is assigned; scan skipped",
                     evt.LibraryId
                 );
                 return;
