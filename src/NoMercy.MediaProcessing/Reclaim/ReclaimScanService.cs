@@ -120,11 +120,338 @@ public sealed class ReclaimScanService : IReclaimScanService
         return Task.CompletedTask;
     }
 
-    public Task<long> DeleteItemAsync(string itemId, CancellationToken ct) =>
-        throw new NotImplementedException("Reclaim delete lands in Task 3.");
+    public async Task<long> DeleteItemAsync(string itemId, CancellationToken ct)
+    {
+        ReclaimableItem item = FindItemOrThrow(itemId);
 
-    public Task<(int count, long bytes)> SweepPartialsAsync(CancellationToken ct) =>
-        throw new NotImplementedException("Reclaim sweep lands in Task 3.");
+        await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
+
+        FreshFolderDbInfo? dbInfo = await ResolveFreshFolderDbContextAsync(
+            context,
+            item.Folder,
+            ct
+        );
+        if (dbInfo is null)
+            throw new InvalidOperationException(
+                $"Folder '{item.Folder}' no longer resolves to a served copy; refusing to delete."
+            );
+
+        EnsureNoServedCopyConflict(item, dbInfo.Value.Rows);
+
+        IStorage storage = _storageFactory.For(
+            dbInfo.Value.FolderId,
+            dbInfo.Value.DriverId,
+            string.Empty
+        );
+        IReadOnlyList<StorageEntry> freshEntries = storage.List(
+            item.Folder,
+            null,
+            recursive: false
+        );
+
+        long freedBytes = DeleteTargets(storage, freshEntries, item.TargetPaths);
+
+        RemoveItemFromSnapshot(itemId, item.ReclaimableBytes);
+
+        return freedBytes;
+    }
+
+    public async Task<(int count, long bytes)> SweepPartialsAsync(CancellationToken ct)
+    {
+        List<PartialJunkItem> partials;
+        lock (_gate)
+            partials = _latest?.PartialJunk.ToList() ?? [];
+
+        if (partials.Count == 0)
+            return (0, 0);
+
+        await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        TimeSpan partialStaleAfter = ResolvePartialStaleAfter();
+
+        List<string> sweptFolders = [];
+        long freedBytes = 0;
+
+        foreach (PartialJunkItem partial in partials)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            long? swept = await SweepPartialFolderAsync(
+                context,
+                partial,
+                now,
+                partialStaleAfter,
+                ct
+            );
+            if (swept is null)
+                continue;
+
+            freedBytes += swept.Value;
+            sweptFolders.Add(partial.Folder);
+        }
+
+        if (sweptFolders.Count > 0)
+            RemoveSweptPartialsFromSnapshot(sweptFolders);
+
+        return (sweptFolders.Count, freedBytes);
+    }
+
+    private ReclaimableItem FindItemOrThrow(string itemId)
+    {
+        lock (_gate)
+        {
+            ReclaimableItem? found = _latest?.Items.FirstOrDefault(candidate =>
+                candidate.Id == itemId
+            );
+            if (found is null)
+                throw new KeyNotFoundException($"Reclaimable item '{itemId}' not found.");
+            return found;
+        }
+    }
+
+    private void EnsureNoServedCopyConflict(
+        ReclaimableItem item,
+        IReadOnlyList<VideoFileScanRow> freshRows
+    )
+    {
+        foreach (VideoFileScanRow row in freshRows)
+        {
+            string servedPath = StoragePathHelpers.Combine(item.Folder, row.Filename);
+
+            foreach (string targetPath in item.TargetPaths)
+            {
+                if (!ConflictsWithServedCopy(targetPath, servedPath))
+                    continue;
+
+                _logger.LogWarning(
+                    "[ReclaimScanService] Refusing to delete {TargetPath} for item {ItemId} — it matches the currently served copy {ServedPath}",
+                    targetPath,
+                    item.Id,
+                    servedPath
+                );
+                throw new InvalidOperationException(
+                    $"Refusing to delete '{targetPath}' — it is the currently served copy '{servedPath}'."
+                );
+            }
+        }
+    }
+
+    private static bool ConflictsWithServedCopy(string targetPath, string servedPath)
+    {
+        string normalizedTarget = targetPath.TrimEnd('/');
+        string normalizedServed = servedPath.TrimEnd('/');
+
+        if (string.Equals(normalizedTarget, normalizedServed, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (normalizedServed.StartsWith(normalizedTarget + "/", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return normalizedTarget.StartsWith(
+            normalizedServed + "/",
+            StringComparison.OrdinalIgnoreCase
+        );
+    }
+
+    private static long DeleteTargets(
+        IStorage storage,
+        IReadOnlyList<StorageEntry> freshEntries,
+        IReadOnlyList<string> targetPaths
+    )
+    {
+        long freedBytes = 0;
+        foreach (string targetPath in targetPaths)
+        {
+            StorageEntry? entry = freshEntries.FirstOrDefault(candidate =>
+                candidate.Path == targetPath
+            );
+            if (entry is null)
+                continue;
+
+            if (entry.IsDirectory)
+                storage.DeleteDirectory(targetPath, recursive: true);
+            else
+                storage.Delete(targetPath);
+
+            freedBytes += entry.SizeBytes;
+        }
+
+        return freedBytes;
+    }
+
+    private void RemoveItemFromSnapshot(string itemId, long reclaimableBytes)
+    {
+        lock (_gate)
+        {
+            if (_latest is null)
+                return;
+
+            List<ReclaimableItem> remaining = _latest
+                .Items.Where(candidate => candidate.Id != itemId)
+                .ToList();
+            _latest = _latest with
+            {
+                Items = remaining,
+                TotalReclaimableBytes = _latest.TotalReclaimableBytes - reclaimableBytes,
+            };
+        }
+    }
+
+    private async Task<long?> SweepPartialFolderAsync(
+        MediaContext context,
+        PartialJunkItem partial,
+        DateTimeOffset now,
+        TimeSpan partialStaleAfter,
+        CancellationToken ct
+    )
+    {
+        FreshFolderDbInfo? dbInfo = await ResolveFreshFolderDbContextAsync(
+            context,
+            partial.Folder,
+            ct
+        );
+        if (dbInfo is null)
+            return null;
+
+        IStorage storage;
+        IReadOnlyList<StorageEntry> freshEntries;
+        try
+        {
+            storage = _storageFactory.For(
+                dbInfo.Value.FolderId,
+                dbInfo.Value.DriverId,
+                string.Empty
+            );
+            freshEntries = storage.List(partial.Folder, null, recursive: false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "[ReclaimScanService] Could not re-list {Folder} during sweep — skipping",
+                partial.Folder
+            );
+            return null;
+        }
+
+        bool isProtected = dbInfo.Value.Rows.Any(row => IsServedPlaylist(row.Filename));
+
+        List<FolderEntry> freshFolderEntries = freshEntries
+            .Select(entry => new FolderEntry(
+                storage.GetName(entry.Path),
+                entry.IsDirectory,
+                entry.SizeBytes,
+                entry.LastModified
+            ))
+            .ToList();
+
+        ReclaimClassification classification = ReclaimClassifier.Classify(
+            freshFolderEntries,
+            isProtected,
+            now,
+            partialStaleAfter
+        );
+
+        if (classification.Kind != ReclaimKind.OrphanPartial)
+        {
+            _logger.LogInformation(
+                "[ReclaimScanService] Folder {Folder} is no longer a stale masterless orphan — skipping sweep",
+                partial.Folder
+            );
+            return null;
+        }
+
+        IReadOnlyList<string> confirmedTargets = classification
+            .TargetNames.Select(name => StoragePathHelpers.Combine(partial.Folder, name))
+            .ToList();
+
+        return DeleteTargets(storage, freshEntries, confirmedTargets);
+    }
+
+    private void RemoveSweptPartialsFromSnapshot(List<string> sweptFolders)
+    {
+        lock (_gate)
+        {
+            if (_latest is null)
+                return;
+
+            List<PartialJunkItem> remaining = [];
+            long removedBytes = 0;
+
+            foreach (PartialJunkItem partial in _latest.PartialJunk)
+            {
+                if (sweptFolders.Contains(partial.Folder))
+                    removedBytes += partial.Bytes;
+                else
+                    remaining.Add(partial);
+            }
+
+            _latest = _latest with
+            {
+                PartialJunk = remaining,
+                TotalPartialJunkBytes = _latest.TotalPartialJunkBytes - removedBytes,
+            };
+        }
+    }
+
+    private async Task<FreshFolderDbInfo?> ResolveFreshFolderDbContextAsync(
+        MediaContext context,
+        string hostFolder,
+        CancellationToken ct
+    )
+    {
+        List<VideoFileScanRow> freshRows = await context
+            .VideoFiles.AsNoTracking()
+            .Where(videoFile => videoFile.HostFolder == hostFolder)
+            .Select(videoFile => new VideoFileScanRow(
+                videoFile.HostFolder,
+                videoFile.Filename,
+                videoFile.Share,
+                videoFile.MovieId,
+                videoFile.EpisodeId,
+                null,
+                null,
+                null,
+                null,
+                null
+            ))
+            .ToListAsync(ct);
+
+        if (freshRows.Count == 0)
+        {
+            _logger.LogWarning(
+                "[ReclaimScanService] Folder {HostFolder} no longer has any VideoFile rows — refusing to act",
+                hostFolder
+            );
+            return null;
+        }
+
+        if (!Ulid.TryParse(freshRows[0].Share, out Ulid folderId))
+        {
+            _logger.LogWarning(
+                "[ReclaimScanService] VideoFile share for {HostFolder} is not a folder id — refusing to act",
+                hostFolder
+            );
+            return null;
+        }
+
+        Dictionary<Ulid, Ulid> driverIdByFolderId = await ResolveDriverIdsAsync(
+            context,
+            freshRows,
+            ct
+        );
+        if (!driverIdByFolderId.TryGetValue(folderId, out Ulid driverId))
+        {
+            _logger.LogWarning(
+                "[ReclaimScanService] Folder {FolderId} for {HostFolder} not found — refusing to act",
+                folderId,
+                hostFolder
+            );
+            return null;
+        }
+
+        return new FreshFolderDbInfo(freshRows, folderId, driverId);
+    }
 
     private async Task RunScanAsync(CancellationToken ct)
     {
@@ -378,5 +705,11 @@ public sealed class ReclaimScanService : IReclaimScanService
         string? ShowMediaType,
         int? SeasonNumber,
         int? EpisodeNumber
+    );
+
+    private readonly record struct FreshFolderDbInfo(
+        IReadOnlyList<VideoFileScanRow> Rows,
+        Ulid FolderId,
+        Ulid DriverId
     );
 }
