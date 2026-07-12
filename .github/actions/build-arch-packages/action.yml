@@ -22,118 +22,130 @@ runs:
         dotnet-version: ${{ inputs.dotnet-version }}
         app-repo-token: ${{ inputs.app-repo-token }}
 
-    - name: Install Arch build dependencies
+    - name: Pull Arch build container
       shell: bash
       run: |
-        sudo apt-get update
-        sudo apt-get install -y libarchive-tools zstd fakeroot
+        docker pull archlinux:base-devel
 
-    - name: Build Arch packages
+    - name: Stage Arch package sources
       shell: bash
       run: |
         VERSION="${{ inputs.version }}"
         PAYLOAD_PATH="./installer-payload"
-        INSTALL_DIR="/opt/nomercy"
+        BUILD_DIR="arch-build"
 
-        # Create package directory structure
-        pkg_dir="arch-nomercy"
-        mkdir -p "${pkg_dir}/pkg${INSTALL_DIR}"
-        mkdir -p "${pkg_dir}/pkg/usr/bin"
-        mkdir -p "${pkg_dir}/pkg/usr/share/applications"
-        mkdir -p "${pkg_dir}/pkg/usr/share/icons/hicolor/scalable/apps"
-        mkdir -p "${pkg_dir}/pkg/usr/share/licenses/nomercy"
+        rm -rf "${BUILD_DIR}"
+        mkdir -p "${BUILD_DIR}/payload" "${BUILD_DIR}/assets"
 
-        # Copy shared runtime payload
-        cp -R "${PAYLOAD_PATH}/"* "${pkg_dir}/pkg${INSTALL_DIR}/"
-        chmod 755 "${pkg_dir}/pkg${INSTALL_DIR}/NoMercyMediaServer"
-        chmod 755 "${pkg_dir}/pkg${INSTALL_DIR}/NoMercyApp"
-        chmod 755 "${pkg_dir}/pkg${INSTALL_DIR}/NoMercyLauncher"
-        chmod 755 "${pkg_dir}/pkg${INSTALL_DIR}/nomercy"
+        # Stage the shared runtime payload
+        cp -R "${PAYLOAD_PATH}/." "${BUILD_DIR}/payload/"
+        chmod 755 "${BUILD_DIR}/payload/NoMercyMediaServer"
+        chmod 755 "${BUILD_DIR}/payload/NoMercyApp"
+        chmod 755 "${BUILD_DIR}/payload/NoMercyLauncher"
+        chmod 755 "${BUILD_DIR}/payload/nomercy"
 
-        # Symlinks in /usr/bin
-        ln -s "${INSTALL_DIR}/NoMercyMediaServer" "${pkg_dir}/pkg/usr/bin/nomercymediaserver"
-        ln -s "${INSTALL_DIR}/NoMercyApp" "${pkg_dir}/pkg/usr/bin/nomercyapp"
-        ln -s "${INSTALL_DIR}/NoMercyLauncher" "${pkg_dir}/pkg/usr/bin/nomercylauncher"
-        ln -s "${INSTALL_DIR}/nomercy" "${pkg_dir}/pkg/usr/bin/nomercy"
-
-        # Desktop files
+        # Stage desktop files + icon for PKGBUILD's package()
         for df in NoMercy-MediaServer.desktop NoMercy-MediaServer-Service.desktop NoMercy-App.desktop; do
           if [ -f "./assets/linux/${df}" ]; then
-            cp "./assets/linux/${df}" "${pkg_dir}/pkg/usr/share/applications/"
+            cp "./assets/linux/${df}" "${BUILD_DIR}/assets/"
           fi
         done
+        cp "./assets/icons/icon.png" "${BUILD_DIR}/assets/icon.png"
 
-        # Icon
-        cp "./assets/icons/icon.png" "${pkg_dir}/pkg/usr/share/icons/hicolor/scalable/apps/NoMercy-MediaServer.png"
+        # PKGBUILD packages the prebuilt payload — no compile step, package()
+        # only. Body is written flush-left (no leading whitespace) since
+        # makepkg is not tolerant of that, unlike the surrounding YAML block.
+        cat > "${BUILD_DIR}/PKGBUILD" << PKGBUILD_EOF
+# Maintainer: NoMercy Entertainment <support@nomercy.tv>
+pkgname=nomercy
+pkgver=${VERSION}
+pkgrel=1
+pkgdesc="NoMercy MediaServer - complete installation"
+arch=('x86_64')
+url="https://nomercy.tv"
+license=('custom')
+depends=('glibc')
 
-        # License
-        echo "Proprietary software. All rights reserved." > "${pkg_dir}/pkg/usr/share/licenses/nomercy/LICENSE"
+package() {
+  install -dm755 "\$pkgdir/opt/nomercy"
+  cp -a "\$startdir/payload/." "\$pkgdir/opt/nomercy/"
+  chmod 755 "\$pkgdir/opt/nomercy/NoMercyMediaServer"
+  chmod 755 "\$pkgdir/opt/nomercy/NoMercyApp"
+  chmod 755 "\$pkgdir/opt/nomercy/NoMercyLauncher"
+  chmod 755 "\$pkgdir/opt/nomercy/nomercy"
 
-        # Create PKGBUILD (for reference)
-        cat > "${pkg_dir}/PKGBUILD" << EOF
-        # Maintainer: NoMercy Entertainment <support@nomercy.tv>
-        pkgname=nomercy
-        pkgver=${VERSION}
-        pkgrel=1
-        pkgdesc="NoMercy MediaServer - complete installation"
-        arch=('x86_64')
-        url="https://nomercy.tv"
-        license=('custom')
-        depends=('glibc')
-        EOF
+  install -dm755 "\$pkgdir/usr/bin"
+  ln -s /opt/nomercy/NoMercyMediaServer "\$pkgdir/usr/bin/nomercymediaserver"
+  ln -s /opt/nomercy/NoMercyApp "\$pkgdir/usr/bin/nomercyapp"
+  ln -s /opt/nomercy/NoMercyLauncher "\$pkgdir/usr/bin/nomercylauncher"
+  ln -s /opt/nomercy/nomercy "\$pkgdir/usr/bin/nomercy"
 
-        # Create .PKGINFO
-        cat > "${pkg_dir}/pkg/.PKGINFO" << EOF
-        pkgname = nomercy
-        pkgbase = nomercy
-        pkgver = ${VERSION}-1
-        pkgdesc = NoMercy MediaServer - complete installation
-        url = https://nomercy.tv
-        builddate = $(date +%s)
-        packager = NoMercy Entertainment <support@nomercy.tv>
-        size = $(du -sb "${pkg_dir}/pkg" | cut -f1)
-        arch = x86_64
-        license = custom
-        depend = glibc
-        EOF
+  install -dm755 "\$pkgdir/usr/share/applications"
+  for df in NoMercy-MediaServer.desktop NoMercy-MediaServer-Service.desktop NoMercy-App.desktop; do
+    if [ -f "\$startdir/assets/\${df}" ]; then
+      install -m644 "\$startdir/assets/\${df}" "\$pkgdir/usr/share/applications/"
+    fi
+  done
 
-        # Create .MTREE
-        cd "${pkg_dir}/pkg"
-        find . -type f -exec stat -c '%n %Y %s' {} \; | sort > .MTREE
-        cd ../..
+  install -dm755 "\$pkgdir/usr/share/icons/hicolor/scalable/apps"
+  install -m644 "\$startdir/assets/icon.png" "\$pkgdir/usr/share/icons/hicolor/scalable/apps/NoMercy-MediaServer.png"
 
-        # Create package
-        mkdir -p packages/arch/pool/x86_64
-        cd "${pkg_dir}/pkg"
-        tar --use-compress-program=zstd -cf "../../packages/arch/pool/x86_64/nomercy-${VERSION}-1-x86_64.pkg.tar.zst" .
-        cd ../..
-        rm -rf "${pkg_dir}"
-        echo "Successfully created nomercy Arch package"
+  install -dm755 "\$pkgdir/usr/share/licenses/nomercy"
+  echo "Proprietary software. All rights reserved." > "\$pkgdir/usr/share/licenses/nomercy/LICENSE"
+}
+PKGBUILD_EOF
 
-        # Create simple database
-        cd packages/arch/pool/x86_64
-        if ls *.pkg.tar.zst >/dev/null 2>&1; then
-          echo "# NoMercy Arch Repository Database" > nomercy.db
-          echo "# Generated on $(date)" >> nomercy.db
-          echo "" >> nomercy.db
+        echo "Staged PKGBUILD:"
+        cat "${BUILD_DIR}/PKGBUILD"
 
-          for pkg in *.pkg.tar.zst; do
-            echo "[Package]" >> nomercy.db
-            echo "Name: ${pkg%%-*}" >> nomercy.db
-            echo "Version: $(echo "$pkg" | cut -d'-' -f2-3)" >> nomercy.db
-            echo "Filename: $pkg" >> nomercy.db
-            echo "Size: $(stat -c%s "$pkg")" >> nomercy.db
-            echo "" >> nomercy.db
-          done
+    - name: Build Arch package with makepkg
+      shell: bash
+      run: |
+        set -euo pipefail
+        BUILD_DIR="$(pwd)/arch-build"
+        OUT_DIR="$(pwd)/packages/arch/pool/x86_64"
+        mkdir -p "${OUT_DIR}"
 
-          gzip -c nomercy.db > nomercy.db.tar.gz
+        # makepkg refuses to run as root and needs real Arch tooling
+        # (fakeroot, bsdtar) to produce a correctly-ordered archive with a
+        # valid .PKGINFO/.MTREE — that guarantee is why this runs makepkg
+        # itself inside Arch rather than hand-assembling the tarball.
+        docker run --rm -v "${BUILD_DIR}:/build" -w /build archlinux:base-devel bash -c '
+          set -euo pipefail
+          useradd -m builder
+          chown -R builder:builder /build
+          su builder -c "cd /build && makepkg -f --noconfirm"
+        '
 
-          echo "Created Arch packages:"
-          ls -la *.pkg.tar.zst
-        else
+        pkg_file=$(ls "${BUILD_DIR}"/*.pkg.tar.zst | head -n1)
+        cp "${pkg_file}" "${OUT_DIR}/"
+        rm -rf "${BUILD_DIR}"
+        echo "Successfully created nomercy Arch package: $(basename "${pkg_file}")"
+
+    - name: Generate Arch repository database
+      shell: bash
+      run: |
+        set -euo pipefail
+        OUT_DIR="$(pwd)/packages/arch/pool/x86_64"
+
+        if ! ls "${OUT_DIR}"/*.pkg.tar.zst >/dev/null 2>&1; then
           echo "ERROR: No package files found"
           exit 1
         fi
+
+        # repo-add is the real Arch tool for sync-db generation — it produces
+        # a valid nomercy.db.tar.gz (+ nomercy.db symlink) that pacman -Sy can
+        # actually parse, unlike a hand-rolled text file.
+        docker run --rm -v "${OUT_DIR}:/repo" -w /repo archlinux:base-devel bash -c '
+          set -euo pipefail
+          pacman -Sy --noconfirm --needed pacman-contrib
+          useradd -m builder
+          chown -R builder:builder /repo
+          su builder -c "cd /repo && repo-add nomercy.db.tar.gz *.pkg.tar.zst"
+        '
+
+        echo "Created Arch repository:"
+        ls -la "${OUT_DIR}"
 
     - name: Upload Arch artifacts
       uses: actions/upload-artifact@v7
