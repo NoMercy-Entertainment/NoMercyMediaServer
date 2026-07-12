@@ -48,6 +48,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 public class LibrariesController(
     ILibraryRepository libraryRepository,
     IEncoderRepository encoderRepository,
+    IEncodingPresetRepository encodingPresetRepository,
     IFolderRepository folderRepository,
     IJobDispatcher jobDispatcher,
     ILanguageRepository languageRepository,
@@ -154,6 +155,15 @@ public class LibrariesController(
         if (library is null)
             return NotFoundResponse("Library not found");
 
+        if (request.EncodePresetId.HasValue)
+        {
+            EncodingPreset? encodingPreset = await encodingPresetRepository.GetByIdAsync(
+                request.EncodePresetId.Value
+            );
+            if (encodingPreset is null)
+                return NotFoundResponse("Encoding preset not found");
+        }
+
         Guid userId = User.UserId();
         bool? oldRealtime = request.Realtime.HasValue ? library.Realtime : null;
 
@@ -168,6 +178,12 @@ public class LibrariesController(
 
             if (request.Realtime.HasValue)
                 library.Realtime = request.Realtime.Value;
+
+            if (request.AutoEncodeOnScan.HasValue)
+                library.AutoEncodeOnScan = request.AutoEncodeOnScan.Value;
+
+            if (request.EncodePresetId.HasValue)
+                library.EncodePresetId = request.EncodePresetId.Value;
 
             if (request.SpecialSeasonName != null)
                 library.SpecialSeasonName = request.SpecialSeasonName;
