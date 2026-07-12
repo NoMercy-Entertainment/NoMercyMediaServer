@@ -436,6 +436,10 @@ public static partial class ServiceConfiguration
             NoMercy.MediaProcessing.Files.Parsing.FilenameParserPipeline
         >();
         services.AddSingleton<IReclaimScanService, ReclaimScanService>();
+        services.AddSingleton<
+            NoMercy.MediaProcessing.Intake.IIntakeSettings,
+            NoMercy.MediaProcessing.Intake.IntakeSettings
+        >();
         services.AddScoped<FilesystemRepository>();
         services.AddScoped<LanguageRepository>();
         services.AddScoped<CollectionRepository>();
