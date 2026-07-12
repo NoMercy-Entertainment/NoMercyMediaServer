@@ -614,6 +614,63 @@ public class InboxRoutingServiceTests : IDisposable
     }
 
     // -----------------------------------------------------------------------
+    // ExecuteAuto — profile-less destination: TargetProfileId is null, not Ulid.Empty
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task ExecuteAuto_ProfileLessDestination_SetsTargetProfileIdToNull()
+    {
+        Library library = new()
+        {
+            Id = Ulid.NewUlid(),
+            Title = "movie library no profile",
+            Type = "movie",
+        };
+        _context.Libraries.Add(library);
+        _context.SaveChanges();
+
+        Folder folder = SeedFolderWithoutProfile(library);
+
+        InboxRoutingService service = MakeService();
+
+        CandidateMatch candidate = MakeCandidate("tmdb", "603", "The Matrix");
+        InboxDestination destination = new()
+        {
+            LibraryId = library.Id,
+            FolderId = folder.Id,
+            ProfileId = Ulid.Empty,
+            DriverId = folder.DriverId,
+            FolderPath = folder.Path,
+        };
+
+        InboxItem item = new()
+        {
+            Id = Ulid.NewUlid(),
+            SourcePath = "inbox/The Matrix (1999).mkv",
+            DriverId = folder.DriverId,
+            DetectedType = "movie",
+            Confidence = "high",
+            Status = "Routing",
+            Candidates = [candidate],
+        };
+
+        RouteOutcome outcome = new()
+        {
+            Mode = "auto",
+            Destination = destination,
+            Item = item,
+        };
+
+        await service.ExecuteAuto(outcome, _context);
+
+        item.TargetProfileId.Should().BeNull();
+
+        InboxItem? persisted = await _context.InboxItems.FindAsync(item.Id);
+        persisted.Should().NotBeNull();
+        persisted!.TargetProfileId.Should().BeNull();
+    }
+
+    // -----------------------------------------------------------------------
     // ExecuteAuto — status transitions: Routing -> Imported
     // -----------------------------------------------------------------------
 

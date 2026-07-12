@@ -231,7 +231,7 @@ public class InboxRoutingService
         item.Status = "Imported";
         item.TargetLibraryId = destination.LibraryId;
         item.TargetFolderId = destination.FolderId;
-        item.TargetProfileId = destination.ProfileId;
+        item.TargetProfileId = destination.ProfileId == Ulid.Empty ? null : destination.ProfileId;
         item.SelectedMatch = match;
 
         if (context.Entry(item).State == EntityState.Detached)

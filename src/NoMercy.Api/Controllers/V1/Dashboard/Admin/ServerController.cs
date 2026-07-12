@@ -243,14 +243,14 @@ public class ServerController(
                 return Ok(request);
             }
 
-            bool autoEncode = library.AutoEncodeOnScan && library.EncodePresetId is not null;
+            Ulid? encodePresetId = library.AutoEncodeOnScan ? library.EncodePresetId : null;
 
             foreach (AddFile file in request.Files)
             {
                 string filePath =
                     isRemoteDriver || isRemoteSource ? file.Path : Path.GetFullPath(file.Path);
 
-                if (autoEncode)
+                if (encodePresetId is { } presetId)
                 {
                     VideoEncodeJob job = new()
                     {
@@ -259,16 +259,14 @@ public class ServerController(
                         Id = file.Id,
                         InputFile = filePath,
                         SourceDriverId = sourceDriverId,
-                        PresetId = library.EncodePresetId!.Value,
+                        PresetId = presetId,
                     };
                     jobDispatcher.Dispatch(job, job.QueueName, job.Priority);
                 }
                 else
                 {
-                    // Auto-encode-on-scan is off for this library — index the
-                    // added file into the library without encoding, the same
-                    // way FileRescanJob matches files to DB entries during a
-                    // manual rescan.
+                    // FileRescanJob is the existing rescan mechanism that
+                    // indexes files without encoding.
                     jobDispatcher.DispatchJob<FileRescanJob>(file.Id.ToInt(), library.Id);
                 }
             }
