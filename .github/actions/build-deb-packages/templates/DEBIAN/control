@@ -1,0 +1,10 @@
+Package: nomercy
+Version: {{VERSION}}
+Architecture: amd64
+Maintainer: NoMercy Entertainment <support@nomercy.tv>
+Description: NoMercy MediaServer - complete installation
+ Modern Media Server Solution with server, launcher, and CLI tool.
+Depends: libc6 (>= 2.31), libgcc-s1, libssl3 | libssl1.1
+Recommends: systemd
+Priority: optional
+Section: multimedia

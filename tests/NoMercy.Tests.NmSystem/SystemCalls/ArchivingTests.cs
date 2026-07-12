@@ -62,8 +62,8 @@ public class ArchivingTests : IDisposable
 
         WriteZipWithEntry(zipPath, "../evil.txt", "payload");
 
-        await Assert.ThrowsAsync<Exception>(
-            () => Archiving.ExtractArchive(_storage, zipPath, destination)
+        await Assert.ThrowsAsync<Exception>(() =>
+            Archiving.ExtractArchive(_storage, zipPath, destination)
         );
 
         Assert.False(File.Exists(Path.Combine(_workDir, "evil.txt")));
@@ -78,8 +78,8 @@ public class ArchivingTests : IDisposable
 
         WriteZipWithEntry(zipPath, "..\\evil.txt", "payload");
 
-        await Assert.ThrowsAsync<Exception>(
-            () => Archiving.ExtractArchive(_storage, zipPath, destination)
+        await Assert.ThrowsAsync<Exception>(() =>
+            Archiving.ExtractArchive(_storage, zipPath, destination)
         );
     }
 
@@ -93,8 +93,8 @@ public class ArchivingTests : IDisposable
         string outsideAbsolute = Path.Combine(_workDir, "outside", "evil.txt");
         WriteZipWithEntry(zipPath, outsideAbsolute, "payload");
 
-        await Assert.ThrowsAsync<Exception>(
-            () => Archiving.ExtractArchive(_storage, zipPath, destination)
+        await Assert.ThrowsAsync<Exception>(() =>
+            Archiving.ExtractArchive(_storage, zipPath, destination)
         );
 
         Assert.False(File.Exists(outsideAbsolute));
@@ -133,7 +133,11 @@ public class ArchivingTests : IDisposable
             GZipStream gzipStream = new(fileStream, CompressionMode.Compress, leaveOpen: true)
         )
         {
-            await TarFile.CreateFromDirectoryAsync(sourceDir, gzipStream, includeBaseDirectory: false);
+            await TarFile.CreateFromDirectoryAsync(
+                sourceDir,
+                gzipStream,
+                includeBaseDirectory: false
+            );
         }
 
         string destination = Path.Combine(_workDir, "dest-tgz");
@@ -159,5 +163,61 @@ public class ArchivingTests : IDisposable
         List<string> extracted = await Archiving.ExtractArchive(_storage, filePath, destination);
 
         Assert.Empty(extracted);
+    }
+
+    // -------------------------------------------------------------------------
+    // Missing/incomplete archive guard: extraction must never be attempted
+    // against a file that isn't actually (fully) on disk. Reproduces the
+    // onboarding blocker where a failed/partial ffmpeg download reached `tar`
+    // as a bare "No such file or directory" instead of a clear abort.
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task ExtractArchive_MissingTarFile_ThrowsFileNotFoundWithoutInvokingTar()
+    {
+        string tarPath = Path.Combine(_workDir, "does-not-exist.tar.gz");
+        string destination = Path.Combine(_workDir, "dest-missing-tar");
+        Directory.CreateDirectory(destination);
+
+        FileNotFoundException ex = await Assert.ThrowsAsync<FileNotFoundException>(() =>
+            Archiving.ExtractArchive(_storage, tarPath, destination)
+        );
+
+        Assert.Contains("missing or empty", ex.Message);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(destination));
+    }
+
+    [Fact]
+    public async Task ExtractArchive_MissingZipFile_ThrowsFileNotFoundWithoutInvokingZipFile()
+    {
+        string zipPath = Path.Combine(_workDir, "does-not-exist.zip");
+        string destination = Path.Combine(_workDir, "dest-missing-zip");
+        Directory.CreateDirectory(destination);
+
+        FileNotFoundException ex = await Assert.ThrowsAsync<FileNotFoundException>(() =>
+            Archiving.ExtractArchive(_storage, zipPath, destination)
+        );
+
+        Assert.Contains("missing or empty", ex.Message);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(destination));
+    }
+
+    [Fact]
+    public async Task ExtractArchive_ZeroByteTarFile_ThrowsFileNotFoundWithoutInvokingTar()
+    {
+        // A 0-byte file is what a killed/partial download or a verify step that
+        // deleted-then-recreated an empty placeholder would leave behind — it
+        // must never be handed to `tar`, which fails with an opaque exit code.
+        string tarPath = Path.Combine(_workDir, "empty.tar.gz");
+        await File.WriteAllBytesAsync(tarPath, []);
+        string destination = Path.Combine(_workDir, "dest-empty-tar");
+        Directory.CreateDirectory(destination);
+
+        FileNotFoundException ex = await Assert.ThrowsAsync<FileNotFoundException>(() =>
+            Archiving.ExtractArchive(_storage, tarPath, destination)
+        );
+
+        Assert.Contains("missing or empty", ex.Message);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(destination));
     }
 }

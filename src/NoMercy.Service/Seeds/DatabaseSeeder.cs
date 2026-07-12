@@ -55,6 +55,14 @@ public static class DatabaseSeeder
         // or "ssl_certificate" row carried over from media.db is visible to it.
         Info.SetResolvedDeviceId(DeviceIdentityResolver.ResolveAndPersist(appDbContext));
 
+        // Decide the default DNS scheme (apex vs srv) exactly once, before
+        // BootOrchestrator's Phase 3 registration reads RuntimeServerSettings
+        // and sends dns_scheme. Must run in this same pass so it can see the
+        // same "prior registration" evidence (auth token / cert rows) the
+        // migration above just made visible, and before Phase 2 auth mints a
+        // brand-new token that would make a fresh install look pre-registered.
+        DnsSchemeResolver.ResolveAndPersist(appDbContext);
+
         await appDbContext.DisposeAsync();
 
         // 2. MediaContext — content and metadata

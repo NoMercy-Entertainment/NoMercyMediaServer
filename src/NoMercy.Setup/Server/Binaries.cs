@@ -102,7 +102,7 @@ public class Binaries
     // -------------------------------------------------------------------------
     private readonly Dictionary<
         string,
-        (ReleaseManifest? Manifest, bool SignatureVerified)
+        (ReleaseManifest? Manifest, bool SignatureVerified, bool SignaturePresent)
     > _manifestCache = new();
 
     /// <summary>
@@ -110,15 +110,27 @@ public class Binaries
     /// If <c>manifest.json.sig</c> is also present among the release assets, verifies the
     /// detached signature and records the result in <see cref="_manifestCache"/>.
     /// </summary>
-    private async Task<(ReleaseManifest? Manifest, bool SignatureVerified)> GetOrFetchManifestAsync(
-        string apiUrl,
-        GithubReleaseResponse releaseInfo
-    )
+    /// <remarks>
+    /// <c>SignaturePresent</c> is tracked separately from <c>SignatureVerified</c> so a
+    /// caller can tell "no <c>.sig</c> asset was published for this release" (the signing
+    /// rollout has not reached this repo's CI yet — expected, low-noise) apart from "a
+    /// <c>.sig</c> asset exists but does not verify against the embedded key" (a real
+    /// integrity concern worth an error-level log).
+    /// </remarks>
+    private async Task<(
+        ReleaseManifest? Manifest,
+        bool SignatureVerified,
+        bool SignaturePresent
+    )> GetOrFetchManifestAsync(string apiUrl, GithubReleaseResponse releaseInfo)
     {
         if (
             _manifestCache.TryGetValue(
                 apiUrl,
-                out (ReleaseManifest? Manifest, bool SignatureVerified) cached
+                out (
+                    ReleaseManifest? Manifest,
+                    bool SignatureVerified,
+                    bool SignaturePresent
+                ) cached
             )
         )
             return cached;
@@ -131,8 +143,8 @@ public class Binaries
 
         if (manifestUrl is null)
         {
-            _manifestCache[apiUrl] = (null, false);
-            return (null, false);
+            _manifestCache[apiUrl] = (null, false, false);
+            return (null, false, false);
         }
 
         try
@@ -148,6 +160,7 @@ public class Binaries
                     a.Name.Equals("manifest.json.sig", StringComparison.OrdinalIgnoreCase)
                 )
                 ?.BrowserDownloadUrl;
+            bool signaturePresent = sigUrl is not null;
 
             if (sigUrl is not null)
             {
@@ -166,9 +179,10 @@ public class Binaries
                     );
             }
 
-            (ReleaseManifest? Manifest, bool SignatureVerified) result = (
+            (ReleaseManifest? Manifest, bool SignatureVerified, bool SignaturePresent) result = (
                 manifest,
-                signatureVerified
+                signatureVerified,
+                signaturePresent
             );
             _manifestCache[apiUrl] = result;
             return result;
@@ -176,8 +190,8 @@ public class Binaries
         catch (Exception ex)
         {
             Logger.Setup($"Failed to fetch release manifest: {ex.Message}", LogEventLevel.Warning);
-            _manifestCache[apiUrl] = (null, false);
-            return (null, false);
+            _manifestCache[apiUrl] = (null, false, false);
+            return (null, false, false);
         }
     }
 
@@ -217,10 +231,8 @@ public class Binaries
         string? expectedSha256 = expectedSha256Override;
         string sha256Source = expectedSha256 is not null ? "upstream checksum" : "none";
 
-        (ReleaseManifest? manifest, bool sigVerified) = await GetOrFetchManifestAsync(
-            apiUrl,
-            releaseInfo
-        );
+        (ReleaseManifest? manifest, bool sigVerified, bool sigPresent) =
+            await GetOrFetchManifestAsync(apiUrl, releaseInfo);
 
         // Owned assets prefer the signature-verified manifest for authenticity. But a
         // signature that does NOT verify — a stale key after a rotation, a CI signing
@@ -232,12 +244,26 @@ public class Binaries
         // honest servers on the next key rotation.
         bool manifestTrusted = sigVerified || !enforceSignedManifest;
 
-        if (enforceSignedManifest && manifest is not null && !sigVerified)
+        if (enforceSignedManifest && manifest is not null && sigPresent && !sigVerified)
         {
+            // A .sig asset WAS published for this release but did not verify against the
+            // embedded key — a genuine signing concern (rotated key, forged manifest, CI
+            // glitch) worth surfacing loudly.
             Logger.Setup(
                 $"Release manifest signature for {label} did not verify against the embedded NoMercy key — "
                     + "falling back to GitHub asset-digest integrity. Investigate the signing key if this persists.",
                 LogEventLevel.Error
+            );
+        }
+        else if (enforceSignedManifest && manifest is not null && !sigPresent)
+        {
+            // The manifest exists but no .sig asset was published at all — this repo's CI
+            // signing rollout has not landed yet (ffmpeg/tesseract/whisper as of writing).
+            // Expected during rollout, not a verification failure, so it must not be logged
+            // as one: low-noise so a fresh install doesn't read this as a security incident.
+            Logger.Setup(
+                $"No signature published yet for {label}'s release manifest — accepting on GitHub asset-digest integrity (signing rollout in progress for this repo).",
+                LogEventLevel.Debug
             );
         }
         else if (enforceSignedManifest && manifest is null)

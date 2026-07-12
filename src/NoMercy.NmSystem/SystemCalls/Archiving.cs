@@ -24,6 +24,8 @@ public static class Archiving
         string destination
     )
     {
+        await EnsureExtractableAsync(storage, filePath);
+
         List<string> extractedFiles;
 
         if (filePath.EndsWith(".zip"))
@@ -48,6 +50,51 @@ public static class Archiving
             await FilePermissions.SetExecutionPermissions(extractedFile);
 
         return extractedFiles;
+    }
+
+    /// <summary>
+    /// Final gate immediately before shelling out to the extractor. Re-confirms the
+    /// archive is actually present and non-empty — a defense against any state change
+    /// between a caller's "download verified" step and this call (a concurrent
+    /// re-provision attempt, external quarantine, or a network-mounted data volume
+    /// where a just-written file briefly lags before it is visible to the child <c>tar</c>
+    /// process). Retries with a short backoff to absorb that lag before giving up.
+    /// </summary>
+    /// <exception cref="FileNotFoundException">
+    /// The archive is still missing or empty after every retry — extraction never runs
+    /// against a file that was not actually there.
+    /// </exception>
+    private static async Task EnsureExtractableAsync(IStorage storage, string filePath)
+    {
+        const int maxAttempts = 3;
+        TimeSpan delay = TimeSpan.FromMilliseconds(250);
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            bool exists = storage.Exists(filePath);
+            long size = exists ? storage.SizeOrZero(filePath) : 0;
+
+            if (ArchiveExtractGate.CanProceed(exists, size))
+                return;
+
+            if (attempt == maxAttempts)
+            {
+                Logger.System(
+                    $"Refusing to extract {filePath}: archive missing or empty "
+                        + $"(exists={exists}, size={size}) after {maxAttempts} checks",
+                    LogEventLevel.Error
+                );
+                throw new FileNotFoundException(
+                    $"Cannot extract archive: file missing or empty at {filePath} — "
+                        + "the download did not complete or was removed before extraction. "
+                        + "Will retry the full download on the next provisioning attempt.",
+                    filePath
+                );
+            }
+
+            await Task.Delay(delay);
+            delay *= 2;
+        }
     }
 
     private static List<string> ExtractZipFile(

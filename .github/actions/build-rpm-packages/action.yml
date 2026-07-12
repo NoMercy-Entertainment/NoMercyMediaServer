@@ -49,154 +49,26 @@ runs:
         cp ./assets/linux/NoMercy-MediaServer-Service.desktop ~/rpmbuild/SOURCES/ 2>/dev/null || true
         cp ./assets/icons/icon.png ~/rpmbuild/SOURCES/
 
-        # Create spec file for unified package
-        cat > ~/rpmbuild/SPECS/nomercy.spec << 'SPEC_EOF'
-        Name: nomercy
-        Version: VERSIONPLACEHOLDER
-        Release: 1%{?dist}
-        Summary: NoMercy MediaServer - complete installation
-        License: Proprietary
-        URL: https://nomercy.tv
-        Source0: nomercy-payload.tar.gz
-        Source1: NoMercy-MediaServer.desktop
-        Source2: icon.png
-        BuildArch: x86_64
-        BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
+        # Systemd service files + README are real checked-in templates,
+        # staged as RPM sources and installed via `install -m 644 %{SOURCEn}`
+        # in the spec — same idea as the desktop file/icon sources below,
+        # replacing what used to be a heredoc nested inside a heredoc.
+        ACTION_TEMPLATES="${{ github.action_path }}/templates"
+        cp "${ACTION_TEMPLATES}/nomercymediaserver.service" ~/rpmbuild/SOURCES/
+        cp "${ACTION_TEMPLATES}/nomercylauncher.service" ~/rpmbuild/SOURCES/
+        cp "${ACTION_TEMPLATES}/README" ~/rpmbuild/SOURCES/
 
-        Requires: glibc
-        Recommends: systemd
+        # Spec file generated from the real checked-in templates/nomercy.spec
+        # by substituting {{VERSION}}/{{CHANGELOG_DATE}} — same pattern as
+        # build-arch-packages and generate-repository-website.
+        sed \
+          -e "s/{{VERSION}}/${VERSION}/g" \
+          -e "s/{{CHANGELOG_DATE}}/$(date '+%a %b %d %Y')/g" \
+          "${ACTION_TEMPLATES}/nomercy.spec" \
+          > ~/rpmbuild/SPECS/nomercy.spec
 
-        %description
-        Modern Media Server Solution with server, launcher, and CLI tool.
-        All components share a single .NET runtime for efficient disk usage.
-
-        %prep
-        %setup -q -c -T
-        tar xzf %{SOURCE0}
-
-        %build
-
-        %install
-        rm -rf %{buildroot}
-
-        # Install shared runtime and executables
-        mkdir -p %{buildroot}/opt/nomercy
-        cp -R * %{buildroot}/opt/nomercy/
-        chmod 755 %{buildroot}/opt/nomercy/NoMercyMediaServer
-        chmod 755 %{buildroot}/opt/nomercy/NoMercyApp
-        chmod 755 %{buildroot}/opt/nomercy/NoMercyLauncher
-        chmod 755 %{buildroot}/opt/nomercy/nomercy
-
-        # Symlinks in /usr/bin
-        mkdir -p %{buildroot}/usr/bin
-        ln -s /opt/nomercy/NoMercyMediaServer %{buildroot}/usr/bin/nomercymediaserver
-        ln -s /opt/nomercy/NoMercyApp %{buildroot}/usr/bin/nomercyapp
-        ln -s /opt/nomercy/NoMercyLauncher %{buildroot}/usr/bin/nomercylauncher
-        ln -s /opt/nomercy/nomercy %{buildroot}/usr/bin/nomercy
-
-        # Desktop files
-        mkdir -p %{buildroot}/usr/share/applications
-        install -m 644 %{SOURCE1} %{buildroot}/usr/share/applications/ 2>/dev/null || true
-
-        # Icon
-        mkdir -p %{buildroot}/usr/share/icons/hicolor/scalable/apps
-        install -m 644 %{SOURCE2} %{buildroot}/usr/share/icons/hicolor/scalable/apps/NoMercy-MediaServer.png
-
-        # Systemd service files
-        mkdir -p %{buildroot}/usr/lib/systemd/user
-
-        cat > %{buildroot}/usr/lib/systemd/user/nomercymediaserver.service << 'SERVICE_EOF'
-        [Unit]
-        Description=NoMercy MediaServer
-        After=network.target
-
-        [Service]
-        Type=simple
-        ExecStart=/opt/nomercy/NoMercyMediaServer
-        Restart=on-failure
-        RestartSec=5
-
-        [Install]
-        WantedBy=default.target
-        SERVICE_EOF
-
-        cat > %{buildroot}/usr/lib/systemd/user/nomercylauncher.service << 'SERVICE_EOF'
-        [Unit]
-        Description=NoMercy Launcher
-        After=network.target
-
-        [Service]
-        Type=simple
-        ExecStart=/opt/nomercy/NoMercyLauncher
-        Restart=on-failure
-        RestartSec=5
-
-        [Install]
-        WantedBy=default.target
-        SERVICE_EOF
-
-        # Documentation
-        mkdir -p %{buildroot}/usr/share/doc/%{name}
-        cat > %{buildroot}/usr/share/doc/%{name}/README << 'README_EOF'
-        NoMercy MediaServer
-
-        To start the server:
-          systemctl --user enable nomercymediaserver.service
-          systemctl --user start nomercymediaserver.service
-
-        For more information, visit: https://nomercy.tv
-        README_EOF
-
-        %files
-        %defattr(-,root,root,-)
-        /opt/nomercy
-        /usr/bin/nomercymediaserver
-        /usr/bin/nomercyapp
-        /usr/bin/nomercylauncher
-        /usr/bin/nomercy
-        %attr(644,root,root) /usr/share/applications/*.desktop
-        %attr(644,root,root) /usr/share/icons/hicolor/scalable/apps/NoMercy-MediaServer.png
-        %attr(644,root,root) /usr/lib/systemd/user/nomercymediaserver.service
-        %attr(644,root,root) /usr/lib/systemd/user/nomercylauncher.service
-        %doc /usr/share/doc/%{name}/README
-
-        %post
-        if command -v gtk-update-icon-cache >/dev/null 2>&1; then
-            gtk-update-icon-cache -q /usr/share/icons/hicolor || true
-        fi
-        if command -v update-desktop-database >/dev/null 2>&1; then
-            update-desktop-database /usr/share/applications || true
-        fi
-        systemctl --user daemon-reload >/dev/null 2>&1 || true
-
-        %preun
-        if [ "$1" -eq 0 ] ; then
-            systemctl --user stop nomercymediaserver.service >/dev/null 2>&1 || true
-            systemctl --user disable nomercymediaserver.service >/dev/null 2>&1 || true
-            systemctl --user stop nomercylauncher.service >/dev/null 2>&1 || true
-            systemctl --user disable nomercylauncher.service >/dev/null 2>&1 || true
-        fi
-
-        %postun
-        if [ "$1" -eq 0 ] ; then
-            if command -v gtk-update-icon-cache >/dev/null 2>&1; then
-                gtk-update-icon-cache -q /usr/share/icons/hicolor || true
-            fi
-            if command -v update-desktop-database >/dev/null 2>&1; then
-                update-desktop-database /usr/share/applications || true
-            fi
-        fi
-
-        %clean
-        rm -rf %{buildroot}
-
-        %changelog
-        SPEC_EOF
-
-        # Replace version placeholder and add changelog date
-        sed -i "s/VERSIONPLACEHOLDER/${VERSION}/g" ~/rpmbuild/SPECS/nomercy.spec
-        echo "* $(date '+%a %b %d %Y') NoMercy <support@nomercy.tv> - ${VERSION}-1" >> ~/rpmbuild/SPECS/nomercy.spec
-        echo "- Unified package with shared runtime" >> ~/rpmbuild/SPECS/nomercy.spec
+        echo "Staged nomercy.spec:"
+        cat ~/rpmbuild/SPECS/nomercy.spec
 
         # Build RPM
         rpmbuild -bb ~/rpmbuild/SPECS/nomercy.spec
