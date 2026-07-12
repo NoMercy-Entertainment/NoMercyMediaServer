@@ -1,0 +1,12 @@
+[Unit]
+Description=NoMercy Launcher
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/nomercy/NoMercyLauncher
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

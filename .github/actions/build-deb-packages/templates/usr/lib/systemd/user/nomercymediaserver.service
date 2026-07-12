@@ -1,0 +1,12 @@
+[Unit]
+Description=NoMercy MediaServer
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/nomercy/NoMercyMediaServer
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

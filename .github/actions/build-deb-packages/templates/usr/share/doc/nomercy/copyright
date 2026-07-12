@@ -1,0 +1,10 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: NoMercy MediaServer
+Source: https://nomercy.tv
+
+Files: *
+Copyright: {{YEAR}} NoMercy Entertainment
+License: Proprietary
+ This is proprietary software.
+ .
+ All rights reserved.

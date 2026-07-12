@@ -1,0 +1,7 @@
+NoMercy MediaServer
+
+To start the server:
+  systemctl --user enable nomercymediaserver.service
+  systemctl --user start nomercymediaserver.service
+
+For more information, visit: https://nomercy.tv
