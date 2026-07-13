@@ -322,9 +322,14 @@ internal static class LibNfs
     [StructLayout(LayoutKind.Sequential)]
     internal struct ExportEntry
     {
-        public IntPtr ExNext;
+        // Field order MUST match the ONC RPC MOUNT `exportnode` (RFC 1813): the
+        // directory path first, then the group list, then the next node. The
+        // previous order (ex_next first) misaligned every pointer, so the moment
+        // a server actually answered the v3 MOUNT protocol the export walk read
+        // the group pointer as the path and dereferenced garbage.
         public IntPtr ExDir;
         public IntPtr ExGroups;
+        public IntPtr ExNext;
     }
 
     // -----------------------------------------------------------------------

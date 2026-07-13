@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Startup;
+using NoMercy.NmSystem.Lifecycle;
 
 namespace NoMercy.Tests.Encoder.Startup;
 
@@ -149,12 +150,52 @@ public class HardwareBenchmarkBackgroundServiceTests
         await sut.StopAsync(CancellationToken.None);
     }
 
+    [Fact]
+    public async Task PendingBinariesStage_DefersCalibrationUntilBinariesComplete()
+    {
+        TaskCompletionSource<bool> calibrated = new();
+        Mock<IHardwareBenchmark> benchmark = new();
+        benchmark.Setup(b => b.NeedsRecalibration()).Returns(true);
+        benchmark
+            .Setup(b => b.CalibrateAsync(It.IsAny<CancellationToken>()))
+            .Returns(
+                (CancellationToken _) =>
+                {
+                    calibrated.TrySetResult(true);
+                    return Task.FromResult(new SpeedIndex(new()));
+                }
+            );
+
+        // Fresh tracker with no stages marked — ffmpeg is not on disk yet.
+        ServerPhaseTracker tracker = new();
+
+        HardwareBenchmarkBackgroundService sut = NewService(
+            benchmark.Object,
+            autoCalibrate: true,
+            startedNow: true,
+            phaseTracker: tracker
+        );
+
+        await sut.StartAsync(CancellationToken.None);
+
+        bool ranTooEarly = await Task.WhenAny(calibrated.Task, Task.Delay(200)) == calibrated.Task;
+        ranTooEarly.Should().BeFalse("benchmark must not spawn ffmpeg before BootStage.Binaries");
+
+        tracker.MarkComplete(BootStage.Binaries);
+
+        bool ranAfter = await Task.WhenAny(calibrated.Task, Task.Delay(2000)) == calibrated.Task;
+        ranAfter.Should().BeTrue("benchmark should run once binaries are provisioned");
+
+        await sut.StopAsync(CancellationToken.None);
+    }
+
     private static HardwareBenchmarkBackgroundService NewService(
         IHardwareBenchmark benchmark,
         bool autoCalibrate,
         bool startedNow,
         IEncoderActivityProbe? probe = null,
-        ControllableLifetime? lifetime = null
+        ControllableLifetime? lifetime = null,
+        IServerPhaseTracker? phaseTracker = null
     )
     {
         ControllableLifetime effectiveLifetime = lifetime ?? new ControllableLifetime();
@@ -176,7 +217,8 @@ public class HardwareBenchmarkBackgroundServiceTests
             probe ?? defaultProbe.Object,
             NullLogger<HardwareBenchmarkBackgroundService>.Instance,
             initialGrace: TimeSpan.Zero,
-            busyPollInterval: TimeSpan.FromMilliseconds(20)
+            busyPollInterval: TimeSpan.FromMilliseconds(20),
+            phaseTracker
         );
     }
 

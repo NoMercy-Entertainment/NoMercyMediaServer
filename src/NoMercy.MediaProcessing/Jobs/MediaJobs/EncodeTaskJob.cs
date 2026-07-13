@@ -12,6 +12,7 @@
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Encoder;
 using NoMercy.Database.Models.Libraries;
@@ -30,8 +31,9 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.Storage;
 using NoMercyQueue;
 using NoMercyQueue.Core;
+using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Resources;
-using Microsoft.Extensions.Logging;
+
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 /// <summary>
@@ -45,7 +47,11 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 /// tasks and prevents the GPU session cap from being exceeded.
 /// </summary>
 [Serializable]
-public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement, IJobStorageInjector
+public class EncodeTaskJob
+    : AbstractEncoderJob,
+        IHasResourceRequirement,
+        IJobStorageInjector,
+        IResourceDegradable
 {
     private IEncodingOrchestrator? _encodingOrchestrator;
     private IEncoderProcessRegistry? _encoderProcessRegistry;
@@ -72,6 +78,26 @@ public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement, IJobSt
     public ResourceRequirement? ResourceRequirement => Task.Resources;
 
     /// <summary>
+    /// Re-plans this task to run without its GPU requirement — see
+    /// <see cref="IResourceDegradable"/>. Called by the queue worker's budget
+    /// gate when <see cref="Task"/>'s <see cref="ResourceRequirement.GpuDeviceKey"/>
+    /// is not a registered device on this host (e.g. a preset pinned to
+    /// <c>h264_amf</c> on a host whose only GPU is NVIDIA) — that requirement
+    /// can never be granted, so it drops the GPU pin and reroutes to
+    /// <c>encoder-cpu</c> via <see cref="QueueName"/> instead of looping at the
+    /// budget gate forever.
+    /// </summary>
+    public IShouldQueue? DegradeToSoftware()
+    {
+        if (Task.Resources?.GpuDeviceKey is null)
+            return null; // already CPU-only — nothing to degrade
+
+        Task = Task with { Resources = Task.Resources with { GpuDeviceKey = null, GpuSlots = 0 } };
+
+        return this;
+    }
+
+    /// <summary>
     /// Destination output directory for this encode task. Set at dispatch time
     /// so orphan-recovery can locate the crash checkpoint without a DB round-trip.
     /// </summary>
@@ -93,7 +119,12 @@ public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement, IJobSt
         }
         catch (Exception ex)
         {
-            Log.LogWarning("[EncodeTaskJob] Skipping task '{Label}' for preset {PresetId}: resolve failed — {Message}", Task.Label, PresetId, ex.Message);
+            Log.LogWarning(
+                "[EncodeTaskJob] Skipping task '{Label}' for preset {PresetId}: resolve failed — {Message}",
+                Task.Label,
+                PresetId,
+                ex.Message
+            );
             await PublishCompletedAsync(success: false, error: ex.Message, artifacts: []);
             return;
         }
@@ -160,12 +191,20 @@ public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement, IJobSt
             {
                 string errorMsg =
                     result.Error?.Message ?? result.EnrichedError?.Message ?? "encode failed";
-                Log.LogWarning("[EncodeTaskJob] Task '{Label}' failed: {ErrorMsg}", Task.Label, errorMsg);
+                Log.LogWarning(
+                    "[EncodeTaskJob] Task '{Label}' failed: {ErrorMsg}",
+                    Task.Label,
+                    errorMsg
+                );
                 await PublishCompletedAsync(success: false, error: errorMsg, artifacts: []);
                 return;
             }
 
-            Log.LogInformation("[EncodeTaskJob] Task '{Label}' completed in {TotalSeconds:F1}s", Task.Label, stopwatch.Elapsed.TotalSeconds);
+            Log.LogInformation(
+                "[EncodeTaskJob] Task '{Label}' completed in {TotalSeconds:F1}s",
+                Task.Label,
+                stopwatch.Elapsed.TotalSeconds
+            );
 
             List<string> artifactPaths = result
                 .Artifacts.Select(artifact => artifact.Path)
@@ -259,7 +298,11 @@ public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement, IJobSt
         }
         catch (Exception ex)
         {
-            Log.LogWarning("[EncodeTaskJob] Failed to write outcome row for task '{TaskId}': {Message}", Task.TaskId, ex.Message);
+            Log.LogWarning(
+                "[EncodeTaskJob] Failed to write outcome row for task '{TaskId}': {Message}",
+                Task.TaskId,
+                ex.Message
+            );
         }
     }
 
@@ -306,7 +349,11 @@ public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement, IJobSt
         }
         catch (Exception ex)
         {
-            Log.LogWarning("[EncodeTaskJob] Failed to write bundle outcome rows for {Length} tasks: {Message}", bundledIds.Length, ex.Message);
+            Log.LogWarning(
+                "[EncodeTaskJob] Failed to write bundle outcome rows for {Length} tasks: {Message}",
+                bundledIds.Length,
+                ex.Message
+            );
         }
     }
 

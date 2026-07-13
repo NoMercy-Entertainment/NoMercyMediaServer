@@ -243,32 +243,30 @@ public class ServerController(
                 return Ok(request);
             }
 
-            Ulid? encodePresetId = library.AutoEncodeOnScan ? library.EncodePresetId : null;
-
+            // Manual "add files" is a deliberate operator action to import and
+            // process the selected files — typically staged in a download/source
+            // location off the library root (source_driver_id set). It always
+            // encodes the explicit file: FileRescanJob only re-walks existing
+            // library folders and cannot see a file staged elsewhere, so routing
+            // a manual import through it silently drops it. Library.AutoEncodeOnScan
+            // gates only the automatic file-watcher path (AutoEncodeSubscriber),
+            // never this manual import. A configured EncodePresetId narrows the
+            // encode to that one preset; a null value keeps the folder's presets.
             foreach (AddFile file in request.Files)
             {
                 string filePath =
                     isRemoteDriver || isRemoteSource ? file.Path : Path.GetFullPath(file.Path);
 
-                if (encodePresetId is { } presetId)
+                VideoEncodeJob job = new()
                 {
-                    VideoEncodeJob job = new()
-                    {
-                        LibraryId = library.Id,
-                        FolderId = request.FolderId,
-                        Id = file.Id,
-                        InputFile = filePath,
-                        SourceDriverId = sourceDriverId,
-                        PresetId = presetId,
-                    };
-                    jobDispatcher.Dispatch(job, job.QueueName, job.Priority);
-                }
-                else
-                {
-                    // FileRescanJob is the existing rescan mechanism that
-                    // indexes files without encoding.
-                    jobDispatcher.DispatchJob<FileRescanJob>(file.Id.ToInt(), library.Id);
-                }
+                    LibraryId = library.Id,
+                    FolderId = request.FolderId,
+                    Id = file.Id,
+                    InputFile = filePath,
+                    SourceDriverId = sourceDriverId,
+                    PresetId = library.EncodePresetId,
+                };
+                jobDispatcher.Dispatch(job, job.QueueName, job.Priority);
             }
             return Ok(request);
         }

@@ -43,4 +43,16 @@ public interface IResourceBudget
     ResourceLease? TryAcquire(ResourceRequirement requirement, TimeSpan timeout);
 
     void Release(ResourceLease lease);
+
+    /// <summary>
+    /// True when <paramref name="gpuDeviceKey"/> resolves to a registered GPU
+    /// semaphore — a real, physically detected device of that vendor exists
+    /// on this host. False means no such device exists at all, as opposed to
+    /// "present but every slot is currently leased" (which <see cref="TryAcquire"/>
+    /// also reports as a null lease). Callers use this distinction to tell a
+    /// permanently unsatisfiable GPU-pinned requirement apart from ordinary
+    /// saturation, so they can degrade to software instead of retrying a gate
+    /// that can never open.
+    /// </summary>
+    bool IsGpuDeviceRegistered(string gpuDeviceKey);
 }

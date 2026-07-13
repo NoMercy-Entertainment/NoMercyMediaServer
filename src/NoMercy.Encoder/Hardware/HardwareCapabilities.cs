@@ -13,12 +13,21 @@ using NoMercy.Encoder.Codecs;
 
 namespace NoMercy.Encoder.Hardware;
 
-public class HardwareCapabilities(IReadOnlyList<GpuDevice> Gpus, int CpuCores)
-    : IHardwareCapabilities
+public class HardwareCapabilities(
+    IReadOnlyList<GpuDevice> Gpus,
+    int CpuCores,
+    IReadOnlySet<string>? UsableHardwareEncoders = null
+) : IHardwareCapabilities
 {
+    private static readonly IReadOnlySet<string> EmptyUsableHardwareEncoders =
+        new HashSet<string>();
+
     public IReadOnlyList<GpuDevice> Gpus { get; } = Gpus;
     public int CpuCores { get; } = CpuCores;
     public bool HasGpu => Gpus.Count > 0;
+
+    public IReadOnlySet<string> UsableHardwareEncoders { get; } =
+        UsableHardwareEncoders ?? EmptyUsableHardwareEncoders;
 
     public bool SupportsHardwareEncoding(VideoCodecType codec)
     {

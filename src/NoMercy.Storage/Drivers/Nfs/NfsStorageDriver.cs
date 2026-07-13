@@ -1046,6 +1046,13 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             );
             return null;
         }
+        catch (Exception ex)
+        {
+            // Best-effort discovery: any failure resolves to "unknown" (null),
+            // never a thrown exception the callers aren't expecting.
+            log.LogWarning(ex, "NFS export discovery failed for {Server}", server);
+            return null;
+        }
     }
 
     private static List<string>? GetExportsBlocking(string server, ILogger log)
@@ -1078,7 +1085,21 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
     private static List<string>? TryV3MountGetExports(string server, ILogger log)
     {
-        IntPtr head = LibNfs.MountGetExports(server);
+        IntPtr head;
+        try
+        {
+            head = LibNfs.MountGetExports(server);
+        }
+        catch (Exception ex)
+        {
+            log.LogWarning(
+                ex,
+                "NFS v3 mount-protocol export query threw for {Server} — falling back to v4 root walk",
+                server
+            );
+            return null;
+        }
+
         if (head == IntPtr.Zero)
             return null;
 
@@ -1097,6 +1118,18 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                 }
                 current = entry.ExNext;
             }
+        }
+        catch (Exception ex)
+        {
+            // A malformed or unexpected export list from the server must degrade
+            // to the v4 root walk, never crash the whole discovery (or a
+            // dashboard NFS browse that reaches this path).
+            log.LogWarning(
+                ex,
+                "NFS v3 export list parse failed for {Server} — falling back to v4 root walk",
+                server
+            );
+            return null;
         }
         finally
         {

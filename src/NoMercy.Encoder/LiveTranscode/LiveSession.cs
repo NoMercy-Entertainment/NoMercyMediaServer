@@ -80,6 +80,14 @@ public class LiveSession : ILiveSession
 
     internal void SetState(LiveSessionState state) => Interlocked.Exchange(ref _state, (int)state);
 
+    // Updates the reported quality in place, WITHOUT tearing down/restarting the
+    // runner. Used by LiveFfmpegRunner's NVENC-session-cap fallback: the runner
+    // has already substituted a software encoder for the CURRENT run, so the
+    // session's public quality just needs to catch up for API/UI reporting and
+    // so a later seek/resume respawn (which reads CurrentQuality) keeps using
+    // the software encoder instead of retrying the exhausted GPU slot.
+    internal void SetQuality(LiveQuality quality) => CurrentQuality = quality;
+
     internal void SetSpeed(double speed) => _currentSpeed = speed;
 
     internal void Complete() => _segmentChannel.Writer.TryComplete();

@@ -137,6 +137,17 @@ public class LegacyProfileCodecRegressionTests
         hardware
             .Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
             .Returns(withGpu ? gpu : null);
+        // Real hardware-encoder init probe authority: nvenc is only
+        // selectable when the GPU is present AND ffmpeg actually carries the
+        // nvenc encoder — mirroring what HardwareEncoderProbe would confirm
+        // on Fillz's GTX 1060 host.
+        hardware
+            .Setup(h => h.UsableHardwareEncoders)
+            .Returns(
+                withGpu && nvencInFfmpeg
+                    ? new HashSet<string> { "h264_nvenc", "hevc_nvenc" }
+                    : new HashSet<string>()
+            );
 
         HashSet<string> encoders =
             withGpu && nvencInFfmpeg

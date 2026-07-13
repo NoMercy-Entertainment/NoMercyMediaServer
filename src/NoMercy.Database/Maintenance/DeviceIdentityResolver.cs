@@ -28,17 +28,21 @@ namespace NoMercy.Database.Maintenance;
 /// keep the exact hardware-derived id their DNS subdomain and certificate were
 /// issued for; a genuinely new/never-registered install gets a fresh unique id.
 ///
-/// A box that already registered on one of the <see cref="KnownDegenerateDeviceIds"/>
-/// values is NOT preserved — that id is shared with every other box that hit the
-/// same empty-DMI probe, so "prior registration evidence" proves nothing about
-/// uniqueness. It is always migrated to a fresh Guid, even with an ssl_certificate
-/// on file. That certificate/DNS entry was never uniquely this box's anyway, so the
-/// migration also deletes the stale ssl_certificate/ssl_private_key rows — leaving
-/// them would make <c>CertificateService.HasValidCertificate()</c> (and therefore
-/// BootOrchestrator's "is this server registered" check) keep reporting true for a
-/// certificate that doesn't cover the new id, silently skipping re-registration.
-/// Auth tokens are never touched, so the re-registration that follows is
-/// non-interactive.
+/// The degenerate-id migration is scoped to containers only. Empty/shared DMI
+/// serials are a containerized-install phenomenon; a bare-metal box reads a real,
+/// stable fingerprint and its DNS subdomain + certificate were issued for exactly
+/// that id, so it is returned untouched — changing a bare-metal server's id would
+/// break the identity it already registered. Inside a container, a box registered
+/// on one of the <see cref="KnownDegenerateDeviceIds"/> values is NOT preserved —
+/// that id is shared with every other container that hit the same empty-DMI probe,
+/// so "prior registration evidence" proves nothing about uniqueness. It is migrated
+/// to a fresh Guid, even with an ssl_certificate on file. That certificate/DNS entry
+/// was never uniquely this box's anyway, so the migration also deletes the stale
+/// ssl_certificate/ssl_private_key rows — leaving them would make
+/// <c>CertificateService.HasValidCertificate()</c> (and therefore BootOrchestrator's
+/// "is this server registered" check) keep reporting true for a certificate that
+/// doesn't cover the new id, silently skipping re-registration. Auth tokens are never
+/// touched, so the re-registration that follows is non-interactive.
 /// </summary>
 public static class DeviceIdentityResolver
 {
@@ -58,8 +62,32 @@ public static class DeviceIdentityResolver
     /// it exists so tests can exercise the degenerate-id migration path
     /// without touching the process-wide <see cref="Info"/> static.
     /// </param>
-    public static Guid ResolveAndPersist(AppDbContext db, Guid? hardwareDerivedId = null)
+    /// <param name="inContainer">
+    /// Overrides container detection (defaults to <see cref="Screen.IsDocker"/>).
+    /// Production call sites never pass this — it exists so tests can exercise
+    /// both the container and bare-metal branches deterministically regardless
+    /// of the CI host environment.
+    /// </param>
+    public static Guid ResolveAndPersist(
+        AppDbContext db,
+        Guid? hardwareDerivedId = null,
+        bool? inContainer = null
+    )
     {
+        Guid hardwareId = hardwareDerivedId ?? Info.DeviceId;
+
+        // The degenerate-id collision is exclusively a container problem: a
+        // recreated container reads empty DMI serials and every instance
+        // collapses onto the same shared hash. A bare-metal install reads a
+        // stable, real hardware fingerprint that its DNS subdomain and TLS
+        // certificate were issued for — migrating it (and dropping that
+        // certificate) would strip a working server of the identity it already
+        // registered. So on bare metal the fingerprint is authoritative and
+        // returned untouched; only a container ever migrates a degenerate id or
+        // persists an override.
+        if (!(inContainer ?? Screen.IsDocker))
+            return hardwareId;
+
         Configuration? existing = db.Configuration.FirstOrDefault(c => c.Key == ConfigKey);
         if (
             existing is not null
@@ -68,7 +96,6 @@ public static class DeviceIdentityResolver
         )
             return persistedId;
 
-        Guid hardwareId = hardwareDerivedId ?? Info.DeviceId;
         Guid resolvedId;
 
         if (KnownDegenerateDeviceIds.IsDegenerate(hardwareId))

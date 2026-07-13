@@ -104,7 +104,7 @@ public class Episode : ColorPaletteTimeStamps
     {
         return "/"
             + string.Concat(
-                    Tv.Title.CleanFileName(),
+                    Tv.Title.CleanFileName().Shorten(),
                     ".S",
                     SeasonNumber.ToString("00"),
                     "E",
@@ -130,13 +130,13 @@ public class Episode : ColorPaletteTimeStamps
     public string CreateFileName()
     {
         return string.Concat(
-                Tv.Title.CleanFileName(),
+                Tv.Title.CleanFileName().Shorten(),
                 ".S",
                 SeasonNumber.ToString("00"),
                 "E",
                 EpisodeNumber.ToString("00"),
                 ".",
-                Title.CleanFileName(),
+                Title.CleanFileName().Shorten(),
                 ".NoMercy"
             )
             .CleanFileName();

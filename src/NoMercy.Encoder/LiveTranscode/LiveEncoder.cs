@@ -72,7 +72,8 @@ public class LiveEncoder(
                 Quality: session.CurrentQuality,
                 SegmentDurationSeconds: options.DefaultSegmentDurationSeconds,
                 Client: request.Client,
-                SourceInfo: request.CachedInfo
+                SourceInfo: request.CachedInfo,
+                CustomArguments: request.CustomArguments
             );
 
             try

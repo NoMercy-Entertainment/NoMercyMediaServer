@@ -177,4 +177,57 @@ public class FileNameSanitizerTests
         string result = "HELLO".NormalizeForComparison();
         result.Should().Be("hello");
     }
+
+    [Fact]
+    public void Shorten_WithinLimit_ReturnsUnchanged()
+    {
+        // Short titles keep their exact existing path — no relocation of content.
+        "Breaking Bad".Shorten().Should().Be("Breaking Bad");
+    }
+
+    [Fact]
+    public void Shorten_NullOrEmpty_ReturnsEmpty()
+    {
+        ((string?)null).Shorten().Should().Be("");
+        "".Shorten().Should().Be("");
+    }
+
+    [Fact]
+    public void Shorten_LongInput_IsBoundedToMaxLength()
+    {
+        string result = new string('a', 200).Shorten();
+        result.Length.Should().BeLessThanOrEqualTo(FileNameSanitizer.MaxTitleComponentLength);
+    }
+
+    [Fact]
+    public void Shorten_IsDeterministic()
+    {
+        const string longTitle =
+            "My.Gift.Lvl.9999.Unlimited.Gacha.Backstabbed.in.a.Backwater.Dungeon.Im.Out.for.Revenge";
+        longTitle.Shorten().Should().Be(longTitle.Shorten());
+    }
+
+    [Fact]
+    public void Shorten_LongTitlesSharingPrefix_DoNotCollide()
+    {
+        // Two different long titles that share a 60-char prefix must never resolve
+        // to the same folder — the digest is taken over the FULL original value.
+        string prefix = new('x', 60);
+        string first = (prefix + ".Season.One").Shorten();
+        string second = (prefix + ".Season.Two").Shorten();
+
+        first.Should().NotBe(second);
+    }
+
+    [Fact]
+    public void Shorten_RealAnimeTitle_FitsAndKeepsRecognizablePrefix()
+    {
+        string cleaned =
+            "My Gift LVL 9999 Unlimited Gacha Backstabbed in a Backwater Dungeon Im Out for Revenge".CleanFileName();
+
+        string result = cleaned.Shorten();
+
+        result.Length.Should().BeLessThanOrEqualTo(FileNameSanitizer.MaxTitleComponentLength);
+        result.Should().StartWith("My.Gift");
+    }
 }

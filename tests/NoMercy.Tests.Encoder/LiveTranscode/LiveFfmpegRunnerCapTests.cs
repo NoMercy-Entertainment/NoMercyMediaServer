@@ -9,7 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using FluentAssertions.Specialized;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Codecs;
@@ -18,6 +17,7 @@ using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.LiveTranscode;
+using NoMercy.Encoder.LiveTranscode.Protocol;
 using NoMercy.Storage;
 using NoMercy.Tests.Encoder.Storage;
 
@@ -103,7 +103,9 @@ public class LiveFfmpegRunnerCapTests
         INvencSessionCap cap,
         IHardwareCapabilities? hardware = null,
         IProcessRunner? processRunner = null,
-        IStorage? storage = null
+        IStorage? storage = null,
+        ICodecResolver? codecResolver = null,
+        ILiveSessionTransport? transport = null
     )
     {
         IHardwareCapabilities hw =
@@ -132,34 +134,66 @@ public class LiveFfmpegRunnerCapTests
             storage ?? TestStorageFactory.CreateLocal(),
             cap,
             hw,
-            noopBudget.Object
+            codecResolver ?? new CodecResolver(new CodecRegistry()),
+            noopBudget.Object,
+            transport
         );
     }
 
     // ──────────────────────────────────────────────────────────────────────────
-    // Hardware encode — cap exhausted → throws EncoderRuntimeException 409
+    // Hardware encode — cap exhausted → falls back to software instead of
+    // failing the session, and reports GpuFallbackToCpu on the transport.
     // ──────────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task RunAsync_HwQuality_CapExhausted_ThrowsEncoderRuntimeException()
+    public async Task RunAsync_HwQuality_CapExhausted_FallsBackToSoftwareAndReportsGpuFallback()
     {
         Mock<INvencSessionCap> capMock = new();
         capMock
             .Setup(c => c.EnforceForGpuEncode(It.IsAny<string>(), true))
             .Throws(RuntimeErrors.GpuCapacityExhausted("RTX 3080", 3));
 
-        LiveFfmpegRunner runner = BuildRunner(capMock.Object);
-        LiveSession session = new("cap-hw-001", MakeHwQuality());
+        List<(string SessionId, object Message)> pushed = [];
+        Mock<ILiveSessionTransport> transportMock = new();
+        transportMock
+            .Setup(t =>
+                t.SendToClientAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<object>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Callback<string, object, CancellationToken>(
+                (sessionId, message, _) => pushed.Add((sessionId, message))
+            )
+            .Returns(Task.CompletedTask);
+
+        LiveFfmpegRunner runner = BuildRunner(
+            capMock.Object,
+            processRunner: MakeInstantProcessRunner(),
+            storage: MakeNoopStorage(),
+            transport: transportMock.Object
+        );
+
+        LiveQuality hwQuality = MakeHwQuality();
+        LiveSession session = new("cap-hw-001", hwQuality);
         string outputDir = Path.Combine(Path.GetTempPath(), "nomercy-cap-test-" + Ulid.NewUlid());
 
         Func<Task> act = () =>
-            runner.RunAsync(MakeInput(MakeHwQuality(), outputDir), session, CancellationToken.None);
+            runner.RunAsync(MakeInput(hwQuality, outputDir), session, CancellationToken.None);
 
-        ExceptionAssertions<EncoderRuntimeException> ex = await act.Should()
-            .ThrowAsync<EncoderRuntimeException>();
+        await act.Should().NotThrowAsync();
 
-        ex.Which.Shape.Id.Should().Be(EncoderRuleId.GpuCapacityExhausted);
-        ex.Which.HttpStatusCode.Should().Be(409);
+        session.CurrentQuality.Encoder.Should().Be("libx264");
+        session.CurrentQuality.IsHardwareAccelerated.Should().BeFalse();
+
+        pushed.Should().ContainSingle(p => p.Message is QualityChangedMessage);
+        QualityChangedMessage message = pushed
+            .Select(p => p.Message)
+            .OfType<QualityChangedMessage>()
+            .Single();
+        message.Reason.Should().Be(QualityChangeReason.GpuFallbackToCpu);
+        message.NewQuality.Encoder.Should().Be("libx264");
     }
 
     // ──────────────────────────────────────────────────────────────────────────

@@ -13,6 +13,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Hardware;
+using NoMercy.NmSystem.Lifecycle;
 
 namespace NoMercy.Encoder.Startup;
 
@@ -37,13 +38,15 @@ public sealed class HardwareBenchmarkBackgroundService : BackgroundService
     private readonly ILogger<HardwareBenchmarkBackgroundService> _logger;
     private readonly TimeSpan _initialGrace;
     private readonly TimeSpan _busyPollInterval;
+    private readonly IServerPhaseTracker? _phaseTracker;
 
     public HardwareBenchmarkBackgroundService(
         IHardwareBenchmark benchmark,
         EncoderOptions options,
         IHostApplicationLifetime lifetime,
         IEncoderActivityProbe activityProbe,
-        ILogger<HardwareBenchmarkBackgroundService> logger
+        ILogger<HardwareBenchmarkBackgroundService> logger,
+        IServerPhaseTracker? phaseTracker = null
     )
         : this(
             benchmark,
@@ -52,7 +55,8 @@ public sealed class HardwareBenchmarkBackgroundService : BackgroundService
             activityProbe,
             logger,
             DefaultInitialGrace,
-            DefaultBusyPollInterval
+            DefaultBusyPollInterval,
+            phaseTracker
         ) { }
 
     internal HardwareBenchmarkBackgroundService(
@@ -62,7 +66,8 @@ public sealed class HardwareBenchmarkBackgroundService : BackgroundService
         IEncoderActivityProbe activityProbe,
         ILogger<HardwareBenchmarkBackgroundService> logger,
         TimeSpan initialGrace,
-        TimeSpan busyPollInterval
+        TimeSpan busyPollInterval,
+        IServerPhaseTracker? phaseTracker = null
     )
     {
         _benchmark = benchmark;
@@ -72,6 +77,7 @@ public sealed class HardwareBenchmarkBackgroundService : BackgroundService
         _logger = logger;
         _initialGrace = initialGrace;
         _busyPollInterval = busyPollInterval;
+        _phaseTracker = phaseTracker;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -85,6 +91,27 @@ public sealed class HardwareBenchmarkBackgroundService : BackgroundService
         await WaitForApplicationStartedAsync(stoppingToken).ConfigureAwait(false);
         if (stoppingToken.IsCancellationRequested)
             return;
+
+        // Gate on BootStage.Binaries before touching ffmpeg. Calibration spawns
+        // the ffmpeg binary directly, so it must not run until the binary
+        // provisioning task has placed it on disk. On a fresh install the server
+        // sits in setup mode and binaries are only downloaded once authentication
+        // completes — without this wait the benchmark fires against a missing
+        // ffmpeg and floods the log with "No such file or directory" for every
+        // codec/resolution. Mirrors HardwareInitializationService's gate.
+        if (_phaseTracker is not null)
+        {
+            try
+            {
+                await _phaseTracker
+                    .WhenReachedAsync(BootStage.Binaries, stoppingToken)
+                    .ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+        }
 
         try
         {

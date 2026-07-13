@@ -13,6 +13,8 @@ using System.Globalization;
 using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Extensions;
@@ -554,9 +556,18 @@ public class Binaries
         return creationTime >= releaseDate;
     }
 
-    private async Task<GithubReleaseResponse> GetLatestReleaseInfo(string apiUrl)
+    // A rate-limited fetch must never block a boot/recovery tick for the full GitHub
+    // hourly reset window (up to 60 minutes) — that starves every other startup
+    // dependency and, for the degraded-mode recovery loop, means the process never
+    // gets a chance to fall back to cached metadata at all. Once either cap is hit,
+    // GetLatestReleaseInfo stops waiting and serves the last-known-good cache instead.
+    private const int MaxRateLimitedAttempts = 3;
+    private static readonly TimeSpan MaxRateLimitWait = TimeSpan.FromMinutes(2);
+
+    internal async Task<GithubReleaseResponse> GetLatestReleaseInfo(string apiUrl)
     {
         int attempt = 0;
+        int rateLimitedAttempts = 0;
         TimeSpan backoff = TimeSpan.FromSeconds(30);
 
         while (true)
@@ -572,26 +583,11 @@ public class Binaries
                         or HttpStatusCode.TooManyRequests
                 )
                 {
-                    TimeSpan waitTime = backoff;
+                    rateLimitedAttempts++;
+                    TimeSpan waitTime = ResolveRateLimitWaitTime(response, backoff);
 
-                    if (
-                        response.Headers.TryGetValues(
-                            "X-RateLimit-Reset",
-                            out IEnumerable<string>? values
-                        )
-                    )
-                    {
-                        string? resetValue = values.FirstOrDefault();
-                        if (resetValue is not null && long.TryParse(resetValue, out long resetUnix))
-                        {
-                            DateTimeOffset resetTime = DateTimeOffset.FromUnixTimeSeconds(
-                                resetUnix
-                            );
-                            TimeSpan untilReset = resetTime - DateTimeOffset.UtcNow;
-                            if (untilReset > TimeSpan.Zero)
-                                waitTime = untilReset + TimeSpan.FromSeconds(2);
-                        }
-                    }
+                    if (ExceedsRateLimitBudget(waitTime, rateLimitedAttempts))
+                        return await ResolveRateLimitedFallbackAsync(apiUrl, waitTime);
 
                     Logger.Setup(
                         $"GitHub API rate limited (attempt {attempt}), waiting {waitTime.TotalSeconds:F0}s to retry: {apiUrl}",
@@ -607,8 +603,7 @@ public class Binaries
 
                 string jsonResponse = await response.Content.ReadAsStringAsync();
 
-                return jsonResponse.FromJson<GithubReleaseResponse>()
-                    ?? new GithubReleaseResponse();
+                return await ParseAndCacheReleaseInfoAsync(apiUrl, jsonResponse);
             }
             catch (Exception e)
             {
@@ -616,8 +611,142 @@ public class Binaries
                     $"Error fetching release info from {apiUrl}: {e.Message}",
                     LogEventLevel.Warning
                 );
-                return new();
+                return await ResolveCachedOrEmptyAsync(apiUrl);
             }
+        }
+    }
+
+    private static TimeSpan ResolveRateLimitWaitTime(HttpResponseMessage response, TimeSpan backoff)
+    {
+        if (!response.Headers.TryGetValues("X-RateLimit-Reset", out IEnumerable<string>? values))
+            return backoff;
+
+        string? resetValue = values.FirstOrDefault();
+        if (resetValue is null || !long.TryParse(resetValue, out long resetUnix))
+            return backoff;
+
+        DateTimeOffset resetTime = DateTimeOffset.FromUnixTimeSeconds(resetUnix);
+        TimeSpan untilReset = resetTime - DateTimeOffset.UtcNow;
+        return untilReset > TimeSpan.Zero ? untilReset + TimeSpan.FromSeconds(2) : backoff;
+    }
+
+    private static bool ExceedsRateLimitBudget(TimeSpan waitTime, int rateLimitedAttempts) =>
+        waitTime > MaxRateLimitWait || rateLimitedAttempts >= MaxRateLimitedAttempts;
+
+    private async Task<GithubReleaseResponse> ResolveRateLimitedFallbackAsync(
+        string apiUrl,
+        TimeSpan waitTime
+    )
+    {
+        GithubReleaseResponse? cached = await TryLoadCachedReleaseInfoAsync(apiUrl);
+        if (cached is not null)
+        {
+            Logger.Setup(
+                $"GitHub API rate limited for {apiUrl} — serving cached release metadata "
+                    + $"instead of waiting {waitTime.TotalSeconds:F0}s for the reset.",
+                LogEventLevel.Information
+            );
+            return cached;
+        }
+
+        Logger.Setup(
+            $"GitHub API rate limited for {apiUrl} and no cached release metadata is available.",
+            LogEventLevel.Warning
+        );
+        return new();
+    }
+
+    private async Task<GithubReleaseResponse> ResolveCachedOrEmptyAsync(string apiUrl)
+    {
+        GithubReleaseResponse? cached = await TryLoadCachedReleaseInfoAsync(apiUrl);
+        if (cached is not null)
+        {
+            Logger.Setup(
+                $"Serving cached release metadata for {apiUrl} because the live fetch failed.",
+                LogEventLevel.Information
+            );
+            return cached;
+        }
+
+        return new();
+    }
+
+    private async Task<GithubReleaseResponse> ParseAndCacheReleaseInfoAsync(
+        string apiUrl,
+        string jsonResponse
+    )
+    {
+        GithubReleaseResponse? parsed = jsonResponse.FromJson<GithubReleaseResponse>();
+        if (parsed is null)
+            return new();
+
+        await WriteReleaseCacheAsync(apiUrl, jsonResponse);
+        return parsed;
+    }
+
+    // -------------------------------------------------------------------------
+    // Last-known-good release metadata cache: written on every successful fetch,
+    // read back only when GitHub's API is unavailable (403/429/exception). This
+    // is what lets ffmpeg provisioning survive a GitHub API rate-limit without
+    // ever downloading an asset from stale/untrusted data — the asset download
+    // itself always uses BrowserDownloadUrl from this (possibly cached) release
+    // info, and that CDN endpoint is not subject to the API's rate limit.
+    // -------------------------------------------------------------------------
+
+    private static string ReleaseCacheDirectory =>
+        Path.Combine(AppFiles.CachePath, "releases-cache");
+
+    private static string ReleaseCacheFilePath(string apiUrl) =>
+        Path.Combine(ReleaseCacheDirectory, ReleaseCacheFileName(apiUrl));
+
+    private static string ReleaseCacheFileName(string apiUrl)
+    {
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(apiUrl));
+        return Convert.ToHexString(hash).ToLowerInvariant() + ".json";
+    }
+
+    private async Task WriteReleaseCacheAsync(string apiUrl, string json)
+    {
+        try
+        {
+            string directory = ReleaseCacheDirectory;
+            if (!_driver.DirectoryExists(directory))
+                _storage.CreateDirectory(directory);
+
+            await _storage.WriteAllTextAsync(
+                ReleaseCacheFilePath(apiUrl),
+                json,
+                CancellationToken.None
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.Setup(
+                $"Failed to cache release metadata for {apiUrl}: {ex.Message}",
+                LogEventLevel.Debug
+            );
+        }
+    }
+
+    private async Task<GithubReleaseResponse?> TryLoadCachedReleaseInfoAsync(string apiUrl)
+    {
+        string path = ReleaseCacheFilePath(apiUrl);
+        if (!_storage.Exists(path))
+            return null;
+
+        try
+        {
+            string json = await _storage.ReadAllTextAsync(path, CancellationToken.None);
+            GithubReleaseResponse? cached = json.FromJson<GithubReleaseResponse>();
+            return cached is { Assets.Length: > 0 } ? cached : null;
+        }
+        catch (Exception ex)
+        {
+            Logger.Setup(
+                $"Failed to read cached release metadata for {apiUrl}: {ex.Message}",
+                LogEventLevel.Debug
+            );
+            return null;
         }
     }
 
@@ -1167,7 +1296,15 @@ public class Binaries
         return ServerUpdateResult.Downloaded;
     }
 
-    private async Task DownloadFfmpeg()
+    /// <summary>
+    /// Internal (not private) so the degraded-mode recovery loop
+    /// (<see cref="Boot.DegradedModeRecovery.TryProvisionBinariesAsync"/>) can retry
+    /// ffmpeg provisioning alone instead of re-running <see cref="DownloadAll"/> — which
+    /// would re-query all ten dependency repos' <c>releases/latest</c> endpoints on every
+    /// backoff tick and, on a single rate-limited hiccup, keep re-triggering the same
+    /// GitHub 403 for every other binary too.
+    /// </summary>
+    internal async Task DownloadFfmpeg()
     {
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubFfmpegApiUrl);
         if (releaseInfo.Assets.Length == 0)

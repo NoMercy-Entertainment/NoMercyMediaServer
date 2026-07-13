@@ -45,6 +45,8 @@ public class LiveFfmpegRunnerTests
         return mock.Object;
     }
 
+    private static ICodecResolver RealCodecResolver() => new CodecResolver(new CodecRegistry());
+
     private static LiveFfmpegRunner MakeRunner(IProcessRunner? processRunner = null) =>
         new(
             processRunner ?? new FakeProcessRunner(() => { }),
@@ -53,6 +55,7 @@ public class LiveFfmpegRunnerTests
             TestStorageFactory.CreateLocal(),
             NoopCap(),
             NoopHardware(),
+            RealCodecResolver(),
             NoopBudget()
         );
 
@@ -170,7 +173,7 @@ public class LiveFfmpegRunnerTests
         string[] args = LiveFfmpegRunner.BuildArguments(input);
 
         int vfIdx = Array.IndexOf(args, "-vf");
-        args[vfIdx + 1].Should().Be("scale=1280:720");
+        args[vfIdx + 1].Should().Be("scale=1280:720,format=yuv420p");
     }
 
     [Fact]
@@ -303,6 +306,7 @@ public class LiveFfmpegRunnerTests
                 TestStorageFactory.CreateLocal(),
                 NoopCap(),
                 NoopHardware(),
+                RealCodecResolver(),
                 NoopBudget()
             );
 
@@ -469,6 +473,7 @@ public class LiveFfmpegRunnerTests
             storage.Object,
             NoopCap(),
             NoopHardware(),
+            RealCodecResolver(),
             budget.Object
         );
 
@@ -645,6 +650,304 @@ public class LiveFfmpegRunnerTests
 
         int acIdx = Array.IndexOf(args, "-ac");
         args[acIdx + 1].Should().Be("2");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Browser-safe 8-bit pixel format (2026-07 fix)
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void BuildArguments_TenBitSdrSource_ForcesYuv420p()
+    {
+        // 10-bit HEVC SDR source transcoded to H.264 for a browser client.
+        // Before this fix, the non-tonemap path never forced a pixel format,
+        // so libx264 auto-negotiated High-10 — a profile no browser decodes.
+        LiveRunInput input = new(
+            InputPath: "/media/sdr10bit.mkv",
+            OutputDirectory: "/tmp/live",
+            StartPosition: TimeSpan.Zero,
+            Quality: MakeQuality(encoder: "libx264"),
+            SegmentDurationSeconds: 4,
+            Client: MakeClientCaps(supportsHdr: false, maxAudioChannels: 2),
+            SourceInfo: MakeMediaInfo(isHdr: false, audioChannels: 2)
+        );
+
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
+
+        int vfIdx = Array.IndexOf(args, "-vf");
+        string vf = args[vfIdx + 1];
+        vf.Should().NotContain("zscale");
+        vf.Should().NotContain("tonemap");
+        vf.Should().Contain("format=yuv420p");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // GOP / keyframe alignment to HLS segment duration
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void BuildArguments_Gop_ForceKeyFramesAndGopSizeTiedToSegmentDuration()
+    {
+        LiveRunInput input = new(
+            InputPath: "/media/in.mkv",
+            OutputDirectory: "/tmp/live",
+            StartPosition: TimeSpan.Zero,
+            Quality: MakeQuality(),
+            SegmentDurationSeconds: 4,
+            SourceInfo: MakeMediaInfo(isHdr: false, audioChannels: 2) // FrameRate: 24
+        );
+
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
+
+        int fkfIdx = Array.IndexOf(args, "-force_key_frames");
+        fkfIdx.Should().BeGreaterThanOrEqualTo(0);
+        args[fkfIdx + 1].Should().Be("expr:gte(t,n_forced*4)");
+
+        int gIdx = Array.IndexOf(args, "-g");
+        gIdx.Should().BeGreaterThanOrEqualTo(0);
+        args[gIdx + 1].Should().Be("192"); // 24fps * 4s segment * 2
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Rate control + preset
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void BuildArguments_RateControlAndPreset_PresentForFullTranscode()
+    {
+        LiveRunInput input = new(
+            InputPath: "/media/in.mkv",
+            OutputDirectory: "/tmp/live",
+            StartPosition: TimeSpan.Zero,
+            Quality: MakeQuality(kbps: 4000, encoder: "libx264"),
+            SegmentDurationSeconds: 4
+        );
+
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
+
+        int maxrateIdx = Array.IndexOf(args, "-maxrate");
+        maxrateIdx.Should().BeGreaterThanOrEqualTo(0);
+        args[maxrateIdx + 1].Should().Be("6000k");
+
+        int bufsizeIdx = Array.IndexOf(args, "-bufsize");
+        bufsizeIdx.Should().BeGreaterThanOrEqualTo(0);
+        args[bufsizeIdx + 1].Should().Be("8000k");
+
+        int presetIdx = Array.IndexOf(args, "-preset");
+        presetIdx.Should().BeGreaterThanOrEqualTo(0);
+        args[presetIdx + 1].Should().Be("veryfast");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Audio-only sources
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void BuildArguments_AudioOnlySource_OmitsVideoMapAndAddsVn()
+    {
+        AudioStreamInfo audio = new(
+            Index: 0,
+            Codec: "flac",
+            Channels: 2,
+            SampleRate: 44100,
+            BitRateKbps: 900,
+            Language: "eng",
+            IsDefault: true,
+            IsForced: false
+        );
+        MediaInfo source = new(
+            FilePath: "/media/audio-only.flac",
+            Format: "flac",
+            Duration: TimeSpan.FromMinutes(4),
+            OverallBitRateKbps: 900,
+            FileSizeBytes: 30_000_000,
+            VideoStreams: [],
+            AudioStreams: [audio],
+            SubtitleStreams: [],
+            Chapters: []
+        );
+
+        LiveRunInput input = new(
+            InputPath: "/media/audio-only.flac",
+            OutputDirectory: "/tmp/live",
+            StartPosition: TimeSpan.Zero,
+            Quality: MakeQuality(),
+            SegmentDurationSeconds: 4,
+            SourceInfo: source
+        );
+
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
+
+        args.Should().NotContain("0:v:0");
+        args.Should().Contain("-vn");
+        int caIdx = Array.IndexOf(args, "-c:a");
+        args[caIdx + 1].Should().Be("aac");
+        args.Should().Contain("-f").And.Contain("hls");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Remux vs full video transcode
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void BuildArguments_RemuxDecision_UsesStreamCopyForVideoAndAudio()
+    {
+        VideoStreamInfo video = new(
+            Index: 0,
+            Codec: "h264",
+            Width: 1920,
+            Height: 1080,
+            FrameRate: 24,
+            BitDepth: 8,
+            PixelFormat: "yuv420p",
+            ColorPrimaries: "bt709",
+            ColorTransfer: "bt709",
+            ColorSpace: "bt709",
+            IsDefault: true,
+            BitRateKbps: 4500
+        );
+        AudioStreamInfo audio = new(
+            Index: 1,
+            Codec: "aac",
+            Channels: 2,
+            SampleRate: 48000,
+            BitRateKbps: 128,
+            Language: "eng",
+            IsDefault: true,
+            IsForced: false
+        );
+        MediaInfo source = new(
+            FilePath: "/media/remux.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: 5000,
+            FileSizeBytes: 1_000_000_000,
+            VideoStreams: [video],
+            AudioStreams: [audio],
+            SubtitleStreams: [],
+            Chapters: []
+        );
+        ClientCapabilities client = new(
+            SupportedVideoCodecs: [VideoCodecType.H264],
+            SupportedAudioCodecs: [AudioCodecType.Aac],
+            SupportedContainers: ["mp4"],
+            MaxWidth: 1920,
+            MaxHeight: 1080,
+            SupportsHdr: true,
+            Supports10Bit: true,
+            MaxBitrateKbps: 0,
+            MaxAudioChannels: 2
+        );
+
+        LiveRunInput input = new(
+            InputPath: "/media/remux.mkv",
+            OutputDirectory: "/tmp/live",
+            StartPosition: TimeSpan.Zero,
+            Quality: MakeQuality(encoder: "libx264"),
+            SegmentDurationSeconds: 4,
+            Client: client,
+            SourceInfo: source
+        );
+
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
+
+        int vIdx = Array.IndexOf(args, "-c:v");
+        args[vIdx + 1].Should().Be("copy");
+        int aIdx = Array.IndexOf(args, "-c:a");
+        args[aIdx + 1].Should().Be("copy");
+        args.Should().NotContain("-preset");
+        args.Should().NotContain("-maxrate");
+        args.Should().NotContain(a => a.StartsWith("scale="));
+    }
+
+    [Fact]
+    public void BuildArguments_TranscodeVideoDecision_ReEncodesVideo()
+    {
+        // Client doesn't support the source's video codec at all → TranscodeVideo,
+        // full re-encode using the resolved quality's encoder — never a copy.
+        VideoStreamInfo video = new(
+            Index: 0,
+            Codec: "hevc",
+            Width: 1920,
+            Height: 1080,
+            FrameRate: 24,
+            BitDepth: 8,
+            PixelFormat: "yuv420p",
+            ColorPrimaries: "bt709",
+            ColorTransfer: "bt709",
+            ColorSpace: "bt709",
+            IsDefault: true,
+            BitRateKbps: 4500
+        );
+        MediaInfo source = new(
+            FilePath: "/media/transcode.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: 4500,
+            FileSizeBytes: 1_000_000_000,
+            VideoStreams: [video],
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
+        );
+        ClientCapabilities client = new(
+            SupportedVideoCodecs: [VideoCodecType.H264],
+            SupportedAudioCodecs: [],
+            SupportedContainers: ["mp4"],
+            MaxWidth: 1920,
+            MaxHeight: 1080,
+            SupportsHdr: true,
+            Supports10Bit: true,
+            MaxBitrateKbps: 0,
+            MaxAudioChannels: 2
+        );
+
+        LiveRunInput input = new(
+            InputPath: "/media/transcode.mkv",
+            OutputDirectory: "/tmp/live",
+            StartPosition: TimeSpan.Zero,
+            Quality: MakeQuality(encoder: "libx264"),
+            SegmentDurationSeconds: 4,
+            Client: client,
+            SourceInfo: source
+        );
+
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
+
+        int vIdx = Array.IndexOf(args, "-c:v");
+        args[vIdx + 1].Should().Be("libx264");
+        args.Should().Contain(a => a.StartsWith("scale="));
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // CustomArguments escape hatch
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void BuildArguments_CustomArguments_AppearInFinalArgv_ButReservedFlagsAreSkipped()
+    {
+        LiveRunInput input = new(
+            InputPath: "/media/in.mkv",
+            OutputDirectory: "/tmp/live",
+            StartPosition: TimeSpan.Zero,
+            Quality: MakeQuality(kbps: 4000, encoder: "libx264"),
+            SegmentDurationSeconds: 4,
+            CustomArguments: new Dictionary<string, string>
+            {
+                ["-x264-params"] = "nal-hrd=cbr",
+                ["-b:v"] = "999k", // reserved — must be skipped, not override the resolved -b:v
+            }
+        );
+
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
+
+        int customIdx = Array.IndexOf(args, "-x264-params");
+        customIdx.Should().BeGreaterThanOrEqualTo(0);
+        args[customIdx + 1].Should().Be("nal-hrd=cbr");
+
+        int bvIdx = Array.IndexOf(args, "-b:v");
+        args[bvIdx + 1].Should().Be("4000k");
+        args.Should().NotContain("999k");
     }
 
     private static string WritePlaylist(string content)

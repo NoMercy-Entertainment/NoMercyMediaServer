@@ -539,6 +539,18 @@ public class ResourceBudget : IResourceBudget
         }
     }
 
+    public bool IsGpuDeviceRegistered(string gpuDeviceKey)
+    {
+        if (_gpuSemaphores.ContainsKey(gpuDeviceKey))
+            return true;
+
+        // Detection may have completed since construction (see the _hardware
+        // field comment above) — retry registration once before concluding
+        // the key is genuinely absent rather than just not yet registered.
+        TryRegisterGpus();
+        return _gpuSemaphores.ContainsKey(gpuDeviceKey);
+    }
+
     private SemaphoreSlim GetGpuSemaphore(string gpuDeviceKey)
     {
         if (_gpuSemaphores.TryGetValue(gpuDeviceKey, out SemaphoreSlim? semaphore))

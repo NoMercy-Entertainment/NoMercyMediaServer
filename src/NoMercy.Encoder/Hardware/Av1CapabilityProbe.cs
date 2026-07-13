@@ -30,6 +30,18 @@ namespace NoMercy.Encoder.Hardware;
 /// signal (nvidia-smi compute_cap for Nvidia, GPU name pattern for AMD/Intel).
 /// Unknown / future SKUs default to "allowed" so the probe-and-log fallback
 /// covers any pattern miss.
+///
+/// Redundancy note: this heuristic only feeds <see cref="GpuDevice.SupportedCodecs"/>
+/// (used for GPU session-budget sizing / HasGpu / SupportsHardwareEncoding
+/// checks) during <see cref="PlatformHardwareDetector.DetectGpusAsync"/>,
+/// which runs before the real init probe is available at that point in boot.
+/// It is NOT the authority for AV1 hardware SELECTION any more —
+/// <see cref="HardwareEncoderProbe"/> runs a real one-frame init for every
+/// compiled av1_* name regardless of this guess, and
+/// <c>PlanStage.IsHardwareEncoderSelectable</c> gates purely on that result
+/// via <see cref="IHardwareCapabilities.UsableHardwareEncoders"/>. A GPU
+/// generation this heuristic misclassifies as "allowed" still cannot have
+/// its AV1 encoder selected unless the real probe confirms it.
 /// </summary>
 internal sealed class Av1CapabilityProbe(IProcessRunner processRunner, ILogger logger)
 {

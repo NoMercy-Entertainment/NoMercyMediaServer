@@ -112,6 +112,13 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<FfmpegCapabilities>()
         );
 
+        // Authoritative real-init probe for hardware encoders — see
+        // HardwareEncoderProbe for why ffmpeg's compiled-in encoder list is
+        // not sufficient signal on its own. Runs once at boot from
+        // HardwareInitializationService; PlanStage gates encoder selection
+        // on the resulting IHardwareCapabilities.UsableHardwareEncoders set.
+        services.AddSingleton<IHardwareEncoderProbe, HardwareEncoderProbe>();
+
         // IHardwareCapabilities — forwards every read through the holder so
         // singletons constructed before HIS finishes detection (most notably
         // HardwareBenchmark) pick up the GPU list once detection completes.

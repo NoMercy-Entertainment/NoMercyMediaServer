@@ -18,5 +18,6 @@ public record LiveEncodeRequest(
     MediaInfo CachedInfo,
     ClientCapabilities Client,
     TimeSpan StartPosition,
-    string? PreferredQuality
+    string? PreferredQuality,
+    Dictionary<string, string>? CustomArguments = null
 );

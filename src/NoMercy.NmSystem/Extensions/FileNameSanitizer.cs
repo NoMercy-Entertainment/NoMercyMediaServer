@@ -115,6 +115,62 @@ public static class FileNameSanitizer
         return _cleanFileName(self);
     }
 
+    /// <summary>
+    /// Default cap for a single title component inside a generated path segment.
+    /// The show title is embedded in the show folder, the episode/season folder
+    /// AND the filename, and the V3 encoder nests an HLS bundle (~90 chars) under
+    /// that directory — so an unbounded anime-length title blows past Windows'
+    /// 260-char path limit and playback fails. 50 leaves the overwhelming majority
+    /// of real titles untouched (so existing on-disk names never move) while
+    /// bounding the pathological ones.
+    /// </summary>
+    public const int MaxTitleComponentLength = 50;
+
+    private static readonly char[] TitleTokenBoundaries = [' ', '.', '-', '_'];
+
+    /// <summary>
+    /// Bounds a single title component to <paramref name="maxLength"/> characters
+    /// without mingling it with the season/episode markers or the episode title it
+    /// gets concatenated with. A value already within the limit is returned
+    /// unchanged, so short titles keep their exact existing paths. An over-long
+    /// value is cut on a token boundary and stamped with a short, stable digest of
+    /// the ORIGINAL value, so two different long titles that share a prefix can
+    /// never resolve to the same folder. Deterministic — the same title always
+    /// produces the same shortened form, so a later rescan reconstructs the
+    /// identical path.
+    /// </summary>
+    public static string Shorten(this string? self, int maxLength = MaxTitleComponentLength)
+    {
+        if (string.IsNullOrEmpty(self) || self.Length <= maxLength)
+            return self ?? string.Empty;
+
+        string digest = _stableTitleDigest(self);
+        int keep = Math.Max(1, maxLength - digest.Length - 1);
+
+        string head = self[..keep];
+        int boundary = head.LastIndexOfAny(TitleTokenBoundaries);
+        if (boundary >= keep / 2)
+            head = head[..boundary];
+
+        return head.Trim('.', ' ', '-', '_') + "." + digest;
+    }
+
+    /// <summary>
+    /// FNV-1a 32-bit digest as 8 lowercase hex chars. Non-cryptographic and stable
+    /// across runs (unlike <see cref="string.GetHashCode()"/>); used purely to keep
+    /// two different long titles from colliding on disk after truncation.
+    /// </summary>
+    private static string _stableTitleDigest(string value)
+    {
+        uint hash = 2166136261;
+        foreach (char c in value)
+        {
+            hash ^= c;
+            hash *= 16777619;
+        }
+        return hash.ToString("x8");
+    }
+
     public static string NormalizeForComparison(this string name)
     {
         name = name.Replace("&", "and");

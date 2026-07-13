@@ -22,13 +22,18 @@ using Xunit;
 namespace NoMercy.Tests.Api.Dashboard;
 
 /// <summary>
-/// The import/"add files" path (ServerController.AddFiles) must honor the
-/// per-library <see cref="Library.AutoEncodeOnScan"/> + <see cref="Library.EncodePresetId"/>
-/// gate instead of unconditionally dispatching a <c>VideoEncodeJob</c> per
-/// file. QueueRunner is a real singleton in the test host (resolved via
-/// ServerController's own constructor parameter), so a Dispatch call writes
-/// a real row into the shared queue.db — asserted here by filtering on the
-/// unique per-test LibraryId embedded in every job payload.
+/// The import/"add files" path (ServerController.AddFiles) is a deliberate manual
+/// import: it always dispatches a <c>VideoEncodeJob</c> per file against the
+/// explicit source path, because the file is typically staged off the library root
+/// (source_driver_id set) where a FileRescanJob — which only re-walks existing
+/// library folders — could never see it. A configured
+/// <see cref="Library.EncodePresetId"/> narrows the encode to that preset;
+/// <see cref="Library.AutoEncodeOnScan"/> gates only the automatic file-watcher
+/// path (AutoEncodeSubscriber), never this manual import. QueueRunner is a real
+/// singleton in the test host (resolved via ServerController's own constructor
+/// parameter), so a Dispatch call writes a real row into the shared queue.db —
+/// asserted here by filtering on the unique per-test LibraryId embedded in every
+/// job payload.
 /// </summary>
 [Trait("Category", "DashboardServer")]
 public class ServerControllerAddFilesTests : IClassFixture<NoMercyApiFactory>, IAsyncLifetime
@@ -91,7 +96,7 @@ public class ServerControllerAddFilesTests : IClassFixture<NoMercyApiFactory>, I
         new(JsonSerializer.Serialize(obj), Encoding.UTF8, "application/json");
 
     [Fact]
-    public async Task AddFiles_AutoEncodeOff_DispatchesZeroVideoEncodeJobs()
+    public async Task AddFiles_ManualImport_AlwaysDispatchesVideoEncodeJobPerFile()
     {
         object body = new
         {
@@ -114,18 +119,13 @@ public class ServerControllerAddFilesTests : IClassFixture<NoMercyApiFactory>, I
 
         List<string> payloads = QueryPayloadsContaining(_manualLibraryId.ToString());
 
-        payloads.Should().HaveCount(2, "one job per added file, none of them an encode");
+        payloads.Should().HaveCount(2, "one VideoEncodeJob per added file");
         payloads
             .Should()
             .OnlyContain(
-                p => !p.Contains("VideoEncodeJob"),
-                "AutoEncodeOnScan is off — no VideoEncodeJob may be dispatched"
-            );
-        payloads
-            .Should()
-            .OnlyContain(
-                p => p.Contains("FileRescanJob"),
-                "the flag-off path indexes the file via FileRescanJob instead of encoding"
+                p => p.Contains("VideoEncodeJob"),
+                "manual add-files is a deliberate import that always encodes the explicit source "
+                    + "file — AutoEncodeOnScan gates only the automatic scan path, not this endpoint"
             );
     }
 

@@ -421,6 +421,33 @@ public class ResourceBudgetBranchTests
         budget.AvailableGpuEncoderSlots(gpu.Name).Should().Be(gpu.MaxEncoderSessions - 1);
     }
 
+    [Fact]
+    public void IsGpuDeviceRegistered_RetriesLazyRegistration_WhenDetectionCompletesLate()
+    {
+        // Detection hadn't finished at construction (Gpus starts empty), so
+        // IsGpuDeviceRegistered must NOT latch a stale "false" — the queue
+        // worker's budget gate calls this on every saturated retry, and a
+        // legitimate GPU key must eventually read true once the live list
+        // populates, the same way GetGpuSemaphore already retries.
+        List<GpuDevice> liveList = [];
+        Mock<IHardwareCapabilities> caps = new();
+        caps.Setup(c => c.Gpus).Returns(() => liveList);
+        caps.Setup(c => c.CpuCores).Returns(4);
+
+        ResourceBudget budget = new(
+            caps.Object,
+            monitor: null,
+            logger: NullLogger<ResourceBudget>.Instance
+        );
+
+        GpuDevice gpu = Nvidia();
+        budget.IsGpuDeviceRegistered(gpu.Name).Should().BeFalse();
+
+        liveList.Add(gpu);
+
+        budget.IsGpuDeviceRegistered(gpu.Name).Should().BeTrue();
+    }
+
     // ── Acquire(requirement, timeout) rollback ───────────────────────────────
     //
     // The sync Acquire had no timeout at all (blocked forever) and no
