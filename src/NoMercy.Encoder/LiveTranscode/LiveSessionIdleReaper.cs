@@ -72,6 +72,12 @@ public class LiveSessionIdleReaper(
             if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
                 continue;
 
+            // A per-language audio child gets no segment hits while another
+            // language is selected, so idle-reaping it would break a later switch.
+            // Its lifetime is bound to the parent, which cascade-disposes it.
+            if (runtime.IsAudioRenditionChild)
+                continue;
+
             if (runtime.IsComplete)
                 continue;
 

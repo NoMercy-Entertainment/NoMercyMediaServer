@@ -63,9 +63,13 @@ public class LiveFfmpegRunner(
 
         // Acquire a resource-budget lease for the duration of this live session
         // so the queue scheduler sees GPU/CPU slots as occupied.
+        // An audio-only rendition (AAC) is cheap — one thread, no GPU — so a raw
+        // source's several language children don't each reserve a full video slot
+        // and starve the video encoder.
+        int cpuThreads = input.AudioRenditionOnly ? 1 : 2;
         ResourceRequirement requirement = requiresGpu
             ? new(gpuName, GpuSlots: 1, CpuThreads: 2)
-            : new ResourceRequirement(null, GpuSlots: 0, CpuThreads: 2);
+            : new ResourceRequirement(null, GpuSlots: 0, CpuThreads: cpuThreads);
 
         // Declared outside the try so the outer finally can always see whether
         // a lease was actually granted. Acquisition now happens INSIDE the try

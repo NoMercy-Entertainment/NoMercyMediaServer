@@ -197,13 +197,19 @@ public class LiveTranscodeService(
         // A NoMercy-encoded file already ships each audio track as a separate
         // browser-ready HLS rendition, so the session transcodes video only and its
         // master playlist points the player at those renditions — instant switching,
-        // no audio re-encode. A raw/disc source with no renditions falls back to
-        // muxing the language-selected track into the video (the older behaviour).
-        List<LiveAudioRendition> audioRenditions = BuildAudioRenditions(
+        // no audio re-encode.
+        List<LiveAudioRendition> fileRenditions = BuildAudioRenditions(
             resolved.File,
             preferredLanguages[0]
         );
-        bool useAudioRenditions = audioRenditions.Count > 0;
+        bool useFileRenditions = fileRenditions.Count > 0;
+
+        // A raw source (a lossless remux, disc rip — no pre-encoded renditions) with
+        // its own audio: transcode video-only and spin up a per-language audio-only
+        // child so every language lands in the menu, each transcoded to AAC. Only
+        // when the source has no renditions AND has audio streams to expose.
+        bool rawMultiAudio = !useFileRenditions && mediaInfo.AudioStreams.Count > 0;
+
         int audioStreamIndex = LiveAudioSelector.Select(mediaInfo.AudioStreams, preferredLanguages);
 
         LiveEncodeRequest liveRequest = new(
@@ -214,7 +220,10 @@ public class LiveTranscodeService(
             PreferredQuality: request.PreferredQuality,
             ExtraInputArgs: resolved.ExtraInputArgs,
             AudioStreamIndex: audioStreamIndex,
-            VideoOnly: useAudioRenditions
+            // Video-only whenever audio comes from a separate track set (existing
+            // renditions or per-language children); muxed only for the last-resort
+            // single-track fallback.
+            VideoOnly: useFileRenditions || rawMultiAudio
         );
 
         ILiveSession session;
@@ -233,14 +242,27 @@ public class LiveTranscodeService(
 
         sessionManager.RegisterSession(session, userId.ToString());
 
-        // Hand the pre-encoded renditions to the runtime so the master playlist can
-        // advertise them, and point the client at the master rather than the raw
-        // media playlist. Without renditions the client loads the muxed media
-        // playlist directly (the disc/raw-source path).
-        if (useAudioRenditions)
-            streamingService.StampAudioRenditions(session.SessionId, audioRenditions);
+        // Assemble the master's audio list: the file's own renditions when it has
+        // them, otherwise a per-language live audio child for a raw source. Either
+        // way the runtime carries the list and the client loads the master; a source
+        // with no audio at all loads the plain (video-only) media playlist.
+        List<LiveAudioRendition> masterRenditions =
+            useFileRenditions ? fileRenditions
+            : rawMultiAudio
+                ? await StartAudioChildrenAsync(
+                    session.SessionId,
+                    liveRequest,
+                    mediaInfo.AudioStreams,
+                    audioStreamIndex,
+                    ct
+                )
+            : [];
+        bool useMaster = masterRenditions.Count > 0;
 
-        string playlistUrl = useAudioRenditions
+        if (useMaster)
+            streamingService.StampAudioRenditions(session.SessionId, masterRenditions);
+
+        string playlistUrl = useMaster
             ? $"/api/v1/streaming/live/sessions/{session.SessionId}/master.m3u8"
             : $"/api/v1/streaming/live/sessions/{session.SessionId}/playlist.m3u8";
         LiveQuality quality = session.CurrentQuality;
@@ -643,6 +665,58 @@ public class LiveTranscodeService(
     // the '/' separators DynamicStaticFilesMiddleware splits on and unescapes.
     private static string EncodeServedPath(string path) =>
         string.Join('/', path.Split('/').Select(Uri.EscapeDataString));
+
+    // Spawn one audio-only transcode per source language for a raw source, and
+    // return the master's audio list pointing at each child's media playlist. The
+    // viewer's language (defaultAudioIndex, already resolved) opens by default;
+    // every language stays switchable because each child runs its own AAC transcode
+    // sharing the video's segment boundaries. A child that fails to start is
+    // skipped rather than sinking the whole session. The children are registered
+    // for cascade disposal so they never outlive the video.
+    private async Task<List<LiveAudioRendition>> StartAudioChildrenAsync(
+        string parentSessionId,
+        LiveEncodeRequest baseRequest,
+        IReadOnlyList<AudioStreamInfo> audioStreams,
+        int defaultAudioIndex,
+        CancellationToken ct
+    )
+    {
+        List<LiveAudioRendition> renditions = [];
+        List<string> childSessionIds = [];
+
+        for (int index = 0; index < audioStreams.Count; index++)
+        {
+            LiveEncodeRequest childRequest = baseRequest with { AudioStreamIndex = index };
+
+            ILiveSession child;
+            try
+            {
+                child = await liveEncoder.StartAudioRenditionAsync(childRequest, ct);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(
+                    ex,
+                    "Failed to start live audio child for stream 0:a:{Index} of session {SessionId}",
+                    index,
+                    parentSessionId
+                );
+                continue;
+            }
+
+            childSessionIds.Add(child.SessionId);
+            renditions.Add(
+                new LiveAudioRendition(
+                    Language: audioStreams[index].Language ?? "und",
+                    Uri: $"/api/v1/streaming/live/sessions/{child.SessionId}/playlist.m3u8",
+                    IsDefault: index == defaultAudioIndex
+                )
+            );
+        }
+
+        streamingService.StampChildAudioSessions(parentSessionId, childSessionIds);
+        return renditions;
+    }
 
     // Evict the caller's least-recently-accessed session. LastAccess is bumped on
     // every playlist/segment fetch, so an abandoned stream (reload/switch) is the

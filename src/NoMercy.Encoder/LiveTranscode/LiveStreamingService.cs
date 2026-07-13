@@ -42,10 +42,14 @@ public class LiveStreamingService(
     public void Register(
         ILiveSession session,
         TimeSpan targetSegmentDuration,
-        string? scratchDirectory = null
+        string? scratchDirectory = null,
+        bool isAudioRenditionChild = false
     )
     {
-        LiveRuntimeSession runtime = new(session, targetSegmentDuration, scratchDirectory);
+        LiveRuntimeSession runtime = new(session, targetSegmentDuration, scratchDirectory)
+        {
+            IsAudioRenditionChild = isAudioRenditionChild,
+        };
         if (!_runtimes.TryAdd(session.SessionId, runtime))
         {
             throw new InvalidOperationException(
@@ -56,6 +60,12 @@ public class LiveStreamingService(
         session.AttachBufferResetCallback(() => runtime.ResetBuffer());
         runtime.DrainerTask = Task.Run(() => DrainAsync(runtime));
         logger.LogDebug("Registered live session {SessionId}", session.SessionId);
+    }
+
+    public void StampChildAudioSessions(string sessionId, IReadOnlyList<string> childSessionIds)
+    {
+        if (_runtimes.TryGetValue(sessionId, out LiveRuntimeSession? runtime))
+            runtime.ChildAudioSessionIds = childSessionIds;
     }
 
     public void StampRequestContext(
@@ -117,6 +127,12 @@ public class LiveStreamingService(
             if (_runtimes.TryRemove(sessionId, out LiveRuntimeSession? runtime))
             {
                 logger.LogDebug("Removing live session {SessionId}", sessionId);
+
+                // Cascade to the per-language audio children so switching audio
+                // never outlives the video session it belongs to.
+                foreach (string childId in runtime.ChildAudioSessionIds)
+                    await RemoveAsync(childId).ConfigureAwait(false);
+
                 await runtime.DisposeAsync().ConfigureAwait(false);
 
                 if (!string.IsNullOrWhiteSpace(runtime.ScratchDirectory))

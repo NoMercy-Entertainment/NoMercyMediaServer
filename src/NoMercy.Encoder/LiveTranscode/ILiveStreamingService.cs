@@ -25,8 +25,15 @@ public interface ILiveStreamingService
     void Register(
         ILiveSession session,
         TimeSpan targetSegmentDuration,
-        string? scratchDirectory = null
+        string? scratchDirectory = null,
+        bool isAudioRenditionChild = false
     );
+
+    /// <summary>
+    /// Records the per-language audio child sessions belonging to a parent video
+    /// session so <see cref="RemoveAsync"/> can cascade-dispose them.
+    /// </summary>
+    void StampChildAudioSessions(string sessionId, IReadOnlyList<string> childSessionIds);
 
     /// <summary>
     /// Stores the original media analysis context on an already-registered

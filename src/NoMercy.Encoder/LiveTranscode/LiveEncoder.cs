@@ -127,6 +127,92 @@ public class LiveEncoder(
         return Task.FromResult<ILiveSession>(session);
     }
 
+    public Task<ILiveSession> StartAudioRenditionAsync(
+        LiveEncodeRequest request,
+        CancellationToken ct
+    )
+    {
+        // No cap check: an audio child rides on a video session that already
+        // passed the cap. It carries a placeholder quality — audio-only runs skip
+        // the whole video block, so width/height/encoder are never read.
+        LiveQuality audioQuality = new(
+            Id: "audio",
+            Label: "Audio",
+            Width: 0,
+            Height: 0,
+            Codec: Codecs.VideoCodecType.H264,
+            BitrateKbps: 128,
+            Encoder: "aac",
+            IsHardwareAccelerated: false,
+            ExpectedSpeed: 1.0,
+            CanRealtime: true
+        );
+
+        string sessionId = Ulid.NewUlid().ToString();
+        LiveSession session = new(sessionId, audioQuality);
+        session.SetAudioStreamIndex(request.AudioStreamIndex);
+        session.ReportPlaybackPosition(request.StartPosition);
+        session.SetState(LiveSessionState.Transcoding);
+
+        string outputDirectory = Path.Combine(
+            options.ResolvedLiveTranscodeCachePath,
+            $"lts-{sessionId}"
+        );
+
+        streamingService.Register(
+            session,
+            TimeSpan.FromSeconds(options.DefaultSegmentDurationSeconds),
+            outputDirectory,
+            isAudioRenditionChild: true
+        );
+
+        async Task SpawnRunner(TimeSpan startPosition, CancellationToken runnerCt)
+        {
+            LiveRunInput runInput = new(
+                InputPath: request.InputPath,
+                OutputDirectory: outputDirectory,
+                StartPosition: startPosition,
+                Quality: session.CurrentQuality,
+                SegmentDurationSeconds: options.DefaultSegmentDurationSeconds,
+                Client: request.Client,
+                SourceInfo: request.CachedInfo,
+                CustomArguments: request.CustomArguments,
+                ExtraInputArgs: request.ExtraInputArgs,
+                AudioStreamIndex: session.CurrentAudioStreamIndex,
+                AudioRenditionOnly: true
+            );
+
+            try
+            {
+                await runner.RunAsync(runInput, session, runnerCt).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected on seek/dispose
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Live audio runner faulted for session {SessionId}", sessionId);
+                session.SetState(LiveSessionState.Error);
+            }
+        }
+
+        session.AttachRunnerFactory(SpawnRunner);
+        session.MarkTranscodeStart();
+        _ = Task.Run(
+            () => SpawnRunner(request.StartPosition, session.RunnerCancellation),
+            CancellationToken.None
+        );
+
+        logger.LogInformation(
+            "Live audio rendition {SessionId} started for stream 0:a:{Index}",
+            sessionId,
+            request.AudioStreamIndex
+        );
+
+        return Task.FromResult<ILiveSession>(session);
+    }
+
     private LiveQuality ResolveQuality(LiveEncodeRequest request)
     {
         if (request.PreferredQuality is not null)
