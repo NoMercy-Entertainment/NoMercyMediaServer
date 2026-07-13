@@ -12,6 +12,7 @@
 using System.Globalization;
 using System.Text;
 using Microsoft.Extensions.Logging;
+using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
@@ -29,12 +30,13 @@ public class LiveFfmpegRunner(
     IStorage storage,
     INvencSessionCap nvencSessionCap,
     IHardwareCapabilities hardware,
+    ICodecResolver codecResolver,
     IResourceBudget resourceBudget,
     ILiveSessionTransport? transport = null
 ) : ILiveFfmpegRunner
 {
-    private const string PlaylistFileName = "index.m3u8";
-    private const string SegmentPrefix = "seg_";
+    internal const string PlaylistFileName = "index.m3u8";
+    internal const string SegmentPrefix = "seg_";
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(500);
 
     public async Task RunAsync(LiveRunInput input, LiveSession session, CancellationToken ct)
@@ -44,7 +46,20 @@ public class LiveFfmpegRunner(
         // the error message; software encodes skip the check.
         bool requiresGpu = input.Quality.IsHardwareAccelerated;
         string gpuName = hardware.Gpus.Count > 0 ? hardware.Gpus[0].Name : "GPU";
-        nvencSessionCap.EnforceForGpuEncode(gpuName, requiresGpu);
+
+        try
+        {
+            nvencSessionCap.EnforceForGpuEncode(gpuName, requiresGpu);
+        }
+        catch (EncoderRuntimeException) when (requiresGpu)
+        {
+            // Every GPU encode slot is occupied — fall back to a software
+            // encoder for THIS session instead of failing it outright. A
+            // saturated GPU is a capacity problem, not a reason to break an
+            // in-progress watch session when the CPU can pick up the slack.
+            input = await FallBackToSoftwareAsync(input, session, ct).ConfigureAwait(false);
+            requiresGpu = false;
+        }
 
         // Acquire a resource-budget lease for the duration of this live session
         // so the queue scheduler sees GPU/CPU slots as occupied.
@@ -184,86 +199,86 @@ public class LiveFfmpegRunner(
         }
     }
 
-    internal static string[] BuildArguments(LiveRunInput input)
+    // Delegates to LiveFfmpegArgumentBuilder — kept as a static passthrough so
+    // existing callers/tests referencing LiveFfmpegRunner.BuildArguments don't
+    // need to change. The actual argv construction is a pure function of the
+    // input and doesn't need any of this class's runtime dependencies, so it
+    // lives in its own file (browser-safe pixel format, GOP/keyframe
+    // alignment, rate control, remux/audio-only branching, CustomArguments
+    // merge — see LiveFfmpegArgumentBuilder for the reasoning behind each).
+    internal static string[] BuildArguments(LiveRunInput input) =>
+        LiveFfmpegArgumentBuilder.Build(input);
+
+    // Resolves the software equivalent of the requested quality's codec and
+    // swaps it in for THIS run when the GPU's NVENC session cap is exhausted.
+    // Updates the session's reported CurrentQuality (so API/UI consumers and
+    // any later seek/resume respawn see the fallback) and best-effort pushes
+    // a QualityChangedMessage so the client knows playback continues at a
+    // CPU-encoded quality rather than silently degrading.
+    private async Task<LiveRunInput> FallBackToSoftwareAsync(
+        LiveRunInput input,
+        LiveSession session,
+        CancellationToken ct
+    )
     {
-        string playlist = Path.Combine(input.OutputDirectory, PlaylistFileName);
-        string segmentPattern = Path.Combine(input.OutputDirectory, $"{SegmentPrefix}%05d.ts");
+        ResolvedCodec software = codecResolver.Resolve(
+            input.Quality.Codec,
+            hardware,
+            EncoderPreference.ForceSoftware
+        );
 
-        List<string> args = ["-hide_banner", "-nostats", "-loglevel", "error"];
-
-        if (input.StartPosition > TimeSpan.Zero)
+        LiveQuality fallbackQuality = input.Quality with
         {
-            args.Add("-ss");
-            args.Add(FormatSeconds(input.StartPosition.TotalSeconds));
-        }
+            Encoder = software.FfmpegEncoderName,
+            IsHardwareAccelerated = false,
+        };
 
-        args.Add("-i");
-        args.Add(input.InputPath);
+        session.SetQuality(fallbackQuality);
 
-        args.Add("-map");
-        args.Add("0:v:0");
-        args.Add("-map");
-        args.Add("0:a:0?");
+        logger.LogWarning(
+            "GPU session cap exhausted for session {SessionId} — falling back to {Encoder}",
+            session.SessionId,
+            fallbackQuality.Encoder
+        );
 
-        args.Add("-c:v");
-        args.Add(input.Quality.Encoder);
+        await PushQualityChangedAsync(
+                session.SessionId,
+                fallbackQuality,
+                QualityChangeReason.GpuFallbackToCpu,
+                ct
+            )
+            .ConfigureAwait(false);
 
-        args.Add("-b:v");
-        args.Add($"{input.Quality.BitrateKbps}k");
-
-        // Build -vf chain: always scale, then append HDR→SDR tonemap when needed.
-        bool needsTonemap =
-            input.Client is { SupportsHdr: false } && (input.SourceInfo?.IsHdr ?? false);
-
-        string vfChain = $"scale={input.Quality.Width}:{input.Quality.Height}";
-        if (needsTonemap)
+        return input with
         {
-            // zscale linearize → convert primaries → hable tonemap → signal range → 8-bit output
-            vfChain +=
-                ",zscale=t=linear:npl=100,format=gbrpf32le"
-                + ",zscale=p=bt709"
-                + ",tonemap=tonemap=hable:desat=0"
-                + ",zscale=t=bt709:m=bt709:r=tv"
-                + ",format=yuv420p";
+            Quality = fallbackQuality,
+        };
+    }
+
+    private async Task PushQualityChangedAsync(
+        string sessionId,
+        LiveQuality quality,
+        QualityChangeReason reason,
+        CancellationToken ct
+    )
+    {
+        if (transport is null)
+            return;
+
+        QualityChangedMessage message = new(NewQuality: quality, Reason: reason);
+
+        try
+        {
+            await transport.SendToClientAsync(sessionId, message, ct).ConfigureAwait(false);
         }
-
-        args.Add("-vf");
-        args.Add(vfChain);
-
-        // Clamp audio channel count to what the client supports.
-        int sourceChannels =
-            input.SourceInfo?.AudioStreams.Count > 0
-                ? input.SourceInfo.AudioStreams[0].Channels
-                : 2;
-        int clientMax = input.Client?.MaxAudioChannels is > 0 ? input.Client.MaxAudioChannels : 2;
-        int outputChannels = Math.Min(sourceChannels, clientMax);
-
-        args.Add("-c:a");
-        args.Add("aac");
-        args.Add("-b:a");
-        args.Add("128k");
-        args.Add("-ac");
-        args.Add(outputChannels.ToString(CultureInfo.InvariantCulture));
-
-        args.Add("-f");
-        args.Add("hls");
-        args.Add("-hls_time");
-        args.Add(input.SegmentDurationSeconds.ToString(CultureInfo.InvariantCulture));
-        args.Add("-hls_list_size");
-        args.Add("0");
-        args.Add("-hls_playlist_type");
-        args.Add("event");
-        args.Add("-hls_flags");
-        args.Add("independent_segments+temp_file");
-        args.Add("-hls_segment_filename");
-        args.Add(segmentPattern);
-
-        args.Add(playlist);
-
-        args.Add("-progress");
-        args.Add("pipe:1");
-
-        return [.. args];
+        catch (Exception ex)
+        {
+            logger.LogDebug(
+                ex,
+                "Transport push failed for QualityChanged on session {SessionId}",
+                sessionId
+            );
+        }
     }
 
     private async Task PollForSegmentsAsync(
@@ -425,9 +440,6 @@ public class LiveFfmpegRunner(
         string digits = segmentLine[start..end];
         return int.TryParse(digits, CultureInfo.InvariantCulture, out int value) ? value : null;
     }
-
-    private static string FormatSeconds(double seconds) =>
-        seconds.ToString("F3", CultureInfo.InvariantCulture);
 
     private static string Truncate(string value, int max) =>
         value.Length > max ? value[..max] : value;

@@ -20,7 +20,8 @@ public record LiveRunInput(
     LiveQuality Quality,
     int SegmentDurationSeconds,
     ClientCapabilities? Client = null,
-    MediaInfo? SourceInfo = null
+    MediaInfo? SourceInfo = null,
+    Dictionary<string, string>? CustomArguments = null
 );
 
 /// <summary>
