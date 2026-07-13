@@ -176,7 +176,8 @@ public class Movie : ColorPaletteTimeStamps, IHasLibrary
 
     public string CreateFolderName()
     {
-        return string.Concat(Title, ".(", ReleaseDate.ParseYear(), ")").CleanFileName();
+        return string.Concat(Title.CleanFileName().Shorten(), ".(", ReleaseDate.ParseYear(), ")")
+            .CleanFileName();
     }
 
     public string CreateTitle()
@@ -186,6 +187,11 @@ public class Movie : ColorPaletteTimeStamps, IHasLibrary
 
     public string CreateFileName()
     {
-        return string.Concat(Title.CleanFileName(), ".(", ReleaseDate.ParseYear(), ").NoMercy");
+        return string.Concat(
+            Title.CleanFileName().Shorten(),
+            ".(",
+            ReleaseDate.ParseYear(),
+            ").NoMercy"
+        );
     }
 }
