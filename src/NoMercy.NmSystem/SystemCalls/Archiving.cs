@@ -164,6 +164,12 @@ public static class Archiving
 
         try
         {
+            // tar's -C target is not auto-created; on a fresh install the output
+            // folder is absent and tar aborts ("Cannot open: No such file or
+            // directory"), stranding the Binaries boot stage and every queue.
+            if (!storage.Exists(extractToDirectory))
+                storage.CreateDirectory(extractToDirectory);
+
             // List entries first so a traversal attempt can be rejected before
             // any file is written — the tar CLI has no per-entry containment guard.
             Shell.ExecResult listResult = await Shell.ExecAsync("tar", $"tf \"{tarFilePath}\"");

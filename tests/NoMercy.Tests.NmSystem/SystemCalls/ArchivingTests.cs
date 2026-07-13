@@ -153,6 +153,45 @@ public class ArchivingTests : IDisposable
     }
 
     [Fact]
+    public async Task ExtractArchive_TgzFile_DestinationDirDoesNotExist_CreatesItAndExtracts()
+    {
+        // Regression guard: tar's `-C` target is not auto-created by the tar CLI
+        // itself. On a fresh install the ffmpeg output folder is absent, so this
+        // must create it before shelling out — otherwise tar aborts with
+        // "Cannot open: No such file or directory" and strands BootStage.Binaries.
+        string sourceDir = Path.Combine(_workDir, "tgz-nodest-source");
+        Directory.CreateDirectory(sourceDir);
+        await File.WriteAllTextAsync(Path.Combine(sourceDir, "hello.txt"), "hello tgz");
+
+        string tgzPath = Path.Combine(_workDir, "bundle-nodest.tgz");
+        await using (FileStream fileStream = File.Create(tgzPath))
+        await using (
+            GZipStream gzipStream = new(fileStream, CompressionMode.Compress, leaveOpen: true)
+        )
+        {
+            await TarFile.CreateFromDirectoryAsync(
+                sourceDir,
+                gzipStream,
+                includeBaseDirectory: false
+            );
+        }
+
+        // Nested, non-existent destination — neither "dest-nodest" nor its
+        // "leaf" child exist before extraction.
+        string destination = Path.Combine(_workDir, "dest-nodest", "leaf");
+        Assert.False(Directory.Exists(destination));
+
+        List<string> extracted = await Archiving.ExtractArchive(_storage, tgzPath, destination);
+
+        Assert.True(Directory.Exists(destination));
+        Assert.Contains(extracted, path => path.EndsWith("hello.txt"));
+        Assert.Equal(
+            "hello tgz",
+            await File.ReadAllTextAsync(Path.Combine(destination, "hello.txt"))
+        );
+    }
+
+    [Fact]
     public async Task ExtractArchive_UnsupportedExtension_ReturnsEmptyList()
     {
         string filePath = Path.Combine(_workDir, "not-an-archive.txt");
