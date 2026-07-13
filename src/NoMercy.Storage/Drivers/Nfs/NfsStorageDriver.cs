@@ -186,12 +186,18 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     // Give this libnfs context a unique NFSv4 client name + verifier before
     // mount so concurrent/sequential drivers in one process don't share seqid
     // state. NFSv4 only — libnfs ignores these for v3.
-    private void ApplyClientIdentity()
+    private void ApplyClientIdentity() => ApplyClientIdentity(_nfs, _clientId);
+
+    // Stamp a libnfs context with a unique NFSv4 client name + verifier. Each
+    // distinct clientId becomes an independent clientid/open-owner on the
+    // server, so its open-seqid sequence is tracked separately and cannot
+    // collide with another context's. NFSv4 only — libnfs ignores these for v3.
+    private void ApplyClientIdentity(IntPtr ctx, string clientId)
     {
         if (_config.Version != 4)
             return;
-        _libNfs.SetClientName(_nfs, _clientId);
-        _libNfs.SetVerifier(_nfs, _clientId);
+        _libNfs.SetClientName(ctx, clientId);
+        _libNfs.SetVerifier(ctx, clientId);
     }
 
     private static bool IsExpiredStateError(int rc, string err)
@@ -771,6 +777,13 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                 if (_config.Gid.HasValue)
                     _libNfs.SetGid(ctx, _config.Gid.Value);
 
+                // A FRESH unique client identity per isolated context — not the
+                // driver's _clientId. Several isolated contexts are open at once
+                // during a parallel scan; if they shared one clientid the server
+                // would fold them into a single open-owner and their independent
+                // local open-seqid counters would collide (NFS4ERR_BAD_SEQID).
+                ApplyClientIdentity(ctx, $"nomercy-{Environment.ProcessId}-{Guid.NewGuid():N}");
+
                 int mountRc = _libNfs.Mount(ctx, _config.Server, _config.Export);
                 if (mountRc != 0)
                     throw new IOException(
@@ -810,7 +823,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
         try
         {
-            return new IsolatedNfsReadStream(ctx, fh, fileSize);
+            return new IsolatedNfsReadStream(_libNfs, ctx, fh, fileSize);
         }
         catch
         {
