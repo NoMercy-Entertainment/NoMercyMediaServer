@@ -117,7 +117,23 @@ public class QueueWorker(
 
                 if (resourceBudget is not null && resourceAwareQueues?.Contains(name) == true)
                 {
-                    if (!TryAcquireBudget(job, out lease))
+                    BudgetAcquireOutcome outcome = TryAcquireBudget(job, out lease);
+
+                    if (
+                        outcome == BudgetAcquireOutcome.GpuDeviceAbsent
+                        && TryDegradeToSoftware(job)
+                    )
+                    {
+                        // Job was re-planned onto its now-CPU queue with a
+                        // software ResourceRequirement and requeued under its
+                        // original row — this reservation must be dropped
+                        // here (not released back to this queue) so it isn't
+                        // picked up again; Requeue already signalled
+                        // WorkAvailable for the destination queue's workers.
+                        continue;
+                    }
+
+                    if (outcome != BudgetAcquireOutcome.Granted)
                     {
                         queue.ReleaseReservation(job, BudgetRetryDelay);
 
@@ -214,20 +230,34 @@ public class QueueWorker(
     }
 
     /// <summary>
-    /// Attempts to acquire budget for the given job payload.
-    /// Returns true and sets <paramref name="lease"/> when a slot is available.
-    /// Returns false when the budget is saturated — caller should release the reservation.
+    /// Outcome of a budget-gate probe. <see cref="Saturated"/> means the
+    /// requirement is fine but no slot is free right now — worth retrying.
+    /// <see cref="GpuDeviceAbsent"/> means the requirement pins a GPU device
+    /// key that is not (and will never be) registered on this host — no
+    /// amount of retrying opens that gate, so the caller must degrade the
+    /// job instead.
     /// </summary>
-    private bool TryAcquireBudget(QueueJobModel job, out ResourceLease? lease)
+    private enum BudgetAcquireOutcome
+    {
+        Granted,
+        Saturated,
+        GpuDeviceAbsent,
+    }
+
+    /// <summary>
+    /// Attempts to acquire budget for the given job payload. Sets
+    /// <paramref name="lease"/> when a slot is available.
+    /// </summary>
+    private BudgetAcquireOutcome TryAcquireBudget(QueueJobModel job, out ResourceLease? lease)
     {
         lease = null;
 
         if (resourceBudget is null)
-            return true;
+            return BudgetAcquireOutcome.Granted;
 
         ResourceRequirement? requirement = ExtractRequirement(job);
         if (requirement is null)
-            return true;
+            return BudgetAcquireOutcome.Granted;
 
         try
         {
@@ -251,7 +281,7 @@ public class QueueWorker(
                 _suppressBudgetSaturationLog = true;
             }
 
-            return false;
+            return BudgetAcquireOutcome.Saturated;
         }
 
         if (lease is null)
@@ -289,11 +319,75 @@ public class QueueWorker(
                 _suppressBudgetSaturationLog = true;
             }
 
-            return false;
+            // A busy-but-present GPU is worth retrying. A GPU device key that
+            // isn't registered at all never opens — the requirement itself
+            // must degrade rather than loop here forever.
+            if (
+                requirement.GpuDeviceKey is not null
+                && !resourceBudget.IsGpuDeviceRegistered(requirement.GpuDeviceKey)
+            )
+            {
+                return BudgetAcquireOutcome.GpuDeviceAbsent;
+            }
+
+            return BudgetAcquireOutcome.Saturated;
         }
 
         _suppressBudgetSaturationLog = false;
         _saturationRetryCount = 0;
+        return BudgetAcquireOutcome.Granted;
+    }
+
+    /// <summary>
+    /// Re-plans a job whose GPU requirement is permanently unsatisfiable (see
+    /// <see cref="BudgetAcquireOutcome.GpuDeviceAbsent"/>) onto a software/CPU
+    /// requirement and reroutes it to that job's own (now CPU) queue. Returns
+    /// false when the job doesn't implement <see cref="IResourceDegradable"/>
+    /// or has no software fallback — the caller keeps the original reservation
+    /// in place and retries rather than dropping work it cannot confidently
+    /// degrade.
+    /// </summary>
+    private bool TryDegradeToSoftware(QueueJobModel job)
+    {
+        object deserialized;
+        try
+        {
+            deserialized = SerializationHelper.Deserialize<object>(job.Payload);
+        }
+        catch (Exception ex)
+        {
+            logger?.LogWarning(
+                ex,
+                "[{Queue}] failed to deserialize job {JobId} while degrading an absent-GPU requirement",
+                name,
+                job.Id
+            );
+            return false;
+        }
+
+        if (deserialized is not IResourceDegradable degradable)
+            return false;
+
+        string? gpuDeviceKey = (deserialized as IHasResourceRequirement)
+            ?.ResourceRequirement
+            ?.GpuDeviceKey;
+
+        IShouldQueue? degraded = degradable.DegradeToSoftware();
+        if (degraded is null)
+            return false;
+
+        string newPayload = SerializationHelper.Serialize(degraded);
+
+        logger?.LogWarning(
+            "[{Queue}] job {JobId} requires GPU device '{GpuKey}' which is not present on this "
+                + "host — degrading to software and rerouting to '{NewQueue}'.",
+            name,
+            job.Id,
+            gpuDeviceKey,
+            degraded.QueueName
+        );
+
+        queue.Requeue(job, degraded.QueueName, newPayload);
         return true;
     }
 

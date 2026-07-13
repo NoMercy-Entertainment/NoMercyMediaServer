@@ -93,6 +93,47 @@ public class ResourceBudgetTests
         budget.Release(lease3);
     }
 
+    // ── IsGpuDeviceRegistered — Fillz's field bug: an AMF-pinned job on an
+    // Nvidia-only host must be recognizable as "absent", not "busy". ────────
+
+    [Fact]
+    public void IsGpuDeviceRegistered_TrueForRegisteredDevice()
+    {
+        ResourceBudget budget = new([TestGpu], cpuCores: 8);
+
+        budget.IsGpuDeviceRegistered(TestGpu.Name).Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsGpuDeviceRegistered_TrueForVendorAliasOfRegisteredDevice()
+    {
+        // Nvidia() only device — "nvenc" and "h264_nvenc" are vendor/encoder
+        // aliases of the same semaphore, not separate devices.
+        ResourceBudget budget = new([TestGpu], cpuCores: 8);
+
+        budget.IsGpuDeviceRegistered("nvenc").Should().BeTrue();
+        budget.IsGpuDeviceRegistered("h264_nvenc").Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsGpuDeviceRegistered_FalseWhenVendorNeverPresent()
+    {
+        // Only an NVIDIA GPU is registered — an AMD-only key (Fillz's stuck
+        // "h264_amf" child jobs) must read as permanently absent, never busy.
+        ResourceBudget budget = new([TestGpu], cpuCores: 8);
+
+        budget.IsGpuDeviceRegistered("h264_amf").Should().BeFalse();
+        budget.IsGpuDeviceRegistered("amf").Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsGpuDeviceRegistered_FalseWhenNoGpuAtAll()
+    {
+        ResourceBudget budget = new([], cpuCores: 8);
+
+        budget.IsGpuDeviceRegistered("h264_nvenc").Should().BeFalse();
+    }
+
     [Fact]
     public void TryAcquire_WhenCpuHeadroomExceeded_ReturnsNull()
     {
