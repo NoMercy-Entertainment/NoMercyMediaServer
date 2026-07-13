@@ -75,6 +75,18 @@ public class PlanStageHardwareVendorGateTests
         hardware
             .Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
             .Returns(nvidiaGpuPresent ? nvidiaGpu : null);
+        // The authoritative gate: only encoders that survived the real
+        // hardware-encoder init probe (HardwareEncoderProbe) are selectable.
+        // A physically detected NVIDIA GPU only makes h264_nvenc/hevc_nvenc
+        // probe-usable — h264_amf/h264_qsv are never usable on this host
+        // regardless of what ffmpeg's compiled-in encoder list advertises.
+        hardware
+            .Setup(h => h.UsableHardwareEncoders)
+            .Returns(
+                nvidiaGpuPresent
+                    ? new HashSet<string> { "h264_nvenc", "hevc_nvenc" }
+                    : new HashSet<string>()
+            );
 
         // The NoMercy ffmpeg fork's binary capability list — every hardware
         // encoder it can build, independent of which GPU vendor is present.

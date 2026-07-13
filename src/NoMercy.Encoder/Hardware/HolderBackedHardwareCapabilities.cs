@@ -30,11 +30,17 @@ namespace NoMercy.Encoder.Hardware;
 public sealed class HolderBackedHardwareCapabilities(HardwareCapabilitiesHolder holder)
     : IHardwareCapabilities
 {
+    private static readonly IReadOnlySet<string> EmptyUsableHardwareEncoders =
+        new HashSet<string>();
+
     public IReadOnlyList<GpuDevice> Gpus => holder.Current?.Gpus ?? [];
 
     public int CpuCores => holder.Current?.CpuCores ?? Environment.ProcessorCount;
 
     public bool HasGpu => holder.Current?.HasGpu ?? false;
+
+    public IReadOnlySet<string> UsableHardwareEncoders =>
+        holder.Current?.UsableHardwareEncoders ?? EmptyUsableHardwareEncoders;
 
     public bool SupportsHardwareEncoding(VideoCodecType codec) =>
         holder.Current?.SupportsHardwareEncoding(codec) ?? false;

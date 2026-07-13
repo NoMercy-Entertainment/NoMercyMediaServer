@@ -135,7 +135,7 @@ public class PlanStage(
 
                 List<string> availableEncoderNames = ffmpegCapabilities
                     .AvailableEncoders.Where(encoderName =>
-                        IsHardwareEncoderPhysicallyAvailable(encoderName, hardware)
+                        IsHardwareEncoderSelectable(encoderName, hardware)
                     )
                     .ToList();
 
@@ -274,19 +274,29 @@ public class PlanStage(
     }
 
     /// <summary>
-    /// Gate on a physically detected GPU of the matching vendor before an
+    /// Gate on the real hardware-encoder init probe result before an
     /// ffmpeg-advertised hardware encoder name is treated as selectable.
     /// <see cref="IFfmpegCapabilities.AvailableEncoders"/> only reflects which
     /// encoders the running ffmpeg binary was compiled with — the NoMercy fork
     /// advertises every hardware encoder it knows how to build regardless of
-    /// what GPU (if any) is actually installed. Without this gate a host with
-    /// only an NVIDIA card would still see "h264_amf" as available, and
-    /// <see cref="IHardwarePreferenceResolver"/> could pick it — a
-    /// ResourceRequirement pinned to an absent AMD device that can never be
-    /// granted a slot at the resource-budget gate (see <c>ResourceBudget</c> /
-    /// <c>EncodeTaskJob.QueueName</c>).
+    /// what GPU (if any) is actually installed. GPU-vendor detection alone is
+    /// not sufficient evidence either — a host can have the right vendor's
+    /// card yet lack the specific encoder block (older GPU generation, driver
+    /// too old, no supporting silicon) and still see the name in the
+    /// compiled list.
+    ///
+    /// <see cref="IHardwareCapabilities.UsableHardwareEncoders"/> is populated
+    /// once at boot by <see cref="HardwareEncoderProbe"/>, which runs a real
+    /// one-frame init through ffmpeg for every candidate. Only a name that
+    /// survives that probe may be selected here — this supersedes the earlier
+    /// vendor-presence gate as the selection authority (Fillz's 7 stuck
+    /// h264_amf child jobs on an NVIDIA-only host: the vendor gate alone still
+    /// let hevc_amf through on hardware that merely happened to be AMD-vendor
+    /// with a driver too old to actually open the codec). Vendor detection
+    /// remains the signal for GPU session-budget sizing (<c>maxHwSessions</c>
+    /// above), just not for whether a name is a legal selection.
     /// </summary>
-    private static bool IsHardwareEncoderPhysicallyAvailable(
+    private static bool IsHardwareEncoderSelectable(
         string ffmpegEncoderName,
         IHardwareCapabilities hardware
     )
@@ -295,7 +305,7 @@ public class PlanStage(
         if (requiredVendor is null)
             return true; // software encoder, or a name outside the known vendor lists
 
-        return hardware.Gpus.Any(gpu => gpu.Vendor == requiredVendor);
+        return hardware.UsableHardwareEncoders.Contains(ffmpegEncoderName);
     }
 
     /// <summary>

@@ -44,6 +44,55 @@ public class HardwareInitializationServiceTests
     }
 
     /// <summary>
+    /// These tests exercise GPU/CPU detection, not the hardware-encoder init
+    /// probe — stub it to return an empty usable set explicitly rather than
+    /// relying on Moq's default Task-returning behaviour.
+    /// </summary>
+    private static IHardwareEncoderProbe StubEncoderProbe()
+    {
+        Mock<IHardwareEncoderProbe> probe = new();
+        probe
+            .Setup(p =>
+                p.ProbeAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>())
+            )
+            .ReturnsAsync((IReadOnlySet<string>)new HashSet<string>());
+        return probe.Object;
+    }
+
+    /// <summary>
+    /// Builds a process runner whose <c>-encoders</c> call returns
+    /// <paramref name="encoderOutput"/> and every other single-flag call
+    /// (decoders/demuxers/filters/protocols) returns an empty success —
+    /// so tests can control exactly which encoder names populate
+    /// <see cref="IFfmpegCapabilities.AvailableEncoders"/>.
+    /// </summary>
+    private static Mock<IProcessRunner> BuildProcessRunnerWithEncoders(string encoderOutput)
+    {
+        Mock<IProcessRunner> processRunner = new();
+        processRunner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.Is<string[]>(a => a.Length == 1 && a[0] == "-encoders"),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(new ProcessResult(0, encoderOutput, "", TimeSpan.Zero));
+        processRunner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.Is<string[]>(a => a.Length == 1 && a[0] != "-encoders"),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.Zero));
+        return processRunner;
+    }
+
+    /// <summary>
     /// Creates a <see cref="ServerPhaseTracker"/> with every stage in
     /// <see cref="BootStage.All"/> marked complete so HIS's detection task —
     /// which gates on <see cref="BootStage.All"/> — runs straight through in
@@ -82,6 +131,7 @@ public class HardwareInitializationServiceTests
         HardwareInitializationService service = new(
             detector.Object,
             ffmpegCaps,
+            StubEncoderProbe(),
             Mock.Of<IDriverChangeDetector>(),
             Mock.Of<IBenchmarkJobTracker>(),
             new(),
@@ -115,6 +165,7 @@ public class HardwareInitializationServiceTests
         HardwareInitializationService service = new(
             detector.Object,
             ffmpegCaps,
+            StubEncoderProbe(),
             Mock.Of<IDriverChangeDetector>(),
             Mock.Of<IBenchmarkJobTracker>(),
             new(),
@@ -144,6 +195,7 @@ public class HardwareInitializationServiceTests
         HardwareInitializationService service = new(
             detector.Object,
             ffmpegCaps,
+            StubEncoderProbe(),
             Mock.Of<IDriverChangeDetector>(),
             Mock.Of<IBenchmarkJobTracker>(),
             new(),
@@ -177,6 +229,7 @@ public class HardwareInitializationServiceTests
         HardwareInitializationService service = new(
             detector.Object,
             ffmpegCaps,
+            StubEncoderProbe(),
             Mock.Of<IDriverChangeDetector>(),
             Mock.Of<IBenchmarkJobTracker>(),
             new(),
@@ -221,6 +274,7 @@ public class HardwareInitializationServiceTests
         HardwareInitializationService service = new(
             detector.Object,
             ffmpegCaps,
+            StubEncoderProbe(),
             Mock.Of<IDriverChangeDetector>(),
             Mock.Of<IBenchmarkJobTracker>(),
             new(),
@@ -299,6 +353,7 @@ public class HardwareInitializationServiceTests
         HardwareInitializationService service = new(
             detector.Object,
             ffmpegCaps,
+            StubEncoderProbe(),
             Mock.Of<IDriverChangeDetector>(),
             Mock.Of<IBenchmarkJobTracker>(),
             new(),
@@ -336,6 +391,7 @@ public class HardwareInitializationServiceTests
         HardwareInitializationService service = new(
             detector.Object,
             ffmpegCaps,
+            StubEncoderProbe(),
             Mock.Of<IDriverChangeDetector>(),
             Mock.Of<IBenchmarkJobTracker>(),
             new(),
@@ -378,6 +434,7 @@ public class HardwareInitializationServiceTests
         HardwareInitializationService service = new(
             detector.Object,
             ffmpegCaps,
+            StubEncoderProbe(),
             Mock.Of<IDriverChangeDetector>(),
             Mock.Of<IBenchmarkJobTracker>(),
             new(),
@@ -393,5 +450,162 @@ public class HardwareInitializationServiceTests
         service.Capabilities.Should().NotBeNull();
         service.Capabilities!.HasGpu.Should().BeFalse();
         service.Capabilities.CpuCores.Should().Be(Environment.ProcessorCount);
+    }
+
+    // -------------------------------------------------------------------------
+    // Hardware-encoder init probe wiring
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// The candidate set handed to <see cref="IHardwareEncoderProbe"/> must be
+    /// exactly the compiled hardware-encoder names (those with a known GPU
+    /// vendor per <see cref="GpuEncoderTokens.VendorForEncoderName"/>) —
+    /// software encoders (libx264, aac, ...) are unconditionally usable and
+    /// must never be spent on a process spawn.
+    /// </summary>
+    [Fact]
+    public async Task StartAsync_ProbesOnlyHardwareEncoderNames_NeverSoftware()
+    {
+        string encoderOutput =
+            "V..... libx264              libx264 H.264 (codec h264)\n"
+            + "V..... h264_nvenc           NVIDIA NVENC H.264 encoder (codec h264)\n"
+            + "V..... h264_amf             AMD AMF H.264 encoder (codec h264)\n"
+            + "A..... aac                  AAC (Advanced Audio Coding) (codec aac)";
+
+        FfmpegCapabilities ffmpegCaps = new(BuildProcessRunnerWithEncoders(encoderOutput).Object);
+
+        Mock<IHardwareDetector> detector = new();
+        detector
+            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<GpuDevice>());
+        detector
+            .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(4);
+
+        IEnumerable<string>? capturedCandidates = null;
+        Mock<IHardwareEncoderProbe> encoderProbe = new();
+        encoderProbe
+            .Setup(p =>
+                p.ProbeAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>())
+            )
+            .Callback<IEnumerable<string>, CancellationToken>(
+                (candidates, _) => capturedCandidates = candidates.ToList()
+            )
+            .ReturnsAsync((IReadOnlySet<string>)new HashSet<string>());
+
+        HardwareInitializationService service = new(
+            detector.Object,
+            ffmpegCaps,
+            encoderProbe.Object,
+            Mock.Of<IDriverChangeDetector>(),
+            Mock.Of<IBenchmarkJobTracker>(),
+            new(),
+            Mock.Of<ILogger<HardwareInitializationService>>(),
+            ServerReadyTracker(),
+            probeRetryDelayMs: 0
+        );
+
+        await service.StartAsync(CancellationToken.None);
+        await service.DetectionTask;
+
+        capturedCandidates.Should().NotBeNull();
+        capturedCandidates.Should().Contain(["h264_nvenc", "h264_amf"]);
+        capturedCandidates.Should().NotContain(["libx264", "aac"]);
+    }
+
+    /// <summary>
+    /// The set the probe confirms as usable must land on
+    /// <see cref="IHardwareCapabilities.UsableHardwareEncoders"/> — this is
+    /// the value <c>PlanStage</c> gates selection on.
+    /// </summary>
+    [Fact]
+    public async Task StartAsync_PopulatesUsableHardwareEncoders_FromProbeResult()
+    {
+        Mock<IHardwareDetector> detector = new();
+        detector
+            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<GpuDevice>());
+        detector
+            .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(4);
+
+        string encoderOutput =
+            "V..... libx264              libx264 H.264 (codec h264)\n"
+            + "V..... h264_nvenc           NVIDIA NVENC H.264 encoder (codec h264)";
+        FfmpegCapabilities ffmpegCaps = new(BuildProcessRunnerWithEncoders(encoderOutput).Object);
+
+        Mock<IHardwareEncoderProbe> encoderProbe = new();
+        encoderProbe
+            .Setup(p =>
+                p.ProbeAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>())
+            )
+            .ReturnsAsync((IReadOnlySet<string>)new HashSet<string> { "h264_nvenc" });
+
+        HardwareInitializationService service = new(
+            detector.Object,
+            ffmpegCaps,
+            encoderProbe.Object,
+            Mock.Of<IDriverChangeDetector>(),
+            Mock.Of<IBenchmarkJobTracker>(),
+            new(),
+            Mock.Of<ILogger<HardwareInitializationService>>(),
+            ServerReadyTracker(),
+            probeRetryDelayMs: 0
+        );
+
+        await service.StartAsync(CancellationToken.None);
+        await service.DetectionTask;
+
+        service.Capabilities.Should().NotBeNull();
+        service.Capabilities!.UsableHardwareEncoders.Should().Contain("h264_nvenc");
+    }
+
+    /// <summary>
+    /// A probe failure must degrade to "no hardware encoders usable"
+    /// (software-only) instead of throwing and taking down hardware
+    /// detection entirely — an init-probe outage removes acceleration for
+    /// this run, it must never block boot.
+    /// </summary>
+    [Fact]
+    public async Task StartAsync_WhenEncoderProbeThrows_DegradesToSoftwareOnly()
+    {
+        Mock<IHardwareDetector> detector = new();
+        detector
+            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<GpuDevice>());
+        detector
+            .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(4);
+
+        string encoderOutput =
+            "V..... libx264              libx264 H.264 (codec h264)\n"
+            + "V..... h264_nvenc           NVIDIA NVENC H.264 encoder (codec h264)";
+        FfmpegCapabilities ffmpegCaps = new(BuildProcessRunnerWithEncoders(encoderOutput).Object);
+
+        Mock<IHardwareEncoderProbe> encoderProbe = new();
+        encoderProbe
+            .Setup(p =>
+                p.ProbeAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>())
+            )
+            .ThrowsAsync(new InvalidOperationException("probe exploded"));
+
+        HardwareInitializationService service = new(
+            detector.Object,
+            ffmpegCaps,
+            encoderProbe.Object,
+            Mock.Of<IDriverChangeDetector>(),
+            Mock.Of<IBenchmarkJobTracker>(),
+            new(),
+            Mock.Of<ILogger<HardwareInitializationService>>(),
+            ServerReadyTracker(),
+            probeRetryDelayMs: 0
+        );
+
+        await service.StartAsync(CancellationToken.None);
+        await service.DetectionTask;
+
+        service.IsReady.Should().BeTrue();
+        service.Capabilities.Should().NotBeNull();
+        service.Capabilities!.UsableHardwareEncoders.Should().BeEmpty();
     }
 }

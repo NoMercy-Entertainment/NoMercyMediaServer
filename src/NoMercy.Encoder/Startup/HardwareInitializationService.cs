@@ -20,6 +20,7 @@ namespace NoMercy.Encoder.Startup;
 public class HardwareInitializationService(
     IHardwareDetector hardwareDetector,
     FfmpegCapabilities ffmpegCapabilities,
+    IHardwareEncoderProbe hardwareEncoderProbe,
     IDriverChangeDetector driverChangeDetector,
     IBenchmarkJobTracker benchmarkJobTracker,
     HardwareCapabilitiesHolder capabilitiesHolder,
@@ -93,7 +94,11 @@ public class HardwareInitializationService(
                 .ConfigureAwait(false);
             int cpuCores = await hardwareDetector.DetectCpuCoreCountAsync(ct).ConfigureAwait(false);
 
-            Capabilities = new HardwareCapabilities(gpus, cpuCores);
+            IReadOnlySet<string> usableHardwareEncoders =
+                await ProbeUsableHardwareEncodersAsync(ct).ConfigureAwait(false)
+                ?? new HashSet<string>();
+
+            Capabilities = new HardwareCapabilities(gpus, cpuCores, usableHardwareEncoders);
             IsReady = true;
 
             System.Text.StringBuilder summary = new();
@@ -111,6 +116,11 @@ public class HardwareInitializationService(
                         $"\n  GPU    : {gpu.Vendor} {gpu.Name} "
                             + $"({gpu.VramMb}MB VRAM, max {gpu.MaxEncoderSessions} sessions)"
                     );
+            summary.Append(
+                usableHardwareEncoders.Count == 0
+                    ? "\n  HW init probe : no hardware encoders usable (software-only)"
+                    : $"\n  HW init probe : usable [{string.Join(", ", usableHardwareEncoders)}]"
+            );
             logger.LogInformation("{HardwareSummary}", summary.ToString());
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -164,6 +174,42 @@ public class HardwareInitializationService(
         }
 
         phaseTracker?.MarkComplete(BootStage.Hardware);
+    }
+
+    /// <summary>
+    /// Runs the real hardware-encoder init probe once, against every
+    /// compiled-in hardware encoder name ffmpeg advertises — not just the
+    /// ones matching a physically detected GPU vendor. This is deliberate:
+    /// the probe result IS the authority PlanStage uses for selection, so it
+    /// must independently confirm or refute every candidate rather than only
+    /// checking the ones vendor detection already believes are present. A
+    /// probe failure degrades to "no hardware encoders usable" (software-only)
+    /// instead of throwing — an init-probe outage must never block boot or
+    /// crash the server, it only removes hardware acceleration for this run.
+    /// </summary>
+    private async Task<IReadOnlySet<string>> ProbeUsableHardwareEncodersAsync(CancellationToken ct)
+    {
+        try
+        {
+            IReadOnlyList<string> candidates = ffmpegCapabilities
+                .AvailableEncoders.Where(encoderName =>
+                    GpuEncoderTokens.VendorForEncoderName(encoderName) is not null
+                )
+                .ToList();
+
+            if (candidates.Count == 0)
+                return new HashSet<string>();
+
+            return await hardwareEncoderProbe.ProbeAsync(candidates, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(
+                ex,
+                "Hardware encoder init probe failed — no hardware encoders usable (software-only)"
+            );
+            return new HashSet<string>();
+        }
     }
 
     /// <summary>
