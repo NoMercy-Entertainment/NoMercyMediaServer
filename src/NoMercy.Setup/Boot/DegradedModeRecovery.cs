@@ -124,6 +124,7 @@ public class DegradedModeRecovery : IDegradedModeRecovery
                     if (_networkDiscovery is not null)
                         await _networkDiscovery.DiscoverExternalIpAsync();
                     tasks.NetworkDiscovered = true;
+                    ServerPhaseTracker.Current?.MarkComplete(BootStage.Network);
                 }
                 catch (Exception e)
                 {
@@ -173,6 +174,7 @@ public class DegradedModeRecovery : IDegradedModeRecovery
 
                     await _serverRegistrationService.Init();
                     tasks.Registered = true;
+                    ServerPhaseTracker.Current?.MarkComplete(BootStage.Registered);
                 }
                 catch (InvalidOperationException e) when (e.Message.Contains("cooldown"))
                 {
