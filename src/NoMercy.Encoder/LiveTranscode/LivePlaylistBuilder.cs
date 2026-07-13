@@ -24,14 +24,23 @@ public record LivePlaylistRequest(
     IReadOnlyList<Segment> Segments,
     TimeSpan TargetSegmentDuration,
     bool IsComplete,
-    string SegmentUrlTemplate
+    string SegmentUrlTemplate,
+    // Total runtime of the source. When known, the playlist lists every segment
+    // for the whole duration up front (VOD) so the client shows a full-length
+    // progress bar and can seek anywhere — the Plex/Jellyfin model — instead of
+    // only the segments produced so far. Null falls back to the produced-only
+    // EVENT playlist for callers that don't know the duration.
+    TimeSpan? TotalDuration = null
 );
 
 /// <summary>
 /// Pure builder that emits an HLS media playlist (.m3u8) from a runtime live
-/// session. While the encoder is still producing segments we emit
-/// <c>EXT-X-PLAYLIST-TYPE:EVENT</c>; once the session finishes we switch to
-/// <c>VOD</c> and add <c>EXT-X-ENDLIST</c>.
+/// session. With a known <see cref="LivePlaylistRequest.TotalDuration"/> it
+/// emits a whole-runtime <c>VOD</c> playlist with <c>EXT-X-ENDLIST</c> so the
+/// client sees the full timeline immediately; segments are produced on demand
+/// as the client requests them. Without a duration it falls back to the legacy
+/// growing playlist: <c>EXT-X-PLAYLIST-TYPE:EVENT</c> while producing, <c>VOD</c>
+/// with <c>EXT-X-ENDLIST</c> once the session finishes.
 /// </summary>
 public class LivePlaylistBuilder : ILivePlaylistBuilder
 {
@@ -41,6 +50,9 @@ public class LivePlaylistBuilder : ILivePlaylistBuilder
         {
             throw new ArgumentException("SegmentUrlTemplate must include {index}", nameof(request));
         }
+
+        if (request.TotalDuration is { } total && total > TimeSpan.Zero)
+            return BuildFullDurationVod(request, total);
 
         StringBuilder sb = new();
         int targetDurationSeconds = Math.Max(1, (int)Math.Ceiling(MaxSegmentDuration(request)));
@@ -77,6 +89,45 @@ public class LivePlaylistBuilder : ILivePlaylistBuilder
             sb.AppendLine("#EXT-X-ENDLIST");
         }
 
+        return sb.ToString();
+    }
+
+    private static string BuildFullDurationVod(LivePlaylistRequest request, TimeSpan total)
+    {
+        double segmentDuration =
+            request.TargetSegmentDuration.TotalSeconds > 0
+                ? request.TargetSegmentDuration.TotalSeconds
+                : 6;
+        double totalSeconds = total.TotalSeconds;
+        int segmentCount = Math.Max(1, (int)Math.Ceiling(totalSeconds / segmentDuration));
+        int targetDurationSeconds = Math.Max(1, (int)Math.Ceiling(segmentDuration));
+
+        StringBuilder sb = new();
+        sb.AppendLine("#EXTM3U");
+        sb.AppendLine("#EXT-X-VERSION:6");
+        sb.AppendLine(
+            $"#EXT-X-TARGETDURATION:{targetDurationSeconds.ToString(CultureInfo.InvariantCulture)}"
+        );
+        sb.AppendLine("#EXT-X-MEDIA-SEQUENCE:0");
+        sb.AppendLine("#EXT-X-PLAYLIST-TYPE:VOD");
+
+        for (int index = 0; index < segmentCount; index++)
+        {
+            double start = index * segmentDuration;
+            double duration = Math.Min(segmentDuration, totalSeconds - start);
+            if (duration <= 0)
+                duration = segmentDuration;
+
+            sb.AppendLine($"#EXTINF:{duration.ToString("F3", CultureInfo.InvariantCulture)},");
+            sb.AppendLine(
+                request.SegmentUrlTemplate.Replace(
+                    "{index}",
+                    index.ToString(CultureInfo.InvariantCulture)
+                )
+            );
+        }
+
+        sb.AppendLine("#EXT-X-ENDLIST");
         return sb.ToString();
     }
 

@@ -22,4 +22,16 @@ public interface IMediaAnalyzer
         IStorage sourceStorage,
         CancellationToken ct = default
     );
+
+    /// <summary>
+    /// Analyze a source, emitting <paramref name="extraInputArgs"/> (e.g. an HTTP
+    /// "-headers" auth line) before the input. When <paramref name="filePath"/> is
+    /// an http(s) URL it is probed directly; otherwise it falls back to the
+    /// scope-validated filesystem path.
+    /// </summary>
+    Task<MediaInfo> AnalyzeAsync(
+        string filePath,
+        string[]? extraInputArgs,
+        CancellationToken ct = default
+    );
 }

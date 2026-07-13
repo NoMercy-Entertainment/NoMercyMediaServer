@@ -38,7 +38,16 @@ public class LiveTranscodeController(ILiveTranscodeService service) : BaseContro
         CancellationToken ct = default
     )
     {
-        return MapResult(await service.StartSessionAsync(User.UserId(), request, deviceId, ct));
+        // The transcoder self-ingests library sources over the server's own HTTP
+        // serving port (backend-agnostic), which requires the caller's bearer token.
+        string authHeader = Request.Headers.Authorization.ToString();
+        string? accessToken = authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+            ? authHeader["Bearer ".Length..].Trim()
+            : null;
+
+        return MapResult(
+            await service.StartSessionAsync(User.UserId(), request, deviceId, accessToken, ct)
+        );
     }
 
     [HttpGet("sessions/{sessionId}/playlist.m3u8")]
@@ -52,9 +61,14 @@ public class LiveTranscodeController(ILiveTranscodeService service) : BaseContro
     }
 
     [HttpGet("sessions/{sessionId}/segment/{epoch}/{index:int}.ts")]
-    public IActionResult GetSegment(string sessionId, string epoch, int index)
+    public async Task<IActionResult> GetSegment(
+        string sessionId,
+        string epoch,
+        int index,
+        CancellationToken ct = default
+    )
     {
-        LiveResult result = service.GetSegment(sessionId, epoch, index);
+        LiveResult result = await service.GetSegmentAsync(sessionId, epoch, index, ct);
         if (result.Kind != LiveResultKind.Ok)
             return MapResult(result);
 

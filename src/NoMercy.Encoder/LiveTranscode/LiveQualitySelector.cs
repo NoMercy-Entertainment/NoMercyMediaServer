@@ -53,7 +53,15 @@ public class LiveQualitySelector(ICodecResolver codecResolver, IHardwareCapabili
                 continue;
 
             qualities.Add(
-                BuildQuality(tierWidth, tierHeight, targetCodec, resolved, speeds, deviceName, isHardwareAccelerated)
+                BuildQuality(
+                    tierWidth,
+                    tierHeight,
+                    targetCodec,
+                    resolved,
+                    speeds,
+                    deviceName,
+                    isHardwareAccelerated
+                )
             );
         }
 
@@ -155,29 +163,30 @@ public class LiveQualitySelector(ICodecResolver codecResolver, IHardwareCapabili
         return optimal;
     }
 
-    // Choose the preferred video codec: pick from the client's supported codecs in priority order
+    // Choose the transcode target codec by honouring the CLIENT's own
+    // preference order. A client lists codecs best-first: browsers put H264
+    // first because it is the most reliably MSE-decodable, then HEVC/AV1 as
+    // bandwidth-saving fallbacks. Imposing a server-side "H265 first" order
+    // here defeated the point of transcoding for a browser — it handed an HEVC
+    // stream to a client that only listed HEVC as a last resort. Pick the first
+    // codec the client lists that we can actually encode.
+    private static readonly VideoCodecType[] EncodableCodecs =
+    [
+        VideoCodecType.H264,
+        VideoCodecType.H265,
+        VideoCodecType.Av1,
+        VideoCodecType.Vp9,
+    ];
+
     private static VideoCodecType ResolveTargetCodec(ClientCapabilities client)
     {
-        VideoCodecType[] preferred =
-        [
-            VideoCodecType.H265,
-            VideoCodecType.H264,
-            VideoCodecType.Vp9,
-            VideoCodecType.Av1,
-        ];
-
-        // Only consider codecs the client explicitly listed as supported.
-        if (client.SupportedVideoCodecs.Length > 0)
+        foreach (VideoCodecType codec in client.SupportedVideoCodecs)
         {
-            foreach (VideoCodecType codec in preferred)
-            {
-                if (client.SupportedVideoCodecs.Contains(codec))
-                    return codec;
-            }
+            if (EncodableCodecs.Contains(codec))
+                return codec;
         }
 
-        // Explicit fallback — empty list or no intersection. H264 is almost
-        // universally supported.
+        // Empty list or nothing we can encode — H264 is the universal baseline.
         return VideoCodecType.H264;
     }
 

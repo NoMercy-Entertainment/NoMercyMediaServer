@@ -38,14 +38,23 @@ public class PlaybackDecisionEngine : IPlaybackDecisionEngine
         bool bitrateOk = client.MaxBitrateKbps <= 0 || video.BitRateKbps <= client.MaxBitrateKbps;
         bool hdrOk = !video.IsHdr || client.SupportsHdr;
 
-        // Video needs transcode — codec, resolution, or HDR incompatible
-        if (!videoCodecOk || !resolutionOk || !hdrOk)
+        // A client that lists the codec (e.g. HEVC) but not 10-bit still cannot
+        // decode a 10-bit stream. Without this gate a 10-bit HEVC source is
+        // judged "codec compatible" and gets remuxed (copied) straight through,
+        // handing the browser bytes it can't decode. Treat excess bit-depth
+        // exactly like an unsupported codec — it forces a real transcode down
+        // to 8-bit.
+        bool bitDepthOk = video.BitDepth <= 8 || client.Supports10Bit;
+
+        // Video needs transcode — codec, resolution, bit-depth, or HDR incompatible
+        if (!videoCodecOk || !resolutionOk || !hdrOk || !bitDepthOk)
         {
             string reason =
                 !videoCodecOk ? $"Client doesn't support {video.Codec}"
                 : !resolutionOk
                     ? $"Resolution {video.Width}x{video.Height} exceeds client max {client.MaxWidth}x{client.MaxHeight}"
-                : "Client doesn't support HDR";
+                : !hdrOk ? "Client doesn't support HDR"
+                : $"Client doesn't support {video.BitDepth}-bit video";
 
             return new(PlaybackAction.TranscodeVideo, reason, null);
         }
@@ -84,7 +93,10 @@ public class PlaybackDecisionEngine : IPlaybackDecisionEngine
     private static bool IsContainerCompatible(string format, ClientCapabilities client)
     {
         string? container = MapContainer(format);
-        return container is not null && client.SupportedContainers.Contains(container);
+        return container is not null
+            && client.SupportedContainers.Any(c =>
+                c.Equals(container, StringComparison.OrdinalIgnoreCase)
+            );
     }
 
     private static VideoCodecType? MapVideoCodec(string codec) =>
@@ -117,9 +129,12 @@ public class PlaybackDecisionEngine : IPlaybackDecisionEngine
         {
             string f when f.Contains("matroska") => "mkv",
             string f when f.Contains("mp4") || f.Contains("mov") => "mp4",
-            "mpegts" => "ts",
-            "hls" => "hls",
-            "flac" => "flac",
+            string f when f.Contains("mpegts") => "ts",
+            // ffprobe reports an HLS playlist as "hls,applehttp" (or "applehttp"),
+            // never a bare "hls" — an exact match here silently missed every HLS
+            // source and forced a needless remux session.
+            string f when f.Contains("hls") || f.Contains("applehttp") => "hls",
+            string f when f.Contains("flac") => "flac",
             _ => null,
         };
 }

@@ -322,7 +322,6 @@ public class LiveFfmpegRunner(
 
         IReadOnlyList<(int Index, TimeSpan Duration)> entries = ParsePlaylist(playlistPath);
 
-        TimeSpan runningStart = TimeSpan.Zero;
         foreach ((int index, TimeSpan duration) in entries)
         {
             string segmentFile = Path.Combine(
@@ -331,16 +330,12 @@ public class LiveFfmpegRunner(
             );
 
             if (seen.Contains(index))
-            {
-                runningStart += duration;
                 continue;
-            }
 
             if (!storage.Exists(segmentFile))
             {
                 // The m3u8 can reference a segment before the file has finished
                 // its atomic rename — wait for the next poll.
-                runningStart += duration;
                 continue;
             }
 
@@ -354,10 +349,14 @@ public class LiveFfmpegRunner(
                 // Race with rename — size stays 0, pick up real value next time
             }
 
-            Segment segment = new(index, runningStart, duration, segmentFile, size);
+            // Segments are absolutely indexed (see LiveFfmpegArgumentBuilder), so
+            // a segment's start is its index times the target duration — not a sum
+            // accumulated from this runner's first segment, which would be wrong
+            // for a runner spawned mid-file by a seek.
+            TimeSpan startTime = TimeSpan.FromSeconds((double)index * input.SegmentDurationSeconds);
+            Segment segment = new(index, startTime, duration, segmentFile, size);
             session.PushSegment(segment);
             seen.Add(index);
-            runningStart += duration;
         }
     }
 

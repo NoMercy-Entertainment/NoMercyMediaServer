@@ -35,6 +35,18 @@ public class BufferAdaptiveService(
 {
     private static readonly TimeSpan EvalInterval = TimeSpan.FromSeconds(5);
 
+    // A runner that just (re)started needs a few seconds to write its first
+    // segment; until then its buffer is legitimately near-zero. Acting inside
+    // this window would misread that as "drop quality" and cancel the fresh
+    // runner every sweep, so a seek / quality-change / resume never completes.
+    private static readonly TimeSpan TranscodeWarmup = TimeSpan.FromSeconds(10);
+
+    // FFmpeg speed (× realtime) above which the encoder is comfortably keeping up.
+    // A low client buffer while the encoder runs this fast just means the viewer
+    // is near the production frontier (normal right after a seek), not that the
+    // hardware can't sustain the resolution — so quality must not be dropped.
+    private const double QualityKeepUpSpeed = 1.2;
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         logger.LogDebug("BufferAdaptiveService started (eval interval = 5 s)");
@@ -75,6 +87,22 @@ public class BufferAdaptiveService(
 
             bool isSuspended = session.State == LiveSessionState.Buffered;
             BufferAction action = bufferManager.Evaluate(session.BufferAhead, isSuspended);
+
+            // Suppress adaptive actions during the warm-up window after a
+            // (re)start so the fresh runner is left alone to fill its buffer; the
+            // client's own request pacing drives production in the meantime. State
+            // is still reported below.
+            if (DateTime.UtcNow - session.LastTranscodeStart < TranscodeWarmup)
+                action = BufferAction.None;
+
+            // Keep resolution up while the encoder is out-running realtime: a thin
+            // buffer then reflects where the viewer is, not a struggling GPU.
+            // Suspend/Resume still apply — only the quality drops are gated.
+            if (
+                action is BufferAction.DropQuality or BufferAction.EmergencyDropQuality
+                && session.CurrentSpeed >= QualityKeepUpSpeed
+            )
+                action = BufferAction.None;
 
             switch (action)
             {

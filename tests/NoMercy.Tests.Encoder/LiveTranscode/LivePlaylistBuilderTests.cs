@@ -149,6 +149,35 @@ public class LivePlaylistBuilderTests
     }
 
     [Fact]
+    public void Build_WithTotalDuration_EmitsWholeRuntimeVodListingEverySegment()
+    {
+        // 20s total, 6s segments → 4 segments (6+6+6+2), VOD + ENDLIST, listed
+        // up front regardless of how few have actually been produced (only one
+        // buffered here). This is what lets the client show a full-length bar.
+        LivePlaylistRequest request = new(
+            SessionId: "s",
+            Segments: [MakeSegment(0, 0, 6)],
+            TargetSegmentDuration: TimeSpan.FromSeconds(6),
+            IsComplete: false,
+            SegmentUrlTemplate: "/seg/{index}.ts",
+            TotalDuration: TimeSpan.FromSeconds(20)
+        );
+
+        string playlist = _builder.Build(request);
+
+        playlist.Should().Contain("#EXT-X-PLAYLIST-TYPE:VOD");
+        playlist.Should().Contain("#EXT-X-ENDLIST");
+        playlist.Should().NotContain("#EXT-X-PLAYLIST-TYPE:EVENT");
+        playlist.Should().Contain("/seg/0.ts");
+        playlist.Should().Contain("/seg/1.ts");
+        playlist.Should().Contain("/seg/2.ts");
+        playlist.Should().Contain("/seg/3.ts");
+        playlist.Should().NotContain("/seg/4.ts");
+        // Last segment is the 2s remainder, not a full 6s.
+        playlist.Should().Contain("#EXTINF:2.000,");
+    }
+
+    [Fact]
     public void Build_InvariantCulture_AlwaysUsesDotAsDecimalSeparator()
     {
         CultureInfo prev = Thread.CurrentThread.CurrentCulture;

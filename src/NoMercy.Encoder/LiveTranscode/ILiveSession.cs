@@ -39,6 +39,21 @@ public interface ILiveSession : IAsyncDisposable
     void ReportPlaybackPosition(TimeSpan position);
 
     /// <summary>
+    /// UTC time the current FFmpeg runner was (re)started — session start, seek,
+    /// quality change, or resume. <see cref="DateTime.MinValue"/> until the first
+    /// runner is spawned. The buffer-adaptive sweep uses it as a warm-up grace so
+    /// it does not act on the legitimately-empty buffer of a runner that has not
+    /// yet written its first segment.
+    /// </summary>
+    DateTime LastTranscodeStart { get; }
+
+    /// <summary>
+    /// Stamps <see cref="LastTranscodeStart"/> with the current UTC time. Called
+    /// at every point a new runner is dispatched.
+    /// </summary>
+    void MarkTranscodeStart();
+
+    /// <summary>
     /// Attaches the factory that <see cref="SeekAsync"/> uses to spawn a
     /// replacement runner. Called once by <see cref="LiveEncoder"/> immediately
     /// after the session is created.

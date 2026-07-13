@@ -21,7 +21,10 @@ public record LiveRunInput(
     int SegmentDurationSeconds,
     ClientCapabilities? Client = null,
     MediaInfo? SourceInfo = null,
-    Dictionary<string, string>? CustomArguments = null
+    Dictionary<string, string>? CustomArguments = null,
+    // ffmpeg input options emitted before "-i" (e.g. "-headers" for an
+    // authenticated HTTP self-ingest URL). Null for a plain filesystem input.
+    string[]? ExtraInputArgs = null
 );
 
 /// <summary>

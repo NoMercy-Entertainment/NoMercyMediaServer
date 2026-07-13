@@ -119,11 +119,19 @@ public class LiveFfmpegRunnerTests
         string[] args = LiveFfmpegRunner.BuildArguments(input);
 
         args.Should().NotContain("-ss");
+        // The first run still numbers its segments from zero.
+        args.Should().Contain("-start_number");
+        args[Array.IndexOf(args, "-start_number") + 1].Should().Be("0");
     }
 
     [Fact]
-    public void BuildArguments_IncludesSeek_WhenStartPositionNonZero()
+    public void BuildArguments_SeekSnapsToSegmentBoundary_AndNumbersFromThatIndex()
     {
+        // 120.5s with 6s segments falls inside absolute segment 20 (120–126s).
+        // The input seek snaps to that segment's start and the muxer numbers its
+        // first output segment 20, so seg_00020.ts maps 1:1 to the index hls.js
+        // requests from the whole-runtime playlist. hls.js resolves the 0.5s
+        // sub-segment offset by seeking inside the segment.
         LiveRunInput input = new(
             InputPath: "/media/in.mkv",
             OutputDirectory: "/tmp/live",
@@ -136,7 +144,17 @@ public class LiveFfmpegRunnerTests
 
         int ssIdx = Array.IndexOf(args, "-ss");
         ssIdx.Should().BeGreaterThanOrEqualTo(0);
-        args[ssIdx + 1].Should().Be("120.500");
+        args[ssIdx + 1].Should().Be("120.000");
+
+        int startNumberIdx = Array.IndexOf(args, "-start_number");
+        startNumberIdx.Should().BeGreaterThanOrEqualTo(0);
+        args[startNumberIdx + 1].Should().Be("20");
+
+        // Muxed PTS is shifted to the segment's true start so hls.js places the
+        // seek fragment at 120s (20×6) instead of 0.
+        int offsetIdx = Array.IndexOf(args, "-output_ts_offset");
+        offsetIdx.Should().BeGreaterThanOrEqualTo(0);
+        args[offsetIdx + 1].Should().Be("120.000");
     }
 
     [Fact]

@@ -100,6 +100,68 @@ public class PlaybackDecisionEngineTests
             MaxBitrateKbps: maxBitrateKbps
         );
 
+    // SDR 10-bit: 10-bit is a decoder trait independent of HDR. NoMercy's own
+    // HLS output is frequently SDR 10-bit HEVC.
+    private static VideoStreamInfo MakeVideo10BitSdr(string codec) =>
+        new(
+            Index: 0,
+            Codec: codec,
+            Width: 1920,
+            Height: 1080,
+            FrameRate: 24.0,
+            BitDepth: 10,
+            PixelFormat: "yuv420p10le",
+            ColorPrimaries: "bt709",
+            ColorTransfer: "bt709",
+            ColorSpace: "bt709",
+            IsDefault: true,
+            BitRateKbps: 8000
+        );
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Bit depth
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Hevc10BitSdr_ClientHasCodecButNo10Bit_TranscodesVideo()
+    {
+        // The exact real-world case: browser lists HEVC but not 10-bit, source is
+        // SDR 10-bit HEVC HLS. Without the bit-depth gate this was judged "codec
+        // compatible" and remuxed through as undecodable 10-bit.
+        MediaInfo media = MakeMedia("hls", MakeVideo10BitSdr("hevc"), MakeAudio("aac"));
+
+        ClientCapabilities client = MakeClient(
+            [VideoCodecType.H265],
+            [AudioCodecType.Aac],
+            ["hls"],
+            supportsHdr: true,
+            supports10Bit: false
+        );
+
+        PlaybackDecision decision = _engine.Decide(media, client);
+
+        decision.Action.Should().Be(PlaybackAction.TranscodeVideo);
+        decision.Reason.Should().Contain("10-bit");
+    }
+
+    [Fact]
+    public void Hevc10BitSdr_ClientSupports10Bit_DirectPlay()
+    {
+        MediaInfo media = MakeMedia("hls", MakeVideo10BitSdr("hevc"), MakeAudio("aac"));
+
+        ClientCapabilities client = MakeClient(
+            [VideoCodecType.H265],
+            [AudioCodecType.Aac],
+            ["hls"],
+            supportsHdr: true,
+            supports10Bit: true
+        );
+
+        PlaybackDecision decision = _engine.Decide(media, client);
+
+        decision.Action.Should().Be(PlaybackAction.DirectPlay);
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     // Direct play
     // ──────────────────────────────────────────────────────────────────────────

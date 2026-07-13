@@ -39,6 +39,13 @@ public class LiveEncoder(
 
         string sessionId = Ulid.NewUlid().ToString();
         LiveSession session = new(sessionId, quality);
+
+        // Seed the playhead at the start position. Segments are absolutely indexed
+        // so a resumed/seeked session's transcoded position is absolute too; if the
+        // playhead stayed at zero, BufferAhead would read as the whole start offset
+        // and the buffer-adaptive sweep could suspend the encoder before the client
+        // has fetched its first segment. Segment fetches keep it current thereafter.
+        session.ReportPlaybackPosition(request.StartPosition);
         session.SetState(LiveSessionState.Starting);
 
         // Flip to Transcoding eagerly so API consumers see the session as live
@@ -73,7 +80,8 @@ public class LiveEncoder(
                 SegmentDurationSeconds: options.DefaultSegmentDurationSeconds,
                 Client: request.Client,
                 SourceInfo: request.CachedInfo,
-                CustomArguments: request.CustomArguments
+                CustomArguments: request.CustomArguments,
+                ExtraInputArgs: request.ExtraInputArgs
             );
 
             try
@@ -95,6 +103,7 @@ public class LiveEncoder(
 
         session.AttachRunnerFactory(SpawnRunner);
 
+        session.MarkTranscodeStart();
         _ = Task.Run(
             () => SpawnRunner(request.StartPosition, session.RunnerCancellation),
             CancellationToken.None

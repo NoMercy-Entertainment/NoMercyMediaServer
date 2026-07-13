@@ -54,10 +54,24 @@ internal static class LiveFfmpegArgumentBuilder
 
         List<string> args = ["-hide_banner", "-nostats", "-loglevel", "error"];
 
-        if (input.StartPosition > TimeSpan.Zero)
+        // Input options (e.g. the "-headers" auth line for an HTTP self-ingest URL)
+        // must precede "-i" to bind to the input that follows.
+        if (input.ExtraInputArgs is { Length: > 0 })
+            args.AddRange(input.ExtraInputArgs);
+
+        // Absolute segment indexing. The playlist the client sees lists every
+        // segment for the whole runtime up front, so segment N must always mean
+        // source time [N*segDur, (N+1)*segDur) no matter which position this
+        // runner was spawned at. Snap the input seek to the segment boundary and
+        // number the muxer's output from that same index (see AppendHls's
+        // -start_number) so a runner spawned by a seek produces seg_N that maps
+        // 1:1 to the index hls.js requests. Any sub-segment offset the user
+        // actually seeked to is resolved by hls.js seeking within the segment.
+        int startIndex = StartSegmentIndex(input);
+        if (startIndex > 0)
         {
             args.Add("-ss");
-            args.Add(FormatSeconds(input.StartPosition.TotalSeconds));
+            args.Add(FormatSeconds((double)startIndex * input.SegmentDurationSeconds));
         }
 
         args.Add("-i");
@@ -73,7 +87,22 @@ internal static class LiveFfmpegArgumentBuilder
 
         AppendAudio(args, input, action);
 
-        AppendHls(args, input, segmentPattern);
+        // Absolute output timestamps. A runner spawned by a seek uses "-ss" before
+        // the input, which resets output PTS to ~0. hls.js then has to reconcile a
+        // segment whose PTS starts at 0 against a playlist that places it deep in
+        // the timeline, and across the implicit discontinuity (no EXT-X-DISCONTINUITY
+        // in a whole-runtime VOD playlist) it mis-positions the fragment and never
+        // appends it — the seek "loads forever". Shifting the muxed PTS back to the
+        // segment's true start makes segment N carry PTS ≈ N×segDur, matching the
+        // playlist exactly, so no client-side remapping is needed. Zero for the
+        // start-at-zero runner, so the common case is unchanged.
+        if (startIndex > 0)
+        {
+            args.Add("-output_ts_offset");
+            args.Add(FormatSeconds((double)startIndex * input.SegmentDurationSeconds));
+        }
+
+        AppendHls(args, input, segmentPattern, startIndex);
 
         if (input.CustomArguments is { Count: > 0 })
             AppendCustomArguments(args, input.CustomArguments);
@@ -256,7 +285,12 @@ internal static class LiveFfmpegArgumentBuilder
         args.Add(outputChannels.ToString(CultureInfo.InvariantCulture));
     }
 
-    private static void AppendHls(List<string> args, LiveRunInput input, string segmentPattern)
+    private static void AppendHls(
+        List<string> args,
+        LiveRunInput input,
+        string segmentPattern,
+        int startIndex
+    )
     {
         args.Add("-f");
         args.Add("hls");
@@ -264,12 +298,31 @@ internal static class LiveFfmpegArgumentBuilder
         args.Add(input.SegmentDurationSeconds.ToString(CultureInfo.InvariantCulture));
         args.Add("-hls_list_size");
         args.Add("0");
+        // Number the first output segment with its absolute index so a runner
+        // spawned at a seek position writes seg_{startIndex}.ts onward, matching
+        // the whole-runtime playlist the client already holds.
+        args.Add("-start_number");
+        args.Add(startIndex.ToString(CultureInfo.InvariantCulture));
         args.Add("-hls_playlist_type");
         args.Add("event");
         args.Add("-hls_flags");
         args.Add("independent_segments+temp_file");
         args.Add("-hls_segment_filename");
         args.Add(segmentPattern);
+    }
+
+    /// <summary>
+    /// Absolute HLS segment index the first output segment of this run carries.
+    /// Floors the (boundary-aligned) start position to whole segments so
+    /// segment N always spans source time [N*segDur, (N+1)*segDur) regardless of
+    /// which position the runner was spawned at.
+    /// </summary>
+    private static int StartSegmentIndex(LiveRunInput input)
+    {
+        if (input.SegmentDurationSeconds <= 0 || input.StartPosition <= TimeSpan.Zero)
+            return 0;
+
+        return (int)(input.StartPosition.TotalSeconds / input.SegmentDurationSeconds);
     }
 
     // Profile/plugin CustomArguments escape hatch — merged last so author

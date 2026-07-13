@@ -98,23 +98,24 @@ public class LiveQualitySelectorTests
         new(
             new()
             {
-                // Client supports H264+H265; selector prefers H265 → resolves hevc_nvenc on NVIDIA
-                [new(VideoCodecType.H265, "hevc_nvenc", 3840, "RTX 4090")] = new(
+                // Client lists H264 first (its own preference order), so the selector
+                // targets H264 → resolves h264_nvenc on NVIDIA.
+                [new(VideoCodecType.H264, "h264_nvenc", 3840, "RTX 4090")] = new(
                     100.0,
                     4.0,
                     DateTime.UtcNow
                 ),
-                [new(VideoCodecType.H265, "hevc_nvenc", 1920, "RTX 4090")] = new(
+                [new(VideoCodecType.H264, "h264_nvenc", 1920, "RTX 4090")] = new(
                     180.0,
                     7.5,
                     DateTime.UtcNow
                 ),
-                [new(VideoCodecType.H265, "hevc_nvenc", 1280, "RTX 4090")] = new(
+                [new(VideoCodecType.H264, "h264_nvenc", 1280, "RTX 4090")] = new(
                     240.0,
                     10.0,
                     DateTime.UtcNow
                 ),
-                [new(VideoCodecType.H265, "hevc_nvenc", 854, "RTX 4090")] = new(
+                [new(VideoCodecType.H264, "h264_nvenc", 854, "RTX 4090")] = new(
                     300.0,
                     12.5,
                     DateTime.UtcNow
@@ -123,6 +124,28 @@ public class LiveQualitySelectorTests
         );
 
     private static SpeedIndex MakeEmptySpeedIndex() => new(new());
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Target codec honours client preference order
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void ClientListsH264First_TargetsH264NotH265()
+    {
+        // Regression guard: the selector used to force an H265-first server order,
+        // handing HEVC to a browser that listed H264 first for reliability. It must
+        // honour the client's own order — here H264.
+        IHardwareCapabilities hardware = MakeGpuHardware();
+        MediaInfo media = MakeMedia(1920, 1080);
+        ClientCapabilities client = MakeClient(); // lists [H264, H265]
+        SpeedIndex speeds = MakeFastGpuSpeedIndex();
+        IResourceBudget budget = MakeBudget(hardware);
+
+        LiveQuality[] qualities = _gpuSelector.GetAvailableQualities(media, client, speeds, budget);
+
+        qualities.Should().NotBeEmpty();
+        qualities.Should().OnlyContain(q => q.Codec == VideoCodecType.H264);
+    }
 
     // ──────────────────────────────────────────────────────────────────────────
     // GetAvailableQualities

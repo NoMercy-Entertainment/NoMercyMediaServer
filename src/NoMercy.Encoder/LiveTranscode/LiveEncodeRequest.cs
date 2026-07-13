@@ -19,5 +19,8 @@ public record LiveEncodeRequest(
     ClientCapabilities Client,
     TimeSpan StartPosition,
     string? PreferredQuality,
-    Dictionary<string, string>? CustomArguments = null
+    Dictionary<string, string>? CustomArguments = null,
+    // ffmpeg input options emitted before "-i" — carries the auth header when
+    // InputPath is an authenticated HTTP self-ingest URL. Null for a filesystem input.
+    string[]? ExtraInputArgs = null
 );
