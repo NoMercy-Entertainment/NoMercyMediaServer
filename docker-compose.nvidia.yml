@@ -30,6 +30,10 @@ services:
       # Configuration and data persistence
       # The app stores all data under $HOME/.local/share/NoMercy/
       - nomercy-data:/data/.local/share/NoMercy
+      # Host machine-id (read-only): gives the container a stable, unique server
+      # identity that survives `docker compose down/up` and container recreation.
+      # Without it, a recreated container registers as a brand-new server.
+      - /etc/machine-id:/etc/machine-id:ro
       # Mount your media libraries (adjust paths as needed)
       # rw = read-write for metadata, thumbnails, and transcoding
       - /path/to/your/movies:/media/movies:rw

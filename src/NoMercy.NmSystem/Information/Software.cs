@@ -43,9 +43,27 @@ public static class Software
 
     internal static Guid GetDeviceId()
     {
+        bool inContainer =
+            Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") is "true" or "1";
+
         string? generatedId = new DeviceIdBuilder()
             .OnWindows(windows => windows.AddMotherboardSerialNumber().AddSystemDriveSerialNumber())
-            .OnLinux(linux => linux.AddMotherboardSerialNumber().AddSystemDriveSerialNumber())
+            .OnLinux(linux =>
+            {
+                linux.AddMotherboardSerialNumber().AddSystemDriveSerialNumber();
+
+                // Inside a container the motherboard/drive serials live in root-only
+                // DMI/sysfs files, so the non-root app user reads them back empty and
+                // every recreated container collapses onto the same degenerate id —
+                // recreating the container then registers a brand-new server each time.
+                // The host machine-id (bind-mounted read-only by the shipped compose)
+                // is a stable, unique-per-host token the non-root process CAN read, so a
+                // recreated container keeps its identity. Gated to containers only: the
+                // bare-metal fingerprint is unchanged, so already-registered hosts keep
+                // the exact id their DNS subdomain and certificate were issued for.
+                if (inContainer)
+                    linux.AddMachineId();
+            })
             .OnMac(mac => mac.AddSystemDriveVolumeUUID().AddPlatformSerialNumber())
             .ToString();
 

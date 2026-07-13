@@ -159,6 +159,9 @@ docker pull ghcr.io/nomercy-entertainment/nomercymediaserver:amd       # AMD
 > [!IMPORTANT]
 > Export `HOST_IP` before running — the compose files use it for `NOMERCY_INTERNAL_IP`. Edit the compose file to update media volume paths.
 
+> [!IMPORTANT]
+> The server derives a stable identity from the host `machine-id`, which the compose files mount read-only. If you run the image directly with `docker run` instead of compose, pass `-v /etc/machine-id:/etc/machine-id:ro` as well. Without it a recreated container reads an empty id and registers as a brand new server.
+
 ### Build from Source
 
 Requires the [.NET 10.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0).
