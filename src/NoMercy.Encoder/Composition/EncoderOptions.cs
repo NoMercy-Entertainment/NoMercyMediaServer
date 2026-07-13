@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Text;
+using NoMercy.NmSystem.Information;
 using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Composition;
@@ -128,13 +129,14 @@ public class EncoderOptions
     /// Parent directory for live transcode scratch folders. Each live session
     /// gets its own subfolder <c>{this}/{sessionId}</c> that holds the HLS
     /// playlist + .ts segments emitted by FFmpeg. Caller is responsible for
-    /// cleanup when the session ends. Defaults to
-    /// <see cref="Path.GetTempPath"/><c>/nomercy-live</c>.
+    /// cleanup when the session ends. Defaults to the app's controlled transcode
+    /// cache (<see cref="AppFiles.TranscodePath"/>) so live scratch stays under
+    /// the managed data folder instead of the system temp directory.
     /// </summary>
     public string? LiveTranscodeCachePath { get; set; }
 
     public string ResolvedLiveTranscodeCachePath =>
-        LiveTranscodeCachePath ?? Path.Combine(Path.GetTempPath(), "nomercy-live");
+        LiveTranscodeCachePath ?? AppFiles.TranscodePath;
 
     /// <summary>
     /// Shared secret that signs distributed-encoding payloads between the
