@@ -41,10 +41,10 @@ public class DeviceIdentityResolverTests : IDisposable
     }
 
     [Fact]
-    public void ResolveAndPersist_PersistedId_IsStableAcrossCalls()
+    public void ResolveAndPersist_Container_PersistedId_IsStableAcrossCalls()
     {
-        Guid first = DeviceIdentityResolver.ResolveAndPersist(_context);
-        Guid second = DeviceIdentityResolver.ResolveAndPersist(_context);
+        Guid first = DeviceIdentityResolver.ResolveAndPersist(_context, inContainer: true);
+        Guid second = DeviceIdentityResolver.ResolveAndPersist(_context, inContainer: true);
 
         Assert.Equal(first, second);
 
@@ -56,12 +56,15 @@ public class DeviceIdentityResolverTests : IDisposable
     }
 
     [Fact]
-    public void ResolveAndPersist_NoPriorRegistration_GetsUniqueNonCollidingId()
+    public void ResolveAndPersist_Container_NoPriorRegistration_GetsUniqueNonCollidingId()
     {
         using AppDbContext otherInstall = CreateFreshContext();
 
-        Guid firstInstallId = DeviceIdentityResolver.ResolveAndPersist(_context);
-        Guid secondInstallId = DeviceIdentityResolver.ResolveAndPersist(otherInstall);
+        Guid firstInstallId = DeviceIdentityResolver.ResolveAndPersist(_context, inContainer: true);
+        Guid secondInstallId = DeviceIdentityResolver.ResolveAndPersist(
+            otherInstall,
+            inContainer: true
+        );
 
         Assert.NotEqual(Guid.Empty, firstInstallId);
         Assert.NotEqual(Guid.Empty, secondInstallId);
@@ -69,7 +72,7 @@ public class DeviceIdentityResolverTests : IDisposable
     }
 
     [Fact]
-    public void ResolveAndPersist_EvidenceOfPriorRegistration_KeepsHardwareDerivedId()
+    public void ResolveAndPersist_Container_EvidenceOfPriorRegistration_KeepsHardwareDerivedId()
     {
         _context.Configuration.Add(
             new() { Key = "ssl_certificate", SecureValue = "existing-cert" }
@@ -77,7 +80,7 @@ public class DeviceIdentityResolverTests : IDisposable
         _context.Configuration.Add(new() { Key = "ssl_private_key", SecureValue = "existing-key" });
         _context.SaveChanges();
 
-        Guid resolvedId = DeviceIdentityResolver.ResolveAndPersist(_context);
+        Guid resolvedId = DeviceIdentityResolver.ResolveAndPersist(_context, inContainer: true);
 
         Assert.Equal(Info.DeviceId, resolvedId);
 
@@ -87,7 +90,33 @@ public class DeviceIdentityResolverTests : IDisposable
     }
 
     [Fact]
-    public void ResolveAndPersist_DegenerateHardwareId_MigratesEvenWithPriorRegistrationEvidence()
+    public void ResolveAndPersist_BareMetal_DegenerateHardwareId_IsKeptAndCertPreserved()
+    {
+        // Stoney's regression: a bare-metal box whose DMI reads empty hashes to a
+        // known-degenerate value, but its DNS subdomain + certificate were issued
+        // for exactly that id. It must NOT be migrated off the machine — the id is
+        // returned untouched and the certificate rows are preserved.
+        Guid knownDegenerateId = KnownDegenerateDeviceIds.Values.First();
+
+        _context.Configuration.Add(
+            new() { Key = "ssl_certificate", SecureValue = "existing-cert" }
+        );
+        _context.Configuration.Add(new() { Key = "ssl_private_key", SecureValue = "existing-key" });
+        _context.SaveChanges();
+
+        Guid resolvedId = DeviceIdentityResolver.ResolveAndPersist(
+            _context,
+            knownDegenerateId,
+            inContainer: false
+        );
+
+        Assert.Equal(knownDegenerateId, resolvedId);
+        Assert.NotNull(_context.Configuration.FirstOrDefault(c => c.Key == "ssl_certificate"));
+        Assert.NotNull(_context.Configuration.FirstOrDefault(c => c.Key == "ssl_private_key"));
+    }
+
+    [Fact]
+    public void ResolveAndPersist_Container_DegenerateHardwareId_MigratesEvenWithPriorRegistrationEvidence()
     {
         Guid knownDegenerateId = KnownDegenerateDeviceIds.Values.First();
 
@@ -103,7 +132,11 @@ public class DeviceIdentityResolverTests : IDisposable
         );
         _context.SaveChanges();
 
-        Guid resolvedId = DeviceIdentityResolver.ResolveAndPersist(_context, knownDegenerateId);
+        Guid resolvedId = DeviceIdentityResolver.ResolveAndPersist(
+            _context,
+            knownDegenerateId,
+            inContainer: true
+        );
 
         Assert.NotEqual(knownDegenerateId, resolvedId);
         Assert.False(KnownDegenerateDeviceIds.IsDegenerate(resolvedId));
@@ -133,7 +166,7 @@ public class DeviceIdentityResolverTests : IDisposable
     }
 
     [Fact]
-    public void ResolveAndPersist_PersistedDegenerateId_IsReplaced()
+    public void ResolveAndPersist_Container_PersistedDegenerateId_IsReplaced()
     {
         Guid knownDegenerateId = KnownDegenerateDeviceIds.Values.First();
 
@@ -142,7 +175,11 @@ public class DeviceIdentityResolverTests : IDisposable
         );
         _context.SaveChanges();
 
-        Guid resolvedId = DeviceIdentityResolver.ResolveAndPersist(_context, knownDegenerateId);
+        Guid resolvedId = DeviceIdentityResolver.ResolveAndPersist(
+            _context,
+            knownDegenerateId,
+            inContainer: true
+        );
 
         Assert.NotEqual(knownDegenerateId, resolvedId);
         Assert.False(KnownDegenerateDeviceIds.IsDegenerate(resolvedId));
