@@ -236,7 +236,12 @@ public class DegradedModeRecovery : IDegradedModeRecovery
                 LogEventLevel.Warning
             );
 
-            await new Binaries(driver, storage).DownloadAll();
+            // Retry only ffmpeg here, not the full DownloadAll(). The recovery loop
+            // calls this on every backoff tick (30s/1m/5m/15m/30m) — re-fetching all
+            // ten dependency repos' releases/latest on each tick turns one transient
+            // GitHub rate-limit into a self-inflicted, permanent one. Ffmpeg is the
+            // only binary this stage blocks on, so it is the only one retried.
+            await new Binaries(driver, storage).DownloadFfmpeg();
 
             if (storage.Exists(AppFiles.FfmpegPath))
             {
