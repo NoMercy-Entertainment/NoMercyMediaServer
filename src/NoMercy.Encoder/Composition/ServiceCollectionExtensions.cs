@@ -361,6 +361,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISessionManager>(sp => new SessionManager(
             sp.GetRequiredService<LiveSessionLimits>()
         ));
+
+        // Ties a session's lifetime to the SignalR connection watching it so a
+        // hard tab-close / navigation disposes it after a short grace window,
+        // instead of leaking against the concurrency cap until the idle reaper.
+        services.AddSingleton<ILiveSessionPresenceTracker, LiveSessionPresenceTracker>();
         services.AddTransient<ILiveQualitySelector, LiveQualitySelector>();
         services.AddTransient<BufferManager>();
         services.AddSingleton<ISpeedIndexStore, JsonSpeedIndexStore>();

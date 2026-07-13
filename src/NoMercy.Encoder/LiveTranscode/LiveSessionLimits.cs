@@ -25,6 +25,14 @@ public class LiveSessionLimits
     public int IdleTimeoutMinutes { get; set; } = 5;
 
     /// <summary>
+    /// Seconds to wait after a watching client's SignalR connection closes before
+    /// disposing its session. Long enough for an automatic reconnect (network
+    /// blip, brief route change) to re-subscribe and keep playback alive; short
+    /// enough that a real tap-out frees the concurrency slot promptly. Default: 15s.
+    /// </summary>
+    public int DisconnectGraceSeconds { get; set; } = 15;
+
+    /// <summary>
     /// Buffer thresholds used by <see cref="BufferManager"/> to decide whether to
     /// suspend, resume, or drop quality on a live transcode. All in seconds of
     /// buffer-ahead measured from the player's reported playhead.
