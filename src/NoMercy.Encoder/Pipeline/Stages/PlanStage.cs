@@ -131,11 +131,13 @@ public class PlanStage(
 
             if (hardwarePreferenceResolver is not null)
             {
-                SpeedIndex effectiveSpeedIndex =
-                    speedIndex ?? new SpeedIndex(new());
+                SpeedIndex effectiveSpeedIndex = speedIndex ?? new SpeedIndex(new());
 
-                List<string> availableEncoderNames =
-                    ffmpegCapabilities.AvailableEncoders.ToList() ?? [];
+                List<string> availableEncoderNames = ffmpegCapabilities
+                    .AvailableEncoders.Where(encoderName =>
+                        IsHardwareEncoderPhysicallyAvailable(encoderName, hardware)
+                    )
+                    .ToList();
 
                 List<ResolvedCodec> codecList = [];
 
@@ -269,6 +271,31 @@ public class PlanStage(
                 new(EncodingErrorKind.Unknown, $"Planning failed: {ex.Message}", null, Name, false)
             );
         }
+    }
+
+    /// <summary>
+    /// Gate on a physically detected GPU of the matching vendor before an
+    /// ffmpeg-advertised hardware encoder name is treated as selectable.
+    /// <see cref="IFfmpegCapabilities.AvailableEncoders"/> only reflects which
+    /// encoders the running ffmpeg binary was compiled with — the NoMercy fork
+    /// advertises every hardware encoder it knows how to build regardless of
+    /// what GPU (if any) is actually installed. Without this gate a host with
+    /// only an NVIDIA card would still see "h264_amf" as available, and
+    /// <see cref="IHardwarePreferenceResolver"/> could pick it — a
+    /// ResourceRequirement pinned to an absent AMD device that can never be
+    /// granted a slot at the resource-budget gate (see <c>ResourceBudget</c> /
+    /// <c>EncodeTaskJob.QueueName</c>).
+    /// </summary>
+    private static bool IsHardwareEncoderPhysicallyAvailable(
+        string ffmpegEncoderName,
+        IHardwareCapabilities hardware
+    )
+    {
+        GpuVendor? requiredVendor = GpuEncoderTokens.VendorForEncoderName(ffmpegEncoderName);
+        if (requiredVendor is null)
+            return true; // software encoder, or a name outside the known vendor lists
+
+        return hardware.Gpus.Any(gpu => gpu.Vendor == requiredVendor);
     }
 
     /// <summary>

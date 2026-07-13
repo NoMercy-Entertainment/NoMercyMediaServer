@@ -63,4 +63,35 @@ public static class GpuEncoderTokens
         "videotoolbox",
         "cuvid",
     ];
+
+    /// <summary>
+    /// Maps an ffmpeg hardware-encoder name to the GPU vendor required to run
+    /// it. Returns null for a software encoder (or any name outside the
+    /// vendor lists above) — callers should treat null as "not vendor-gated".
+    ///
+    /// This is the selection-time counterpart to <see cref="EncoderNamesForVendor"/>
+    /// in <c>ResourceBudget</c>: an encoder name is only a real, runnable
+    /// option when a physically detected GPU of the matching vendor exists —
+    /// ffmpeg's binary capability list alone (which encoders the build was
+    /// compiled with) says nothing about which GPUs are actually installed.
+    /// </summary>
+    public static GpuVendor? VendorForEncoderName(string ffmpegEncoderName)
+    {
+        if (NvencNames.Contains(ffmpegEncoderName, StringComparer.OrdinalIgnoreCase))
+            return GpuVendor.Nvidia;
+
+        if (AmfNames.Contains(ffmpegEncoderName, StringComparer.OrdinalIgnoreCase))
+            return GpuVendor.Amd;
+
+        if (
+            QsvNames.Contains(ffmpegEncoderName, StringComparer.OrdinalIgnoreCase)
+            || VaapiNames.Contains(ffmpegEncoderName, StringComparer.OrdinalIgnoreCase)
+        )
+            return GpuVendor.Intel;
+
+        if (VideotoolboxNames.Contains(ffmpegEncoderName, StringComparer.OrdinalIgnoreCase))
+            return GpuVendor.Apple;
+
+        return null;
+    }
 }
