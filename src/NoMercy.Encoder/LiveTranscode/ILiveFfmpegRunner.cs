@@ -32,7 +32,12 @@ public record LiveRunInput(
     // Emit video only ("-an"). The master playlist references the file's own
     // pre-encoded audio renditions, so muxing audio here would waste CPU and
     // break instant track switching.
-    bool VideoOnly = false
+    bool VideoOnly = false,
+    // Produce an audio-only AAC rendition for the single audio stream at
+    // AudioStreamIndex ("-vn -map 0:a:N"), for a source that has no pre-encoded
+    // renditions (a raw remux). Each source language runs as its own audio-only
+    // transcode so the master can list every language and switch between them.
+    bool AudioRenditionOnly = false
 );
 
 /// <summary>

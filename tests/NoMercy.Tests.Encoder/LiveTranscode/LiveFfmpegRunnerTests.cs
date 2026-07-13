@@ -831,6 +831,59 @@ public class LiveFfmpegRunnerTests
     }
 
     // ──────────────────────────────────────────────────────────────────────────
+    // AudioRenditionOnly — one language transcoded to AAC, no video
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void BuildArguments_AudioRenditionOnly_MapsOneLanguageToAac_NoVideo()
+    {
+        LiveRunInput input = new(
+            InputPath: "/media/remux.mkv",
+            OutputDirectory: "/tmp/live-audio-jpn",
+            StartPosition: TimeSpan.Zero,
+            Quality: MakeQuality(),
+            SegmentDurationSeconds: 4,
+            AudioStreamIndex: 2,
+            AudioRenditionOnly: true
+        );
+
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
+
+        // No video is produced or mapped, and the selected language is transcoded
+        // to AAC — this is the per-language rendition for a raw multi-audio source.
+        args.Should().Contain("-vn");
+        args.Should().NotContain("0:v:0");
+        args.Should().NotContain("-c:v");
+        args.Should().Contain("-map").And.Contain("0:a:2?");
+        int caIdx = Array.IndexOf(args, "-c:a");
+        args[caIdx + 1].Should().Be("aac");
+        // Still an HLS output so it can be served and seeked like the video track.
+        args.Should().Contain("-f").And.Contain("hls");
+    }
+
+    [Fact]
+    public void BuildArguments_AudioRenditionOnly_SharesAbsoluteSegmentIndexingWithVideo()
+    {
+        // A language rendition must seek to the same segment boundaries the video
+        // does so hls.js keeps audio and video aligned across a seek.
+        LiveRunInput input = new(
+            InputPath: "/media/remux.mkv",
+            OutputDirectory: "/tmp/live-audio-eng",
+            StartPosition: TimeSpan.FromSeconds(120.5),
+            Quality: MakeQuality(),
+            SegmentDurationSeconds: 6,
+            AudioStreamIndex: 0,
+            AudioRenditionOnly: true
+        );
+
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
+
+        args[Array.IndexOf(args, "-ss") + 1].Should().Be("120.000");
+        args[Array.IndexOf(args, "-start_number") + 1].Should().Be("20");
+        args[Array.IndexOf(args, "-output_ts_offset") + 1].Should().Be("120.000");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
     // Remux vs full video transcode
     // ──────────────────────────────────────────────────────────────────────────
 

@@ -78,21 +78,34 @@ internal static class LiveFfmpegArgumentBuilder
         args.Add("-i");
         args.Add(input.InputPath);
 
-        bool hasVideo = input.SourceInfo is null || input.SourceInfo.HasVideo;
-        PlaybackAction action = DetermineAction(input, hasVideo);
-
-        if (hasVideo)
-            AppendVideo(args, input, action);
-        else
+        // An audio-only rendition run drops video entirely and transcodes just the
+        // one selected language to AAC. It shares the seek / absolute-index / HLS
+        // scaffolding below with the video path (a language rendition must seek to
+        // the same segment boundaries the video does), only the codec mapping
+        // differs — so it branches here and skips the whole video block.
+        if (input.AudioRenditionOnly)
+        {
             args.Add("-vn");
-
-        // A source that ships its own browser-ready HLS audio renditions is
-        // transcoded video-only; the master playlist points the player at those
-        // renditions, so muxing audio here would be wasted work.
-        if (input.VideoOnly)
-            args.Add("-an");
+            AppendAudioRendition(args, input);
+        }
         else
-            AppendAudio(args, input, action);
+        {
+            bool hasVideo = input.SourceInfo is null || input.SourceInfo.HasVideo;
+            PlaybackAction action = DetermineAction(input, hasVideo);
+
+            if (hasVideo)
+                AppendVideo(args, input, action);
+            else
+                args.Add("-vn");
+
+            // A source that ships its own browser-ready HLS audio renditions is
+            // transcoded video-only; the master playlist points the player at those
+            // renditions, so muxing audio here would be wasted work.
+            if (input.VideoOnly)
+                args.Add("-an");
+            else
+                AppendAudio(args, input, action);
+        }
 
         // Absolute output timestamps. A runner spawned by a seek uses "-ss" before
         // the input, which resets output PTS to ~0. hls.js then has to reconcile a
@@ -282,6 +295,28 @@ internal static class LiveFfmpegArgumentBuilder
         // Clamp audio channel count to what the client supports. Read the channel
         // count off the SELECTED stream (a 5.1 English track next to a stereo
         // commentary must downmix from its own layout, not the first stream's).
+        int sourceChannels = SelectedAudioChannels(input);
+        int clientMax = input.Client?.MaxAudioChannels is > 0 ? input.Client.MaxAudioChannels : 2;
+        int outputChannels = Math.Min(sourceChannels, clientMax);
+
+        args.Add("-c:a");
+        args.Add("aac");
+        args.Add("-b:a");
+        args.Add("128k");
+        args.Add("-ac");
+        args.Add(outputChannels.ToString(CultureInfo.InvariantCulture));
+    }
+
+    // Audio-only rendition for one source language. Always transcodes to AAC (the
+    // reason this path exists is a source whose audio a browser can't play), with
+    // the channel count clamped to what the client supports — a 7.1 or Atmos bed
+    // folds down to the client's cap (stereo by default) since browsers can't
+    // render object audio and rarely decode 7.1 anyway.
+    private static void AppendAudioRendition(List<string> args, LiveRunInput input)
+    {
+        args.Add("-map");
+        args.Add($"0:a:{input.AudioStreamIndex.ToString(CultureInfo.InvariantCulture)}?");
+
         int sourceChannels = SelectedAudioChannels(input);
         int clientMax = input.Client?.MaxAudioChannels is > 0 ? input.Client.MaxAudioChannels : 2;
         int outputChannels = Math.Min(sourceChannels, clientMax);
