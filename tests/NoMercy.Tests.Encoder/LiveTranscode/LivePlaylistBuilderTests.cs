@@ -203,4 +203,99 @@ public class LivePlaylistBuilderTests
             Thread.CurrentThread.CurrentCulture = prev;
         }
     }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // BuildMaster — video variant + pre-encoded audio renditions
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void BuildMaster_EmitsVideoVariantPointingAtRelativeMediaPlaylist()
+    {
+        LiveMasterPlaylistRequest request = new(
+            VideoPlaylistUri: "playlist.m3u8",
+            Width: 1920,
+            Height: 1080,
+            BitrateKbps: 5000,
+            AudioRenditions: []
+        );
+
+        string master = _builder.BuildMaster(request);
+
+        master.Should().Contain("#EXTM3U");
+        master.Should().Contain("#EXT-X-STREAM-INF:");
+        master.Should().Contain("RESOLUTION=1920x1080");
+        master.Should().Contain("VIDEO-RANGE=SDR");
+        // The video variant is the last line so the client fetches the live media
+        // playlist relative to the master's own URL.
+        master.Should().Contain("playlist.m3u8");
+    }
+
+    [Fact]
+    public void BuildMaster_EmitsOneAudioMediaEntryPerRendition_WithDisplayNames()
+    {
+        LiveMasterPlaylistRequest request = new(
+            VideoPlaylistUri: "playlist.m3u8",
+            Width: 1920,
+            Height: 1080,
+            BitrateKbps: 5000,
+            AudioRenditions:
+            [
+                new("eng", "/2/Show/S01E01/audio_eng_aac/audio_eng_aac.m3u8", IsDefault: true),
+                new("jpn", "/2/Show/S01E01/audio_jpn_aac/audio_jpn_aac.m3u8", IsDefault: false),
+            ]
+        );
+
+        string master = _builder.BuildMaster(request);
+
+        master.Should().Contain("TYPE=AUDIO");
+        master.Should().Contain("LANGUAGE=\"eng\"");
+        master.Should().Contain("LANGUAGE=\"jpn\"");
+        master.Should().Contain("NAME=\"English\"");
+        master.Should().Contain("NAME=\"Japanese\"");
+        master.Should().Contain("URI=\"/2/Show/S01E01/audio_eng_aac/audio_eng_aac.m3u8\"");
+        master.Should().Contain("URI=\"/2/Show/S01E01/audio_jpn_aac/audio_jpn_aac.m3u8\"");
+        // The variant references the audio group so the player pairs them.
+        master.Should().Contain("AUDIO=\"audio\"");
+    }
+
+    [Fact]
+    public void BuildMaster_MarksOnlyTheDefaultRenditionDefaultYes()
+    {
+        LiveMasterPlaylistRequest request = new(
+            VideoPlaylistUri: "playlist.m3u8",
+            Width: 1280,
+            Height: 720,
+            BitrateKbps: 3000,
+            AudioRenditions:
+            [
+                new("jpn", "/a/jpn.m3u8", IsDefault: false),
+                new("eng", "/a/eng.m3u8", IsDefault: true),
+            ]
+        );
+
+        string master = _builder.BuildMaster(request);
+
+        // Exactly one DEFAULT=YES, and it is the English track even though Japanese
+        // is listed first — the viewer's language opens by default.
+        System.Text.RegularExpressions.Regex.Matches(master, "DEFAULT=YES").Count.Should().Be(1);
+        string engLine = master.Split('\n').First(line => line.Contains("LANGUAGE=\"eng\""));
+        engLine.Should().Contain("DEFAULT=YES");
+    }
+
+    [Fact]
+    public void BuildMaster_NoRenditions_OmitsAudioGroupFromVariant()
+    {
+        LiveMasterPlaylistRequest request = new(
+            VideoPlaylistUri: "playlist.m3u8",
+            Width: 1920,
+            Height: 1080,
+            BitrateKbps: 5000,
+            AudioRenditions: []
+        );
+
+        string master = _builder.BuildMaster(request);
+
+        master.Should().NotContain("TYPE=AUDIO");
+        master.Should().NotContain("AUDIO=\"audio\"");
+    }
 }

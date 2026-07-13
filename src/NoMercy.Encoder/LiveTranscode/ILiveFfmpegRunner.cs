@@ -27,8 +27,12 @@ public record LiveRunInput(
     string[]? ExtraInputArgs = null,
     // Zero-based index AMONG AUDIO STREAMS to map (0:a:N). Chosen by
     // LiveAudioSelector from the viewer's language preference; 0 is the file's
-    // first audio track.
-    int AudioStreamIndex = 0
+    // first audio track. Only consulted when audio is muxed (VideoOnly is false).
+    int AudioStreamIndex = 0,
+    // Emit video only ("-an"). The master playlist references the file's own
+    // pre-encoded audio renditions, so muxing audio here would waste CPU and
+    // break instant track switching.
+    bool VideoOnly = false
 );
 
 /// <summary>

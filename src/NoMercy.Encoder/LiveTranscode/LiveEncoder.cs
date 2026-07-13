@@ -89,7 +89,8 @@ public class LiveEncoder(
                 ExtraInputArgs: request.ExtraInputArgs,
                 // Read back at spawn time so an audio switch performed before the
                 // factory fires (like a quality change) uses the new track.
-                AudioStreamIndex: session.CurrentAudioStreamIndex
+                AudioStreamIndex: session.CurrentAudioStreamIndex,
+                VideoOnly: request.VideoOnly
             );
 
             try

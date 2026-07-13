@@ -804,6 +804,33 @@ public class LiveFfmpegRunnerTests
     }
 
     // ──────────────────────────────────────────────────────────────────────────
+    // VideoOnly — audio comes from the file's own renditions via the master
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void BuildArguments_VideoOnly_DropsAudioEntirely()
+    {
+        LiveRunInput input = new(
+            InputPath: "/media/in.mkv",
+            OutputDirectory: "/tmp/live",
+            StartPosition: TimeSpan.Zero,
+            Quality: MakeQuality(),
+            SegmentDurationSeconds: 4,
+            AudioStreamIndex: 1,
+            VideoOnly: true
+        );
+
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
+
+        // Video is still mapped and encoded, but audio is dropped: no audio map,
+        // no audio codec — just "-an". The master playlist supplies the audio.
+        args.Should().Contain("0:v:0");
+        args.Should().Contain("-an");
+        args.Should().NotContain("-c:a");
+        args.Should().NotContain(a => a.StartsWith("0:a:"));
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
     // Remux vs full video transcode
     // ──────────────────────────────────────────────────────────────────────────
 

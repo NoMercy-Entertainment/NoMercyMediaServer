@@ -30,6 +30,8 @@ public interface ILiveTranscodeService
         CancellationToken ct
     );
 
+    LiveResult GetMasterPlaylist(string sessionId);
+
     LiveResult GetPlaylist(string sessionId);
 
     Task<LiveResult> GetSegmentAsync(

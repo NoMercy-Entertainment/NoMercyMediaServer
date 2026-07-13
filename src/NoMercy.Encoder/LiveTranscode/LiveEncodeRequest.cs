@@ -25,5 +25,10 @@ public record LiveEncodeRequest(
     string[]? ExtraInputArgs = null,
     // Zero-based index among the source's audio streams to map by default,
     // resolved from the library's language preference by LiveAudioSelector.
-    int AudioStreamIndex = 0
+    // Only consulted when audio is muxed (VideoOnly is false).
+    int AudioStreamIndex = 0,
+    // Drop audio entirely and transcode video only. Set when the source already
+    // ships browser-ready HLS audio renditions the master playlist references, so
+    // re-encoding audio would be wasted work and would defeat instant switching.
+    bool VideoOnly = false
 );

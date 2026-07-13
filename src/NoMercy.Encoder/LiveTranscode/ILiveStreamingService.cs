@@ -35,6 +35,13 @@ public interface ILiveStreamingService
     /// </summary>
     void StampRequestContext(string sessionId, MediaInfo mediaInfo, ClientCapabilities client);
 
+    /// <summary>
+    /// Stores the file's pre-encoded audio renditions on an already-registered
+    /// runtime so the master playlist can advertise them. The API layer resolves
+    /// them from the file's metadata; the streaming layer only holds the result.
+    /// </summary>
+    void StampAudioRenditions(string sessionId, IReadOnlyList<LiveAudioRendition> renditions);
+
     bool TryGetRuntime(string sessionId, out LiveRuntimeSession runtime);
 
     Task RemoveAsync(string sessionId);

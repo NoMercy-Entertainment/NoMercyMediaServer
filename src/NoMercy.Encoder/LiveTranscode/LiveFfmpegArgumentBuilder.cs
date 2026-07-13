@@ -86,7 +86,13 @@ internal static class LiveFfmpegArgumentBuilder
         else
             args.Add("-vn");
 
-        AppendAudio(args, input, action);
+        // A source that ships its own browser-ready HLS audio renditions is
+        // transcoded video-only; the master playlist points the player at those
+        // renditions, so muxing audio here would be wasted work.
+        if (input.VideoOnly)
+            args.Add("-an");
+        else
+            AppendAudio(args, input, action);
 
         // Absolute output timestamps. A runner spawned by a seek uses "-ss" before
         // the input, which resets output PTS to ~0. hls.js then has to reconcile a

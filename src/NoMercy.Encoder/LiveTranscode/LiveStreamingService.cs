@@ -71,6 +71,12 @@ public class LiveStreamingService(
         }
     }
 
+    public void StampAudioRenditions(string sessionId, IReadOnlyList<LiveAudioRendition> renditions)
+    {
+        if (_runtimes.TryGetValue(sessionId, out LiveRuntimeSession? runtime))
+            runtime.AudioRenditions = renditions;
+    }
+
     public bool TryGetRuntime(string sessionId, out LiveRuntimeSession runtime)
     {
         return _runtimes.TryGetValue(sessionId, out runtime!);

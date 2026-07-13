@@ -42,6 +42,14 @@ public sealed class LiveRuntimeSession : IAsyncDisposable
     public ClientCapabilities? ClientCapabilities { get; internal set; }
 
     /// <summary>
+    /// The file's own pre-encoded audio renditions, advertised in the session's
+    /// master playlist. Empty when the source has no HLS audio renditions (a raw
+    /// or disc source), in which case the session muxes audio into the video and
+    /// serves the media playlist directly instead of a master.
+    /// </summary>
+    public IReadOnlyList<LiveAudioRendition> AudioRenditions { get; internal set; } = [];
+
+    /// <summary>
     /// Monotonic generation counter for the segment buffer. Incremented on every
     /// buffer reset (seek or quality change) so clients can tell — via the epoch
     /// embedded in segment URLs — that indices from a previous generation are now

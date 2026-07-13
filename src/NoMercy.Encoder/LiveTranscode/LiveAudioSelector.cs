@@ -92,7 +92,13 @@ public static class LiveAudioSelector
         return 0;
     }
 
-    private static bool LanguageMatches(string? streamLanguage, string preferredIso6391)
+    /// <summary>
+    /// True when a stream/rendition language tag matches a viewer's preferred
+    /// ISO 639-1 code, accounting for the 639-2/B and /T forms muxers emit and a
+    /// leading-two-letter fallback. Shared by the master-playlist builder to pick
+    /// which pre-encoded audio rendition opens by default.
+    /// </summary>
+    public static bool LanguageMatches(string? streamLanguage, string preferredIso6391)
     {
         if (
             string.IsNullOrWhiteSpace(streamLanguage) || string.IsNullOrWhiteSpace(preferredIso6391)

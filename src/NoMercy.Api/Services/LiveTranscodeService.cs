@@ -188,12 +188,22 @@ public class LiveTranscodeService(
             );
 
         // The client picks the audio track from the episode's own language list and
-        // passes the ISO code; the encoder maps the matching source stream. Absent
-        // (older client), fall back to English then the file's default so a
+        // passes the ISO code. Absent (older client), fall back to English so a
         // Japanese-default file still opens in English.
         List<string> preferredLanguages = request.AudioLanguage is { Length: > 0 } lang
             ? [lang]
             : ["eng"];
+
+        // A NoMercy-encoded file already ships each audio track as a separate
+        // browser-ready HLS rendition, so the session transcodes video only and its
+        // master playlist points the player at those renditions — instant switching,
+        // no audio re-encode. A raw/disc source with no renditions falls back to
+        // muxing the language-selected track into the video (the older behaviour).
+        List<LiveAudioRendition> audioRenditions = BuildAudioRenditions(
+            resolved.File,
+            preferredLanguages[0]
+        );
+        bool useAudioRenditions = audioRenditions.Count > 0;
         int audioStreamIndex = LiveAudioSelector.Select(mediaInfo.AudioStreams, preferredLanguages);
 
         LiveEncodeRequest liveRequest = new(
@@ -203,7 +213,8 @@ public class LiveTranscodeService(
             StartPosition: TimeSpan.FromSeconds(Math.Max(0, request.StartTimeSeconds)),
             PreferredQuality: request.PreferredQuality,
             ExtraInputArgs: resolved.ExtraInputArgs,
-            AudioStreamIndex: audioStreamIndex
+            AudioStreamIndex: audioStreamIndex,
+            VideoOnly: useAudioRenditions
         );
 
         ILiveSession session;
@@ -222,7 +233,16 @@ public class LiveTranscodeService(
 
         sessionManager.RegisterSession(session, userId.ToString());
 
-        string playlistUrl = $"/api/v1/streaming/live/sessions/{session.SessionId}/playlist.m3u8";
+        // Hand the pre-encoded renditions to the runtime so the master playlist can
+        // advertise them, and point the client at the master rather than the raw
+        // media playlist. Without renditions the client loads the muxed media
+        // playlist directly (the disc/raw-source path).
+        if (useAudioRenditions)
+            streamingService.StampAudioRenditions(session.SessionId, audioRenditions);
+
+        string playlistUrl = useAudioRenditions
+            ? $"/api/v1/streaming/live/sessions/{session.SessionId}/master.m3u8"
+            : $"/api/v1/streaming/live/sessions/{session.SessionId}/playlist.m3u8";
         LiveQuality quality = session.CurrentQuality;
         DateTime expiresAt = DateTime.UtcNow.AddMinutes(sessionLimits.IdleTimeoutMinutes);
         SelectedVariantDto selectedVariant = new(
@@ -239,6 +259,27 @@ public class LiveTranscodeService(
                 ExpiresAt = expiresAt,
             }
         );
+    }
+
+    public LiveResult GetMasterPlaylist(string sessionId)
+    {
+        if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
+            return SessionGoneOrNotFound(sessionId);
+
+        runtime.TouchLastAccess();
+        LiveQuality quality = runtime.Session.CurrentQuality;
+
+        // The video variant URI is relative so the client resolves it against the
+        // master's own URL; the media playlist and its segment URLs are unchanged.
+        LiveMasterPlaylistRequest request = new(
+            VideoPlaylistUri: "playlist.m3u8",
+            Width: quality.Width,
+            Height: quality.Height,
+            BitrateKbps: quality.BitrateKbps,
+            AudioRenditions: runtime.AudioRenditions
+        );
+        string master = playlistBuilder.BuildMaster(request);
+        return LiveResult.Ok(master);
     }
 
     public LiveResult GetPlaylist(string sessionId)
@@ -559,6 +600,50 @@ public class LiveTranscodeService(
     private static string BuildServedUrl(VideoFile file) =>
         $"/{file.Share}{file.Folder}{file.Filename}";
 
+    // The file's own pre-encoded HLS audio renditions, mapped to client-facing
+    // URLs the session's master playlist references. Each rendition's FileName is
+    // a folder-relative HLS path (e.g. "/audio_eng_aac/audio_eng_aac.m3u8"); the
+    // served URL joins it to the file's base folder exactly as the static playlist
+    // response does. The viewer's preferred language opens by default; the rest
+    // stay available in the player's audio menu. Empty when the source has no
+    // renditions (raw/disc), which routes the session to the muxed media playlist.
+    private static List<LiveAudioRendition> BuildAudioRenditions(VideoFile file, string preferred)
+    {
+        List<IAudio> tracks =
+            file.Metadata?.Audio?.Where(a =>
+                    !string.IsNullOrWhiteSpace(a.FileName)
+                    && a.FileName.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase)
+                )
+                .ToList()
+            ?? [];
+
+        if (tracks.Count == 0)
+            return [];
+
+        int defaultIndex = tracks.FindIndex(a =>
+            LiveAudioSelector.LanguageMatches(a.Language, preferred)
+        );
+        if (defaultIndex < 0)
+            defaultIndex = 0;
+
+        string baseFolder = $"/{file.Share}{file.Folder}";
+        return tracks
+            .Select(
+                (a, index) =>
+                    new LiveAudioRendition(
+                        Language: a.Language,
+                        Uri: EncodeServedPath($"{baseFolder}{a.FileName}"),
+                        IsDefault: index == defaultIndex
+                    )
+            )
+            .ToList();
+    }
+
+    // Percent-encode each path segment (spaces, commas, apostrophes) while keeping
+    // the '/' separators DynamicStaticFilesMiddleware splits on and unescapes.
+    private static string EncodeServedPath(string path) =>
+        string.Join('/', path.Split('/').Select(Uri.EscapeDataString));
+
     // Evict the caller's least-recently-accessed session. LastAccess is bumped on
     // every playlist/segment fetch, so an abandoned stream (reload/switch) is the
     // stalest and gets reclaimed first, leaving a genuinely active second-device
@@ -616,6 +701,7 @@ public class LiveTranscodeService(
     {
         VideoFile? file = await context
             .VideoFiles.AsNoTracking()
+            .Include(vf => vf.Metadata)
             .FirstOrDefaultAsync(vf => vf.Id == videoFileId, ct);
         if (file is null)
             return null;
@@ -670,7 +756,7 @@ public class LiveTranscodeService(
     // while preserving the '/' separators DynamicStaticFilesMiddleware splits on and
     // then unescapes.
     private static string BuildServedUrlEncoded(VideoFile file) =>
-        string.Join('/', BuildServedUrl(file).Split('/').Select(Uri.EscapeDataString));
+        EncodeServedPath(BuildServedUrl(file));
 
     private static async Task<bool> UserHasAccessAsync(
         MediaContext context,

@@ -50,6 +50,16 @@ public class LiveTranscodeController(ILiveTranscodeService service) : BaseContro
         );
     }
 
+    [HttpGet("sessions/{sessionId}/master.m3u8")]
+    public IActionResult GetMasterPlaylist(string sessionId)
+    {
+        LiveResult result = service.GetMasterPlaylist(sessionId);
+        if (result.Kind != LiveResultKind.Ok)
+            return MapResult(result);
+
+        return Content((string)result.Payload!, "application/vnd.apple.mpegurl");
+    }
+
     [HttpGet("sessions/{sessionId}/playlist.m3u8")]
     public IActionResult GetPlaylist(string sessionId)
     {
