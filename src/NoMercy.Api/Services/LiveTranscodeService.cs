@@ -42,6 +42,7 @@ public class LiveTranscodeService(
     IStorage storage,
     IDeviceCapabilityRegistry capabilityRegistry,
     IDeviceAwareVariantSelector variantSelector,
+    ILiveIngestKeyStore ingestKeyStore,
     ILogger<LiveTranscodeService> logger,
     ILiveSessionTransport? transport = null
 ) : ILiveTranscodeService
@@ -76,7 +77,6 @@ public class LiveTranscodeService(
         Guid userId,
         StartLiveSessionRequest request,
         string? deviceId,
-        string? accessToken,
         CancellationToken ct
     )
     {
@@ -94,7 +94,6 @@ public class LiveTranscodeService(
             context,
             videoFileId,
             userId,
-            accessToken,
             ct
         );
         if (resolved is null)
@@ -241,6 +240,12 @@ public class LiveTranscodeService(
         }
 
         sessionManager.RegisterSession(session, userId.ToString());
+
+        // Tie the self-ingest key to the session so it dies on teardown, not just
+        // on its absolute-lifetime backstop. Null for local/disc sources that read
+        // straight off the filesystem and never touch the HTTP serving port.
+        if (resolved.IngestKey is not null)
+            ingestKeyStore.BindSession(resolved.IngestKey, session.SessionId);
 
         // Assemble the master's audio list: the file's own renditions when it has
         // them, otherwise a per-language live audio child for a raw source. Either
@@ -573,6 +578,10 @@ public class LiveTranscodeService(
         // (runtime disposal + session-manager removal + tombstone) atomically,
         // so callers no longer need a separate RemoveSession call.
         await streamingService.RemoveAsync(sessionId);
+
+        // Kill the file's self-ingest key the moment the session ends so no
+        // spent key survives on its absolute-lifetime backstop.
+        ingestKeyStore.RevokeSession(sessionId);
     }
 
     private LiveResult SessionGoneOrNotFound(string sessionId) =>
@@ -769,7 +778,6 @@ public class LiveTranscodeService(
         MediaContext context,
         Ulid videoFileId,
         Guid userId,
-        string? accessToken,
         CancellationToken ct
     )
     {
@@ -784,13 +792,12 @@ public class LiveTranscodeService(
         if (!allowed)
             return null;
 
-        (string inputPath, string[]? extraInputArgs) = await ResolveInputAsync(
+        (string inputPath, string[]? extraInputArgs, string? ingestKey) = await ResolveInputAsync(
             context,
             file,
-            accessToken,
             ct
         );
-        return new(file, inputPath, extraInputArgs);
+        return new(file, inputPath, extraInputArgs, ingestKey);
     }
 
     // Resolve the source to something ffprobe/ffmpeg can actually open across every
@@ -799,38 +806,36 @@ public class LiveTranscodeService(
     // cannot read directly — its own NFS client, for instance, fails where the
     // server's driver succeeds. So the transcoder self-ingests over the server's own
     // internal HTTP serving port: that path already streams every backend correctly
-    // (it is what the browser plays), so ffmpeg only ever speaks plain HTTP. Media
-    // serving is authenticated, hence the caller's bearer token. Non-library sources
-    // (disc rips, absolute paths — no folder ULID) keep their direct filesystem path.
-    private async Task<(string InputPath, string[]? ExtraInputArgs)> ResolveInputAsync(
-        MediaContext context,
-        VideoFile file,
-        string? accessToken,
-        CancellationToken ct
-    )
+    // (it is what the browser plays), so ffmpeg only ever speaks plain HTTP. The
+    // serving port is authenticated, so ffmpeg carries a single-use ingest key
+    // scoped to this one file (not the viewer's bearer): it stays out of ffmpeg's
+    // argv and outlives a short access token so long transcodes never 401 mid-run.
+    // Non-library sources (disc rips, absolute paths — no folder ULID) keep their
+    // direct filesystem path and no key.
+    private async Task<(
+        string InputPath,
+        string[]? ExtraInputArgs,
+        string? IngestKey
+    )> ResolveInputAsync(MediaContext context, VideoFile file, CancellationToken ct)
     {
         string localPath = storage.CombinePath(file.HostFolder, file.Filename);
 
-        if (accessToken is null || !Ulid.TryParse(file.Share, out Ulid folderId))
-            return (localPath, null);
+        if (!Ulid.TryParse(file.Share, out Ulid folderId))
+            return (localPath, null, null);
 
         bool folderExists = await context
             .Folders.AsNoTracking()
             .AnyAsync(f => f.Id == folderId, ct);
         if (!folderExists)
-            return (localPath, null);
+            return (localPath, null, null);
 
+        string servedPath = BuildServedUrl(file);
+        string ingestKey = ingestKeyStore.Issue(servedPath);
         int httpPort = RuntimeServerSettings.Current.InternalServerPort + 1;
-        string url = $"http://127.0.0.1:{httpPort}{BuildServedUrlEncoded(file)}";
-        string[] headers = ["-headers", $"Authorization: Bearer {accessToken}\r\n"];
-        return (url, headers);
+        string url = $"http://127.0.0.1:{httpPort}{EncodeServedPath(servedPath)}";
+        string[] headers = ["-headers", $"X-NoMercy-Ingest-Key: {ingestKey}\r\n"];
+        return (url, headers, ingestKey);
     }
-
-    // Percent-encode each path segment (spaces, commas, apostrophes, parentheses)
-    // while preserving the '/' separators DynamicStaticFilesMiddleware splits on and
-    // then unescapes.
-    private static string BuildServedUrlEncoded(VideoFile file) =>
-        EncodeServedPath(BuildServedUrl(file));
 
     private static async Task<bool> UserHasAccessAsync(
         MediaContext context,
@@ -865,6 +870,7 @@ public class LiveTranscodeService(
     private sealed record AuthorizedFile(
         VideoFile File,
         string InputPath,
-        string[]? ExtraInputArgs
+        string[]? ExtraInputArgs,
+        string? IngestKey
     );
 }

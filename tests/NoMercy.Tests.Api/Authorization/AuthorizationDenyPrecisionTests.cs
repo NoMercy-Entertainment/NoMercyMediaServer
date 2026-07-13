@@ -18,6 +18,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Api.Middleware;
+using NoMercy.Api.Services;
 using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -495,9 +496,7 @@ public sealed class TokenParamAuthDenyPrecisionTests : IAsyncLifetime, IDisposab
 
     public TokenParamAuthDenyPrecisionTests()
     {
-        _connection = new(
-            $"DataSource={Guid.NewGuid():N};Mode=Memory;Cache=Shared"
-        );
+        _connection = new($"DataSource={Guid.NewGuid():N};Mode=Memory;Cache=Shared");
         _connection.Open();
 
         _dbOptions = new DbContextOptionsBuilder<MediaContext>()
@@ -558,7 +557,7 @@ public sealed class TokenParamAuthDenyPrecisionTests : IAsyncLifetime, IDisposab
     }
 
     private static TokenParamAuthMiddleware BuildMiddleware(RequestDelegate next) =>
-        new(next, NullLogger<TokenParamAuthMiddleware>.Instance);
+        new(next, new LiveIngestKeyStore(), NullLogger<TokenParamAuthMiddleware>.Instance);
 
     private static HttpContext BuildContext(string path, ClaimsPrincipal? user = null)
     {

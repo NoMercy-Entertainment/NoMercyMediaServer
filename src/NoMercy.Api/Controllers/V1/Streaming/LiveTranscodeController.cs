@@ -38,16 +38,7 @@ public class LiveTranscodeController(ILiveTranscodeService service) : BaseContro
         CancellationToken ct = default
     )
     {
-        // The transcoder self-ingests library sources over the server's own HTTP
-        // serving port (backend-agnostic), which requires the caller's bearer token.
-        string authHeader = Request.Headers.Authorization.ToString();
-        string? accessToken = authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
-            ? authHeader["Bearer ".Length..].Trim()
-            : null;
-
-        return MapResult(
-            await service.StartSessionAsync(User.UserId(), request, deviceId, accessToken, ct)
-        );
+        return MapResult(await service.StartSessionAsync(User.UserId(), request, deviceId, ct));
     }
 
     [HttpGet("sessions/{sessionId}/master.m3u8")]

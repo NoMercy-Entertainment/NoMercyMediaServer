@@ -26,7 +26,6 @@ public interface ILiveTranscodeService
         Guid userId,
         StartLiveSessionRequest request,
         string? deviceId,
-        string? accessToken,
         CancellationToken ct
     );
 
