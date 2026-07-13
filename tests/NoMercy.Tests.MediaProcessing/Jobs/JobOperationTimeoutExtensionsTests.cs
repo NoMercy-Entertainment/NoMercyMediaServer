@@ -70,4 +70,59 @@ public sealed class JobOperationTimeoutExtensionsTests
 
         fastOperation.IsCompletedSuccessfully.Should().BeTrue();
     }
+
+    /// <summary>
+    /// After the guard gives up on a stalled operation, that abandoned task keeps
+    /// running and later faults (in the field: its DI-scoped MediaContext is
+    /// disposed once the job unwinds, so the next EF call throws
+    /// ObjectDisposedException). Nothing awaits it anymore, so without the guard
+    /// observing the fault it would resurface as a process-level
+    /// UnobservedTaskException from the finalizer thread. Regression guard for
+    /// exactly that crash-log spam.
+    /// </summary>
+    [Fact]
+    public async Task WithTimeout_AbandonedOperationFaultsAfterTimeout_DoesNotRaiseUnobserved()
+    {
+        List<Exception> unobserved = [];
+
+        void Handler(object? _, UnobservedTaskExceptionEventArgs e)
+        {
+            unobserved.Add(e.Exception);
+            e.SetObserved();
+        }
+
+        TaskScheduler.UnobservedTaskException += Handler;
+        try
+        {
+            await TimeOutThenFaultAbandonedOperationAsync();
+
+            // The abandoned faulted task must be finalized to trigger the
+            // unobserved-exception path; scoping its only references inside the
+            // helper above lets the GC reclaim it here.
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+
+            unobserved.Should().BeEmpty();
+        }
+        finally
+        {
+            TaskScheduler.UnobservedTaskException -= Handler;
+        }
+    }
+
+    private static async Task TimeOutThenFaultAbandonedOperationAsync()
+    {
+        TaskCompletionSource stalled = new();
+
+        Func<Task> act = () =>
+            stalled.Task.WithTimeout("AbandonedStore", TimeSpan.FromMilliseconds(30));
+
+        await Assert.ThrowsAsync<TimeoutException>(act);
+
+        // The inner operation faults only AFTER the caller has already unwound —
+        // the disposed-MediaContext situation the extras jobs hit in the field.
+        stalled.SetException(new InvalidOperationException("MediaContext disposed"));
+    }
 }

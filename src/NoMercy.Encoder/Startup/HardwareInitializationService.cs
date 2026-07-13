@@ -94,9 +94,26 @@ public class HardwareInitializationService(
                 .ConfigureAwait(false);
             int cpuCores = await hardwareDetector.DetectCpuCoreCountAsync(ct).ConfigureAwait(false);
 
-            IReadOnlySet<string> usableHardwareEncoders =
-                await ProbeUsableHardwareEncodersAsync(ct).ConfigureAwait(false)
-                ?? new HashSet<string>();
+            // No GPU of any vendor was detected, so every hardware-encoder init
+            // probe would only spawn ffmpeg to fail on a missing device/driver.
+            // DetectGpusAsync already covers the one case vendor detection can
+            // miss — NVIDIA in a container without /dev/dri, found via
+            // nvidia-smi — so an empty result here is a genuine software-only
+            // host. Skip the probe rather than logging a wall of expected init
+            // failures for encoders that cannot possibly run.
+            IReadOnlySet<string> usableHardwareEncoders;
+            if (gpus.Count == 0)
+            {
+                logger.LogDebug(
+                    "No GPU detected — skipping hardware-encoder init probe (software-only host)"
+                );
+                usableHardwareEncoders = new HashSet<string>();
+            }
+            else
+            {
+                usableHardwareEncoders = await ProbeUsableHardwareEncodersAsync(ct)
+                    .ConfigureAwait(false);
+            }
 
             Capabilities = new HardwareCapabilities(gpus, cpuCores, usableHardwareEncoders);
             IsReady = true;
@@ -186,6 +203,10 @@ public class HardwareInitializationService(
     /// probe failure degrades to "no hardware encoders usable" (software-only)
     /// instead of throwing — an init-probe outage must never block boot or
     /// crash the server, it only removes hardware acceleration for this run.
+    ///
+    /// The caller only reaches this method when at least one GPU was detected;
+    /// a zero-GPU host is short-circuited before here so no ffmpeg process is
+    /// spawned for encoders that have no device to run on.
     /// </summary>
     private async Task<IReadOnlySet<string>> ProbeUsableHardwareEncodersAsync(CancellationToken ct)
     {

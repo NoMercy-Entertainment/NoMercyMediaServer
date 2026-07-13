@@ -111,6 +111,15 @@ public class HardwareInitializationServiceTests
         return tracker;
     }
 
+    /// <summary>
+    /// One detected GPU — the trigger that makes HIS actually run the
+    /// hardware-encoder init probe. A zero-GPU host is short-circuited to
+    /// software-only before the probe, so any test that asserts on probe
+    /// behaviour must supply a detected device.
+    /// </summary>
+    private static IReadOnlyList<GpuDevice> OneNvidiaGpu() =>
+        [new(GpuVendor.Nvidia, "NVIDIA GeForce RTX 4090", 24576, 8, [])];
+
     // -------------------------------------------------------------------------
     // Core detection
     // -------------------------------------------------------------------------
@@ -477,7 +486,7 @@ public class HardwareInitializationServiceTests
         Mock<IHardwareDetector> detector = new();
         detector
             .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<GpuDevice>());
+            .ReturnsAsync(OneNvidiaGpu());
         detector
             .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(4);
@@ -514,6 +523,61 @@ public class HardwareInitializationServiceTests
     }
 
     /// <summary>
+    /// A genuinely GPU-less host must never spawn the per-encoder ffmpeg init
+    /// probe — <see cref="IHardwareDetector.DetectGpusAsync"/> returning zero
+    /// devices is the authoritative "software-only" signal (it already covers
+    /// the NVIDIA-in-container case), so probing every compiled-in hardware
+    /// encoder only to watch each fail is pure noise and wasted boot time.
+    /// Regression guard for the software-only init-failure log spam.
+    /// </summary>
+    [Fact]
+    public async Task StartAsync_WhenNoGpuDetected_SkipsHardwareEncoderProbe()
+    {
+        string encoderOutput =
+            "V..... h264_nvenc           NVIDIA NVENC H.264 encoder (codec h264)\n"
+            + "V..... h264_vaapi           VAAPI H.264 encoder (codec h264)";
+        FfmpegCapabilities ffmpegCaps = new(BuildProcessRunnerWithEncoders(encoderOutput).Object);
+
+        Mock<IHardwareDetector> detector = new();
+        detector
+            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<GpuDevice>());
+        detector
+            .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(4);
+
+        Mock<IHardwareEncoderProbe> encoderProbe = new();
+        encoderProbe
+            .Setup(p =>
+                p.ProbeAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>())
+            )
+            .ReturnsAsync((IReadOnlySet<string>)new HashSet<string>());
+
+        HardwareInitializationService service = new(
+            detector.Object,
+            ffmpegCaps,
+            encoderProbe.Object,
+            Mock.Of<IDriverChangeDetector>(),
+            Mock.Of<IBenchmarkJobTracker>(),
+            new(),
+            Mock.Of<ILogger<HardwareInitializationService>>(),
+            ServerReadyTracker(),
+            probeRetryDelayMs: 0
+        );
+
+        await service.StartAsync(CancellationToken.None);
+        await service.DetectionTask;
+
+        encoderProbe.Verify(
+            p => p.ProbeAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()),
+            Times.Never
+        );
+        service.Capabilities.Should().NotBeNull();
+        service.Capabilities!.UsableHardwareEncoders.Should().BeEmpty();
+        service.Capabilities.HasGpu.Should().BeFalse();
+    }
+
+    /// <summary>
     /// The set the probe confirms as usable must land on
     /// <see cref="IHardwareCapabilities.UsableHardwareEncoders"/> — this is
     /// the value <c>PlanStage</c> gates selection on.
@@ -524,7 +588,7 @@ public class HardwareInitializationServiceTests
         Mock<IHardwareDetector> detector = new();
         detector
             .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<GpuDevice>());
+            .ReturnsAsync(OneNvidiaGpu());
         detector
             .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(4);
@@ -572,7 +636,7 @@ public class HardwareInitializationServiceTests
         Mock<IHardwareDetector> detector = new();
         detector
             .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<GpuDevice>());
+            .ReturnsAsync(OneNvidiaGpu());
         detector
             .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(4);

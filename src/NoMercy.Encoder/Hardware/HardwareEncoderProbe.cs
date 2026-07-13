@@ -85,11 +85,17 @@ public sealed class HardwareEncoderProbe(
                 return true;
             }
 
-            logger.LogInformation(
+            // An encoder that fails to initialize is the expected outcome on any
+            // host lacking that vendor's silicon/driver — it is diagnostic
+            // detail, not an operational event, so it stays at Debug. Only the
+            // first stderr line is logged: ffmpeg emits a multi-line cascade but
+            // the first line carries the actual cause (e.g. "Cannot load
+            // libcuda.so.1", "No VA display found"); the rest is downstream noise.
+            logger.LogDebug(
                 "Hardware encoder init probe: {Encoder} unusable (exit {Code}): {Err}",
                 encoderName,
                 result.ExitCode,
-                result.StdErr.Trim()
+                FirstMeaningfulLine(result.StdErr)
             );
             return false;
         }
@@ -113,6 +119,23 @@ public sealed class HardwareEncoderProbe(
             );
             return false;
         }
+    }
+
+    /// <summary>
+    /// Returns the first non-empty line of an ffmpeg error dump — the line
+    /// carrying the actual cause — so a failed probe logs one readable reason
+    /// instead of the full multi-line codec-init cascade.
+    /// </summary>
+    private static string FirstMeaningfulLine(string stdErr)
+    {
+        foreach (string line in stdErr.Split('\n'))
+        {
+            string trimmed = line.Trim();
+            if (trimmed.Length > 0)
+                return trimmed;
+        }
+
+        return string.Empty;
     }
 
     /// <summary>

@@ -51,7 +51,30 @@ public static class JobOperationTimeoutExtensions
         }
         catch (TimeoutException ex)
         {
+            // WaitAsync stops awaiting the operation but cannot cancel it, so the
+            // abandoned task keeps running and typically faults later — its
+            // DI-scoped MediaContext is disposed the moment this job unwinds, and
+            // the next EF call on it throws ObjectDisposedException. Nothing awaits
+            // that task anymore, so the fault would otherwise resurface as a
+            // process-level UnobservedTaskException on the finalizer thread. Observe
+            // it here to keep the abandoned failure contained.
+            operation.ObserveExceptionWhenFaulted();
             throw new TimeoutException($"{operationName} timed out after {effectiveTimeout}", ex);
         }
+    }
+
+    /// <summary>
+    /// Marks a fire-and-forget task's eventual fault as observed so it never
+    /// bubbles up as an <see cref="UnobservedTaskException"/>. A no-op when the
+    /// task ultimately completes successfully.
+    /// </summary>
+    private static void ObserveExceptionWhenFaulted(this Task task)
+    {
+        _ = task.ContinueWith(
+            static faulted => _ = faulted.Exception,
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default
+        );
     }
 }
