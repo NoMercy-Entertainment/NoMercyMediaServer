@@ -409,6 +409,40 @@ public class LiveTranscodeService(
             return SessionGoneOrNotFound(sessionId);
 
         double clampedSeconds = Math.Max(0, request.PositionSeconds);
+        int targetIndex = SegmentIndexAt(runtime, clampedSeconds);
+
+        // Fast seek. The target segment has already been transcoded, so the client
+        // can pull it over HTTP immediately. Re-spawning ffmpeg at the target would
+        // kill the runner's forward lead and re-encode ground already covered: the
+        // slow path, and the reason a "rewatch" seek used to stall. Skip it — just
+        // move the reported playhead so the buffer-adaptive sweep paces from the new
+        // position (it suspends the encoder if the seek left it far ahead, and a
+        // later request past the transcoded frontier resumes it there). The check
+        // reads the on-disk scratch too, not just the current runner's in-memory
+        // buffer, because segment files persist across runner generations while the
+        // buffer is cleared on every (re)spawn — without the disk check, every seek
+        // after the first would re-encode content already sitting on disk. A target
+        // that is genuinely absent — a forward jump past everything transcoded, or a
+        // gap left by an earlier jump — falls through to a real re-spawn below.
+        if (SegmentAlreadyTranscoded(runtime, targetIndex))
+        {
+            runtime.Session.ReportPlaybackPosition(TimeSpan.FromSeconds(clampedSeconds));
+            runtime.TouchLastAccess();
+
+            await PushIfTransportAsync(
+                    sessionId,
+                    new SeekCompletedMessage(
+                        NewPositionSeconds: clampedSeconds,
+                        FirstSegmentIndex: targetIndex,
+                        SeekEpoch: runtime.CurrentEpoch
+                    ),
+                    ct
+                )
+                .ConfigureAwait(false);
+
+            return LiveResult.Ok(new SeekResponse(clampedSeconds));
+        }
+
         await runtime.Session.SeekAsync(TimeSpan.FromSeconds(clampedSeconds), ct);
         runtime.TouchLastAccess();
 
@@ -425,6 +459,32 @@ public class LiveTranscodeService(
             .ConfigureAwait(false);
 
         return LiveResult.Ok(new SeekResponse(clampedSeconds));
+    }
+
+    // Absolute HLS segment index a wall-clock position maps to. Mirrors the
+    // indexing GetSegmentAsync and the ffmpeg arg builder use so a seek's
+    // "is it already transcoded" check lines up with what the client requests.
+    private static int SegmentIndexAt(LiveRuntimeSession runtime, double positionSeconds)
+    {
+        double segmentSeconds =
+            runtime.TargetSegmentDuration.TotalSeconds > 0
+                ? runtime.TargetSegmentDuration.TotalSeconds
+                : 6;
+        return (int)(positionSeconds / segmentSeconds);
+    }
+
+    // Whether the segment at <paramref name="index"/> has already been produced
+    // and is servable right now — in the current runner's in-memory buffer, or on
+    // disk from any runner generation this session has spawned. Mirrors the two
+    // sources GetSegmentAsync serves from, so a fast seek only skips the re-spawn
+    // when the client is guaranteed to get the segment without one.
+    private bool SegmentAlreadyTranscoded(LiveRuntimeSession runtime, int index)
+    {
+        if (runtime.TryGetSegment(index, out Segment buffered) && storage.Exists(buffered.FilePath))
+            return true;
+
+        return runtime.ScratchDirectory is { Length: > 0 } scratch
+            && storage.Exists(storage.CombinePath(scratch, $"seg_{index:D5}.ts"));
     }
 
     public async Task EndSessionAsync(string sessionId, CancellationToken ct)
