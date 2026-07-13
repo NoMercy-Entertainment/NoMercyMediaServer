@@ -22,5 +22,8 @@ public record LiveEncodeRequest(
     Dictionary<string, string>? CustomArguments = null,
     // ffmpeg input options emitted before "-i" — carries the auth header when
     // InputPath is an authenticated HTTP self-ingest URL. Null for a filesystem input.
-    string[]? ExtraInputArgs = null
+    string[]? ExtraInputArgs = null,
+    // Zero-based index among the source's audio streams to map by default,
+    // resolved from the library's language preference by LiveAudioSelector.
+    int AudioStreamIndex = 0
 );

@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Globalization;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Profiles;
 
@@ -259,8 +260,11 @@ internal static class LiveFfmpegArgumentBuilder
 
     private static void AppendAudio(List<string> args, LiveRunInput input, PlaybackAction action)
     {
+        // Map the viewer's chosen audio track (resolved from the library language
+        // preference, or switched at runtime). Trailing '?' keeps a video-only
+        // source from failing when the index has no matching stream.
         args.Add("-map");
-        args.Add("0:a:0?");
+        args.Add($"0:a:{input.AudioStreamIndex.ToString(CultureInfo.InvariantCulture)}?");
 
         if (action == PlaybackAction.Remux)
         {
@@ -269,11 +273,10 @@ internal static class LiveFfmpegArgumentBuilder
             return;
         }
 
-        // Clamp audio channel count to what the client supports.
-        int sourceChannels =
-            input.SourceInfo?.AudioStreams.Count > 0
-                ? input.SourceInfo.AudioStreams[0].Channels
-                : 2;
+        // Clamp audio channel count to what the client supports. Read the channel
+        // count off the SELECTED stream (a 5.1 English track next to a stereo
+        // commentary must downmix from its own layout, not the first stream's).
+        int sourceChannels = SelectedAudioChannels(input);
         int clientMax = input.Client?.MaxAudioChannels is > 0 ? input.Client.MaxAudioChannels : 2;
         int outputChannels = Math.Min(sourceChannels, clientMax);
 
@@ -317,6 +320,22 @@ internal static class LiveFfmpegArgumentBuilder
     /// segment N always spans source time [N*segDur, (N+1)*segDur) regardless of
     /// which position the runner was spawned at.
     /// </summary>
+    // Channel count of the audio stream being mapped, falling back to stereo when
+    // the source analysis is missing or the index is out of range.
+    private static int SelectedAudioChannels(LiveRunInput input)
+    {
+        IReadOnlyList<AudioStreamInfo>? streams = input.SourceInfo?.AudioStreams;
+        if (streams is null || streams.Count == 0)
+            return 2;
+
+        int index =
+            input.AudioStreamIndex >= 0 && input.AudioStreamIndex < streams.Count
+                ? input.AudioStreamIndex
+                : 0;
+
+        return streams[index].Channels;
+    }
+
     private static int StartSegmentIndex(LiveRunInput input)
     {
         if (input.SegmentDurationSeconds <= 0 || input.StartPosition <= TimeSpan.Zero)

@@ -187,13 +187,23 @@ public class LiveTranscodeService(
                 "File is compatible with client capabilities"
             );
 
+        // The client picks the audio track from the episode's own language list and
+        // passes the ISO code; the encoder maps the matching source stream. Absent
+        // (older client), fall back to English then the file's default so a
+        // Japanese-default file still opens in English.
+        List<string> preferredLanguages = request.AudioLanguage is { Length: > 0 } lang
+            ? [lang]
+            : ["eng"];
+        int audioStreamIndex = LiveAudioSelector.Select(mediaInfo.AudioStreams, preferredLanguages);
+
         LiveEncodeRequest liveRequest = new(
             InputPath: resolved.InputPath,
             CachedInfo: mediaInfo,
             Client: clientCaps,
             StartPosition: TimeSpan.FromSeconds(Math.Max(0, request.StartTimeSeconds)),
             PreferredQuality: request.PreferredQuality,
-            ExtraInputArgs: resolved.ExtraInputArgs
+            ExtraInputArgs: resolved.ExtraInputArgs,
+            AudioStreamIndex: audioStreamIndex
         );
 
         ILiveSession session;

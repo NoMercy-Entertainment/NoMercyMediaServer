@@ -16,6 +16,14 @@ public interface ILiveSession : IAsyncDisposable
     string SessionId { get; }
     LiveSessionState State { get; }
     LiveQuality CurrentQuality { get; }
+
+    /// <summary>
+    /// Zero-based index among the source's audio streams currently being mapped
+    /// (<c>0:a:N</c>). Read at every runner (re)spawn so a seek or quality change
+    /// keeps the track resolved from the library's language preference.
+    /// </summary>
+    int CurrentAudioStreamIndex { get; }
+
     double CurrentSpeed { get; }
     TimeSpan TranscodedPosition { get; }
     TimeSpan BufferAhead { get; }

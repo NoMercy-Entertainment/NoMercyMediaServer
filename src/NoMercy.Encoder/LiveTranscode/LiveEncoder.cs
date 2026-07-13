@@ -40,6 +40,11 @@ public class LiveEncoder(
         string sessionId = Ulid.NewUlid().ToString();
         LiveSession session = new(sessionId, quality);
 
+        // The default audio track (resolved from the library's language
+        // preference) so the first spawn — and every seek/quality re-spawn that
+        // reads it back — maps the viewer's language, not just the file's first.
+        session.SetAudioStreamIndex(request.AudioStreamIndex);
+
         // Seed the playhead at the start position. Segments are absolutely indexed
         // so a resumed/seeked session's transcoded position is absolute too; if the
         // playhead stayed at zero, BufferAhead would read as the whole start offset
@@ -81,7 +86,10 @@ public class LiveEncoder(
                 Client: request.Client,
                 SourceInfo: request.CachedInfo,
                 CustomArguments: request.CustomArguments,
-                ExtraInputArgs: request.ExtraInputArgs
+                ExtraInputArgs: request.ExtraInputArgs,
+                // Read back at spawn time so an audio switch performed before the
+                // factory fires (like a quality change) uses the new track.
+                AudioStreamIndex: session.CurrentAudioStreamIndex
             );
 
             try

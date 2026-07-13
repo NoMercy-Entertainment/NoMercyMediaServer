@@ -18,7 +18,11 @@ public record StartLiveSessionRequest(
     [property: JsonProperty("video_file_id")] string VideoFileId,
     [property: JsonProperty("client_caps")] ClientCapabilitiesDto ClientCaps,
     [property: JsonProperty("start_time_seconds")] double StartTimeSeconds,
-    [property: JsonProperty("preferred_quality")] string? PreferredQuality
+    [property: JsonProperty("preferred_quality")] string? PreferredQuality,
+    // ISO 639 language of the audio track the viewer picked from the episode's
+    // own language list. The encoder maps the matching source stream. Null = let
+    // the server default (English, then the file's default track).
+    [property: JsonProperty("audio_language")] string? AudioLanguage = null
 );
 
 public record ClientCapabilitiesDto(

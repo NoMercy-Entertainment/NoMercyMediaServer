@@ -24,7 +24,11 @@ public record LiveRunInput(
     Dictionary<string, string>? CustomArguments = null,
     // ffmpeg input options emitted before "-i" (e.g. "-headers" for an
     // authenticated HTTP self-ingest URL). Null for a plain filesystem input.
-    string[]? ExtraInputArgs = null
+    string[]? ExtraInputArgs = null,
+    // Zero-based index AMONG AUDIO STREAMS to map (0:a:N). Chosen by
+    // LiveAudioSelector from the viewer's language preference; 0 is the file's
+    // first audio track.
+    int AudioStreamIndex = 0
 );
 
 /// <summary>

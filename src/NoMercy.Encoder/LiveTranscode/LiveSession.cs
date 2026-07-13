@@ -31,6 +31,7 @@ public class LiveSession : ILiveSession
     private long _playbackPositionTicks;
     private TimeSpan _transcodedPosition;
     private double _currentSpeed;
+    private int _audioStreamIndex;
 
     // MinValue until the first runner is dispatched, so a session that never
     // spawns one (unit tests exercising Evaluate directly) is not treated as
@@ -53,6 +54,7 @@ public class LiveSession : ILiveSession
     public LiveSessionState State =>
         (LiveSessionState)Interlocked.CompareExchange(ref _state, 0, 0);
     public LiveQuality CurrentQuality { get; private set; }
+    public int CurrentAudioStreamIndex => Volatile.Read(ref _audioStreamIndex);
     public double CurrentSpeed => _currentSpeed;
     public TimeSpan TranscodedPosition => _transcodedPosition;
     public TimeSpan BufferAhead =>
@@ -92,6 +94,10 @@ public class LiveSession : ILiveSession
     // so a later seek/resume respawn (which reads CurrentQuality) keeps using
     // the software encoder instead of retrying the exhausted GPU slot.
     internal void SetQuality(LiveQuality quality) => CurrentQuality = quality;
+
+    // Sets the audio track a subsequent (re)spawn maps. Called at session start
+    // with the track resolved from the library's language preference.
+    internal void SetAudioStreamIndex(int index) => Volatile.Write(ref _audioStreamIndex, index);
 
     internal void SetSpeed(double speed) => _currentSpeed = speed;
 
