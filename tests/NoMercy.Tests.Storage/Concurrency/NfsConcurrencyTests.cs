@@ -221,6 +221,43 @@ public class NfsConcurrencyTests
     }
 
     [Fact]
+    public void OpenReadIsolated_stamps_each_context_with_a_unique_client_identity()
+    {
+        FaultyLibNfs lib = new();
+        lib.SeedDir("/");
+        byte[] payload = Enumerable.Range(0, 64).Select(n => (byte)n).ToArray();
+        for (int i = 0; i < 4; i++)
+            lib.Seed($"/iso_{i}.bin", payload);
+
+        NfsStorageDriver driver = new(BuildConfig(), lib);
+        List<Stream> streams = [];
+        try
+        {
+            for (int i = 0; i < 4; i++)
+                streams.Add(driver.OpenReadIsolated($"/iso_{i}.bin"));
+
+            // Every context libnfs stamped — the main context plus one per
+            // isolated read — must carry a DISTINCT NFSv4 client name. A shared
+            // name folds them into a single open-owner on the server, and their
+            // independent local open-seqid counters then collide as
+            // NFS4ERR_BAD_SEQID the moment a parallel scan opens several at once.
+            lib.ClientNames.Should().HaveCountGreaterThanOrEqualTo(5); // 1 main + 4 isolated
+            lib.ClientNames.Values.Distinct()
+                .Should()
+                .HaveCount(
+                    lib.ClientNames.Count,
+                    "each isolated read context needs its own NFSv4 client identity"
+                );
+        }
+        finally
+        {
+            foreach (Stream s in streams)
+                s.Dispose();
+            driver.Dispose();
+        }
+    }
+
+    [Fact]
     public void High_contention_stress_holds_lock_invariant()
     {
         (NfsStorageDriver driver, FaultyLibNfs lib) = BuildDriverWithLatency(

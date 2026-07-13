@@ -25,14 +25,16 @@ internal sealed class IsolatedNfsReadStream : Stream
 {
     private const int ChunkSize = 32 * 1024;
 
+    private readonly ILibNfs _libNfs;
     private readonly IntPtr _ownedCtx;
     private readonly IntPtr _fh;
     private readonly long _length;
     private long _position;
     private bool _disposed;
 
-    internal IsolatedNfsReadStream(IntPtr ownedCtx, IntPtr fh, long length)
+    internal IsolatedNfsReadStream(ILibNfs libNfs, IntPtr ownedCtx, IntPtr fh, long length)
     {
+        _libNfs = libNfs;
         _ownedCtx = ownedCtx;
         _fh = fh;
         _length = length;
@@ -66,10 +68,10 @@ internal sealed class IsolatedNfsReadStream : Stream
             IntPtr pinned = Marshal.AllocHGlobal(chunk);
             try
             {
-                int n = LibNfs.Read(_ownedCtx, _fh, pinned, chunk);
+                int n = _libNfs.Read(_ownedCtx, _fh, pinned, chunk);
                 if (n < 0)
                     throw new IOException(
-                        $"NFS isolated read failed: {LibNfs.GetError(_ownedCtx)}"
+                        $"NFS isolated read failed: {_libNfs.GetError(_ownedCtx)}"
                     );
                 if (n == 0)
                     break;
@@ -98,7 +100,7 @@ internal sealed class IsolatedNfsReadStream : Stream
             _ => throw new ArgumentOutOfRangeException(nameof(origin)),
         };
 
-        long rc = LibNfs.Lseek(
+        long rc = _libNfs.Lseek(
             _ownedCtx,
             _fh,
             target,
@@ -107,7 +109,7 @@ internal sealed class IsolatedNfsReadStream : Stream
             out _
         );
         if (rc < 0)
-            throw new IOException($"NFS isolated lseek failed: {LibNfs.GetError(_ownedCtx)}");
+            throw new IOException($"NFS isolated lseek failed: {_libNfs.GetError(_ownedCtx)}");
 
         _position = target;
         return _position;
@@ -126,9 +128,9 @@ internal sealed class IsolatedNfsReadStream : Stream
             return;
         _disposed = true;
 
-        LibNfs.Close(_ownedCtx, _fh);
-        LibNfs.Umount(_ownedCtx);
-        LibNfs.DestroyContext(_ownedCtx);
+        _libNfs.Close(_ownedCtx, _fh);
+        _libNfs.Umount(_ownedCtx);
+        _libNfs.DestroyContext(_ownedCtx);
 
         base.Dispose(disposing);
     }

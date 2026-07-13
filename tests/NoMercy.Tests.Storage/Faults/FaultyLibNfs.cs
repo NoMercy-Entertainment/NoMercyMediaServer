@@ -206,7 +206,15 @@ internal sealed class FaultyLibNfs : ILibNfs
         return 0;
     }
 
-    public void SetClientName(IntPtr nfs, string id) { }
+    /// <summary>
+    /// NFSv4 client name applied to each context via <c>nfs_set_client_name</c>,
+    /// keyed by context pointer. Isolated read contexts must each receive a
+    /// UNIQUE name so their open-owner seqid sequences stay independent on the
+    /// server (a shared name collides as NFS4ERR_BAD_SEQID under a parallel scan).
+    /// </summary>
+    public ConcurrentDictionary<IntPtr, string> ClientNames { get; } = new();
+
+    public void SetClientName(IntPtr nfs, string id) => ClientNames[nfs] = id;
 
     public void SetVerifier(IntPtr nfs, string verifier) { }
 
