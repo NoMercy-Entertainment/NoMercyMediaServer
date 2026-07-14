@@ -365,12 +365,6 @@ public class LiveSession : ILiveSession
     public void MarkTranscodeStart() =>
         Interlocked.Exchange(ref _lastTranscodeStartTicks, DateTime.UtcNow.Ticks);
 
-    public DateTime LastTranscodeStart =>
-        new(Interlocked.Read(ref _lastTranscodeStartTicks), DateTimeKind.Utc);
-
-    public void MarkTranscodeStart() =>
-        Interlocked.Exchange(ref _lastTranscodeStartTicks, DateTime.UtcNow.Ticks);
-
     public ValueTask DisposeAsync()
     {
         try

@@ -49,8 +49,8 @@ public static class WebHostFactory
             DefaultApiVersionDescriptionProvider
         >();
         builder.Services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
-        builder.Services.AddSingleton<NoMercy.NmSystem.Logging.NoMercyLoggerOptions>(
-            _ => new()
+        builder.Services.AddSingleton<NoMercy.NmSystem.Logging.NoMercyLoggerOptions>(_ =>
+            new()
             {
                 MinimumLevel = Microsoft.Extensions.Logging.LogLevel.Information,
                 LogDirectory = NoMercy.NmSystem.Information.AppFiles.LogPath,
@@ -76,10 +76,12 @@ public static class WebHostFactory
                     // Redirected/headless: assume a standard width so long
                     // lines still wrap and hang under the gutter instead of the
                     // consumer terminal hard-wrapping them flush-left.
-                    return int.TryParse(
-                        System.Environment.GetEnvironmentVariable("COLUMNS"),
-                        out int cols
-                    ) && cols > 0
+                    return
+                        int.TryParse(
+                            System.Environment.GetEnvironmentVariable("COLUMNS"),
+                            out int cols
+                        )
+                        && cols > 0
                         ? cols
                         : 120;
                 },
@@ -127,7 +129,18 @@ public static class WebHostFactory
                         }
                         else
                         {
-                            listenOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3;
+                            // HTTP/1.1 + HTTP/3, no HTTP/2 — deliberate. With h2 in the ALPN
+                            // set Kestrel advertises Extended CONNECT (RFC 8441,
+                            // SETTINGS_ENABLE_CONNECT_PROTOCOL), so Firefox tunnels SignalR
+                            // WebSockets over the single shared h2 connection; when one such
+                            // stream stalls it poisons the whole connection and every hub's
+                            // negotiate riding it fails with status(null) — an endless
+                            // reconnect storm. Chrome never does WS-over-h2, which masked it.
+                            // .NET exposes no switch to keep h2 while disabling Extended
+                            // CONNECT, and h3/QUIC already supersedes h2's multiplexing, so we
+                            // drop h2 and let WebSockets use the plain HTTP/1.1 upgrade. Do not
+                            // re-add Http2 here without first solving Extended CONNECT.
+                            listenOptions.Protocols = HttpProtocols.Http1 | HttpProtocols.Http3;
                             certificateService.ConfigureHttpsListener(listenOptions);
                         }
                     }
