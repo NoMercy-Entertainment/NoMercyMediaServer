@@ -358,10 +358,10 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
     }
 
     [Fact]
-    public async Task Denies_WhenIngestKeyBoundToDifferentPath()
+    public async Task Denies_WhenIngestKeyBoundToDifferentFolder()
     {
         LiveIngestKeyStore store = new();
-        string key = store.Issue($"/{KnownFolderId}/first-file.mkv");
+        string key = store.Issue($"/{KnownFolderId}/ShowA/Ep/Ep.NoMercy.m3u8");
 
         bool nextCalled = false;
         TokenParamAuthMiddleware middleware = BuildMiddleware(
@@ -372,9 +372,10 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
             },
             store
         );
-        // Valid key, loopback, ingest port, but a different file than it was minted for.
+        // Valid key, loopback, ingest port, but a different title's folder than it
+        // was minted for — the key authorizes its own folder subtree, not a sibling.
         HttpContext context = BuildContext(
-            $"/{KnownFolderId}/second-file.mkv",
+            $"/{KnownFolderId}/ShowB/Ep/Ep.NoMercy.m3u8",
             ingestKey: key,
             remoteIp: IPAddress.Loopback,
             localPort: IngestPort
@@ -384,5 +385,34 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
 
         nextCalled.Should().BeFalse();
         context.Response.StatusCode.Should().Be(401);
+    }
+
+    [Fact]
+    public async Task Allows_NestedResourceUnderIngestKeyFolder()
+    {
+        LiveIngestKeyStore store = new();
+        // Minted for the encoded master; ffmpeg then self-ingests the nested video
+        // variant playlist under the same folder — the case that broke on .60.
+        string key = store.Issue($"/{KnownFolderId}/Show/Ep/Ep.NoMercy.m3u8");
+
+        bool nextCalled = false;
+        TokenParamAuthMiddleware middleware = BuildMiddleware(
+            _ =>
+            {
+                nextCalled = true;
+                return Task.CompletedTask;
+            },
+            store
+        );
+        HttpContext context = BuildContext(
+            $"/{KnownFolderId}/Show/Ep/video_1920x1080_SDR/video_1920x1080_SDR.m3u8",
+            ingestKey: key,
+            remoteIp: IPAddress.Loopback,
+            localPort: IngestPort
+        );
+
+        await middleware.InvokeAsync(context);
+
+        nextCalled.Should().BeTrue();
     }
 }

@@ -22,8 +22,11 @@ namespace NoMercy.Api.Services;
 public interface ILiveIngestKeyStore
 {
     /// <summary>
-    /// Mint a key bound to one served path (e.g. "/{folderId}/dir/file.mkv").
-    /// The path is the decoded request path the serving middleware will see.
+    /// Mint a key authorizing the served file's folder (e.g. a key for
+    /// "/{folderId}/Show/Ep/Ep.NoMercy.m3u8" covers everything under
+    /// "/{folderId}/Show/Ep/"). An encoded source is an HLS master whose nested
+    /// variant playlists, segments and subtitles all sit in that folder, so the
+    /// self-ingest must be able to read the whole subtree, not just the master.
     /// </summary>
     string Issue(string servedPath);
 
