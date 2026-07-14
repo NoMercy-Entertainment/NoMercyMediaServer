@@ -515,7 +515,7 @@ public class LibraryManager(
         FileRepository fileRepository = new(mediaContext, storageDriver);
         FileManager fileManager = new(fileRepository, storageFactory, storageDriver);
 
-        await fileManager.FindFiles(id, library);
+        _ = await fileManager.FindFiles(id, library);
 
         return library;
     }
