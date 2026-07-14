@@ -25,13 +25,23 @@ public class LiveIngestKeyStore : ILiveIngestKeyStore
     // clean teardown. Comfortably longer than the longest single file.
     private static readonly TimeSpan AbsoluteLifetime = TimeSpan.FromHours(12);
 
-    private sealed record Entry(string ServedPath, DateTime ExpiresAtUtc, string? SessionId);
+    private sealed record Entry(string PathPrefix, DateTime ExpiresAtUtc, string? SessionId);
 
     private readonly ConcurrentDictionary<string, Entry> _byKey = new(StringComparer.Ordinal);
 
     public string Issue(string servedPath)
     {
         PruneExpired();
+
+        // Authorize the served file's whole folder, not just the exact file. A
+        // NoMercy-encoded source is an HLS master (".NoMercy.m3u8") whose variant
+        // playlists, segments, audio renditions and subtitles all live under the
+        // same episode/movie folder, and ffmpeg's self-ingest follows every one of
+        // those nested URLs. Scoping to the file alone 401s them all. The folder is
+        // one title's content — still far tighter than the old library-wide bearer,
+        // and the request is loopback + ingest-port gated regardless.
+        int lastSlash = servedPath.LastIndexOf('/');
+        string prefix = lastSlash >= 0 ? servedPath[..(lastSlash + 1)] : servedPath;
 
         // 256 bits of entropy, base64url so the value is safe to drop verbatim
         // into an ffmpeg "-headers" line (no CR/LF, no reserved chars).
@@ -41,7 +51,7 @@ public class LiveIngestKeyStore : ILiveIngestKeyStore
             .Replace('/', '_')
             .TrimEnd('=');
 
-        _byKey[key] = new(servedPath, DateTime.UtcNow.Add(AbsoluteLifetime), SessionId: null);
+        _byKey[key] = new(prefix, DateTime.UtcNow.Add(AbsoluteLifetime), SessionId: null);
         return key;
     }
 
@@ -62,12 +72,13 @@ public class LiveIngestKeyStore : ILiveIngestKeyStore
             return false;
         }
 
-        // The serving middleware decodes the path; match both the raw request
-        // path and its decoded form so a key never fails on a percent-encoded
-        // segment the source URL carried.
+        // The request path must sit under the authorized folder prefix. The
+        // serving middleware decodes the path, so match both the raw request path
+        // and its decoded form — the prefix ends in '/', so this is a true folder
+        // boundary, not a "/dir" matching "/dir-other" substring slip.
         string decoded = Uri.UnescapeDataString(requestPath);
-        return string.Equals(entry.ServedPath, requestPath, StringComparison.Ordinal)
-            || string.Equals(entry.ServedPath, decoded, StringComparison.Ordinal);
+        return requestPath.StartsWith(entry.PathPrefix, StringComparison.Ordinal)
+            || decoded.StartsWith(entry.PathPrefix, StringComparison.Ordinal);
     }
 
     public void RevokeSession(string sessionId)

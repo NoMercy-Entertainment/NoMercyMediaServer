@@ -36,13 +36,30 @@ public sealed class LiveIngestKeyStoreTests
     }
 
     [Fact]
-    public void Validate_WithMismatchedPath_ReturnsFalse()
+    public void Validate_WithDifferentFolder_ReturnsFalse()
     {
         LiveIngestKeyStore store = new();
-        string key = store.Issue("/01ABC/Anime/Show/Ep.mkv");
+        string key = store.Issue("/01ABC/Anime/ShowA/Ep.mkv");
 
-        // A key only unlocks the one file it was minted for.
-        store.TryValidate(key, "/01ABC/Anime/Show/Other.mkv").Should().BeFalse();
+        // A key unlocks its own title's folder, not a sibling's.
+        store.TryValidate(key, "/01ABC/Anime/ShowB/Ep.mkv").Should().BeFalse();
+    }
+
+    [Fact]
+    public void Validate_NestedResourceUnderSameFolder_ReturnsTrue()
+    {
+        LiveIngestKeyStore store = new();
+        // Minted for the encoded master; ffmpeg then self-ingests its nested
+        // variant playlist, which must validate under the same folder. This is
+        // the case the exact-path scope broke (encoded HLS self-ingest 401'd).
+        string key = store.Issue("/01ABC/Show/Ep/Ep.The.Title.NoMercy.m3u8");
+
+        store
+            .TryValidate(key, "/01ABC/Show/Ep/video_1920x1080_SDR/video_1920x1080_SDR.m3u8")
+            .Should()
+            .BeTrue();
+        store.TryValidate(key, "/01ABC/Show/Ep/audio_eng_aac/audio_eng_aac.m3u8").Should().BeTrue();
+        store.TryValidate(key, "/01ABC/Show/Ep/subtitles/eng/full.m3u8").Should().BeTrue();
     }
 
     [Fact]
