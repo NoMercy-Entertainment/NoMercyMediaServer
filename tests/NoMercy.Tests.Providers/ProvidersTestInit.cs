@@ -39,7 +39,7 @@ internal static class ProvidersTestInit
     [ModuleInitializer]
     internal static void Initialize()
     {
-        global::NoMercy.Tests.TestEnvironmentSetup.EnsureIsolatedAppData();
+        TestEnvironmentSetup.EnsureIsolatedAppData();
 
         // Resolve all AppFiles paths under the dedicated test app-data folder.
         Config.IsTest = true;

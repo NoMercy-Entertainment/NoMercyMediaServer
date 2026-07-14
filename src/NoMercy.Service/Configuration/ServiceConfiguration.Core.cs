@@ -174,7 +174,7 @@ public static partial class ServiceConfiguration
         services.AddSingleton<IUserProvisioningService, UserProvisioningService>();
         services.AddSingleton<IDegradedModeRecovery, DegradedModeRecovery>();
         services.AddSingleton<AppProcessManager>();
-        services.AddSingleton<Monitoring.ResourceMonitor>();
+        services.AddSingleton<ResourceMonitor>();
 
         // Network discovery (replaces static Networking.Networking IP/address members)
         NetworkProbeConfig networkProbeConfig =
@@ -217,7 +217,7 @@ public static partial class ServiceConfiguration
         services
             .AddHttpClient("cert-renewal")
             .ConfigurePrimaryHttpMessageHandler(() =>
-                NoMercy.NmSystem.Extensions.HttpClientExtensions.CreateDnsHandler()
+                NmSystem.Extensions.HttpClientExtensions.CreateDnsHandler()
             );
         services.AddSingleton<ICertificateService>(sp =>
         {
@@ -387,53 +387,58 @@ public static partial class ServiceConfiguration
         services.AddScoped<MediaProcessingFileRepository>();
         services.AddScoped<IFileRepository, MediaProcessingFileRepository>();
         services.AddScoped<
-            NoMercy.MediaProcessing.Files.IMediaIdentificationService,
-            NoMercy.MediaProcessing.Files.MediaIdentificationService
+            IMediaIdentificationService,
+            MediaIdentificationService
         >();
         services.AddScoped<
-            NoMercy.MediaProcessing.Files.IFileListService,
-            NoMercy.MediaProcessing.Files.FileListService
+            IFileListService,
+            FileListService
         >();
 
         // Filename parse-adapter pipeline. Adapters are resolved as a set, so
         // plugins can contribute their own; FilenameParsingOptions can reorder or
         // disable them at runtime without recompiling.
-        services.AddSingleton<NoMercy.MediaProcessing.Files.Parsing.FilenameParsingOptions>();
+        services.AddSingleton<MediaProcessing.Files.Parsing.FilenameParsingOptions>();
         services.AddSingleton<
-            NoMercy.MediaProcessing.Files.Parsing.IFilenameParseAdapter,
-            NoMercy.MediaProcessing.Files.Parsing.Adapters.EpisodePrefixAdapter
+            MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            MediaProcessing.Files.Parsing.Adapters.EpisodePrefixAdapter
         >();
         services.AddSingleton<
-            NoMercy.MediaProcessing.Files.Parsing.IFilenameParseAdapter,
-            NoMercy.MediaProcessing.Files.Parsing.Adapters.EpisodeWordAdapter
+            MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            MediaProcessing.Files.Parsing.Adapters.EpisodeWordAdapter
         >();
         services.AddSingleton<
-            NoMercy.MediaProcessing.Files.Parsing.IFilenameParseAdapter,
-            NoMercy.MediaProcessing.Files.Parsing.Adapters.SeasonEpisodeAdapter
+            MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            MediaProcessing.Files.Parsing.Adapters.SeasonEpisodeAdapter
         >();
         services.AddSingleton<
-            NoMercy.MediaProcessing.Files.Parsing.IFilenameParseAdapter,
-            NoMercy.MediaProcessing.Files.Parsing.Adapters.CrossFormatAdapter
+            MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            MediaProcessing.Files.Parsing.Adapters.CrossFormatAdapter
         >();
         services.AddSingleton<
-            NoMercy.MediaProcessing.Files.Parsing.IFilenameParseAdapter,
-            NoMercy.MediaProcessing.Files.Parsing.Adapters.AnimeAbsoluteAdapter
+            MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            MediaProcessing.Files.Parsing.Adapters.AnimeAbsoluteAdapter
         >();
         services.AddSingleton<
-            NoMercy.MediaProcessing.Files.Parsing.IFilenameParseAdapter,
-            NoMercy.MediaProcessing.Files.Parsing.Adapters.EpisodeShortFormAdapter
+            MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            MediaProcessing.Files.Parsing.Adapters.EpisodeShortFormAdapter
         >();
         services.AddSingleton<
-            NoMercy.MediaProcessing.Files.Parsing.IFilenameParseAdapter,
-            NoMercy.MediaProcessing.Files.Parsing.Adapters.SpecialsAdapter
+            MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            MediaProcessing.Files.Parsing.Adapters.SpecialsAdapter
         >();
         services.AddSingleton<
-            NoMercy.MediaProcessing.Files.Parsing.IFilenameParseAdapter,
-            NoMercy.MediaProcessing.Files.Parsing.Adapters.MovieDetectorAdapter
+            MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            MediaProcessing.Files.Parsing.Adapters.MovieDetectorAdapter
         >();
         services.AddSingleton<
-            NoMercy.MediaProcessing.Files.Parsing.IFilenameParserPipeline,
-            NoMercy.MediaProcessing.Files.Parsing.FilenameParserPipeline
+            MediaProcessing.Files.Parsing.IFilenameParserPipeline,
+            MediaProcessing.Files.Parsing.FilenameParserPipeline
+        >();
+        services.AddSingleton<IReclaimScanService, ReclaimScanService>();
+        services.AddSingleton<
+            MediaProcessing.Intake.IIntakeSettings,
+            MediaProcessing.Intake.IntakeSettings
         >();
         services.AddSingleton<IReclaimScanService, ReclaimScanService>();
         services.AddSingleton<
@@ -535,7 +540,7 @@ public static partial class ServiceConfiguration
 
         services.AddMediaServerQueue();
         services.AddSingleton<JobDispatcher>();
-        services.AddSingleton<NoMercy.MediaProcessing.Jobs.IJobDispatcher>(sp =>
+        services.AddSingleton<IJobDispatcher>(sp =>
             sp.GetRequiredService<JobDispatcher>()
         );
 

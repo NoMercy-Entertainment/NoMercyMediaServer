@@ -31,7 +31,7 @@ internal static class MediaProcessingTestInit
     [ModuleInitializer]
     internal static void Initialize()
     {
-        global::NoMercy.Tests.TestEnvironmentSetup.EnsureIsolatedAppData();
+        TestEnvironmentSetup.EnsureIsolatedAppData();
 
         // Ensure test paths regardless of module-initializer ordering.
         Config.IsTest = true;

@@ -131,7 +131,7 @@ public class MusicSyncProtocolTests
         state.SetPosition(1_000);
         long firstCapture = state.PositionCapturedAtMs;
 
-        System.Threading.Thread.Sleep(5);
+        Thread.Sleep(5);
         state.SetPosition(2_000);
 
         state.Time.Should().Be(2_000);

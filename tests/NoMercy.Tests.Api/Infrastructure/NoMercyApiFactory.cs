@@ -127,8 +127,8 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
                 // The test host registers the logger itself, so it must register the
                 // provider + options too, or activating any ILogger<T> throws.
                 // LogDirectory defaults to null here, so tests write no log files.
-                services.AddSingleton(new NoMercy.NmSystem.Logging.NoMercyLoggerOptions());
-                services.AddSingleton<NoMercy.NmSystem.Logging.NoMercyLoggerProvider>();
+                services.AddSingleton(new NmSystem.Logging.NoMercyLoggerOptions());
+                services.AddSingleton<NmSystem.Logging.NoMercyLoggerProvider>();
                 services.AddSingleton(typeof(ILogger<>), typeof(CustomLogger<>));
 
                 // Register the shared ConnectedClients instance early.  Because

@@ -44,11 +44,11 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
     public NoMercyLoggerProvider(NoMercyLoggerOptions options, TextWriter? output = null)
     {
         _options = options;
-        _output = output ?? System.Console.Out;
+        _output = output ?? Console.Out;
         _color =
             options.Color
             ?? (
-                !System.Console.IsOutputRedirected
+                !Console.IsOutputRedirected
                 && Environment.GetEnvironmentVariable("NO_COLOR") is null
             );
 

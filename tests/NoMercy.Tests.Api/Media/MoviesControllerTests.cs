@@ -159,7 +159,7 @@ public class MoviesControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _authed.PostAsync(
             $"/api/v1/movie/{SeededMovieId}/like",
-            new StringContent(string.Empty, System.Text.Encoding.UTF8, "application/json")
+            new StringContent(string.Empty, Encoding.UTF8, "application/json")
         );
 
         response

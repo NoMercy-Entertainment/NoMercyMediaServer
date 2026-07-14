@@ -26,16 +26,13 @@ public static class NetworkProbe
             try
             {
                 using TcpClient client = new();
-                Task connectTask = client.ConnectAsync(target, 443);
-                if (await Task.WhenAny(connectTask, Task.Delay(timeoutMs)) == connectTask)
-                {
-                    await connectTask;
-                    return true;
-                }
+                using CancellationTokenSource cts = new(timeoutMs);
+                await client.ConnectAsync(target, 443, cts.Token);
+                return true;
             }
             catch
             {
-                // Try next target
+                // Timed out or unreachable — try the next target
             }
         }
 

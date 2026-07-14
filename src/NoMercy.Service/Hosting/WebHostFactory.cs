@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Net;
+using System.Net.Sockets;
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -49,20 +50,20 @@ public static class WebHostFactory
             DefaultApiVersionDescriptionProvider
         >();
         builder.Services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
-        builder.Services.AddSingleton<NoMercy.NmSystem.Logging.NoMercyLoggerOptions>(_ =>
+        builder.Services.AddSingleton<NmSystem.Logging.NoMercyLoggerOptions>(_ =>
             new()
             {
-                MinimumLevel = Microsoft.Extensions.Logging.LogLevel.Information,
-                LogDirectory = NoMercy.NmSystem.Information.AppFiles.LogPath,
+                MinimumLevel = LogLevel.Information,
+                LogDirectory = AppFiles.LogPath,
                 MaxRunFiles = 10,
                 BridgeLegacyLogger = true,
                 WidthProvider = static () =>
                 {
                     try
                     {
-                        if (!System.Console.IsOutputRedirected)
+                        if (!Console.IsOutputRedirected)
                         {
-                            int w = System.Console.WindowWidth;
+                            int w = Console.WindowWidth;
                             if (w > 0)
                                 return w;
                         }
@@ -78,7 +79,7 @@ public static class WebHostFactory
                     // consumer terminal hard-wrapping them flush-left.
                     return
                         int.TryParse(
-                            System.Environment.GetEnvironmentVariable("COLUMNS"),
+                            Environment.GetEnvironmentVariable("COLUMNS"),
                             out int cols
                         )
                         && cols > 0
@@ -87,7 +88,7 @@ public static class WebHostFactory
                 },
             }
         );
-        builder.Services.AddSingleton<NoMercy.NmSystem.Logging.NoMercyLoggerProvider>();
+        builder.Services.AddSingleton<NmSystem.Logging.NoMercyLoggerProvider>();
         builder.Services.AddSingleton(typeof(ILogger<>), typeof(CustomLogger<>));
 
         // Configure host options with reduced shutdown timeout
@@ -125,7 +126,7 @@ public static class WebHostFactory
                     {
                         if (forceHttp)
                         {
-                            listenOptions.Protocols = HttpProtocols.Http1;
+                            listenOptions.Protocols = HttpProtocols.Http1 | HttpProtocols.Http3;
                         }
                         else
                         {
@@ -153,7 +154,7 @@ public static class WebHostFactory
                 RuntimeServerSettings.Current.InternalServerPort + 1,
                 listenOptions =>
                 {
-                    listenOptions.Protocols = HttpProtocols.Http1;
+                    listenOptions.Protocols = HttpProtocols.Http1 | HttpProtocols.Http3;
                 }
             );
 
@@ -164,7 +165,7 @@ public static class WebHostFactory
                     Config.ManagementPipeName,
                     listenOptions =>
                     {
-                        listenOptions.Protocols = HttpProtocols.Http1;
+                        listenOptions.Protocols = HttpProtocols.Http1 | HttpProtocols.Http3;
                     }
                 );
 
@@ -182,7 +183,7 @@ public static class WebHostFactory
                     socketPath,
                     listenOptions =>
                     {
-                        listenOptions.Protocols = HttpProtocols.Http1;
+                        listenOptions.Protocols = HttpProtocols.Http1 | HttpProtocols.Http3;
                     }
                 );
 

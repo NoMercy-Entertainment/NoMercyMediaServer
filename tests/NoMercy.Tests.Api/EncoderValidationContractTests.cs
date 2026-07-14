@@ -312,9 +312,9 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        Assert.NotEqual(System.Net.HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
         Assert.True(
-            response.StatusCode == System.Net.HttpStatusCode.OK,
+            response.StatusCode == HttpStatusCode.OK,
             $"Expected 200 (validation envelope) for empty-outputs profile, got {(int)response.StatusCode}: {body}"
         );
 
@@ -350,8 +350,8 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        Assert.NotEqual(System.Net.HttpStatusCode.InternalServerError, response.StatusCode);
-        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         using JsonDocument doc = JsonDocument.Parse(body);
         bool hasNoOutputsRule = false;
@@ -1709,7 +1709,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     [Fact]
     public async Task DeleteDriver_SystemLocalDriver_Returns409()
     {
-        string systemId = NoMercy.Database.Models.Storage.Driver.SystemLocalDriverId.ToString();
+        string systemId = Database.Models.Storage.Driver.SystemLocalDriverId.ToString();
         HttpResponseMessage response = await _authed.DeleteAsync(
             $"/api/v1/dashboard/drivers/{systemId}"
         );
@@ -1755,7 +1755,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     [Fact]
     public async Task UpdateDriver_SystemLocalDriver_Returns409()
     {
-        string systemId = NoMercy.Database.Models.Storage.Driver.SystemLocalDriverId.ToString();
+        string systemId = Database.Models.Storage.Driver.SystemLocalDriverId.ToString();
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
             $"/api/v1/dashboard/drivers/{systemId}",
             new { name = "Renamed System" }
@@ -1895,7 +1895,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     [Fact]
     public async Task DeleteDriver_SystemDriverWithFolderReferences_Returns409()
     {
-        string systemId = NoMercy.Database.Models.Storage.Driver.SystemLocalDriverId.ToString();
+        string systemId = Database.Models.Storage.Driver.SystemLocalDriverId.ToString();
         HttpResponseMessage response = await _authed.DeleteAsync(
             $"/api/v1/dashboard/drivers/{systemId}"
         );

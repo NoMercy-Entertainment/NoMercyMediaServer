@@ -71,7 +71,7 @@ public sealed class ServerBootstrapper
         stopWatch.Start();
 
         // Phase 1 only (UserSettings, CreateAppFolders, ApiInfo) — fast, no network
-        await Setup.Boot.Start.InitEssential();
+        await Start.InitEssential();
 
         // Route storage-facade temp + transcode writes inside the NoMercy data
         // directory instead of the OS temp folder. StoragePaths default to
@@ -152,7 +152,7 @@ public sealed class ServerBootstrapper
         // Rename on-disk bundle directories when a built-in preset slug changed.
         await DatabaseSeeder.RunBundleSlugRenamePassAsync(
             app.Services.GetRequiredService<IStorageFactory>(),
-            app.Services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<NoMercy.Encoder.Bundle.BundleSlugRenamer>>()
+            app.Services.GetRequiredService<ILogger<Encoder.Bundle.BundleSlugRenamer>>()
         );
 
         // BootOrchestrator owns Phase 2 (auth) and Phase 3 (registration).

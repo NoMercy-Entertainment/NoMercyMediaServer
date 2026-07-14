@@ -73,7 +73,7 @@ public class EncoderOptionsTests
 
         // Live scratch defaults to the app's managed transcode cache, not the
         // system temp directory.
-        resolved.Should().Be(NoMercy.NmSystem.Information.AppFiles.TranscodePath);
+        resolved.Should().Be(NmSystem.Information.AppFiles.TranscodePath);
     }
 
     [Fact]

@@ -22,9 +22,7 @@ namespace NoMercy.Encoder.Strategies.Shared;
 /// </summary>
 internal static class TaskResourceHelper
 {
-    private static readonly IReadOnlyList<string> GpuEncoderTokens = NoMercy
-        .Encoder
-        .Hardware
+    private static readonly IReadOnlyList<string> GpuEncoderTokens = Hardware
         .GpuEncoderTokens
         .VendorPrefixes;
 

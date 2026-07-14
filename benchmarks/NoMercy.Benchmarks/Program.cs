@@ -295,7 +295,7 @@ internal static class Program
                     );
                     if (artist is null)
                         return 0;
-                    NoMercy.Api.DTOs.Music.ArtistResponseItemDto dto = new(artist, userId, country);
+                    Api.DTOs.Music.ArtistResponseItemDto dto = new(artist, userId, country);
                     Newtonsoft.Json.JsonSerializerSettings settings = new()
                     {
                         ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore,

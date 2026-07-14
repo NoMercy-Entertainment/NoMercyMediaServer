@@ -283,14 +283,18 @@ public class NetworkDiscovery : INetworkDiscovery
         int timeoutMilliseconds = 1500;
 
         using TcpClient client = new();
-        Task connectTask = client.ConnectAsync(
-            ExternalIp,
-            RuntimeServerSettings.Current.ExternalServerPort
-        );
-        Task delayTask = Task.Delay(timeoutMilliseconds);
-        Task completedTask = await Task.WhenAny(connectTask, delayTask);
+        using CancellationTokenSource cts = new(timeoutMilliseconds);
 
-        if (completedTask == delayTask)
+        try
+        {
+            await client.ConnectAsync(
+                ExternalIp,
+                RuntimeServerSettings.Current.ExternalServerPort,
+                cts.Token
+            );
+            return true;
+        }
+        catch (OperationCanceledException)
         {
             _logger.LogTrace(
                 "Timeout checking {ExternalIp}:{ExternalServerPort} after {TimeoutMilliseconds}ms.",
@@ -299,12 +303,6 @@ public class NetworkDiscovery : INetworkDiscovery
                 timeoutMilliseconds
             );
             return false;
-        }
-
-        try
-        {
-            await connectTask;
-            return true;
         }
         catch (SocketException ex)
         {
