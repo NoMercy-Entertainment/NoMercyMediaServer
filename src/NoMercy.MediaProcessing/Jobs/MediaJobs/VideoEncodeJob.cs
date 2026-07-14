@@ -12,6 +12,7 @@
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Encoder;
@@ -76,6 +77,12 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
     private IMediaAnalyzer? _mediaAnalyzer;
     private ISubtitleOcrEngine? _subtitleOcrEngine;
 
+    // Host shutdown signal for the post-encode scan retry backoff — falls back to
+    // CancellationToken.None when the DI scope has no IHostApplicationLifetime
+    // (e.g. a minimal test scope) so the retry loop still runs, just without an
+    // early-exit on server shutdown.
+    private CancellationToken _shutdownToken;
+
     public new void InjectStorageServices(IServiceProvider serviceProvider)
     {
         base.InjectStorageServices(serviceProvider);
@@ -85,6 +92,9 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         _encoderProcessRegistry = serviceProvider.GetRequiredService<IEncoderProcessRegistry>();
         _mediaAnalyzer = serviceProvider.GetRequiredService<IMediaAnalyzer>();
         _subtitleOcrEngine = serviceProvider.GetRequiredService<ISubtitleOcrEngine>();
+        _shutdownToken =
+            serviceProvider.GetService<IHostApplicationLifetime>()?.ApplicationStopping
+            ?? CancellationToken.None;
     }
 
     public override string QueueName => "encoder";
@@ -771,8 +781,13 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
 
         await PublishStageAsync(fileMetadata, "Refreshing library");
         Library library = folder.FolderLibraries.First().Library;
-        fileManager.FilterFiles(fileMetadata.FileName);
-        await fileManager.FindFiles(fileMetadata.Id, library);
+        await ScanEncodedOutputWithRetryAsync(
+            fileManager,
+            fileMetadata.Id,
+            fileMetadata.Title,
+            library,
+            fileMetadata.FileName
+        );
 
         await new IncompleteEncodeRecorder().ClearAsync(
             context,
@@ -796,6 +811,68 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         Log.LogInformation(
             "[VideoEncodeJob] Finalize complete for GroupTag={GroupTag}",
             state.GroupTag
+        );
+    }
+
+    // ------------------------------------------------------------------
+    // Post-encode registration
+    // ------------------------------------------------------------------
+
+    private static readonly TimeSpan[] PostEncodeScanRetryDelays =
+    [
+        TimeSpan.Zero,
+        TimeSpan.FromSeconds(5),
+        TimeSpan.FromSeconds(10),
+        TimeSpan.FromSeconds(20),
+        TimeSpan.FromSeconds(25),
+    ];
+
+    /// <summary>
+    /// Registers the just-published encode output, retrying the filtered scan on a
+    /// bounded backoff when it resolves 0 files. Remote-storage directory listings
+    /// (NFS <c>acdirmax</c>, S3 read-after-write) can hide a just-created entry for
+    /// tens of seconds right after publish, so an immediate scan can come back empty
+    /// even though the output was written successfully — the delayed manual rescan a
+    /// user runs afterward then "just works" because enough time has passed. The
+    /// retried scan is the same filtered, additive call — <see cref="FileManager.FindFiles"/>
+    /// never deletes existing records while a <see cref="FileManager.FilterFiles"/> filter
+    /// is set — so re-running it here is safe.
+    /// </summary>
+    private async Task ScanEncodedOutputWithRetryAsync(
+        FileManager fileManager,
+        int mediaId,
+        string title,
+        Library library,
+        string filterFileName
+    )
+    {
+        for (int attempt = 0; attempt < PostEncodeScanRetryDelays.Length; attempt++)
+        {
+            TimeSpan delay = PostEncodeScanRetryDelays[attempt];
+            if (delay > TimeSpan.Zero)
+            {
+                try
+                {
+                    await Task.Delay(delay, _shutdownToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+            }
+
+            fileManager.FilterFiles(filterFileName);
+            bool hasCandidates = await fileManager.FindFiles(mediaId, library);
+            if (hasCandidates)
+                return;
+        }
+
+        Log.LogWarning(
+            "[VideoEncodeJob] Post-encode registration found 0 files for id={Id} '{Title}' (filter='{Filter}') after {Attempts} attempts — a manual rescan will be required; check storage visibility/naming",
+            mediaId,
+            title,
+            filterFileName,
+            PostEncodeScanRetryDelays.Length
         );
     }
 
@@ -1423,8 +1500,13 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         await RunBitmapSubtitleOcrAsync(fileMetadata, InputFile, sourceStorage);
 
         await PublishStageAsync(fileMetadata, "Refreshing library");
-        fileManager.FilterFiles(fileMetadata.FileName);
-        await fileManager.FindFiles(fileMetadata.Id, folder.FolderLibraries.First().Library);
+        await ScanEncodedOutputWithRetryAsync(
+            fileManager,
+            fileMetadata.Id,
+            fileMetadata.Title,
+            folder.FolderLibraries.First().Library,
+            fileMetadata.FileName
+        );
 
         if (EventBusProvider.IsConfigured)
         {

@@ -45,7 +45,7 @@ public partial class FileManager(
 
     private string? Filter { get; set; }
 
-    public async Task FindFiles(int id, Library library)
+    public async Task<bool> FindFiles(int id, Library library)
     {
         Id = id;
 
@@ -151,6 +151,8 @@ public partial class FileManager(
                     );
                 break;
         }
+
+        return hasCandidates;
     }
 
     public void FilterFiles(string filter)
@@ -289,6 +291,6 @@ public partial class FileManager(
             await context.SaveChangesAsync();
         }
 
-        await FindFiles(id, newFolderLibrary.Library);
+        _ = await FindFiles(id, newFolderLibrary.Library);
     }
 }
