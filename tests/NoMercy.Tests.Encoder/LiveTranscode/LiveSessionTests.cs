@@ -134,7 +134,7 @@ public class LiveSessionTests
         );
         session.PushSegment(segment);
 
-        session.ReportPlaybackPosition(TimeSpan.FromSeconds(10));
+        session.ReportPlaybackPosition(TimeSpan.FromSeconds(10), authoritative: true);
 
         // TranscodedPosition = 30s, PlaybackPosition = 10s → BufferAhead = 20s
         session.BufferAhead.Should().Be(TimeSpan.FromSeconds(20));

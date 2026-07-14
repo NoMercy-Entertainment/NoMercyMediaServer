@@ -16,6 +16,16 @@ namespace NoMercy.Encoder.LiveTranscode;
 
 public class LiveSession : ILiveSession
 {
+    // How long an authoritative playhead report (a real client heartbeat, a
+    // seek, or the encode start position) stays in force before a
+    // non-authoritative report — the segment-request-derived prefetch
+    // frontier — is allowed to move the playhead again. Without this window a
+    // player that prefetches far ahead of what the user is actually watching
+    // overwrites the true playhead on every segment GET, and BufferAhead reads
+    // as permanently low even though the encoder is racing far past the
+    // viewer's real position.
+    private static readonly TimeSpan AuthoritativePlayheadWindow = TimeSpan.FromSeconds(15);
+
     private readonly Channel<Segment> _segmentChannel = Channel.CreateUnbounded<Segment>();
 
     // Protects concurrent seeks: only one seek can manipulate the runner CTS at a time.
@@ -29,6 +39,13 @@ public class LiveSession : ILiveSession
 
     private int _state = (int)LiveSessionState.Starting;
     private long _playbackPositionTicks;
+
+    // UTC ticks of the last authoritative playhead report. MinValue-relative
+    // default (0) means "no authoritative report yet" — DateTime.UtcNow minus
+    // DateTime(0) is always well outside AuthoritativePlayheadWindow, so a
+    // non-authoritative report applies freely until the first authoritative
+    // one lands (session start always reports one; see LiveEncoder).
+    private long _lastAuthoritativePlayheadUtcTicks;
     private TimeSpan _transcodedPosition;
     private double _currentSpeed;
     private int _audioStreamIndex;
@@ -156,8 +173,12 @@ public class LiveSession : ILiveSession
                 oldCts.Dispose();
             }
 
-            // Reset position bookkeeping
+            // Reset position bookkeeping. A seek is an authoritative reposition —
+            // stamp the authority window too so a stale, in-flight prefetch report
+            // (issued for the pre-seek position, landing just after) cannot
+            // immediately clobber the seek target.
             Interlocked.Exchange(ref _playbackPositionTicks, position.Ticks);
+            Interlocked.Exchange(ref _lastAuthoritativePlayheadUtcTicks, DateTime.UtcNow.Ticks);
             _transcodedPosition = position;
 
             // Create a new CTS for the replacement runner, linked to session lifetime
@@ -312,8 +333,31 @@ public class LiveSession : ILiveSession
         }
     }
 
-    public void ReportPlaybackPosition(TimeSpan position) =>
-        Interlocked.Exchange(ref _playbackPositionTicks, position.Ticks);
+    /// <summary>
+    /// Updates the playhead used to compute <see cref="BufferAhead"/>.
+    /// <paramref name="authoritative"/> true (a client heartbeat, a seek, or the
+    /// encode start position) always applies and refreshes the authority window;
+    /// false (the segment-request-derived prefetch frontier) applies only when
+    /// no authoritative report has landed within <see cref="AuthoritativePlayheadWindow"/>,
+    /// so a live client's true position is never overwritten by how far ahead
+    /// the player has prefetched.
+    /// </summary>
+    public void ReportPlaybackPosition(TimeSpan position, bool authoritative)
+    {
+        if (authoritative)
+        {
+            Interlocked.Exchange(ref _playbackPositionTicks, position.Ticks);
+            Interlocked.Exchange(ref _lastAuthoritativePlayheadUtcTicks, DateTime.UtcNow.Ticks);
+            return;
+        }
+
+        DateTime lastAuthoritative = new(
+            Interlocked.Read(ref _lastAuthoritativePlayheadUtcTicks),
+            DateTimeKind.Utc
+        );
+        if (DateTime.UtcNow - lastAuthoritative > AuthoritativePlayheadWindow)
+            Interlocked.Exchange(ref _playbackPositionTicks, position.Ticks);
+    }
 
     public DateTime LastTranscodeStart =>
         new(Interlocked.Read(ref _lastTranscodeStartTicks), DateTimeKind.Utc);

@@ -81,7 +81,7 @@ public class LiveSessionSuspendResumeTests
         session.SetState(LiveSessionState.Transcoding);
 
         TimeSpan reportedPosition = TimeSpan.FromSeconds(42);
-        session.ReportPlaybackPosition(reportedPosition);
+        session.ReportPlaybackPosition(reportedPosition, authoritative: true);
 
         TimeSpan? spawnedPosition = null;
         session.AttachRunnerFactory(
