@@ -22,7 +22,7 @@ public class BlurayDiscSourceTests
     {
         string stderr = "";
 
-        System.Collections.Generic.List<(int Index, TimeSpan Duration)> result =
+        List<(int Index, TimeSpan Duration)> result =
             BlurayDiscSource.ParsePlaylists(stderr);
 
         result.Should().BeEmpty();
@@ -33,7 +33,7 @@ public class BlurayDiscSourceTests
     {
         string stderr = "";
 
-        System.Collections.Generic.List<(int Index, TimeSpan Duration)> result =
+        List<(int Index, TimeSpan Duration)> result =
             BlurayDiscSource.ParsePlaylists(stderr);
 
         result.Should().BeEmpty();
@@ -44,7 +44,7 @@ public class BlurayDiscSourceTests
     {
         string stderr = "playlist 00100.mpls (02:05:30)";
 
-        System.Collections.Generic.List<(int Index, TimeSpan Duration)> result =
+        List<(int Index, TimeSpan Duration)> result =
             BlurayDiscSource.ParsePlaylists(stderr);
 
         result.Should().HaveCount(1);
@@ -66,7 +66,7 @@ public class BlurayDiscSourceTests
             playlist 00110.mpls (00:45:15)
             """;
 
-        System.Collections.Generic.List<(int Index, TimeSpan Duration)> result =
+        List<(int Index, TimeSpan Duration)> result =
             BlurayDiscSource.ParsePlaylists(stderr);
 
         result.Should().HaveCount(3);
@@ -83,7 +83,7 @@ public class BlurayDiscSourceTests
             playlist 00100.mpls (02:00:00)
             """;
 
-        System.Collections.Generic.List<(int Index, TimeSpan Duration)> result =
+        List<(int Index, TimeSpan Duration)> result =
             BlurayDiscSource.ParsePlaylists(stderr);
 
         result.Should().HaveCount(1);
@@ -98,7 +98,7 @@ public class BlurayDiscSourceTests
             playlist 00100.mpls (01:00:00)
             """;
 
-        System.Collections.Generic.List<(int Index, TimeSpan Duration)> result =
+        List<(int Index, TimeSpan Duration)> result =
             BlurayDiscSource.ParsePlaylists(stderr);
 
         result.Should().HaveCount(1);
@@ -113,7 +113,7 @@ public class BlurayDiscSourceTests
             playlist 00110.mpls (01:00:00)
             """;
 
-        System.Collections.Generic.List<(int Index, TimeSpan Duration)> result =
+        List<(int Index, TimeSpan Duration)> result =
             BlurayDiscSource.ParsePlaylists(stderr);
 
         result.Should().HaveCount(1);
@@ -128,7 +128,7 @@ public class BlurayDiscSourceTests
             Playlist 00110.mpls (01:30:00)
             """;
 
-        System.Collections.Generic.List<(int Index, TimeSpan Duration)> result =
+        List<(int Index, TimeSpan Duration)> result =
             BlurayDiscSource.ParsePlaylists(stderr);
 
         result.Should().HaveCount(2);
@@ -139,7 +139,7 @@ public class BlurayDiscSourceTests
     {
         string stderr = "playlist  00100.mpls  (01:00:00)";
 
-        System.Collections.Generic.List<(int Index, TimeSpan Duration)> result =
+        List<(int Index, TimeSpan Duration)> result =
             BlurayDiscSource.ParsePlaylists(stderr);
 
         result.Should().HaveCount(1);
@@ -151,7 +151,7 @@ public class BlurayDiscSourceTests
     {
         string stderr = "playlist 99999.mpls (01:00:00)";
 
-        System.Collections.Generic.List<(int Index, TimeSpan Duration)> result =
+        List<(int Index, TimeSpan Duration)> result =
             BlurayDiscSource.ParsePlaylists(stderr);
 
         result.Should().HaveCount(1);
@@ -163,7 +163,7 @@ public class BlurayDiscSourceTests
     {
         string stderr = "playlist 00100.mpls (1:2:3)";
 
-        System.Collections.Generic.List<(int Index, TimeSpan Duration)> result =
+        List<(int Index, TimeSpan Duration)> result =
             BlurayDiscSource.ParsePlaylists(stderr);
 
         result.Should().HaveCount(1);

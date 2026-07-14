@@ -508,7 +508,7 @@ public class Binaries
                         columnWidth[col] = _binaryReport[i].Length;
                 }
 
-                System.Text.StringBuilder report = new();
+                StringBuilder report = new();
                 report.Append($"Binaries up to date ({_binaryReport.Count}):");
                 for (int row = 0; row < rows; row++)
                 {

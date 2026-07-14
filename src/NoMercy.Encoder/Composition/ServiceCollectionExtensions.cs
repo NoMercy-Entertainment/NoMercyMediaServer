@@ -251,7 +251,7 @@ public static class ServiceCollectionExtensions
         // playback via MediaActivityMonitor. TryAdd so a host that also calls
         // AddMediaServerQueue() (the primary owner) shares that same instance
         // regardless of which registration runs first.
-        services.TryAddSingleton<NoMercy.NmSystem.Monitoring.MediaActivityMonitor>();
+        services.TryAddSingleton<NmSystem.Monitoring.MediaActivityMonitor>();
         services.AddTransient<IAudioFingerprinter, ChromaprintFingerprinter>();
         services.AddTransient<IIntroDetector, ChromaprintIntroDetector>();
 

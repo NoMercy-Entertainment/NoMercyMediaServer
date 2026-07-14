@@ -303,7 +303,7 @@ public static class DatabaseSeeder
     /// </summary>
     public static async Task RunBundleSlugRenamePassAsync(
         IStorageFactory storageFactory,
-        Microsoft.Extensions.Logging.ILogger<NoMercy.Encoder.Bundle.BundleSlugRenamer> logger
+        ILogger<BundleSlugRenamer> logger
     )
     {
         if (BuiltinPresetRenames.SlugRenames.Count == 0)

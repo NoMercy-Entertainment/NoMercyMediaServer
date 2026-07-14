@@ -765,4 +765,16 @@
     <Key>Found {0} subtitle(s)</Key>
     <Value lang="nl">Gevonden {0} ondertitel(s)</Value>
   </Entry>
+  <Entry>
+    <Key>Gone.</Key>
+    <Value lang="nl">Gone.</Value>
+  </Entry>
+  <Entry>
+    <Key>Live session has ended or expired</Key>
+    <Value lang="nl">Live session has ended or expired</Value>
+  </Entry>
+  <Entry>
+    <Key>Video file not found or you lack access</Key>
+    <Value lang="nl">Video file not found or you lack access</Value>
+  </Entry>
 </I18N>

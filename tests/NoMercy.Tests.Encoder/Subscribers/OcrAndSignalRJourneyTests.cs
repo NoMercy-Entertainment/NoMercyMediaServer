@@ -374,9 +374,9 @@ public class OcrAndSignalRJourneyTests
 
         capturedPayload.Should().NotBeNull();
 
-        NoMercy.Api.DTOs.Encoding.EncodingCompletedDto dto = capturedPayload
+        Api.DTOs.Encoding.EncodingCompletedDto dto = capturedPayload
             .Should()
-            .BeOfType<NoMercy.Api.DTOs.Encoding.EncodingCompletedDto>()
+            .BeOfType<Api.DTOs.Encoding.EncodingCompletedDto>()
             .Subject;
 
         dto.Id.Should().Be(77);
