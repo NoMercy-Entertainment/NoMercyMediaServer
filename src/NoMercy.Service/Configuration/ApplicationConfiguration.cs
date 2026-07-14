@@ -106,6 +106,9 @@ public static class ApplicationConfiguration
         app.UseResponseCompression();
         app.UseResponseCaching();
 
+        // Must precede UseCors: it sets the Private Network Access opt-in header on
+        // preflights so a public-origin page may reach this server on a LAN address.
+        app.UseMiddleware<PrivateNetworkAccessMiddleware>();
         app.UseCors("AllowNoMercyOrigins");
         app.UseRouting();
 
