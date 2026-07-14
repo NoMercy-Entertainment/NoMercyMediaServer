@@ -89,7 +89,11 @@ public class ServerUserSyncCronJob : ICronJobExecutor
         );
         await _userCache.RefreshUsersAsync(refreshContext);
 
-        _logger.LogInformation(
+        // A no-op sync (nobody revoked) is routine background chatter — keep it at
+        // Debug. A run that actually revoked access is a real event worth Info.
+        LogLevel syncLevel = result.RevokedCount > 0 ? LogLevel.Information : LogLevel.Debug;
+        _logger.Log(
+            syncLevel,
             "Server user sync complete: {Count} upstream user(s), {Revoked} revoked locally",
             result.UpstreamUserCount,
             result.RevokedCount

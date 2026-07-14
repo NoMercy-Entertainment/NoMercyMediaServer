@@ -49,8 +49,10 @@ public class LiveEncoder(
         // so a resumed/seeked session's transcoded position is absolute too; if the
         // playhead stayed at zero, BufferAhead would read as the whole start offset
         // and the buffer-adaptive sweep could suspend the encoder before the client
-        // has fetched its first segment. Segment fetches keep it current thereafter.
-        session.ReportPlaybackPosition(request.StartPosition);
+        // has fetched its first segment. Authoritative: the client's own heartbeat
+        // reports (or, absent those, the segment-request-derived frontier) keep it
+        // current thereafter.
+        session.ReportPlaybackPosition(request.StartPosition, authoritative: true);
         session.SetState(LiveSessionState.Starting);
 
         // Flip to Transcoding eagerly so API consumers see the session as live
@@ -151,7 +153,7 @@ public class LiveEncoder(
         string sessionId = Ulid.NewUlid().ToString();
         LiveSession session = new(sessionId, audioQuality);
         session.SetAudioStreamIndex(request.AudioStreamIndex);
-        session.ReportPlaybackPosition(request.StartPosition);
+        session.ReportPlaybackPosition(request.StartPosition, authoritative: true);
         session.SetState(LiveSessionState.Transcoding);
 
         string outputDirectory = Path.Combine(

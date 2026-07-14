@@ -111,6 +111,29 @@ public class LiveTranscodeHub(
     }
 
     /// <summary>
+    /// The watching client reports its true playback position, so buffer-ahead
+    /// is measured from where the user is actually watching rather than from
+    /// the prefetch frontier (how far the player has fetched segments ahead).
+    /// Older clients that never call this keep getting the pre-fix,
+    /// segment-request-derived estimate — see
+    /// <see cref="NoMercy.Api.Services.LiveTranscodeService.GetSegmentAsync"/>.
+    /// </summary>
+    public void ReportPlayhead(string sessionId, double currentTimeSeconds)
+    {
+        if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
+            return;
+
+        if (!CallerOwnsSession(sessionId))
+            return;
+
+        runtime.Session.ReportPlaybackPosition(
+            TimeSpan.FromSeconds(Math.Max(0, currentTimeSeconds)),
+            authoritative: true
+        );
+        runtime.TouchLastAccess();
+    }
+
+    /// <summary>
     /// Client requests the encoder pause (fill buffer to max, stop producing
     /// new segments). Maps to <see cref="ILiveSession.Suspend"/>.
     /// </summary>

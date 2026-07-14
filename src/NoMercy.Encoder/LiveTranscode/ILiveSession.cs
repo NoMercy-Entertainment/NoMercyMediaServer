@@ -44,7 +44,31 @@ public interface ILiveSession : IAsyncDisposable
     Task ChangeQualityAsync(string qualityId, LiveQuality newQuality, CancellationToken ct);
     void Suspend();
     void Resume();
-    void ReportPlaybackPosition(TimeSpan position);
+
+    /// <summary>
+    /// Updates the playhead used to compute <see cref="BufferAhead"/>.
+    /// <paramref name="authoritative"/> true (a client heartbeat, a seek, or the
+    /// encode start position) always applies; false (the segment-request-derived
+    /// prefetch frontier) applies only while no authoritative report is still
+    /// within its authority window, so a live client's true position is never
+    /// overwritten by how far ahead the player has prefetched.
+    /// </summary>
+    void ReportPlaybackPosition(TimeSpan position, bool authoritative);
+
+    /// <summary>
+    /// UTC time the current FFmpeg runner was (re)started — session start, seek,
+    /// quality change, or resume. <see cref="DateTime.MinValue"/> until the first
+    /// runner is spawned. The buffer-adaptive sweep uses it as a warm-up grace so
+    /// it does not act on the legitimately-empty buffer of a runner that has not
+    /// yet written its first segment.
+    /// </summary>
+    DateTime LastTranscodeStart { get; }
+
+    /// <summary>
+    /// Stamps <see cref="LastTranscodeStart"/> with the current UTC time. Called
+    /// at every point a new runner is dispatched.
+    /// </summary>
+    void MarkTranscodeStart();
 
     /// <summary>
     /// UTC time the current FFmpeg runner was (re)started — session start, seek,

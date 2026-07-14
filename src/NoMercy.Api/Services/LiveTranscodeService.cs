@@ -347,18 +347,23 @@ public class LiveTranscodeService(
         // URL-shape compatibility; it is intentionally not matched here.)
         _ = epoch;
 
-        // Pace transcoding from real client demand. The web client never posts a
-        // playback position, so the only signal of where the viewer is comes from
-        // which segment it is fetching. Feed that to the session as the playhead:
-        // segments are absolutely indexed, so segment N sits at N×segDur. Without
-        // this the session's BufferAhead is (absolute transcoded position − 0),
-        // which the buffer-adaptive sweep reads as a permanently-full buffer and
-        // suspends the encoder forever — the stall this fixes.
+        // Pace transcoding from real client demand as a FALLBACK. A client that
+        // reports its true position (LiveTranscodeHub.ReportPlayhead) owns the
+        // playhead; this segment-request-derived estimate only applies while no
+        // such authoritative report is current — see LiveSession.ReportPlaybackPosition.
+        // Absent an authoritative report, the only signal of where the viewer is
+        // comes from which segment it is fetching, and the player prefetches well
+        // ahead of that — feeding it in unconditionally used to make BufferAhead
+        // read as permanently low and let the encoder race to the end of the file.
+        // Segments are absolutely indexed, so segment N sits at N×segDur.
         double segmentSeconds =
             runtime.TargetSegmentDuration.TotalSeconds > 0
                 ? runtime.TargetSegmentDuration.TotalSeconds
                 : 6;
-        runtime.Session.ReportPlaybackPosition(TimeSpan.FromSeconds(index * segmentSeconds));
+        runtime.Session.ReportPlaybackPosition(
+            TimeSpan.FromSeconds(index * segmentSeconds),
+            authoritative: false
+        );
 
         // The whole-runtime VOD playlist lists every segment up front, so hls.js
         // asks for the one at the playhead before the encoder has written it —
@@ -426,7 +431,10 @@ public class LiveTranscodeService(
             return SessionGoneOrNotFound(sessionId);
 
         double clampedSeconds = Math.Max(0, request.TimeSeconds);
-        runtime.Session.ReportPlaybackPosition(TimeSpan.FromSeconds(clampedSeconds));
+        runtime.Session.ReportPlaybackPosition(
+            TimeSpan.FromSeconds(clampedSeconds),
+            authoritative: true
+        );
         bool isPaused = runtime.Session.State == LiveSessionState.Buffered;
         return LiveResult.Ok(new ReportPositionResponse(clampedSeconds, isPaused));
     }
@@ -504,7 +512,10 @@ public class LiveTranscodeService(
         // gap left by an earlier jump — falls through to a real re-spawn below.
         if (SegmentAlreadyTranscoded(runtime, targetIndex))
         {
-            runtime.Session.ReportPlaybackPosition(TimeSpan.FromSeconds(clampedSeconds));
+            runtime.Session.ReportPlaybackPosition(
+                TimeSpan.FromSeconds(clampedSeconds),
+                authoritative: true
+            );
             runtime.TouchLastAccess();
 
             await PushIfTransportAsync(
