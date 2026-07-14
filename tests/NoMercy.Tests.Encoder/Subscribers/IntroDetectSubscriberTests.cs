@@ -223,6 +223,59 @@ public class IntroDetectSubscriberTests
     }
 
     [Fact]
+    public async Task OnLibraryScanCompleted_MusicLibrary_DoesNoWork_DoesNotFingerprint()
+    {
+        IDbContextFactory<MediaContext> factory = InMemoryFactory("music");
+        Mock<IAudioFingerprinter> fingerprinter = new();
+        Mock<IIntroDetector> detector = new();
+        InMemoryEventBus bus = new();
+
+        using IntroDetectSubscriber subject = BuildSubscriber(
+            bus,
+            factory,
+            fingerprinter.Object,
+            detector.Object
+        );
+
+        Ulid musicLibraryId = Ulid.NewUlid();
+        await using (MediaContext seedCtx = await factory.CreateDbContextAsync())
+        {
+            seedCtx.Libraries.Add(
+                new()
+                {
+                    Id = musicLibraryId,
+                    Title = "Music",
+                    Type = "music",
+                }
+            );
+            await seedCtx.SaveChangesAsync();
+        }
+
+        await bus.PublishAsync(
+            new LibraryScanCompletedEvent
+            {
+                LibraryId = musicLibraryId,
+                LibraryName = "Music",
+                ItemsFound = 0,
+                Duration = TimeSpan.Zero,
+            }
+        );
+
+        await using MediaContext ctx = await factory.CreateDbContextAsync();
+        ctx.ContentSegments.Should()
+            .BeEmpty("intro detection is a TV feature and must not run on a music library");
+        fingerprinter.Verify(
+            f =>
+                f.FingerprintAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<FingerprintWindow?>(),
+                    It.IsAny<CancellationToken>()
+                ),
+            Times.Never
+        );
+    }
+
+    [Fact]
     public async Task OnLibraryScanCompleted_SeasonHasOnlyOneEpisode_SkipsDetection_WritesNoSegments()
     {
         IDbContextFactory<MediaContext> factory = InMemoryFactory("singleepisode");

@@ -82,12 +82,6 @@ public class IntroDetectSubscriber : IDisposable
         if (!_options.EnableIntroDetectSubscriber)
             return;
 
-        _logger.LogInformation(
-            "IntroDetect: starting for library {LibraryName} ({LibraryId})",
-            @event.LibraryName,
-            @event.LibraryId
-        );
-
         // Load all TV seasons whose show belongs to this library.
         List<int> seasonIds;
         await using (MediaContext context = await _contextFactory.CreateDbContextAsync(ct))
@@ -102,6 +96,26 @@ public class IntroDetectSubscriber : IDisposable
                 .Select(s => s.Id)
                 .ToListAsync(ct);
         }
+
+        // Intro/outro detection is a TV-episode feature. A library with no TV
+        // seasons — music, movies, or an empty library — has nothing to detect, so
+        // skip it quietly instead of announcing a run that immediately does nothing.
+        if (seasonIds.Count == 0)
+        {
+            _logger.LogDebug(
+                "IntroDetect: no TV content in library {LibraryName} ({LibraryId}) — skipping",
+                @event.LibraryName,
+                @event.LibraryId
+            );
+            return;
+        }
+
+        _logger.LogInformation(
+            "IntroDetect: starting for library {LibraryName} ({LibraryId}) — {SeasonCount} season(s)",
+            @event.LibraryName,
+            @event.LibraryId,
+            seasonIds.Count
+        );
 
         foreach (int seasonId in seasonIds)
         {
