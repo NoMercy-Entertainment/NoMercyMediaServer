@@ -201,6 +201,40 @@ public class LiveEncoderTests
         session.State.Should().Be(LiveSessionState.Transcoding);
     }
 
+    // ──────────────────────────────────────────────────────────────────────────
+    // StartAudioRenditionAsync — per-language audio child
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task StartAudioRenditionAsync_StartsChild_BypassingTheSessionCap()
+    {
+        // Cap of zero: a normal StartAsync would be refused, but an audio child
+        // rides on an already-admitted video session and must not be capped.
+        SessionManager capped = new(new() { MaxConcurrentSessions = 0, MaxSessionsPerUser = 0 });
+        LiveEncoder encoder = BuildEncoder(sessionManager: capped);
+        LiveEncodeRequest request = MakeRequest() with { AudioStreamIndex = 2 };
+
+        ILiveSession child = await encoder.StartAudioRenditionAsync(
+            request,
+            CancellationToken.None
+        );
+
+        child.Should().NotBeNull();
+        child.State.Should().Be(LiveSessionState.Transcoding);
+        child.CurrentAudioStreamIndex.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task StartAsync_WhenCapExhausted_Throws()
+    {
+        SessionManager capped = new(new() { MaxConcurrentSessions = 0, MaxSessionsPerUser = 0 });
+        LiveEncoder encoder = BuildEncoder(sessionManager: capped);
+
+        Func<Task> act = () => encoder.StartAsync(MakeRequest(), CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
     [Fact]
     public async Task StartAsync_UsesOptimalQuality_WhenNoPreference()
     {

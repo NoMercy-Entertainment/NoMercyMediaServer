@@ -31,7 +31,7 @@ public static class LocalizationHelper
     public static string Localize(this string key)
     {
         string localized = GlobalLocalizer.Localize(key);
-        if (key == localized && Config.IsDev)
+        if (key == localized && Config.IsDev && IsCollectableKey(key))
         {
             TryAppendMissingLocalization(key);
             return key;
@@ -39,6 +39,15 @@ public static class LocalizationHelper
 
         return localized;
     }
+
+    // A missing key is only worth recording as a translatable string when it is a
+    // stable, human-authored label. Runtime-interpolated messages — "Segment 78 is
+    // not ready yet", a served file path, "Maximum 3 sessions" — bake variable data
+    // into the text, so every occurrence is a unique throwaway key that pollutes
+    // I18N.xml and can never be usefully translated. Any digit or path separator is
+    // the tell: a real UI label carries a placeholder token, never a live value.
+    private static bool IsCollectableKey(string key) =>
+        !key.Any(c => char.IsDigit(c) || c == '\\' || c == '/');
 
     private static void TryAppendMissingLocalization(string key)
     {

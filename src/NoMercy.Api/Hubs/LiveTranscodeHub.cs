@@ -29,6 +29,7 @@ public class LiveTranscodeHub(
     IActivityLogger activityLogger,
     ISessionManager sessionManager,
     ILiveStreamingService streamingService,
+    ILiveSessionPresenceTracker presenceTracker,
     ILogger<LiveTranscodeHub> logger
 ) : ConnectionHub(httpContextAccessor, contextFactory, connectedClients, activityLogger)
 {
@@ -62,6 +63,7 @@ public class LiveTranscodeHub(
         }
 
         await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(sessionId));
+        presenceTracker.OnSubscribed(Context.ConnectionId, sessionId);
 
         logger.LogDebug(
             "Client {ConnectionId} subscribed to live session {SessionId}",
@@ -75,7 +77,19 @@ public class LiveTranscodeHub(
     /// </summary>
     public async Task UnsubscribeFromSession(string sessionId)
     {
+        presenceTracker.OnUnsubscribed(Context.ConnectionId, sessionId);
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupName(sessionId));
+    }
+
+    /// <summary>
+    /// A watching connection dropped (tab close, navigation, network loss). Hand
+    /// off to the presence tracker, which disposes the connection's sessions once
+    /// a short grace window elapses without a reconnect re-subscribing.
+    /// </summary>
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        presenceTracker.OnConnectionClosed(Context.ConnectionId);
+        await base.OnDisconnectedAsync(exception);
     }
 
     /// <summary>

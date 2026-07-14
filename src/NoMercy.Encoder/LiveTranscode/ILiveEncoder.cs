@@ -14,4 +14,13 @@ namespace NoMercy.Encoder.LiveTranscode;
 public interface ILiveEncoder
 {
     Task<ILiveSession> StartAsync(LiveEncodeRequest request, CancellationToken ct);
+
+    /// <summary>
+    /// Starts an audio-only transcode for a single source language (a child of a
+    /// video session), used for a raw source with no pre-encoded renditions. It
+    /// does not count against the concurrent-session cap and produces an AAC HLS
+    /// track the master playlist references. The audio stream to map is taken from
+    /// <see cref="LiveEncodeRequest.AudioStreamIndex"/>.
+    /// </summary>
+    Task<ILiveSession> StartAudioRenditionAsync(LiveEncodeRequest request, CancellationToken ct);
 }

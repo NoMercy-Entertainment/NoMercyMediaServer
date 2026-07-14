@@ -9,17 +9,20 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Net;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Api.Middleware;
+using NoMercy.Api.Services;
 using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Storage;
 using NoMercy.Database.Models.Users;
+using NoMercy.NmSystem.Configuration;
 using Xunit;
 
 // ReSharper disable AccessToDisposedClosure
@@ -37,9 +40,7 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
 
     public TokenParamAuthMiddlewareTests()
     {
-        _connection = new(
-            $"DataSource={Guid.NewGuid():N};Mode=Memory;Cache=Shared"
-        );
+        _connection = new($"DataSource={Guid.NewGuid():N};Mode=Memory;Cache=Shared");
         _connection.Open();
 
         _dbOptions = new DbContextOptionsBuilder<MediaContext>()
@@ -100,15 +101,27 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
         _connection.Dispose();
     }
 
-    private static TokenParamAuthMiddleware BuildMiddleware(RequestDelegate next)
+    private static TokenParamAuthMiddleware BuildMiddleware(
+        RequestDelegate next,
+        ILiveIngestKeyStore? ingestKeyStore = null
+    )
     {
-        return new(next, NullLogger<TokenParamAuthMiddleware>.Instance);
+        return new(
+            next,
+            ingestKeyStore ?? new LiveIngestKeyStore(),
+            NullLogger<TokenParamAuthMiddleware>.Instance
+        );
     }
+
+    private static readonly int IngestPort = RuntimeServerSettings.Current.InternalServerPort + 1;
 
     private static HttpContext BuildContext(
         string path,
         string? authorizationHeader = null,
-        ClaimsPrincipal? user = null
+        ClaimsPrincipal? user = null,
+        string? ingestKey = null,
+        IPAddress? remoteIp = null,
+        int? localPort = null
     )
     {
         DefaultHttpContext context = new();
@@ -117,6 +130,15 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
 
         if (authorizationHeader is not null)
             context.Request.Headers.Authorization = authorizationHeader;
+
+        if (ingestKey is not null)
+            context.Request.Headers["X-NoMercy-Ingest-Key"] = ingestKey;
+
+        if (remoteIp is not null)
+            context.Connection.RemoteIpAddress = remoteIp;
+
+        if (localPort is not null)
+            context.Connection.LocalPort = localPort.Value;
 
         if (user is not null)
             context.User = user;
@@ -240,5 +262,127 @@ public sealed class TokenParamAuthMiddlewareTests : IAsyncLifetime, IDisposable
         await middleware.InvokeAsync(context);
 
         nextCalled.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Allows_WhenValidIngestKeyOnIngestPortFromLoopback_NoBearerNoUser()
+    {
+        LiveIngestKeyStore store = new();
+        string path = $"/{KnownFolderId}/some-file.mkv";
+        string key = store.Issue(path);
+
+        bool nextCalled = false;
+        TokenParamAuthMiddleware middleware = BuildMiddleware(
+            _ =>
+            {
+                nextCalled = true;
+                return Task.CompletedTask;
+            },
+            store
+        );
+        HttpContext context = BuildContext(
+            path,
+            ingestKey: key,
+            remoteIp: IPAddress.Loopback,
+            localPort: IngestPort
+        );
+
+        await middleware.InvokeAsync(context);
+
+        // A loopback ffmpeg self-ingest on the internal ingest port carries only the
+        // scoped key, no bearer and no authenticated user — it must still be served.
+        nextCalled.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Denies_WhenValidIngestKeyArrivesOnPublicPort()
+    {
+        LiveIngestKeyStore store = new();
+        string path = $"/{KnownFolderId}/some-file.mkv";
+        string key = store.Issue(path);
+
+        bool nextCalled = false;
+        TokenParamAuthMiddleware middleware = BuildMiddleware(
+            _ =>
+            {
+                nextCalled = true;
+                return Task.CompletedTask;
+            },
+            store
+        );
+        // The cloudflared-relay case: a valid key from a loopback source IP, but the
+        // request landed on the PUBLIC port (relayed external traffic), not the
+        // loopback-only ingest port. The bypass must not fire — it falls through to
+        // the normal 401 (folder path, no auth).
+        HttpContext context = BuildContext(
+            path,
+            ingestKey: key,
+            remoteIp: IPAddress.Loopback,
+            localPort: RuntimeServerSettings.Current.InternalServerPort
+        );
+
+        await middleware.InvokeAsync(context);
+
+        nextCalled.Should().BeFalse();
+        context.Response.StatusCode.Should().Be(401);
+    }
+
+    [Fact]
+    public async Task Denies_WhenValidIngestKeyButNotFromLoopback()
+    {
+        LiveIngestKeyStore store = new();
+        string path = $"/{KnownFolderId}/some-file.mkv";
+        string key = store.Issue(path);
+
+        bool nextCalled = false;
+        TokenParamAuthMiddleware middleware = BuildMiddleware(
+            _ =>
+            {
+                nextCalled = true;
+                return Task.CompletedTask;
+            },
+            store
+        );
+        // Same valid key, correct port, but a public source address — denied.
+        HttpContext context = BuildContext(
+            path,
+            ingestKey: key,
+            remoteIp: IPAddress.Parse("203.0.113.7"),
+            localPort: IngestPort
+        );
+
+        await middleware.InvokeAsync(context);
+
+        nextCalled.Should().BeFalse();
+        context.Response.StatusCode.Should().Be(401);
+    }
+
+    [Fact]
+    public async Task Denies_WhenIngestKeyBoundToDifferentPath()
+    {
+        LiveIngestKeyStore store = new();
+        string key = store.Issue($"/{KnownFolderId}/first-file.mkv");
+
+        bool nextCalled = false;
+        TokenParamAuthMiddleware middleware = BuildMiddleware(
+            _ =>
+            {
+                nextCalled = true;
+                return Task.CompletedTask;
+            },
+            store
+        );
+        // Valid key, loopback, ingest port, but a different file than it was minted for.
+        HttpContext context = BuildContext(
+            $"/{KnownFolderId}/second-file.mkv",
+            ingestKey: key,
+            remoteIp: IPAddress.Loopback,
+            localPort: IngestPort
+        );
+
+        await middleware.InvokeAsync(context);
+
+        nextCalled.Should().BeFalse();
+        context.Response.StatusCode.Should().Be(401);
     }
 }

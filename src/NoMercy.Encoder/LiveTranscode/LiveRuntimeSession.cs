@@ -42,6 +42,29 @@ public sealed class LiveRuntimeSession : IAsyncDisposable
     public ClientCapabilities? ClientCapabilities { get; internal set; }
 
     /// <summary>
+    /// The file's own pre-encoded audio renditions, advertised in the session's
+    /// master playlist. Empty when the source has no HLS audio renditions (a raw
+    /// or disc source), in which case the session muxes audio into the video and
+    /// serves the media playlist directly instead of a master.
+    /// </summary>
+    public IReadOnlyList<LiveAudioRendition> AudioRenditions { get; internal set; } = [];
+
+    /// <summary>
+    /// Session ids of the per-language audio-only transcodes spawned for a raw
+    /// source that has no pre-encoded renditions. They are disposed together with
+    /// this (parent video) session so switching audio never outlives the video.
+    /// </summary>
+    public IReadOnlyList<string> ChildAudioSessionIds { get; internal set; } = [];
+
+    /// <summary>
+    /// True for a per-language audio-only transcode spawned as a child of a video
+    /// session. The idle reaper skips these — a language nobody is currently
+    /// listening to gets no segment hits, so it would be reaped out from under a
+    /// later switch; its lifetime is bound to the parent instead.
+    /// </summary>
+    public bool IsAudioRenditionChild { get; internal set; }
+
+    /// <summary>
     /// Monotonic generation counter for the segment buffer. Incremented on every
     /// buffer reset (seek or quality change) so clients can tell — via the epoch
     /// embedded in segment URLs — that indices from a previous generation are now

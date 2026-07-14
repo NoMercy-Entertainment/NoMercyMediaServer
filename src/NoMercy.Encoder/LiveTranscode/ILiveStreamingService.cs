@@ -25,8 +25,15 @@ public interface ILiveStreamingService
     void Register(
         ILiveSession session,
         TimeSpan targetSegmentDuration,
-        string? scratchDirectory = null
+        string? scratchDirectory = null,
+        bool isAudioRenditionChild = false
     );
+
+    /// <summary>
+    /// Records the per-language audio child sessions belonging to a parent video
+    /// session so <see cref="RemoveAsync"/> can cascade-dispose them.
+    /// </summary>
+    void StampChildAudioSessions(string sessionId, IReadOnlyList<string> childSessionIds);
 
     /// <summary>
     /// Stores the original media analysis context on an already-registered
@@ -34,6 +41,13 @@ public interface ILiveStreamingService
     /// without re-probing the file.
     /// </summary>
     void StampRequestContext(string sessionId, MediaInfo mediaInfo, ClientCapabilities client);
+
+    /// <summary>
+    /// Stores the file's pre-encoded audio renditions on an already-registered
+    /// runtime so the master playlist can advertise them. The API layer resolves
+    /// them from the file's metadata; the streaming layer only holds the result.
+    /// </summary>
+    void StampAudioRenditions(string sessionId, IReadOnlyList<LiveAudioRendition> renditions);
 
     bool TryGetRuntime(string sessionId, out LiveRuntimeSession runtime);
 

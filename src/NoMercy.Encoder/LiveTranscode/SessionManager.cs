@@ -58,4 +58,25 @@ public class SessionManager(LiveSessionLimits limits) : ISessionManager
         _sessionUserMap.TryGetValue(sessionId, out string? userId);
         return userId;
     }
+
+    public IReadOnlyList<string> GetUserSessionIds(string? userId)
+    {
+        if (userId is null)
+            return [];
+
+        return _sessionUserMap.Where(kv => kv.Value == userId).Select(kv => kv.Key).ToList();
+    }
+
+    public void PruneDeadSessions(IReadOnlyCollection<string> aliveSessionIds)
+    {
+        HashSet<string> alive = [.. aliveSessionIds];
+
+        // Union of both maps' keys — either could hold a ghost id the other has
+        // already dropped.
+        foreach (string sessionId in _sessions.Keys.Concat(_sessionUserMap.Keys).Distinct())
+        {
+            if (!alive.Contains(sessionId))
+                RemoveSession(sessionId);
+        }
+    }
 }

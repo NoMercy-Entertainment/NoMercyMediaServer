@@ -31,6 +31,12 @@ public class LiveSession : ILiveSession
     private long _playbackPositionTicks;
     private TimeSpan _transcodedPosition;
     private double _currentSpeed;
+    private int _audioStreamIndex;
+
+    // MinValue until the first runner is dispatched, so a session that never
+    // spawns one (unit tests exercising Evaluate directly) is not treated as
+    // "warming up". Stamped on every real (re)spawn via MarkTranscodeStart.
+    private long _lastTranscodeStartTicks = DateTime.MinValue.Ticks;
 
     // Injected by LiveEncoder after construction via AttachRunnerFactory.
     private Func<TimeSpan, CancellationToken, Task>? _runnerFactory;
@@ -48,6 +54,7 @@ public class LiveSession : ILiveSession
     public LiveSessionState State =>
         (LiveSessionState)Interlocked.CompareExchange(ref _state, 0, 0);
     public LiveQuality CurrentQuality { get; private set; }
+    public int CurrentAudioStreamIndex => Volatile.Read(ref _audioStreamIndex);
     public double CurrentSpeed => _currentSpeed;
     public TimeSpan TranscodedPosition => _transcodedPosition;
     public TimeSpan BufferAhead =>
@@ -87,6 +94,10 @@ public class LiveSession : ILiveSession
     // so a later seek/resume respawn (which reads CurrentQuality) keeps using
     // the software encoder instead of retrying the exhausted GPU slot.
     internal void SetQuality(LiveQuality quality) => CurrentQuality = quality;
+
+    // Sets the audio track a subsequent (re)spawn maps. Called at session start
+    // with the track resolved from the library's language preference.
+    internal void SetAudioStreamIndex(int index) => Volatile.Write(ref _audioStreamIndex, index);
 
     internal void SetSpeed(double speed) => _currentSpeed = speed;
 
@@ -158,6 +169,7 @@ public class LiveSession : ILiveSession
             if (_runnerFactory is not null)
             {
                 SetState(LiveSessionState.Transcoding);
+                MarkTranscodeStart();
 
                 _ = Task.Run(
                     () => _runnerFactory(position, _runnerCts.Token),
@@ -212,6 +224,7 @@ public class LiveSession : ILiveSession
 
                 // Keep same playback position — quality change doesn't rewind
                 TimeSpan resumePosition = new(Interlocked.Read(ref _playbackPositionTicks));
+                MarkTranscodeStart();
                 _ = Task.Run(
                     () => _runnerFactory(resumePosition, _runnerCts.Token),
                     CancellationToken.None
@@ -285,6 +298,7 @@ public class LiveSession : ILiveSession
 
             if (_runnerFactory is not null)
             {
+                MarkTranscodeStart();
                 TimeSpan resumePosition = new(Interlocked.Read(ref _playbackPositionTicks));
                 _ = Task.Run(
                     () => _runnerFactory(resumePosition, _runnerCts.Token),
@@ -300,6 +314,12 @@ public class LiveSession : ILiveSession
 
     public void ReportPlaybackPosition(TimeSpan position) =>
         Interlocked.Exchange(ref _playbackPositionTicks, position.Ticks);
+
+    public DateTime LastTranscodeStart =>
+        new(Interlocked.Read(ref _lastTranscodeStartTicks), DateTimeKind.Utc);
+
+    public void MarkTranscodeStart() =>
+        Interlocked.Exchange(ref _lastTranscodeStartTicks, DateTime.UtcNow.Ticks);
 
     public ValueTask DisposeAsync()
     {

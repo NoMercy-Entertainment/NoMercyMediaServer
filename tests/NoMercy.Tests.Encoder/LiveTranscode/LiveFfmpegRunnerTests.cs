@@ -119,11 +119,19 @@ public class LiveFfmpegRunnerTests
         string[] args = LiveFfmpegRunner.BuildArguments(input);
 
         args.Should().NotContain("-ss");
+        // The first run still numbers its segments from zero.
+        args.Should().Contain("-start_number");
+        args[Array.IndexOf(args, "-start_number") + 1].Should().Be("0");
     }
 
     [Fact]
-    public void BuildArguments_IncludesSeek_WhenStartPositionNonZero()
+    public void BuildArguments_SeekSnapsToSegmentBoundary_AndNumbersFromThatIndex()
     {
+        // 120.5s with 6s segments falls inside absolute segment 20 (120–126s).
+        // The input seek snaps to that segment's start and the muxer numbers its
+        // first output segment 20, so seg_00020.ts maps 1:1 to the index hls.js
+        // requests from the whole-runtime playlist. hls.js resolves the 0.5s
+        // sub-segment offset by seeking inside the segment.
         LiveRunInput input = new(
             InputPath: "/media/in.mkv",
             OutputDirectory: "/tmp/live",
@@ -136,7 +144,17 @@ public class LiveFfmpegRunnerTests
 
         int ssIdx = Array.IndexOf(args, "-ss");
         ssIdx.Should().BeGreaterThanOrEqualTo(0);
-        args[ssIdx + 1].Should().Be("120.500");
+        args[ssIdx + 1].Should().Be("120.000");
+
+        int startNumberIdx = Array.IndexOf(args, "-start_number");
+        startNumberIdx.Should().BeGreaterThanOrEqualTo(0);
+        args[startNumberIdx + 1].Should().Be("20");
+
+        // Muxed PTS is shifted to the segment's true start so hls.js places the
+        // seek fragment at 120s (20×6) instead of 0.
+        int offsetIdx = Array.IndexOf(args, "-output_ts_offset");
+        offsetIdx.Should().BeGreaterThanOrEqualTo(0);
+        args[offsetIdx + 1].Should().Be("120.000");
     }
 
     [Fact]
@@ -783,6 +801,86 @@ public class LiveFfmpegRunnerTests
         int caIdx = Array.IndexOf(args, "-c:a");
         args[caIdx + 1].Should().Be("aac");
         args.Should().Contain("-f").And.Contain("hls");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // VideoOnly — audio comes from the file's own renditions via the master
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void BuildArguments_VideoOnly_DropsAudioEntirely()
+    {
+        LiveRunInput input = new(
+            InputPath: "/media/in.mkv",
+            OutputDirectory: "/tmp/live",
+            StartPosition: TimeSpan.Zero,
+            Quality: MakeQuality(),
+            SegmentDurationSeconds: 4,
+            AudioStreamIndex: 1,
+            VideoOnly: true
+        );
+
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
+
+        // Video is still mapped and encoded, but audio is dropped: no audio map,
+        // no audio codec — just "-an". The master playlist supplies the audio.
+        args.Should().Contain("0:v:0");
+        args.Should().Contain("-an");
+        args.Should().NotContain("-c:a");
+        args.Should().NotContain(a => a.StartsWith("0:a:"));
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // AudioRenditionOnly — one language transcoded to AAC, no video
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void BuildArguments_AudioRenditionOnly_MapsOneLanguageToAac_NoVideo()
+    {
+        LiveRunInput input = new(
+            InputPath: "/media/remux.mkv",
+            OutputDirectory: "/tmp/live-audio-jpn",
+            StartPosition: TimeSpan.Zero,
+            Quality: MakeQuality(),
+            SegmentDurationSeconds: 4,
+            AudioStreamIndex: 2,
+            AudioRenditionOnly: true
+        );
+
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
+
+        // No video is produced or mapped, and the selected language is transcoded
+        // to AAC — this is the per-language rendition for a raw multi-audio source.
+        args.Should().Contain("-vn");
+        args.Should().NotContain("0:v:0");
+        args.Should().NotContain("-c:v");
+        args.Should().Contain("-map").And.Contain("0:a:2?");
+        int caIdx = Array.IndexOf(args, "-c:a");
+        args[caIdx + 1].Should().Be("aac");
+        // Still an HLS output so it can be served and seeked like the video track.
+        args.Should().Contain("-f").And.Contain("hls");
+    }
+
+    [Fact]
+    public void BuildArguments_AudioRenditionOnly_SharesAbsoluteSegmentIndexingWithVideo()
+    {
+        // A language rendition must seek to the same segment boundaries the video
+        // does so hls.js keeps audio and video aligned across a seek.
+        LiveRunInput input = new(
+            InputPath: "/media/remux.mkv",
+            OutputDirectory: "/tmp/live-audio-eng",
+            StartPosition: TimeSpan.FromSeconds(120.5),
+            Quality: MakeQuality(),
+            SegmentDurationSeconds: 6,
+            AudioStreamIndex: 0,
+            AudioRenditionOnly: true
+        );
+
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
+
+        args[Array.IndexOf(args, "-ss") + 1].Should().Be("120.000");
+        args[Array.IndexOf(args, "-start_number") + 1].Should().Be("20");
+        args[Array.IndexOf(args, "-output_ts_offset") + 1].Should().Be("120.000");
     }
 
     // ──────────────────────────────────────────────────────────────────────────

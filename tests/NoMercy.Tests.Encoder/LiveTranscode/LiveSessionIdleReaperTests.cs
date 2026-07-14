@@ -160,6 +160,34 @@ public class LiveSessionIdleReaperTests
     // Multiple sessions: only idle ones evicted
     // ──────────────────────────────────────────────────────────────────────────
 
+    // ──────────────────────────────────────────────────────────────────────────
+    // Audio-rendition children are never idle-reaped
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task SweepAsync_IdleAudioRenditionChild_IsNotEvicted()
+    {
+        LiveStreamingService service = new(
+            NullLogger<LiveStreamingService>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
+
+        LiveSession child = new(Ulid.NewUlid().ToString(), MakeQuality());
+        service.Register(child, TimeSpan.FromSeconds(4), isAudioRenditionChild: true);
+
+        // Idle far past the threshold — a non-selected language gets no hits, but
+        // it must stay alive so a later switch to it works. The parent disposes it.
+        BackdateLastAccess(service, child.SessionId, TimeSpan.FromMinutes(30));
+
+        Mock<ISessionManager> managerMock = new();
+        LiveSessionIdleReaper reaper = BuildReaper(service, managerMock.Object);
+
+        await reaper.SweepAsync();
+
+        service.ActiveSessionIds.Should().Contain(child.SessionId);
+        managerMock.Verify(m => m.RemoveSession(It.IsAny<string>()), Times.Never);
+    }
+
     [Fact]
     public async Task SweepAsync_MixedSessions_OnlyIdleEvicted()
     {

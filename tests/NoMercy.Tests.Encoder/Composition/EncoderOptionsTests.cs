@@ -20,8 +20,9 @@ namespace NoMercy.Tests.Encoder.Composition;
 ///   - FfmpegPath / FfprobePath throw a clear InvalidOperationException
 ///     when the overrides aren't set, instead of propagating a
 ///     cryptic "process not found" from FfmpegExecutor later.
-///   - ResolvedLiveTranscodeCachePath defaults to a sane temp location
-///     so live sessions never write to the repo directory by accident.
+///   - ResolvedLiveTranscodeCachePath defaults under the app's managed
+///     transcode cache so live sessions never write to the repo directory
+///     or the system temp by accident.
 /// </summary>
 public class EncoderOptionsTests
 {
@@ -64,14 +65,15 @@ public class EncoderOptionsTests
     }
 
     [Fact]
-    public void ResolvedLiveTranscodeCachePath_UnsetDefault_UsesTempDir()
+    public void ResolvedLiveTranscodeCachePath_UnsetDefault_UsesControlledTranscodeCache()
     {
         EncoderOptions options = new();
 
         string resolved = options.ResolvedLiveTranscodeCachePath;
 
-        resolved.Should().EndWith("nomercy-live");
-        resolved.Should().StartWith(Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar));
+        // Live scratch defaults to the app's managed transcode cache, not the
+        // system temp directory.
+        resolved.Should().Be(NoMercy.NmSystem.Information.AppFiles.TranscodePath);
     }
 
     [Fact]

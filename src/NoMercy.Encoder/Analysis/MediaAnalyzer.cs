@@ -35,6 +35,37 @@ public class MediaAnalyzer(IProcessRunner processRunner, IStorage storage, Encod
 
     public async Task<MediaInfo> AnalyzeAsync(
         string filePath,
+        string[]? extraInputArgs,
+        CancellationToken ct = default
+    )
+    {
+        bool isUrl =
+            filePath.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+            || filePath.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+
+        // Non-URL source: keep the scope-validated, remote-staging filesystem path.
+        // Extra input args are only meaningful for the HTTP self-ingest URL.
+        if (!isUrl)
+            return await AnalyzeAsync(filePath, storage, ct);
+
+        string[] arguments = [.. FfprobeArgs, .. (extraInputArgs ?? []), filePath];
+        ProcessResult result = await processRunner.RunAsync(
+            options.FfprobePath,
+            arguments,
+            null,
+            ct
+        );
+
+        if (!result.IsSuccess)
+            throw new InvalidOperationException(
+                $"ffprobe failed for '{filePath}': {result.StdErr}"
+            );
+
+        return ParseFfprobeJson(result.StdOut, filePath);
+    }
+
+    public async Task<MediaInfo> AnalyzeAsync(
+        string filePath,
         IStorage sourceStorage,
         CancellationToken ct = default
     )

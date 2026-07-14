@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Globalization;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Profiles;
 
@@ -54,26 +55,74 @@ internal static class LiveFfmpegArgumentBuilder
 
         List<string> args = ["-hide_banner", "-nostats", "-loglevel", "error"];
 
-        if (input.StartPosition > TimeSpan.Zero)
+        // Input options (e.g. the "-headers" auth line for an HTTP self-ingest URL)
+        // must precede "-i" to bind to the input that follows.
+        if (input.ExtraInputArgs is { Length: > 0 })
+            args.AddRange(input.ExtraInputArgs);
+
+        // Absolute segment indexing. The playlist the client sees lists every
+        // segment for the whole runtime up front, so segment N must always mean
+        // source time [N*segDur, (N+1)*segDur) no matter which position this
+        // runner was spawned at. Snap the input seek to the segment boundary and
+        // number the muxer's output from that same index (see AppendHls's
+        // -start_number) so a runner spawned by a seek produces seg_N that maps
+        // 1:1 to the index hls.js requests. Any sub-segment offset the user
+        // actually seeked to is resolved by hls.js seeking within the segment.
+        int startIndex = StartSegmentIndex(input);
+        if (startIndex > 0)
         {
             args.Add("-ss");
-            args.Add(FormatSeconds(input.StartPosition.TotalSeconds));
+            args.Add(FormatSeconds((double)startIndex * input.SegmentDurationSeconds));
         }
 
         args.Add("-i");
         args.Add(input.InputPath);
 
-        bool hasVideo = input.SourceInfo is null || input.SourceInfo.HasVideo;
-        PlaybackAction action = DetermineAction(input, hasVideo);
-
-        if (hasVideo)
-            AppendVideo(args, input, action);
-        else
+        // An audio-only rendition run drops video entirely and transcodes just the
+        // one selected language to AAC. It shares the seek / absolute-index / HLS
+        // scaffolding below with the video path (a language rendition must seek to
+        // the same segment boundaries the video does), only the codec mapping
+        // differs — so it branches here and skips the whole video block.
+        if (input.AudioRenditionOnly)
+        {
             args.Add("-vn");
+            AppendAudioRendition(args, input);
+        }
+        else
+        {
+            bool hasVideo = input.SourceInfo is null || input.SourceInfo.HasVideo;
+            PlaybackAction action = DetermineAction(input, hasVideo);
 
-        AppendAudio(args, input, action);
+            if (hasVideo)
+                AppendVideo(args, input, action);
+            else
+                args.Add("-vn");
 
-        AppendHls(args, input, segmentPattern);
+            // A source that ships its own browser-ready HLS audio renditions is
+            // transcoded video-only; the master playlist points the player at those
+            // renditions, so muxing audio here would be wasted work.
+            if (input.VideoOnly)
+                args.Add("-an");
+            else
+                AppendAudio(args, input, action);
+        }
+
+        // Absolute output timestamps. A runner spawned by a seek uses "-ss" before
+        // the input, which resets output PTS to ~0. hls.js then has to reconcile a
+        // segment whose PTS starts at 0 against a playlist that places it deep in
+        // the timeline, and across the implicit discontinuity (no EXT-X-DISCONTINUITY
+        // in a whole-runtime VOD playlist) it mis-positions the fragment and never
+        // appends it — the seek "loads forever". Shifting the muxed PTS back to the
+        // segment's true start makes segment N carry PTS ≈ N×segDur, matching the
+        // playlist exactly, so no client-side remapping is needed. Zero for the
+        // start-at-zero runner, so the common case is unchanged.
+        if (startIndex > 0)
+        {
+            args.Add("-output_ts_offset");
+            args.Add(FormatSeconds((double)startIndex * input.SegmentDurationSeconds));
+        }
+
+        AppendHls(args, input, segmentPattern, startIndex);
 
         if (input.CustomArguments is { Count: > 0 })
             AppendCustomArguments(args, input.CustomArguments);
@@ -230,8 +279,11 @@ internal static class LiveFfmpegArgumentBuilder
 
     private static void AppendAudio(List<string> args, LiveRunInput input, PlaybackAction action)
     {
+        // Map the viewer's chosen audio track (resolved from the library language
+        // preference, or switched at runtime). Trailing '?' keeps a video-only
+        // source from failing when the index has no matching stream.
         args.Add("-map");
-        args.Add("0:a:0?");
+        args.Add($"0:a:{input.AudioStreamIndex.ToString(CultureInfo.InvariantCulture)}?");
 
         if (action == PlaybackAction.Remux)
         {
@@ -240,11 +292,10 @@ internal static class LiveFfmpegArgumentBuilder
             return;
         }
 
-        // Clamp audio channel count to what the client supports.
-        int sourceChannels =
-            input.SourceInfo?.AudioStreams.Count > 0
-                ? input.SourceInfo.AudioStreams[0].Channels
-                : 2;
+        // Clamp audio channel count to what the client supports. Read the channel
+        // count off the SELECTED stream (a 5.1 English track next to a stereo
+        // commentary must downmix from its own layout, not the first stream's).
+        int sourceChannels = SelectedAudioChannels(input);
         int clientMax = input.Client?.MaxAudioChannels is > 0 ? input.Client.MaxAudioChannels : 2;
         int outputChannels = Math.Min(sourceChannels, clientMax);
 
@@ -256,7 +307,34 @@ internal static class LiveFfmpegArgumentBuilder
         args.Add(outputChannels.ToString(CultureInfo.InvariantCulture));
     }
 
-    private static void AppendHls(List<string> args, LiveRunInput input, string segmentPattern)
+    // Audio-only rendition for one source language. Always transcodes to AAC (the
+    // reason this path exists is a source whose audio a browser can't play), with
+    // the channel count clamped to what the client supports — a 7.1 or Atmos bed
+    // folds down to the client's cap (stereo by default) since browsers can't
+    // render object audio and rarely decode 7.1 anyway.
+    private static void AppendAudioRendition(List<string> args, LiveRunInput input)
+    {
+        args.Add("-map");
+        args.Add($"0:a:{input.AudioStreamIndex.ToString(CultureInfo.InvariantCulture)}?");
+
+        int sourceChannels = SelectedAudioChannels(input);
+        int clientMax = input.Client?.MaxAudioChannels is > 0 ? input.Client.MaxAudioChannels : 2;
+        int outputChannels = Math.Min(sourceChannels, clientMax);
+
+        args.Add("-c:a");
+        args.Add("aac");
+        args.Add("-b:a");
+        args.Add("128k");
+        args.Add("-ac");
+        args.Add(outputChannels.ToString(CultureInfo.InvariantCulture));
+    }
+
+    private static void AppendHls(
+        List<string> args,
+        LiveRunInput input,
+        string segmentPattern,
+        int startIndex
+    )
     {
         args.Add("-f");
         args.Add("hls");
@@ -264,12 +342,47 @@ internal static class LiveFfmpegArgumentBuilder
         args.Add(input.SegmentDurationSeconds.ToString(CultureInfo.InvariantCulture));
         args.Add("-hls_list_size");
         args.Add("0");
+        // Number the first output segment with its absolute index so a runner
+        // spawned at a seek position writes seg_{startIndex}.ts onward, matching
+        // the whole-runtime playlist the client already holds.
+        args.Add("-start_number");
+        args.Add(startIndex.ToString(CultureInfo.InvariantCulture));
         args.Add("-hls_playlist_type");
         args.Add("event");
         args.Add("-hls_flags");
         args.Add("independent_segments+temp_file");
         args.Add("-hls_segment_filename");
         args.Add(segmentPattern);
+    }
+
+    /// <summary>
+    /// Absolute HLS segment index the first output segment of this run carries.
+    /// Floors the (boundary-aligned) start position to whole segments so
+    /// segment N always spans source time [N*segDur, (N+1)*segDur) regardless of
+    /// which position the runner was spawned at.
+    /// </summary>
+    // Channel count of the audio stream being mapped, falling back to stereo when
+    // the source analysis is missing or the index is out of range.
+    private static int SelectedAudioChannels(LiveRunInput input)
+    {
+        IReadOnlyList<AudioStreamInfo>? streams = input.SourceInfo?.AudioStreams;
+        if (streams is null || streams.Count == 0)
+            return 2;
+
+        int index =
+            input.AudioStreamIndex >= 0 && input.AudioStreamIndex < streams.Count
+                ? input.AudioStreamIndex
+                : 0;
+
+        return streams[index].Channels;
+    }
+
+    private static int StartSegmentIndex(LiveRunInput input)
+    {
+        if (input.SegmentDurationSeconds <= 0 || input.StartPosition <= TimeSpan.Zero)
+            return 0;
+
+        return (int)(input.StartPosition.TotalSeconds / input.SegmentDurationSeconds);
     }
 
     // Profile/plugin CustomArguments escape hatch — merged last so author

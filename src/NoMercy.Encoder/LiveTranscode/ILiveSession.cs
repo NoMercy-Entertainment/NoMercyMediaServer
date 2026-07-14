@@ -16,6 +16,14 @@ public interface ILiveSession : IAsyncDisposable
     string SessionId { get; }
     LiveSessionState State { get; }
     LiveQuality CurrentQuality { get; }
+
+    /// <summary>
+    /// Zero-based index among the source's audio streams currently being mapped
+    /// (<c>0:a:N</c>). Read at every runner (re)spawn so a seek or quality change
+    /// keeps the track resolved from the library's language preference.
+    /// </summary>
+    int CurrentAudioStreamIndex { get; }
+
     double CurrentSpeed { get; }
     TimeSpan TranscodedPosition { get; }
     TimeSpan BufferAhead { get; }
@@ -37,6 +45,21 @@ public interface ILiveSession : IAsyncDisposable
     void Suspend();
     void Resume();
     void ReportPlaybackPosition(TimeSpan position);
+
+    /// <summary>
+    /// UTC time the current FFmpeg runner was (re)started — session start, seek,
+    /// quality change, or resume. <see cref="DateTime.MinValue"/> until the first
+    /// runner is spawned. The buffer-adaptive sweep uses it as a warm-up grace so
+    /// it does not act on the legitimately-empty buffer of a runner that has not
+    /// yet written its first segment.
+    /// </summary>
+    DateTime LastTranscodeStart { get; }
+
+    /// <summary>
+    /// Stamps <see cref="LastTranscodeStart"/> with the current UTC time. Called
+    /// at every point a new runner is dispatched.
+    /// </summary>
+    void MarkTranscodeStart();
 
     /// <summary>
     /// Attaches the factory that <see cref="SeekAsync"/> uses to spawn a

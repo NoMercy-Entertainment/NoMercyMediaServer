@@ -29,9 +29,16 @@ public interface ILiveTranscodeService
         CancellationToken ct
     );
 
+    LiveResult GetMasterPlaylist(string sessionId);
+
     LiveResult GetPlaylist(string sessionId);
 
-    LiveResult GetSegment(string sessionId, string epoch, int index);
+    Task<LiveResult> GetSegmentAsync(
+        string sessionId,
+        string epoch,
+        int index,
+        CancellationToken ct
+    );
 
     LiveResult ReportPosition(string sessionId, ReportPositionRequest request);
 

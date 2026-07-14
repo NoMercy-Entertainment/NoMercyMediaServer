@@ -41,6 +41,16 @@ public class LiveTranscodeController(ILiveTranscodeService service) : BaseContro
         return MapResult(await service.StartSessionAsync(User.UserId(), request, deviceId, ct));
     }
 
+    [HttpGet("sessions/{sessionId}/master.m3u8")]
+    public IActionResult GetMasterPlaylist(string sessionId)
+    {
+        LiveResult result = service.GetMasterPlaylist(sessionId);
+        if (result.Kind != LiveResultKind.Ok)
+            return MapResult(result);
+
+        return Content((string)result.Payload!, "application/vnd.apple.mpegurl");
+    }
+
     [HttpGet("sessions/{sessionId}/playlist.m3u8")]
     public IActionResult GetPlaylist(string sessionId)
     {
@@ -52,9 +62,14 @@ public class LiveTranscodeController(ILiveTranscodeService service) : BaseContro
     }
 
     [HttpGet("sessions/{sessionId}/segment/{epoch}/{index:int}.ts")]
-    public IActionResult GetSegment(string sessionId, string epoch, int index)
+    public async Task<IActionResult> GetSegment(
+        string sessionId,
+        string epoch,
+        int index,
+        CancellationToken ct = default
+    )
     {
-        LiveResult result = service.GetSegment(sessionId, epoch, index);
+        LiveResult result = await service.GetSegmentAsync(sessionId, epoch, index, ct);
         if (result.Kind != LiveResultKind.Ok)
             return MapResult(result);
 

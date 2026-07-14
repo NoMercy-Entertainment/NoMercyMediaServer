@@ -239,6 +239,42 @@ public class LiveStreamingServiceTests
         svc.ActiveSessionIds.Should().BeEquivalentTo("b");
     }
 
+    [Fact]
+    public void Register_AsAudioRenditionChild_FlagsRuntime()
+    {
+        LiveStreamingService svc = NewService();
+        LiveSession session = MakeSession("child-1");
+
+        svc.Register(session, TimeSpan.FromSeconds(6), isAudioRenditionChild: true);
+
+        svc.TryGetRuntime("child-1", out LiveRuntimeSession runtime).Should().BeTrue();
+        runtime.IsAudioRenditionChild.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task RemoveAsync_CascadesToChildAudioSessions()
+    {
+        LiveStreamingService svc = NewService();
+        LiveSession parent = MakeSession("parent");
+        LiveSession childA = MakeSession("audio-eng");
+        LiveSession childB = MakeSession("audio-jpn");
+
+        svc.Register(parent, TimeSpan.FromSeconds(6));
+        svc.Register(childA, TimeSpan.FromSeconds(6), isAudioRenditionChild: true);
+        svc.Register(childB, TimeSpan.FromSeconds(6), isAudioRenditionChild: true);
+        svc.StampChildAudioSessions("parent", ["audio-eng", "audio-jpn"]);
+
+        await svc.RemoveAsync("parent");
+
+        // Removing the video session disposes its per-language audio children too,
+        // so a switch can never target an audio track whose video is already gone.
+        svc.TryGetRuntime("parent", out _).Should().BeFalse();
+        svc.TryGetRuntime("audio-eng", out _).Should().BeFalse();
+        svc.TryGetRuntime("audio-jpn", out _).Should().BeFalse();
+        childA.State.Should().Be(LiveSessionState.Ended);
+        childB.State.Should().Be(LiveSessionState.Ended);
+    }
+
     private static async Task WaitForBufferAsync(
         ILiveStreamingService svc,
         string sessionId,

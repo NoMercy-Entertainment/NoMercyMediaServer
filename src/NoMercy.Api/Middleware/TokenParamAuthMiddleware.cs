@@ -15,18 +15,47 @@ using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using NoMercy.Api.Services;
 using NoMercy.Authorization;
 using NoMercy.Database.Models.Users;
+using NoMercy.NmSystem.Configuration;
 
 namespace NoMercy.Api.Middleware;
 
 public class TokenParamAuthMiddleware(
     RequestDelegate next,
+    ILiveIngestKeyStore ingestKeyStore,
     ILogger<TokenParamAuthMiddleware> logger
 )
 {
     public async Task InvokeAsync(HttpContext context)
     {
+        // Loopback self-ingest: ffmpeg/ffprobe pull a library source over the
+        // internal serving port with a single-use ingest key scoped to one file,
+        // in place of the viewer's bearer. Honoured only for the exact file the
+        // key was minted for, and only when the request actually arrived on the
+        // loopback-only ingest listener (InternalServerPort + 1). Gating on the
+        // OS-bound local port — not just a loopback source IP — closes the case
+        // where a local relay (Cloudflare Tunnel's cloudflared) forwards external
+        // traffic to the PUBLIC port from 127.0.0.1: that traffic never lands on
+        // the ingest port, so it can never reach this bypass.
+        if (
+            context.Connection.LocalPort == RuntimeServerSettings.Current.InternalServerPort + 1
+            && context.Connection.RemoteIpAddress is { } remoteIp
+            && IPAddress.IsLoopback(remoteIp)
+        )
+        {
+            string ingestKey = context.Request.Headers["X-NoMercy-Ingest-Key"].ToString();
+            if (
+                !string.IsNullOrEmpty(ingestKey)
+                && ingestKeyStore.TryValidate(ingestKey, context.Request.Path.Value ?? string.Empty)
+            )
+            {
+                await next(context);
+                return;
+            }
+        }
+
         context.Request.Headers.Authorization = context
             .Request.Headers.Authorization.ToString()
             .Split(",")
