@@ -31,8 +31,8 @@ public record LibrariesDto
                     )
                     .Include(library => library.FolderLibraries)
                         .ThenInclude(folderLibrary => folderLibrary.Folder)
-                            .ThenInclude(folder => folder.EncoderProfileFolder)
-                                .ThenInclude(library => library.EncoderProfile)
+                            .ThenInclude(folder => folder.EncodingPresetFolders)
+                                .ThenInclude(link => link.Preset)
                     .Include(library => library.LanguageLibraries)
                         .ThenInclude(languageLibrary => languageLibrary.Language)
         );

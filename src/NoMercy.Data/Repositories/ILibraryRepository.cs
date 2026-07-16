@@ -191,16 +191,16 @@ public interface ILibraryRepository
 
     Task DeleteLibraryAsync(Library library);
 
-    Task<int> AddEncoderProfileFolderAsync(EncoderProfileFolder encoderProfileFolder);
+    Task<int> AddEncodingPresetFolderAsync(EncodingPresetFolder encodingPresetFolder);
 
-    Task<int> AddEncoderProfileFolderAsync(List<EncoderProfileFolder> encoderProfileFolders);
+    Task<int> AddEncodingPresetFolderAsync(List<EncodingPresetFolder> encodingPresetFolders);
 
-    Task<int> AddEncoderProfileFolderAsync(EncoderProfileFolder[] encoderProfileFolders);
+    Task<int> AddEncodingPresetFolderAsync(EncodingPresetFolder[] encodingPresetFolders);
 
     Task<int> AddLanguageLibraryAsync(LanguageLibrary[] languageLibraries);
 
-    Task<int> SyncEncoderProfileFolderAsync(
-        List<EncoderProfileFolder> encoderProfileFolders,
+    Task<int> SyncEncodingPresetFolderAsync(
+        List<EncodingPresetFolder> encodingPresetFolders,
         List<Folder> folders
     );
 }

@@ -351,8 +351,6 @@ public class MediaContext : DbContext
     public virtual DbSet<Crew> Crews { get; init; }
     public virtual DbSet<Device> Devices { get; init; }
     public virtual DbSet<DeviceDropNotice> DeviceDropNotices { get; init; }
-    public virtual DbSet<EncoderProfileFolder> EncoderProfileFolder { get; init; }
-    public virtual DbSet<EncoderProfile> EncoderProfiles { get; init; }
     public virtual DbSet<EncodingHistory> EncodingHistory { get; init; }
     public virtual DbSet<EncodingPreset> EncodingPresets { get; init; }
     public DbSet<EncodingPresetFolder> EncodingPresetFolders => Set<EncodingPresetFolder>();

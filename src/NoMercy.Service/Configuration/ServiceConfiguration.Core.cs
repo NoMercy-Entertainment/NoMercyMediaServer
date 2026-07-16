@@ -376,7 +376,6 @@ public static partial class ServiceConfiguration
 
         // Add Repositories
         services.AddScoped<HomeRepository>();
-        services.AddScoped<EncoderRepository>();
         services.AddScoped<EncodingHistoryRepository>();
         services.AddScoped<ContentSegmentRepository>();
         services.AddScoped<LibraryRepository>();
@@ -386,14 +385,8 @@ public static partial class ServiceConfiguration
         services.AddScoped<DriverRepository>();
         services.AddScoped<MediaProcessingFileRepository>();
         services.AddScoped<IFileRepository, MediaProcessingFileRepository>();
-        services.AddScoped<
-            IMediaIdentificationService,
-            MediaIdentificationService
-        >();
-        services.AddScoped<
-            IFileListService,
-            FileListService
-        >();
+        services.AddScoped<IMediaIdentificationService, MediaIdentificationService>();
+        services.AddScoped<IFileListService, FileListService>();
 
         // Filename parse-adapter pipeline. Adapters are resolved as a set, so
         // plugins can contribute their own; FilenameParsingOptions can reorder or
@@ -473,7 +466,6 @@ public static partial class ServiceConfiguration
         services.AddScoped<IContentSegmentRepository, ContentSegmentRepository>();
         services.AddScoped<IDeviceRepository, DeviceRepository>();
         services.AddScoped<IDriverRepository, DriverRepository>();
-        services.AddScoped<IEncoderRepository, EncoderRepository>();
         services.AddScoped<IEncodingHistoryRepository, EncodingHistoryRepository>();
         services.AddScoped<IEncodingPresetRepository, EncodingPresetRepository>();
         services.AddScoped<IFolderRepository, FolderRepository>();
@@ -535,9 +527,7 @@ public static partial class ServiceConfiguration
 
         services.AddMediaServerQueue();
         services.AddSingleton<JobDispatcher>();
-        services.AddSingleton<IJobDispatcher>(sp =>
-            sp.GetRequiredService<JobDispatcher>()
-        );
+        services.AddSingleton<IJobDispatcher>(sp => sp.GetRequiredService<JobDispatcher>());
 
         // Storage driver resolvers — registered before AddNoMercyEncoder so
         // the TryAdd inside AddNoMercyStorage picks them up via GetService<>.

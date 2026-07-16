@@ -27,22 +27,24 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/encoderprofiles", Order = 10)]
-public class EncoderController(IEncoderRepository encoderRepository, CodecRegistry codecRegistry)
-    : BaseController
+public class EncoderController(
+    IEncodingPresetRepository encodingPresetRepository,
+    CodecRegistry codecRegistry
+) : BaseController
 {
     [HttpGet]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Index()
     {
-        List<EncoderProfile> encoderProfiles = await encoderRepository.GetEncoderProfilesAsync();
+        List<EncodingPreset> encodingPresets = await encodingPresetRepository.ListAsync(
+            pageSize: int.MaxValue
+        );
 
-        return Ok(new { data = encoderProfiles });
+        return Ok(new { data = encodingPresets });
     }
 
     /// <remarks>
     /// Deprecated: Use POST /api/v1/encoder/profiles instead.
-    /// This endpoint writes to both the legacy EncoderProfiles table and the
-    /// current EncodingPresets table to avoid silent data loss during migration.
     /// </remarks>
     [Obsolete("Use POST /api/v1/encoder/profiles")]
     [HttpPost]
@@ -69,14 +71,18 @@ public class EncoderController(IEncoderRepository encoderRepository, CodecRegist
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Destroy(Ulid id)
     {
-        EncoderProfile? profile = await encoderRepository.GetEncoderProfileByIdAsync(id);
+        try
+        {
+            bool removed = await encodingPresetRepository.DeleteAsync(id);
+            if (!removed)
+                return NotFoundResponse("Encoder profile not found");
 
-        if (profile == null)
-            return NotFoundResponse("Encoder profile not found");
-
-        await encoderRepository.DeleteEncoderProfileAsync(profile);
-
-        return Ok(new StatusResponseDto<string> { Status = "ok", Data = "Profile removed" });
+            return Ok(new StatusResponseDto<string> { Status = "ok", Data = "Profile removed" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return ConflictResponse(ex.Message);
+        }
     }
 
     [HttpGet]

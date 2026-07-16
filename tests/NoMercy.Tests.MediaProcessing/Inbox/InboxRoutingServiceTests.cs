@@ -108,17 +108,18 @@ public class InboxRoutingServiceTests : IDisposable
             DriverId = driverId,
         };
 
-        EncoderProfileFolder profileFolder = new()
+        EncodingPresetFolder profileFolder = new()
         {
-            EncoderProfileId = profileId,
+            PresetId = profileId,
             FolderId = folder.Id,
+            IsDefault = true,
         };
 
         FolderLibrary folderLibrary = new() { FolderId = folder.Id, LibraryId = library.Id };
 
         _context.Libraries.Add(library);
         _context.Folders.Add(folder);
-        _context.EncoderProfileFolder.Add(profileFolder);
+        _context.EncodingPresetFolders.Add(profileFolder);
         _context.FolderLibrary.Add(folderLibrary);
         _context.SaveChanges();
 

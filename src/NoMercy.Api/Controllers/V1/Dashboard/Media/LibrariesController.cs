@@ -34,7 +34,7 @@ using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Domain;
 using NoMercy.Storage;
-using EncoderProfileDto = NoMercy.Data.DTOs.Encoder.EncoderProfileDto;
+using FolderPresetDto = NoMercy.Data.DTOs.Encoder.FolderPresetDto;
 using IDefaultEncodingPresetLinker = NoMercy.MediaProcessing.Libraries.IDefaultEncodingPresetLinker;
 using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 
@@ -47,7 +47,6 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 [Route("api/v{version:apiVersion}/dashboard/libraries", Order = 10)]
 public class LibrariesController(
     ILibraryRepository libraryRepository,
-    IEncoderRepository encoderRepository,
     IEncodingPresetRepository encodingPresetRepository,
     IFolderRepository folderRepository,
     IJobDispatcher jobDispatcher,
@@ -267,9 +266,7 @@ public class LibrariesController(
 
             try
             {
-                List<EncoderProfile> encoderProfiles =
-                    await encoderRepository.GetEncoderProfilesAsync();
-                List<EncoderProfileFolder> encoderProfileFolders = [];
+                List<EncodingPresetFolder> encodingPresetFolders = [];
 
                 List<Folder> folders = await folderRepository.GetFoldersByLibraryIdAsync(
                     request.FolderLibrary
@@ -281,22 +278,21 @@ public class LibrariesController(
                     if (folderDb is null)
                         continue;
 
-                    foreach (EncoderProfileDto profile in folder.Folder.EncoderProfiles)
+                    foreach (FolderPresetDto profile in folder.Folder.EncoderProfiles)
                     {
-                        EncoderProfile? encoderProfile = encoderProfiles.FirstOrDefault(ep =>
-                            ep.Id == profile.Id
-                        );
-                        if (encoderProfile is null)
+                        EncodingPreset? encodingPreset =
+                            await encodingPresetRepository.GetByIdAsync(profile.Id);
+                        if (encodingPreset is null)
                             continue;
 
-                        encoderProfileFolders.Add(
-                            new() { FolderId = folderDb.Id, EncoderProfileId = encoderProfile.Id }
+                        encodingPresetFolders.Add(
+                            new() { FolderId = folderDb.Id, PresetId = encodingPreset.Id }
                         );
                     }
                 }
 
-                await libraryRepository.SyncEncoderProfileFolderAsync(
-                    encoderProfileFolders,
+                await libraryRepository.SyncEncodingPresetFolderAsync(
+                    encodingPresetFolders,
                     folders
                 );
             }
@@ -817,15 +813,15 @@ public class LibrariesController(
 
         try
         {
-            EncoderProfileFolder[] encoderProfileFolder = request
-                .Profiles.Select(profile => new EncoderProfileFolder
+            EncodingPresetFolder[] encodingPresetFolder = request
+                .Profiles.Select(profile => new EncodingPresetFolder
                 {
                     FolderId = folder.Id,
-                    EncoderProfileId = Ulid.Parse(profile),
+                    PresetId = Ulid.Parse(profile),
                 })
                 .ToArray();
 
-            await libraryRepository.AddEncoderProfileFolderAsync(encoderProfileFolder);
+            await libraryRepository.AddEncodingPresetFolderAsync(encodingPresetFolder);
 
             return Ok(
                 new StatusResponseDto<string>
@@ -851,23 +847,28 @@ public class LibrariesController(
         Ulid encoderProfileId
     )
     {
-        EncoderProfile? encoderProfile = await encoderRepository.GetEncoderProfileByIdAsync(
+        EncodingPreset? encodingPreset = await encodingPresetRepository.GetByIdAsync(
             encoderProfileId
         );
 
-        if (encoderProfile is null)
+        if (encodingPreset is null)
             return NotFoundResponse("Encoder profile not found");
 
         try
         {
-            await encoderRepository.DeleteEncoderProfileAsync(encoderProfile);
+            await using MediaContext context = await mediaContextFactory.CreateDbContextAsync();
+            await context
+                .EncodingPresetFolders.Where(link =>
+                    link.FolderId == folderId && link.PresetId == encoderProfileId
+                )
+                .ExecuteDeleteAsync();
 
             return Ok(
                 new StatusResponseDto<string>
                 {
                     Status = "ok",
                     Message = "Successfully deleted encoder profile {0}.",
-                    Args = [encoderProfile.Name],
+                    Args = [encodingPreset.Name],
                 }
             );
         }

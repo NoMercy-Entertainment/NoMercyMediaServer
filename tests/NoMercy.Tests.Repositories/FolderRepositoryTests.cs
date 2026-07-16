@@ -327,7 +327,7 @@ public class FolderRepositoryTests : IDisposable
     [Fact]
     public async Task DeleteFolderAsync_WithForeignKeyDependents_SucceedsWithoutThrowing()
     {
-        // Real DB-level FK dependents (FolderLibrary, EncoderProfileFolder) with the
+        // Real DB-level FK dependents (FolderLibrary, EncodingPresetFolder) with the
         // folder fetched through a context that has never tracked them. The
         // set-based ExecuteDelete must remove the dependents before the folder so
         // SQLite's Restrict constraint does not throw.

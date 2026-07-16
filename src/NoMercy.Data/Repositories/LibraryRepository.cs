@@ -90,8 +90,8 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory) :
                     .ThenInclude(f => f.Driver)
             .Include(library => library.FolderLibraries)
                 .ThenInclude(fl => fl.Folder)
-                    .ThenInclude(f => f.EncoderProfileFolder)
-                        .ThenInclude(epf => epf.EncoderProfile)
+                    .ThenInclude(f => f.EncodingPresetFolders)
+                        .ThenInclude(link => link.Preset)
             .Include(library => library.LanguageLibraries)
                 .ThenInclude(ll => ll.Language)
             .Include(library => library.LibraryMovies)
@@ -958,7 +958,7 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory) :
         if (!hasFolder)
             return false;
 
-        return await context.EncoderProfiles.AnyAsync(ct);
+        return await context.EncodingPresets.AnyAsync(ct);
     }
 
     public async Task<List<Library>> GetAllLibrariesAsync()
@@ -1255,45 +1255,42 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory) :
         await context.Libraries.Where(l => l.Id == library.Id).ExecuteDeleteAsync();
     }
 
-    public async Task<int> AddEncoderProfileFolderAsync(EncoderProfileFolder encoderProfileFolder)
+    public async Task<int> AddEncodingPresetFolderAsync(EncodingPresetFolder encodingPresetFolder)
     {
         await using MediaContext context = await contextFactory.CreateDbContextAsync();
         return await context
-            .EncoderProfileFolder.Upsert(encoderProfileFolder)
-            .On(epf => new { epf.FolderId, epf.EncoderProfileId })
+            .EncodingPresetFolders.Upsert(encodingPresetFolder)
+            .On(link => new { link.FolderId, link.PresetId })
             .WhenMatched(
-                (source, input) =>
-                    new() { FolderId = input.FolderId, EncoderProfileId = input.EncoderProfileId }
+                (source, input) => new() { FolderId = input.FolderId, PresetId = input.PresetId }
             )
             .RunAsync();
     }
 
-    public async Task<int> AddEncoderProfileFolderAsync(
-        List<EncoderProfileFolder> encoderProfileFolders
+    public async Task<int> AddEncodingPresetFolderAsync(
+        List<EncodingPresetFolder> encodingPresetFolders
     )
     {
         await using MediaContext context = await contextFactory.CreateDbContextAsync();
         return await context
-            .EncoderProfileFolder.UpsertRange(encoderProfileFolders)
-            .On(epl => new { epl.FolderId, epl.EncoderProfileId })
+            .EncodingPresetFolders.UpsertRange(encodingPresetFolders)
+            .On(link => new { link.FolderId, link.PresetId })
             .WhenMatched(
-                (epls, epli) =>
-                    new() { FolderId = epli.FolderId, EncoderProfileId = epli.EncoderProfileId }
+                (links, linki) => new() { FolderId = linki.FolderId, PresetId = linki.PresetId }
             )
             .RunAsync();
     }
 
-    public async Task<int> AddEncoderProfileFolderAsync(
-        EncoderProfileFolder[] encoderProfileFolders
+    public async Task<int> AddEncodingPresetFolderAsync(
+        EncodingPresetFolder[] encodingPresetFolders
     )
     {
         await using MediaContext context = await contextFactory.CreateDbContextAsync();
         return await context
-            .EncoderProfileFolder.UpsertRange(encoderProfileFolders)
-            .On(epf => new { epf.FolderId, epf.EncoderProfileId })
+            .EncodingPresetFolders.UpsertRange(encodingPresetFolders)
+            .On(link => new { link.FolderId, link.PresetId })
             .WhenMatched(
-                (source, input) =>
-                    new() { FolderId = input.FolderId, EncoderProfileId = input.EncoderProfileId }
+                (source, input) => new() { FolderId = input.FolderId, PresetId = input.PresetId }
             )
             .RunAsync();
     }
@@ -1312,8 +1309,8 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory) :
 
     #endregion
 
-    public async Task<int> SyncEncoderProfileFolderAsync(
-        List<EncoderProfileFolder> encoderProfileFolders,
+    public async Task<int> SyncEncodingPresetFolderAsync(
+        List<EncodingPresetFolder> encodingPresetFolders,
         List<Folder> folders
     )
     {
@@ -1324,15 +1321,16 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory) :
         try
         {
             await context
-                .EncoderProfileFolder.Where(epf => folders.Select(f => f.Id).Contains(epf.FolderId))
+                .EncodingPresetFolders.Where(link =>
+                    folders.Select(f => f.Id).Contains(link.FolderId)
+                )
                 .ExecuteDeleteAsync();
 
             int result = await context
-                .EncoderProfileFolder.UpsertRange(encoderProfileFolders)
-                .On(epl => new { epl.FolderId, epl.EncoderProfileId })
+                .EncodingPresetFolders.UpsertRange(encodingPresetFolders)
+                .On(link => new { link.FolderId, link.PresetId })
                 .WhenMatched(
-                    (epls, epli) =>
-                        new() { FolderId = epli.FolderId, EncoderProfileId = epli.EncoderProfileId }
+                    (links, linki) => new() { FolderId = linki.FolderId, PresetId = linki.PresetId }
                 )
                 .RunAsync();
 

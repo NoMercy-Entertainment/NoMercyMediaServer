@@ -11,11 +11,11 @@
 
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Tests.Repositories.Infrastructure;
 
-using Microsoft.Extensions.Logging.Abstractions;
 namespace NoMercy.Tests.Repositories;
 
 /// <summary>
@@ -782,50 +782,6 @@ public class QueryOutputTests : IDisposable
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);
         Assert.Contains("Devices", sql);
-    }
-
-    #endregion
-
-    #region EncoderRepository
-
-    [Fact]
-    public async Task EncoderRepository_GetEncoderProfilesAsync_GeneratesExpectedSql()
-    {
-        EncoderRepository repository = new(_context);
-        _interceptor.Clear();
-
-        await repository.GetEncoderProfilesAsync();
-
-        Assert.NotEmpty(_interceptor.CapturedSql);
-        string sql = string.Join(" ", _interceptor.CapturedSql);
-        Assert.Contains("EncoderProfiles", sql);
-    }
-
-    [Fact]
-    public async Task EncoderRepository_GetEncoderProfileByIdAsync_GeneratesExpectedSql()
-    {
-        EncoderRepository repository = new(_context);
-        _interceptor.Clear();
-
-        await repository.GetEncoderProfileByIdAsync(Ulid.NewUlid());
-
-        Assert.NotEmpty(_interceptor.CapturedSql);
-        string sql = string.Join(" ", _interceptor.CapturedSql);
-        Assert.Contains("EncoderProfiles", sql);
-    }
-
-    [Fact]
-    public async Task EncoderRepository_GetEncoderProfileCountAsync_GeneratesCountSql()
-    {
-        EncoderRepository repository = new(_context);
-        _interceptor.Clear();
-
-        await repository.GetEncoderProfileCountAsync();
-
-        Assert.NotEmpty(_interceptor.CapturedSql);
-        string sql = string.Join(" ", _interceptor.CapturedSql);
-        Assert.Contains("EncoderProfiles", sql);
-        Assert.Contains("COUNT", sql);
     }
 
     #endregion

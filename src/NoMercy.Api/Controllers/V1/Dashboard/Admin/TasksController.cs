@@ -197,8 +197,8 @@ public class TasksController(
         List<Folder> folders = await mediaContext
             .Folders.AsNoTracking()
             .Where(f => folderIds.Contains(f.Id))
-            .Include(f => f.EncoderProfileFolder)
-                .ThenInclude(e => e.EncoderProfile)
+            .Include(f => f.EncodingPresetFolders)
+                .ThenInclude(link => link.Preset)
             .ToListAsync();
 
         Dictionary<Ulid, Folder> folderById = folders.ToDictionary(f => f.Id);
@@ -257,8 +257,9 @@ public class TasksController(
                         InputFile = j.InputFile,
                         Profile = folderById
                             .GetValueOrDefault(j.FolderId)
-                            ?.EncoderProfileFolder.FirstOrDefault()
-                            ?.EncoderProfile.Name,
+                            ?.EncodingPresetFolders.OrderByDescending(link => link.IsDefault)
+                            .FirstOrDefault()
+                            ?.Preset?.Name,
                     }
             )
             .ToArray();

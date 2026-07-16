@@ -17,15 +17,15 @@ using Newtonsoft.Json;
 namespace NoMercy.Database.Models.Media;
 
 /// <summary>
-/// Shareable, importable encoding profile shipped separately from the
-/// runtime EncoderProfile table. Presets carry richer metadata (description,
+/// Shareable, importable encoding profile — the sole source of truth for
+/// encoding configuration. Presets carry richer metadata (description,
 /// author, tags, inheritance) so users can browse a library and pick one,
 /// or import community presets from a URL.
 ///
-/// When applied, a preset's <see cref="ProfileJson"/> (serialized
-/// <c>EncodingProfile</c>) materializes into a runtime EncoderProfile —
-/// the two tables are decoupled so deleting a preset doesn't break running
-/// encodes that were already dispatched with its materialized profile.
+/// A preset's <see cref="ProfileJson"/> (serialized <c>EncodingProfile</c>)
+/// is resolved on demand — by <see cref="NoMercy.Encoder.Profiles.PresetResolver"/>,
+/// walking <see cref="ParentPresetId"/> chains — wherever a caller only
+/// holds the preset's <see cref="Id"/>.
 /// </summary>
 [PrimaryKey(nameof(Id))]
 [Index(nameof(Name))]

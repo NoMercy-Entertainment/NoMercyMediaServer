@@ -12,9 +12,9 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.Domain;
 using NoMercy.Storage;
 
 namespace NoMercy.MediaProcessing.Libraries;
@@ -46,8 +46,6 @@ public class LibraryRepository(MediaContext context, IStorageDriver storageDrive
                 .ThenInclude(folderLibrary => folderLibrary.Library)
                     .ThenInclude(f => f.FolderLibraries)
                         .ThenInclude(f => f.Folder)
-            .Include(folder => folder.EncoderProfileFolder)
-                .ThenInclude(encoderProfileFolder => encoderProfileFolder.EncoderProfile)
             .Include(folder => folder.EncodingPresetFolders)
                 .ThenInclude(link => link.Preset)
             .FirstOrDefaultAsync(folder => folder.Id == folderId);

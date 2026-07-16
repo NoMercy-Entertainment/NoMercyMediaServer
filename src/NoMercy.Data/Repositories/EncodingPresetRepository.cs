@@ -16,11 +16,11 @@ using NoMercy.Database.Models.Media;
 namespace NoMercy.Data.Repositories;
 
 /// <summary>
-/// Repository for the shareable preset library. Presets are separate from
-/// the runtime <c>EncoderProfile</c> table — applying a preset materializes
-/// its resolved profile into a fresh EncoderProfile row, which is what the
-/// encoder actually consumes. That decoupling means deleting or renaming a
-/// preset never breaks an in-flight encode job.
+/// Repository for the shareable preset library. Callers (jobs, controllers)
+/// hold only a preset's <see cref="Ulid"/> id; <see cref="NoMercy.Encoder.Profiles.PresetResolver"/>
+/// resolves <see cref="EncodingPreset.ProfileJson"/> — walking the parent
+/// chain if any — fresh each time it's needed, so an edit to a preset takes
+/// effect on the next resolve rather than requiring a separate migration step.
 /// </summary>
 public class EncodingPresetRepository(MediaContext context) : IEncodingPresetRepository
 {
