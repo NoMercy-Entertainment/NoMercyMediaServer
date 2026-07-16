@@ -31,4 +31,14 @@ public interface IFontExtractor
 
     /// <summary>Counts how many of the source attachments are fonts.</summary>
     int CountFontAttachments(IReadOnlyList<AttachmentInfo> attachments);
+
+    /// <summary>
+    /// Resolves the sanitized, collision-free "-dump_attachment" target for
+    /// each attachment (relative to the extraction command's working
+    /// directory). Used by ExtractionCommandBuilder to merge attachment
+    /// dumping into the combined subtitle+font extraction command.
+    /// </summary>
+    IReadOnlyList<AttachmentDumpTarget> ResolveAttachmentDumpTargets(
+        IReadOnlyList<AttachmentInfo> attachments
+    );
 }

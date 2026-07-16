@@ -81,6 +81,26 @@ public class FontExtractor(IStorage storage) : IFontExtractor
         return count;
     }
 
+    // Exposes the same sanitized, collision-free naming ResolveSafeAttachmentName
+    // uses internally, but pre-fixed with "fonts/" — ExtractionCommandBuilder wires
+    // these straight into -dump_attachment args when it merges attachment dumping
+    // with bitmap-subtitle extraction into a single ffmpeg command. Keeping this on
+    // IFontExtractor (rather than duplicating the sanitizer as a static call) means
+    // a plugin's replacement IFontExtractor controls attachment naming too.
+    public IReadOnlyList<AttachmentDumpTarget> ResolveAttachmentDumpTargets(
+        IReadOnlyList<AttachmentInfo> attachments
+    )
+    {
+        HashSet<string> usedNames = new(StringComparer.OrdinalIgnoreCase);
+        List<AttachmentDumpTarget> targets = [];
+        foreach (AttachmentInfo attachment in attachments)
+        {
+            string safeName = ResolveSafeAttachmentName(attachment, usedNames);
+            targets.Add(new(attachment.Index, $"fonts/{safeName}"));
+        }
+        return targets;
+    }
+
     /// <summary>
     /// Writes fonts.json (and moves any LUT attachments to luts/). Returns the
     /// number of font files written to the manifest so the finalize stage can

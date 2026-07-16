@@ -430,24 +430,13 @@ public class BuildStage(
                 }
             }
 
-            // Text subtitles go in the main command (single-pass).
-            // Bitmap subtitles need separate extraction (FFmpeg can't mux dvd_subtitle to .sub+.idx).
-            List<FfmpegCommand> bitmapSubCommands = [];
+            // Text subtitles go in the main command (single-pass). Bitmap
+            // subtitles (and, when this task owns font extraction, font
+            // attachments) are pulled out into ExtractionCommandBuilder below.
             if (input.Plan.OutputPlan.SubtitleOutputs.Length > 0 && context.MediaInfo is not null)
             {
                 SubtitleCommandBuilder.AddTextSubtitleOutputs(
                     builder,
-                    input.Plan.OutputPlan,
-                    context.MediaInfo,
-                    input.OutputDirectory,
-                    input.MediaTitle,
-                    subtitleExtractor,
-                    effectiveStorage
-                );
-
-                bitmapSubCommands = SubtitleCommandBuilder.BuildBitmapSubtitleCommands(
-                    options.FfmpegPath,
-                    input.InputPath,
                     input.Plan.OutputPlan,
                     context.MediaInfo,
                     input.OutputDirectory,
@@ -476,13 +465,8 @@ public class BuildStage(
             );
 
             List<FfmpegCommand> allCommands = [mainCommand];
-            allCommands.AddRange(bitmapSubCommands);
             allCommands.AddRange(spriteCommands);
 
-            // Font extraction — only when the source has embedded attachments (fonts).
-            // This requires a separate command because -dump_attachment is incompatible
-            // with encoding outputs.
-            //
             // Run-once semantics: when tasks are decomposed, fonts are extracted by
             // EXACTLY ONE task to keep the on-disk fonts/ dir stable. We gate on the
             // first video task (OutputIndex=0) or the Thumbnails task when there is
@@ -501,17 +485,42 @@ public class BuildStage(
                     && input.Plan.OutputPlan.VideoOutputs.Length == 0
                 );
 
-            if (isFontOwner && context.MediaInfo is not null && context.MediaInfo.HasAttachments)
+            IReadOnlyList<AttachmentInfo> attachmentsToExtract =
+                isFontOwner && context.MediaInfo is not null && context.MediaInfo.HasAttachments
+                    ? context.MediaInfo.Attachments
+                    : [];
+
+            // Bitmap subtitles and (when this task owns them) font attachments are
+            // pulled out into ONE dedicated ffmpeg command. input.InputPath is
+            // frequently a remote source (NFS/SMB/S3), so every extra "-i" is a
+            // full network re-read of a multi-GB file — merging what used to be
+            // one command per bitmap subtitle stream plus one for fonts turns
+            // N+1 network reads into exactly one. Kept separate from the main
+            // encode command so an extraction failure never sinks an otherwise
+            // successful, hours-long encode.
+            if (
+                context.MediaInfo is not null
+                && (
+                    input.Plan.OutputPlan.SubtitleOutputs.Length > 0
+                    || attachmentsToExtract.Count > 0
+                )
+            )
             {
-                string fontDir = effectiveStorage.CombinePath(input.OutputDirectory, "fonts");
-                effectiveStorage.CreateDirectory(fontDir);
-                FfmpegCommand fontCommand = fontExtractor.BuildExtractionCommand(
+                FfmpegCommand? extractionCommand = ExtractionCommandBuilder.BuildCommand(
                     options.FfmpegPath,
                     input.InputPath,
                     input.OutputDirectory,
-                    context.MediaInfo.Attachments
+                    input.Plan.OutputPlan,
+                    context.MediaInfo,
+                    input.MediaTitle,
+                    subtitleExtractor,
+                    fontExtractor,
+                    effectiveStorage,
+                    attachmentsToExtract
                 );
-                allCommands.Add(fontCommand);
+
+                if (extractionCommand is not null)
+                    allCommands.Add(extractionCommand);
             }
 
             return new StageSuccess<FfmpegCommand[]>(allCommands.ToArray());
