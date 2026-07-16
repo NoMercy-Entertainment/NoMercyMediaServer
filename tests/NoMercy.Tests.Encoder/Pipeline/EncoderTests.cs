@@ -597,13 +597,15 @@ public class EncoderTests : IDisposable
     }
 
     [Fact]
-    public async Task Guardrail_MediaItemOnABuildExecutingRequest_ChangesTheCommand()
+    public async Task CriterionB_MediaItemOnBuildExecutingRequest_InjectionDefaultOff_CommandIsIdentical()
     {
-        // Pins the DANGER this feature must never trigger in production:
-        // BuildStage injects -metadata whenever MediaItem is non-null,
-        // regardless of FinalizeOnly. VideoEncodeJob must never set MediaItem
-        // on a request that reaches Build — if this test starts failing, that
-        // invariant has been violated somewhere in the wiring.
+        // Criterion B: MediaItem is now attached to every production encode
+        // request (including ones where Build/Execute run — the Whole-task
+        // inline path) so it can drive manifest/reconstruction writes. This
+        // pins the guarantee that makes that safe: with
+        // EncodingOptions.EnableMetadataInjection left at its default (false —
+        // what VideoEncodeJob sets today), the emitted ffmpeg command is
+        // byte-for-byte identical whether or not MediaItem is populated.
         SetupSuccessPath();
 
         List<string[]> capturedArgs = [];
@@ -657,8 +659,116 @@ public class EncoderTests : IDisposable
         string[] withItemArgs = capturedArgs[0];
 
         plainArgs.Should().NotContain("-metadata");
-        withItemArgs.Should().Contain("-metadata");
-        ContainsPair(withItemArgs, "-metadata", "title=Fight Club").Should().BeTrue();
+        withItemArgs.Should().NotContain("-metadata");
+        withItemArgs
+            .Should()
+            .Equal(
+                plainArgs,
+                "MediaItem is pure identity — with EnableMetadataInjection left at its "
+                    + "default, populating it must never change a single argv token"
+            );
+    }
+
+    [Fact]
+    public async Task CriterionB_EnableMetadataInjectionExplicitlyOn_CommandContainsMetadataFlags()
+    {
+        // The opt-in still works end-to-end when a caller explicitly asks for
+        // it — keeps the original MetadataInjectorBuildStageIntegrationTests
+        // coverage meaningful under the new explicit contract.
+        SetupSuccessPath();
+
+        List<string[]> capturedArgs = [];
+        _ffmpegExecutor
+            .Setup(e =>
+                e.ExecuteAsync(
+                    It.IsAny<FfmpegCommand>(),
+                    It.IsAny<TimeSpan>(),
+                    It.IsAny<Action<EncodingProgress>?>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Callback<
+                FfmpegCommand,
+                TimeSpan,
+                Action<EncodingProgress>?,
+                string?,
+                CancellationToken
+            >((cmd, _, _, _, _) => capturedArgs.Add(cmd.Arguments))
+            .ReturnsAsync(
+                new ExecutionResult(
+                    Success: true,
+                    ExitCode: 0,
+                    StdErr: "",
+                    Duration: TimeSpan.FromMinutes(10),
+                    Error: null
+                )
+            );
+
+        string outputDirectory = CreateSeededOutputDirectory();
+        await _encoder.EncodeAsync(
+            new EncodingRequest(
+                InputPath: "/movies/test.mkv",
+                OutputDirectory: outputDirectory,
+                Profile: BuildProfile(),
+                Options: new(EnableMetadataInjection: true),
+                MediaItem: MovieRef()
+            )
+        );
+        string[] args = capturedArgs[0];
+
+        args.Should().Contain("-metadata");
+        ContainsPair(args, "-metadata", "title=Fight Club").Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task CriterionA_InlineWholeTaskShapedRequest_WritesManifestAndReconstruction()
+    {
+        // Criterion A: the exact request shape VideoEncodeJob.RunInlineAsync
+        // sends to Encoder.EncodeAsync (Options left null — Build+Execute+
+        // Finalize all run, no FinalizeOnly) must still produce both sidecar
+        // artifacts once MediaItem is attached, not only the coordinator's
+        // separate FinalizeOnly pass.
+        SetupSuccessPath();
+        string outputDirectory = CreateSeededOutputDirectory();
+
+        EncodingRequest request = new(
+            InputPath: "/movies/test.mkv",
+            OutputDirectory: outputDirectory,
+            Profile: BuildProfile(),
+            MediaTitle: "Fight Club.NoMercy",
+            MediaItem: MovieRef()
+        );
+
+        EncodingResult result = await _encoder.EncodeAsync(request);
+        result.Success.Should().BeTrue();
+
+        string bundleDir = Path.Combine(outputDirectory, "encodes", "test");
+        string manifestPath = Path.Combine(bundleDir, "manifest.json");
+        string reconstructionPath = Path.Combine(bundleDir, "reconstruction.json");
+
+        File.Exists(manifestPath)
+            .Should()
+            .BeTrue("the inline Whole-task path must write manifest.json");
+        File.Exists(reconstructionPath)
+            .Should()
+            .BeTrue("the inline Whole-task path must write reconstruction.json");
+
+        BundleManifest? manifest = JsonConvert.DeserializeObject<BundleManifest>(
+            File.ReadAllText(manifestPath)
+        );
+        manifest.Should().NotBeNull();
+        manifest!.MediaType.Should().Be("movie");
+        manifest.MediaId.Should().Be(550);
+        manifest.Files.Should().NotBeEmpty();
+
+        Reconstruction? reconstruction = JsonConvert.DeserializeObject<Reconstruction>(
+            File.ReadAllText(reconstructionPath)
+        );
+        reconstruction.Should().NotBeNull();
+        reconstruction!.Source.OriginalPath.Should().Be("/movies/test.mkv");
+        reconstruction.Tracks.Should().NotBeEmpty();
+        reconstruction.CommandTemplate.Should().NotBeNullOrWhiteSpace();
     }
 
     private static bool ContainsPair(string[] args, string flag, string value)

@@ -454,7 +454,8 @@ public class BuildStage(
                 mainCommand,
                 context.MediaItem,
                 context,
-                copyMode
+                copyMode,
+                context.EnableMetadataInjection
             );
 
             logger.LogInformation(

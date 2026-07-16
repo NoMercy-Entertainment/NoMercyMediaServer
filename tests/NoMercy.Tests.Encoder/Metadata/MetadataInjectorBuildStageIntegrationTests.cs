@@ -113,6 +113,8 @@ public class MetadataInjectorBuildStageIntegrationTests
         MetadataInjector injector = new();
         BuildStage stage = CreateStageWithInjector(injector);
 
+        // EnableMetadataInjection must be explicitly turned on — MediaItem alone
+        // no longer activates injection (see the contract note above the class).
         EncodingContext context = EncodingContext.Create() with
         {
             MediaItem = new MovieMediaRef(
@@ -121,10 +123,16 @@ public class MetadataInjectorBuildStageIntegrationTests
                 Title: "Fight Club",
                 Year: 1999
             ),
+            EnableMetadataInjection = true,
         };
 
         ExecutionPlan plan = BuildMkvPlan();
-        BuildInput input = new(plan, "/movies/fight_club.mkv", "/tmp/nmtest-output/fc", "Fight Club.NoMercy");
+        BuildInput input = new(
+            plan,
+            "/movies/fight_club.mkv",
+            "/tmp/nmtest-output/fc",
+            "Fight Club.NoMercy"
+        );
 
         StageResult result = await stage.ExecuteAsync(input, context, default);
 
@@ -158,10 +166,16 @@ public class MetadataInjectorBuildStageIntegrationTests
                 SeasonNumber: 1,
                 EpisodeNumber: 1
             ),
+            EnableMetadataInjection = true,
         };
 
         ExecutionPlan plan = BuildMkvPlan();
-        BuildInput input = new(plan, "/tv/breaking_bad_s01e01.mkv", "/tmp/nmtest-output/bb", "Pilot.NoMercy");
+        BuildInput input = new(
+            plan,
+            "/tv/breaking_bad_s01e01.mkv",
+            "/tmp/nmtest-output/bb",
+            "Pilot.NoMercy"
+        );
 
         StageResult result = await stage.ExecuteAsync(input, context, default);
 
@@ -198,6 +212,44 @@ public class MetadataInjectorBuildStageIntegrationTests
         string[] args = commands[0].Arguments;
 
         args.Should().NotContain("-metadata", "no -metadata flags when context has no MediaItem");
+    }
+
+    [Fact]
+    public async Task BuildStage_MediaItemSetButInjectionDisabled_NoMetadataFlagsEmitted()
+    {
+        // The regression this slice fixes: MediaItem is now attached to every
+        // production encode request (to drive manifest/reconstruction writes),
+        // so MediaItem alone must NEVER be enough to trigger -metadata injection.
+        // EnableMetadataInjection is the only signal allowed to do that, and it
+        // defaults to false on every request VideoEncodeJob builds today.
+        MetadataInjector injector = new();
+        BuildStage stage = CreateStageWithInjector(injector);
+
+        EncodingContext context = EncodingContext.Create() with
+        {
+            MediaItem = new MovieMediaRef(
+                Type: MediaType.Movie,
+                Id: 550,
+                Title: "Fight Club",
+                Year: 1999
+            ),
+            // EnableMetadataInjection intentionally left at its default (false).
+        };
+
+        ExecutionPlan plan = BuildMkvPlan();
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
+
+        StageResult result = await stage.ExecuteAsync(input, context, default);
+
+        result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
+        FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
+        string[] args = commands[0].Arguments;
+
+        args.Should()
+            .NotContain(
+                "-metadata",
+                "MediaItem is pure identity — it must not inject -metadata unless EnableMetadataInjection is explicitly true"
+            );
     }
 
     // -----------------------------------------------------------------------

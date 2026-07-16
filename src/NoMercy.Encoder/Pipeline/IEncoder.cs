@@ -63,14 +63,15 @@ public record EncodingRequest(
     /// </summary>
     IStorage? DestinationStorage = null,
     /// <summary>
-    /// The library item being encoded (movie or episode). Set ONLY on requests
-    /// where <see cref="EncodingOptions.FinalizeOnly"/> is true (the coordinator's
-    /// post-encode pass) — Build/Execute never run for that pass, so populating
-    /// this field cannot change the ffmpeg command that produced the output.
-    /// Drives <see cref="Naming.BundleLayout"/> resolution in PlanStage and the
+    /// The library item being encoded (movie or episode). Safe to set on EVERY
+    /// request — including ones where Build/Execute run — because it is pure
+    /// identity and has no effect on the emitted ffmpeg command. Drives
+    /// <see cref="Naming.BundleLayout"/> resolution in PlanStage and the
     /// manifest.json / reconstruction.json writes in FinalizeStage. Null (the
     /// default) preserves today's behavior exactly: no layout, no reconstruction
     /// artifacts — the source has no resolvable library item (e.g. a disc rip).
+    /// See <see cref="EncodingOptions.EnableMetadataInjection"/> for the separate
+    /// opt-in that actually changes the command.
     /// </summary>
     MediaItemRef? MediaItem = null
 )
@@ -115,7 +116,16 @@ public record EncodingOptions(
     /// by the resume path to restart the encode from near the last-known
     /// good position rather than from the beginning.
     /// </summary>
-    long? ResumeFromMs = null
+    long? ResumeFromMs = null,
+    /// <summary>
+    /// Explicit opt-in for BuildStage to splice -metadata / per-stream metadata /
+    /// disposition args into the main ffmpeg command from
+    /// <see cref="EncodingRequest.MediaItem"/>. Deliberately independent of whether
+    /// MediaItem is set — MediaItem is pure identity (safe everywhere); this flag
+    /// is the only thing allowed to change the command. Defaults to false so every
+    /// existing production request keeps emitting the exact command it does today.
+    /// </summary>
+    bool EnableMetadataInjection = false
 );
 
 public enum Priority

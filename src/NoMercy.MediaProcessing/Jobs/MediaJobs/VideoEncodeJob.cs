@@ -289,7 +289,17 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                     Profile: encodingProfile,
                     MediaTitle: fileMetadata.FileName,
                     SourceStorage: sourceStorage,
-                    DestinationStorage: destinationStorage
+                    DestinationStorage: destinationStorage,
+                    // Pure identity — safe on every request, including the Whole-task
+                    // inline path below (RunInlineAsync runs Build+Execute+Finalize
+                    // over this exact request). Drives BundleLayout resolution in
+                    // PlanStage so FinalizeStage writes manifest.json/reconstruction.json
+                    // for every encode, not only the coordinator's FinalizeOnly pass.
+                    // EncodingOptions.EnableMetadataInjection stays unset (defaults
+                    // false) here, so the emitted ffmpeg command is unaffected. Null
+                    // when the source has no resolvable movie/episode (e.g. a disc
+                    // rip) — degrades to today's behavior exactly.
+                    MediaItem: fileMetadata.MediaItem
                 );
 
                 string groupTag = Ulid.NewUlid().ToString();
@@ -808,12 +818,13 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             MediaTitle: fileMetadata.FileName,
             SourceStorage: sourceStorage,
             DestinationStorage: destinationStorage,
-            // Safe ONLY because FinalizeOnly is true above — Build/Execute never
-            // run for this request, so BuildStage's metadata-injection path (which
-            // activates whenever MediaItem is non-null) never sees this value.
-            // Drives BundleLayout resolution + manifest.json/reconstruction.json
-            // in FinalizeStage. Null when the source has no resolvable movie/
-            // episode (e.g. a disc rip) — degrades to today's behavior exactly.
+            // Pure identity — safe here regardless of FinalizeOnly. Drives
+            // BundleLayout resolution + manifest.json/reconstruction.json in
+            // FinalizeStage. EncodingOptions.EnableMetadataInjection stays unset
+            // (defaults false), so this has no effect on the ffmpeg command even
+            // on a request where Build/Execute do run. Null when the source has
+            // no resolvable movie/episode (e.g. a disc rip) — degrades to today's
+            // behavior exactly.
             MediaItem: fileMetadata.MediaItem
         );
 
@@ -2052,10 +2063,13 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
 
         /// <summary>
         /// The resolved movie/episode reference for reconstruction-metadata
-        /// wiring. Only ever set on the <see cref="EncodingRequest"/> used for
-        /// the coordinator's FinalizeOnly pass (<see cref="HandleFinalizeAsync"/>)
-        /// — never on a request that reaches BuildStage — so populating it can
-        /// never change the ffmpeg command that produced the output.
+        /// wiring. Set on every <see cref="EncodingRequest"/> this job builds —
+        /// the inline Whole-task request in <see cref="HandleInitialRunAsync"/>
+        /// and the coordinator's FinalizeOnly request in
+        /// <see cref="HandleFinalizeAsync"/> alike. Pure identity: it can never
+        /// change the ffmpeg command that produced the output, because that is
+        /// gated separately by <see cref="EncodingOptions.EnableMetadataInjection"/>,
+        /// which this job never sets.
         /// </summary>
         public MediaItemRef? MediaItem { get; set; }
     }
