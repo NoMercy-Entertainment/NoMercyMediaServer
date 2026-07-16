@@ -558,7 +558,16 @@ public static class BuiltinPresets
                 tune: tune,
                 convertHdrToSdr: convertHdrToSdr
             ),
-            Audio: [AacStereo(), Eac3Surround()],
+            // A library preset repackages the source for streaming without
+            // giving up anything that isn't the video codec — copy every
+            // source audio track as-is instead of re-encoding into a fixed
+            // AAC+E-AC-3 pair. PlanStage's ContainerCompatibility gate (via
+            // ProfileValidator, which only checks Transcode-policy outputs)
+            // is bypassed here exactly like CopyVideo() already is: a codec
+            // the target container genuinely cannot carry (e.g. TrueHD/DTS
+            // into HlsFmp4) is the author's call to fix with a re-encode
+            // preset, the same tradeoff Remux/Archive already make for MKV.
+            Audio: [CopyAudio()],
             Subtitles: [DefaultSubs()],
             Thumbnails: null,
             Ladder: null,

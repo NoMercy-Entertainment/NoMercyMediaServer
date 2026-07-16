@@ -158,10 +158,10 @@ public class ProfileValidatorCoreTests
     [Fact]
     public void Audio_codec_incompatible_with_container_rejects()
     {
-        // HlsFmp4 only supports Aac/Ac3/Eac3 — Opus must be rejected.
+        // HlsFmp4 supports Aac/Ac3/Eac3/Opus — TrueHD must be rejected.
         EncodingProfile profile = Profile(
             container: Container.HlsFmp4,
-            audio: [Audio(codec: AudioCodecType.Opus)]
+            audio: [Audio(codec: AudioCodecType.TrueHd)]
         );
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
@@ -170,8 +170,23 @@ public class ProfileValidatorCoreTests
         result
             .Errors.Should()
             .Contain(e =>
-                e.Contains("HlsFmp4") && e.Contains("Opus") && e.Contains("Compatible containers")
+                e.Contains("HlsFmp4") && e.Contains("TrueHd") && e.Contains("Compatible containers")
             );
+    }
+
+    [Fact]
+    public void Audio_codec_opus_compatible_with_hlsfmp4_passes()
+    {
+        // The nomercy-ffmpeg fork muxes Opus into fragmented MP4 fine, so
+        // HlsFmp4 accepts it — must not trigger the rule.
+        EncodingProfile profile = Profile(
+            container: Container.HlsFmp4,
+            audio: [Audio(codec: AudioCodecType.Opus)]
+        );
+
+        ProfileValidationResult result = ProfileValidator.Validate(profile);
+
+        result.Errors.Should().NotContain(e => e.Contains("does not support audio"));
     }
 
     [Fact]
@@ -546,9 +561,7 @@ public class ProfileValidatorCoreTests
     [InlineData("scodec")]
     public void Forbidden_custom_arg_produces_warning(string key)
     {
-        EncodingProfile profile = Profile(
-            customArguments: new() { [key] = "libx264" }
-        );
+        EncodingProfile profile = Profile(customArguments: new() { [key] = "libx264" });
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
 
@@ -564,9 +577,7 @@ public class ProfileValidatorCoreTests
     public void Forbidden_custom_arg_match_is_case_insensitive(string key)
     {
         // The hash set uses StringComparer.OrdinalIgnoreCase — casing must not bypass.
-        EncodingProfile profile = Profile(
-            customArguments: new() { [key] = "anything" }
-        );
+        EncodingProfile profile = Profile(customArguments: new() { [key] = "anything" });
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
 
@@ -638,9 +649,7 @@ public class ProfileValidatorCoreTests
     public void Validate_is_valid_when_only_warnings_present()
     {
         // Forbidden custom arg is the only issue — IsValid should still be true.
-        EncodingProfile profile = Profile(
-            customArguments: new() { ["c:v"] = "libx264" }
-        );
+        EncodingProfile profile = Profile(customArguments: new() { ["c:v"] = "libx264" });
 
         ProfileValidationResult result = ProfileValidator.Validate(profile);
 

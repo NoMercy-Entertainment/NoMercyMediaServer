@@ -432,6 +432,102 @@ public class PlanStage(
     }
 
     /// <summary>
+    /// Downgrades an individual <see cref="AudioOutput"/> from Transcode to
+    /// Copy when every source stream it would match already satisfies it
+    /// losslessly — the audio equivalent of
+    /// <see cref="ApplySmartCopyDowngrade"/>. Re-encoding a matching lossy
+    /// source can only add generation loss and CPU time, never shrink it.
+    ///
+    /// Evaluated per profile-level <see cref="AudioOutput"/> (not per source
+    /// stream), matching the granularity the profile author reasons in — a
+    /// preset asking AAC+E-AC-3 from an AAC source copies the AAC output and
+    /// still transcodes toward E-AC-3. Because one AudioOutput can match
+    /// several source streams (multiple languages), the downgrade only
+    /// applies when EVERY matched stream individually resolves to Copy —
+    /// otherwise a heterogeneous-codec source (e.g. an AAC English track next
+    /// to a DTS Japanese one, both matched by the same AllowedLanguages rule)
+    /// would end up mapping "-c:a copy" onto a stream it cannot actually
+    /// carry unmodified.
+    /// </summary>
+    private AudioOutput[] ApplySmartCopyDowngradeAudio(
+        AudioOutput[] audioOutputs,
+        MediaInfo media,
+        EncodingProfile profile,
+        IDecisionLogSink decisions
+    )
+    {
+        if (media.AudioStreams.Count == 0)
+            return audioOutputs;
+
+        OutputFormat outputFormat = PlanStageHelpers.ContainerToOutputFormat(profile.Container);
+
+        return audioOutputs
+            .Select(a =>
+                TryDowngradeAudioToSmartCopy(
+                    a,
+                    media.AudioStreams,
+                    profile,
+                    outputFormat,
+                    decisions
+                )
+            )
+            .ToArray();
+    }
+
+    private AudioOutput TryDowngradeAudioToSmartCopy(
+        AudioOutput audioOutput,
+        IReadOnlyList<AudioStreamInfo> sourceStreams,
+        EncodingProfile profile,
+        OutputFormat outputFormat,
+        IDecisionLogSink decisions
+    )
+    {
+        if (audioOutput.Policy != StreamPolicy.Transcode)
+            return audioOutput;
+
+        HashSet<string> allowed =
+            audioOutput.AllowedLanguages.Length > 0
+                ? new HashSet<string>(
+                    audioOutput.AllowedLanguages,
+                    StringComparer.OrdinalIgnoreCase
+                )
+                : [];
+
+        List<AudioStreamInfo> matched = sourceStreams
+            .Where(s => allowed.Count == 0 || allowed.Contains(s.Language ?? "und"))
+            .ToList();
+
+        if (matched.Count == 0)
+            return audioOutput;
+
+        bool allCopy = matched.All(s =>
+            _streamActionResolver.ResolveAudio(s, audioOutput, outputFormat) == StreamAction.Copy
+        );
+
+        if (!allCopy)
+            return audioOutput;
+
+        if (!ContainerCompatibility.SupportsAudio(profile.Container, audioOutput.Codec))
+            return audioOutput;
+
+        decisions.Add(
+            new(
+                "plan",
+                "plan.audio_smart_copy",
+                $"Source audio ({matched.Count} stream(s)) already matches the profile "
+                    + $"target {audioOutput.Codec} — stream-copying instead of re-encoding.",
+                new { codec = audioOutput.Codec, streams = matched.Count }
+            )
+        );
+
+        return audioOutput with
+        {
+            Policy = StreamPolicy.Copy,
+            Codec = AudioCodecType.Copy,
+        };
+    }
+
+    /// <summary>
     /// Resolves the GPU-resident decode+scale plan for this output, or null for
     /// the CPU path. Dark by default: only when <c>EncoderOptions.EnableGpuResident</c>
     /// is opted in, the host has a GPU, the plan is eligible (no tonemap / crop /
@@ -852,9 +948,27 @@ public class PlanStage(
         // distinct directories (video_1920x1080_SDR_avc/ vs _hevc/).
         videoPlan = PlanStageDisambiguation.DisambiguateVideo(videoPlan);
 
+        // Smart-copy downgrade — audio equivalent of ApplySmartCopyDowngrade
+        // above. Unlike video, there is no separate resolvedCodecs array to
+        // keep in lockstep with (audio never goes through hardware codec
+        // resolution), so this runs exactly once, right before the plan is
+        // built from it.
+        AudioOutput[] audioOutputs = ApplySmartCopyDowngradeAudio(
+            profile.Audio,
+            media,
+            profile,
+            context.DecisionsOrNoOp
+        );
+
         // Build one AudioOutputPlan per matching source stream.
         // AllowedLanguages is a FILTER — the actual language comes from the source stream.
-        AudioOutputPlan[] audioPlan = AudioPlanBuilder.Build(profile, media);
+        AudioOutputPlan[] audioPlan = AudioPlanBuilder.Build(
+            profile with
+            {
+                Audio = audioOutputs,
+            },
+            media
+        );
 
         SubtitleOutputPlan[] subtitlePlan = SubtitlePlanBuilder.Build(profile, media);
 

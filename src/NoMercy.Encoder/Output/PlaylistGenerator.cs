@@ -88,10 +88,7 @@ public class PlaylistGenerator : IPlaylistGenerator
         string audioGroupId = "audio_aac";
         if (plan.AudioOutputs.Length > 0)
         {
-            string firstCodecName = plan.AudioOutputs[0]
-                .EncoderName.Replace("libfdk_", "")
-                .Replace("lib", "");
-            audioGroupId = $"audio_{firstCodecName}";
+            audioGroupId = $"audio_{plan.AudioOutputs[0].CodecToken}";
         }
 
         bool defaultAudioEmitted = false;
@@ -108,10 +105,9 @@ public class PlaylistGenerator : IPlaylistGenerator
             if (audMetrics.PeakBandwidth == 0)
                 continue;
 
-            string codecName = audio.EncoderName.Replace("libfdk_", "").Replace("lib", "");
             Dictionary<string, string> tokens = TemplateResolver.AudioTokens(
                 audio.Language ?? "und",
-                codecName,
+                audio.CodecToken,
                 audio.Channels
             );
 

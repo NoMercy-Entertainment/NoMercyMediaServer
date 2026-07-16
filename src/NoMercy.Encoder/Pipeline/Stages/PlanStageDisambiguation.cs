@@ -57,7 +57,7 @@ internal static class PlanStageDisambiguation
             .Select((plan, idx) => new IndexedAudioPlan(plan, idx))
             .GroupBy(entry => new AudioGroupKey(
                 entry.Plan.Language ?? "und",
-                AudioCodecTokenFor(entry.Plan.EncoderName),
+                entry.Plan.CodecToken,
                 entry.Plan.SegmentNameTemplate,
                 entry.Plan.PlaylistNameTemplate
             ));
@@ -145,13 +145,5 @@ internal static class PlanStageDisambiguation
         // unexpected shapes so we still produce a unique-per-call suffix.
         int lastColon = mapLabel.LastIndexOf(':');
         return lastColon >= 0 && int.TryParse(mapLabel[(lastColon + 1)..], out int idx) ? idx : 0;
-    }
-
-    private static string AudioCodecTokenFor(string encoderName)
-    {
-        // Mirrors HlsOutputStrategy's codec-name shortening (lib / libfdk_
-        // prefixes stripped) so the collision grouping uses the same key
-        // the template would resolve to.
-        return encoderName.Replace("libfdk_", "").Replace("lib", "");
     }
 }

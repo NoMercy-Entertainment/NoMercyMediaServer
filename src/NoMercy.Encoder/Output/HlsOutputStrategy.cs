@@ -116,10 +116,9 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
         {
             if (audio.Action == StreamAction.Copy || audio.Action == StreamAction.Transcode)
             {
-                string codecName = audio.EncoderName.Replace("libfdk_", "").Replace("lib", "");
                 Dictionary<string, string> tokens = TemplateResolver.AudioTokens(
                     audio.Language ?? "und",
-                    codecName,
+                    audio.CodecToken,
                     audio.Channels
                 );
 
@@ -222,10 +221,9 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
             if (audio.Action is not (StreamAction.Copy or StreamAction.Transcode))
                 continue;
 
-            string codecName = audio.EncoderName.Replace("libfdk_", "").Replace("lib", "");
             Dictionary<string, string> tokens = TemplateResolver.AudioTokens(
                 audio.Language ?? "und",
-                codecName,
+                audio.CodecToken,
                 audio.Channels
             );
             string playlistResolved = TemplateResolver.Resolve(audio.PlaylistNameTemplate, tokens);
@@ -463,10 +461,9 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
         {
             if (audio.Action is StreamAction.Copy or StreamAction.Transcode)
             {
-                string codecName = audio.EncoderName.Replace("libfdk_", "").Replace("lib", "");
                 Dictionary<string, string> tokens = TemplateResolver.AudioTokens(
                     audio.Language ?? "und",
-                    codecName,
+                    audio.CodecToken,
                     audio.Channels
                 );
                 string resolved = TemplateResolver.Resolve(audio.PlaylistNameTemplate, tokens);

@@ -237,6 +237,27 @@ public class BuiltinPresetsTests
     }
 
     /// <summary>
+    /// A library preset repackages the source for streaming — it should never
+    /// re-encode audio into a fixed AAC+E-AC-3 pair, since that inflates a
+    /// source already carrying compact lossy tracks (e.g. two Opus stereo
+    /// tracks) into several times its size for no quality gain.
+    /// </summary>
+    [Theory]
+    [InlineData("Anime 1080p HEVC 10-bit")]
+    [InlineData("1080p HEVC 10-bit")]
+    [InlineData("4K HDR HEVC 10-bit")]
+    [InlineData("1080p SDR HEVC 10-bit")]
+    public void Library_presets_copy_audio_rather_than_transcode(string name)
+    {
+        EncodingProfile preset = Preset(name);
+
+        preset
+            .Audio.Should()
+            .AllSatisfy(audio => audio.Policy.Should().Be(StreamPolicy.Copy))
+            .And.NotBeEmpty();
+    }
+
+    /// <summary>
     /// Direct-stream audio exists to avoid re-encoding, so a transcoding audio
     /// output would defeat the whole preset.
     /// </summary>

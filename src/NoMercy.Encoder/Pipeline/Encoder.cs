@@ -109,10 +109,7 @@ public class Encoder(
                     (v, i) => $"{i}:{v.Width}x{v.Height}_{v.EncoderName}"
                 )
                 .ToList(),
-            plan.OutputPlan.AudioOutputs.Select(
-                    (a, i) =>
-                        $"{i}:{a.Language}_{a.EncoderName.Replace("libfdk_", "").Replace("lib", "")}"
-                )
+            plan.OutputPlan.AudioOutputs.Select((a, i) => $"{i}:{a.Language}_{a.CodecToken}")
                 .ToList(),
             plan.OutputPlan.SubtitleOutputs.Select((s, i) => $"{i}:{s.Language}_{s.OutputCodec}")
                 .ToList(),

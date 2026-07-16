@@ -38,6 +38,8 @@ public class ContainerCompatibilityTests
     [InlineData(Container.Mp4, AudioCodecType.Opus, false)]
     [InlineData(Container.HlsFmp4, AudioCodecType.Aac, true)]
     [InlineData(Container.HlsFmp4, AudioCodecType.Eac3, true)]
+    [InlineData(Container.HlsFmp4, AudioCodecType.Opus, true)]
+    [InlineData(Container.AudioHlsFmp4, AudioCodecType.Opus, true)]
     [InlineData(Container.Mkv, AudioCodecType.TrueHd, true)]
     [InlineData(Container.Flac, AudioCodecType.Flac, true)]
     [InlineData(Container.Mp3, AudioCodecType.Mp3, true)]
@@ -291,7 +293,13 @@ public class ContainerCompatibilityTests
                 AudioCodecType.Eac3,
                 AudioCodecType.Mp3,
             ],
-            [Container.HlsFmp4] = [AudioCodecType.Aac, AudioCodecType.Ac3, AudioCodecType.Eac3],
+            [Container.HlsFmp4] =
+            [
+                AudioCodecType.Aac,
+                AudioCodecType.Ac3,
+                AudioCodecType.Eac3,
+                AudioCodecType.Opus,
+            ],
             [Container.Mp3] = [AudioCodecType.Mp3],
             [Container.Aac] = [AudioCodecType.Aac],
             [Container.Flac] = [AudioCodecType.Flac],
@@ -310,7 +318,12 @@ public class ContainerCompatibilityTests
             ],
             [Container.Mks] = [],
             [Container.AudioHlsTs] = [AudioCodecType.Aac, AudioCodecType.Mp3],
-            [Container.AudioHlsFmp4] = [AudioCodecType.Aac, AudioCodecType.Eac3],
+            [Container.AudioHlsFmp4] =
+            [
+                AudioCodecType.Aac,
+                AudioCodecType.Eac3,
+                AudioCodecType.Opus,
+            ],
             [Container.Dash] = [AudioCodecType.Aac, AudioCodecType.Eac3, AudioCodecType.Opus],
         };
 

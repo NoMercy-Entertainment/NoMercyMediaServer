@@ -54,13 +54,24 @@ public static class AudioPlanBuilder
                     customPanMatrix
                 );
 
+                // Policy drives the action: a Copy-policy output (author-declared,
+                // e.g. BuiltinPresets.CopyAudio, or downgraded by
+                // PlanStage.ApplySmartCopyDowngradeAudio) must map to
+                // StreamAction.Copy so downstream output strategies emit
+                // "-c:a copy" and skip bitrate/filter flags that only apply to
+                // a real encode.
+                StreamAction action =
+                    audioProfile.Policy == StreamPolicy.Copy
+                        ? StreamAction.Copy
+                        : StreamAction.Transcode;
+
                 audioPlans.Add(
                     new(
                         EncoderName: encoderName,
                         BitrateKbps: audioProfile.BitrateKbps,
                         Channels: audioProfile.Channels,
                         SampleRate: audioProfile.SampleRateHz,
-                        Action: StreamAction.Transcode,
+                        Action: action,
                         Language: streamLang,
                         MapLabel: $"0:a:{si}",
                         SegmentNameTemplate: audioProfile.SegmentNameTemplate,
@@ -68,7 +79,8 @@ public static class AudioPlanBuilder
                         AudioFilter: audioFilter,
                         ExtraFlags: audioProfile.CustomArguments is not null
                             ? new Dictionary<string, string>(audioProfile.CustomArguments)
-                            : null
+                            : null,
+                        SourceCodecName: stream.Codec.ToLowerInvariant()
                     )
                 );
             }
