@@ -348,4 +348,127 @@ public class StreamActionResolverTests
         );
         _resolver.ResolveVideo(source, profile).Should().Be(StreamAction.Transcode);
     }
+
+    [Fact]
+    public void Video_HevcMain10SameResSufficientBitrate_Copy()
+    {
+        VideoStreamInfo source = new(
+            0,
+            "hevc",
+            1920,
+            1080,
+            24.0,
+            10,
+            "yuv420p10le",
+            "bt2020",
+            "smpte2084",
+            "bt2020nc",
+            true,
+            12000
+        );
+        VideoOutput profile = new(
+            StreamPolicy.Transcode,
+            VideoCodecType.H265,
+            1920,
+            1080,
+            RateControlMode.Crf,
+            0,
+            8000,
+            null,
+            null,
+            null,
+            CodecProfile.Auto,
+            null,
+            null,
+            10,
+            null,
+            0,
+            false,
+            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+        );
+        _resolver.ResolveVideo(source, profile).Should().Be(StreamAction.Copy);
+    }
+
+    [Fact]
+    public void Video_10BitSourceAgainst8BitProfile_Transcode()
+    {
+        VideoStreamInfo source = new(
+            0,
+            "hevc",
+            1920,
+            1080,
+            24.0,
+            10,
+            "yuv420p10le",
+            "bt2020",
+            "smpte2084",
+            "bt2020nc",
+            true,
+            12000
+        );
+        VideoOutput profile = new(
+            StreamPolicy.Transcode,
+            VideoCodecType.H265,
+            1920,
+            1080,
+            RateControlMode.Crf,
+            0,
+            8000,
+            null,
+            null,
+            null,
+            CodecProfile.Auto,
+            null,
+            null,
+            8,
+            null,
+            0,
+            false,
+            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+        );
+        _resolver.ResolveVideo(source, profile).Should().Be(StreamAction.Transcode);
+    }
+
+    [Fact]
+    public void Video_8BitSourceAgainst10BitProfile_Transcode()
+    {
+        VideoStreamInfo source = new(
+            0,
+            "h264",
+            1920,
+            1080,
+            24.0,
+            8,
+            "yuv420p",
+            "bt709",
+            "bt709",
+            "bt709",
+            true,
+            8000
+        );
+        VideoOutput profile = new(
+            StreamPolicy.Transcode,
+            VideoCodecType.H264,
+            1920,
+            1080,
+            RateControlMode.Crf,
+            0,
+            4000,
+            null,
+            null,
+            null,
+            CodecProfile.Auto,
+            null,
+            null,
+            10,
+            null,
+            0,
+            false,
+            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+            ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+        );
+        _resolver.ResolveVideo(source, profile).Should().Be(StreamAction.Transcode);
+    }
 }
