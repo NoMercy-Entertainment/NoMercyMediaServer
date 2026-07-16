@@ -241,6 +241,11 @@ public static class ServiceCollectionExtensions
             client.WithNoMercyUserAgent();
             return client;
         });
+        // ITesseractModelDownloader is implemented in NoMercy.Setup (which owns
+        // release/manifest signature verification) and cannot be referenced here — the
+        // Service host registers the real one after this call, replacing this default
+        // via standard DI last-wins, same as IOpenSubtitlesProvider below.
+        services.TryAddSingleton<ITesseractModelDownloader, NoOpTesseractModelDownloader>();
         services.AddTransient<ITesseractModelManager, TesseractModelManager>();
         services.AddTransient<ISubtitleOcrEngine, SubtitleOcrEngine>();
         services.AddSingleton<ISubtitleRouter, SubtitleRouter>();

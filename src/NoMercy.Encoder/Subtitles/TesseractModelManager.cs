@@ -9,7 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.Net;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Storage;
@@ -17,20 +16,18 @@ using NoMercy.Storage;
 namespace NoMercy.Encoder.Subtitles;
 
 /// <summary>
-/// Ensures Tesseract *.traineddata language models are available on disk,
-/// downloading missing ones from the NoMercy-Entertainment/nomercy-tesseract
-/// repository. Idempotent — repeat calls for an existing language are a no-op.
+/// Ensures Tesseract *.traineddata language models are available on disk, downloading
+/// missing ones through <see cref="ITesseractModelDownloader"/> — the signed
+/// NoMercy-Entertainment/nomercy-tesseract release, never an unverified raw fetch.
+/// Idempotent — repeat calls for an existing language are a no-op.
 /// </summary>
 public class TesseractModelManager(
     EncoderOptions options,
-    HttpClient httpClient,
+    ITesseractModelDownloader downloader,
     IStorage storage,
     ILogger<TesseractModelManager> logger
 ) : ITesseractModelManager
 {
-    private const string RepositoryBaseUrl =
-        "https://raw.githubusercontent.com/NoMercy-Entertainment/nomercy-tesseract/master/tessdata";
-
     public string ModelDirectory =>
         options.TesseractModelsDirectory
         ?? throw new InvalidOperationException(
@@ -53,33 +50,22 @@ public class TesseractModelManager(
             return localPath;
         }
 
-        string url = $"{RepositoryBaseUrl}/{fileName}";
-        logger.LogInformation("Downloading Tesseract model {FileName} from {Url}", fileName, url);
-
-        using HttpResponseMessage response = await httpClient.GetAsync(
-            url,
-            HttpCompletionOption.ResponseHeadersRead,
-            ct
+        logger.LogInformation(
+            "Downloading verified Tesseract model {FileName} from the signed nomercy-tesseract release",
+            fileName
         );
 
-        if (response.StatusCode == HttpStatusCode.NotFound)
-        {
-            throw new InvalidOperationException(
-                $"Tesseract model not found in repository: {fileName}"
-            );
-        }
-
-        response.EnsureSuccessStatusCode();
-
         // Stream to a temp file then rename — never leave a half-written model on disk
-        // if the download is cancelled midway.
+        // if the download is cancelled midway. The downloader itself has already verified
+        // the manifest signature and the SHA-256 before handing back any bytes, so nothing
+        // reaches disk here unless it passed both checks.
         string tempPath = $"{localPath}.tmp";
         try
         {
+            await using Stream verified = await downloader.DownloadVerifiedAsync(language, ct);
             await using (Stream file = await storage.OpenWriteAsync(tempPath, overwrite: true, ct))
             {
-                await using Stream remote = await response.Content.ReadAsStreamAsync(ct);
-                await remote.CopyToAsync(file, ct);
+                await verified.CopyToAsync(file, ct);
             }
 
             // Atomic-ish swap: delete any prior model then move the

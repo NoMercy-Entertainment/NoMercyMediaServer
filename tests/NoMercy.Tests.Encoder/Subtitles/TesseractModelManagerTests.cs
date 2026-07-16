@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -9,7 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.Net;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Subtitles;
@@ -18,6 +17,13 @@ using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.Encoder.Subtitles;
 
+/// <summary>
+/// Tests <see cref="TesseractModelManager"/> against a fake
+/// <see cref="ITesseractModelDownloader"/> — the real signed-release verification lives in
+/// NoMercy.Setup's TesseractModelDownloaderTests; this class asserts what the manager does
+/// with the downloader's outcome (file written / not written / cleaned up), never that a
+/// method was merely called.
+/// </summary>
 public class TesseractModelManagerTests : IDisposable
 {
     private readonly string _tempDir;
@@ -43,48 +49,80 @@ public class TesseractModelManagerTests : IDisposable
         string localPath = Path.Combine(_tempDir, "eng.traineddata");
         await File.WriteAllBytesAsync(localPath, [0xFF, 0xFE]);
 
-        FakeHandler handler = new();
-        TesseractModelManager manager = BuildManager(handler);
+        FakeTesseractModelDownloader downloader = new();
+        TesseractModelManager manager = BuildManager(downloader);
 
         string resolved = await manager.EnsureLanguageModelAsync("eng", CancellationToken.None);
 
         Assert.Equal(localPath, resolved);
-        Assert.Equal(0, handler.CallCount);
+        Assert.Equal(0, downloader.CallCount);
     }
 
     [Fact]
-    public async Task Ensure_WhenModelMissing_DownloadsAndSaves()
+    public async Task Ensure_WhenModelMissing_DownloadsVerifiedModelAndSaves()
     {
         byte[] payload = [0x01, 0x02, 0x03, 0x04];
-        FakeHandler handler = new() { ResponseBody = payload, StatusCode = HttpStatusCode.OK };
-        TesseractModelManager manager = BuildManager(handler);
+        FakeTesseractModelDownloader downloader = new() { Payload = payload };
+        TesseractModelManager manager = BuildManager(downloader);
 
         string resolved = await manager.EnsureLanguageModelAsync("fra", CancellationToken.None);
 
         string expectedPath = Path.Combine(_tempDir, "fra.traineddata");
         Assert.Equal(expectedPath, resolved);
-        Assert.Equal(1, handler.CallCount);
+        Assert.Equal(1, downloader.CallCount);
         Assert.True(File.Exists(expectedPath));
         Assert.Equal(payload, await File.ReadAllBytesAsync(expectedPath));
+        Assert.False(File.Exists($"{expectedPath}.tmp"));
     }
 
     [Fact]
-    public async Task Ensure_WhenRepositoryReturns404_Throws()
+    public async Task Ensure_WhenManifestSignatureInvalid_RejectsAndWritesNothing()
     {
-        FakeHandler handler = new() { StatusCode = HttpStatusCode.NotFound };
-        TesseractModelManager manager = BuildManager(handler);
+        // The downloader hard-fails when the signed manifest's signature does not verify —
+        // the manager must not write anything, and must not fall back to any other source.
+        FakeTesseractModelDownloader downloader = new()
+        {
+            FailureToThrow = new InvalidOperationException(
+                "nomercy-tesseract release manifest signature could not be verified"
+            ),
+        };
+        TesseractModelManager manager = BuildManager(downloader);
 
-        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            manager.EnsureLanguageModelAsync("xyz", CancellationToken.None)
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            manager.EnsureLanguageModelAsync("deu", CancellationToken.None)
         );
 
-        Assert.Contains("xyz.traineddata", ex.Message);
+        string expectedPath = Path.Combine(_tempDir, "deu.traineddata");
+        Assert.False(File.Exists(expectedPath));
+        Assert.False(File.Exists($"{expectedPath}.tmp"));
+    }
+
+    [Fact]
+    public async Task Ensure_WhenShaMismatch_RejectsAndWritesNothing()
+    {
+        // The downloader hard-fails when the downloaded bytes don't match the signed
+        // manifest's SHA-256 — the manager must not install the tampered/corrupt model.
+        FakeTesseractModelDownloader downloader = new()
+        {
+            FailureToThrow = new InvalidDataException(
+                "SHA-256 mismatch: the downloaded model does not match the signed manifest."
+            ),
+        };
+        TesseractModelManager manager = BuildManager(downloader);
+
+        await Assert.ThrowsAsync<InvalidDataException>(() =>
+            manager.EnsureLanguageModelAsync("jpn", CancellationToken.None)
+        );
+
+        string expectedPath = Path.Combine(_tempDir, "jpn.traineddata");
+        Assert.False(File.Exists(expectedPath));
+        Assert.False(File.Exists($"{expectedPath}.tmp"));
     }
 
     [Fact]
     public async Task Ensure_EmptyLanguage_ThrowsArgumentException()
     {
-        TesseractModelManager manager = BuildManager(new());
+        TesseractModelManager manager = BuildManager(new FakeTesseractModelDownloader());
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             manager.EnsureLanguageModelAsync("", CancellationToken.None)
@@ -94,7 +132,7 @@ public class TesseractModelManagerTests : IDisposable
     [Fact]
     public void GetDownloadedLanguages_WhenDirectoryMissing_ReturnsEmpty()
     {
-        TesseractModelManager manager = BuildManager(new());
+        TesseractModelManager manager = BuildManager(new FakeTesseractModelDownloader());
 
         IReadOnlyList<string> langs = manager.GetDownloadedLanguages();
 
@@ -109,7 +147,7 @@ public class TesseractModelManagerTests : IDisposable
         await File.WriteAllTextAsync(Path.Combine(_tempDir, "fra.traineddata"), "data");
         await File.WriteAllTextAsync(Path.Combine(_tempDir, "readme.txt"), "not a model");
 
-        TesseractModelManager manager = BuildManager(new());
+        TesseractModelManager manager = BuildManager(new FakeTesseractModelDownloader());
 
         IReadOnlyList<string> langs = manager.GetDownloadedLanguages();
 
@@ -121,10 +159,9 @@ public class TesseractModelManagerTests : IDisposable
     [Fact]
     public async Task Ensure_WhenDownloadCancelled_DoesNotLeavePartialFile()
     {
-        FakeHandler handler = new() { StatusCode = HttpStatusCode.OK, ResponseBody = [0x01] };
         CancellationTokenSource cts = new();
-        TesseractModelManager manager = BuildManager(handler);
-        handler.OnHandleRequest = () => cts.Cancel();
+        FakeTesseractModelDownloader downloader = new() { OnDownloadRequested = cts.Cancel };
+        TesseractModelManager manager = BuildManager(downloader);
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             manager.EnsureLanguageModelAsync("deu", cts.Token)
@@ -135,37 +172,30 @@ public class TesseractModelManagerTests : IDisposable
         Assert.False(File.Exists($"{expectedPath}.tmp"));
     }
 
-    private TesseractModelManager BuildManager(FakeHandler handler)
+    private TesseractModelManager BuildManager(ITesseractModelDownloader downloader)
     {
-        HttpClient client = new(handler);
         LocalStorageDriver driver = new();
         LocalStorage storage = new(driver, new([], driver));
-        return new(_options, client, storage, NullLogger<TesseractModelManager>.Instance);
+        return new(_options, downloader, storage, NullLogger<TesseractModelManager>.Instance);
     }
 
-    private sealed class FakeHandler : HttpMessageHandler
+    private sealed class FakeTesseractModelDownloader : ITesseractModelDownloader
     {
-        public HttpStatusCode StatusCode { get; set; } = HttpStatusCode.OK;
-        public byte[] ResponseBody { get; set; } = [];
+        public byte[] Payload { get; init; } = [];
+        public Exception? FailureToThrow { get; init; }
+        public Action? OnDownloadRequested { get; init; }
         public int CallCount { get; private set; }
-        public Action? OnHandleRequest { get; set; }
 
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken
-        )
+        public Task<Stream> DownloadVerifiedAsync(string language, CancellationToken ct)
         {
             CallCount++;
-            OnHandleRequest?.Invoke();
-            cancellationToken.ThrowIfCancellationRequested();
+            OnDownloadRequested?.Invoke();
+            ct.ThrowIfCancellationRequested();
 
-            HttpResponseMessage response = new(StatusCode);
-            if (StatusCode == HttpStatusCode.OK)
-            {
-                response.Content = new ByteArrayContent(ResponseBody);
-            }
+            if (FailureToThrow is not null)
+                throw FailureToThrow;
 
-            return Task.FromResult(response);
+            return Task.FromResult<Stream>(new MemoryStream(Payload));
         }
     }
 }

@@ -83,7 +83,26 @@ public static class BinaryVerification
             bufferSize: 81920,
             useAsync: true
         );
-        byte[] hash = await SHA256.HashDataAsync(fs, ct);
+        return await VerifyStreamSha256Async(fs, expectedHex, ct);
+    }
+
+    /// <summary>
+    /// Computes the SHA-256 hash of <paramref name="stream"/> and compares it against
+    /// <paramref name="expectedHex"/> (case-insensitive, hex-encoded). Shared core behind
+    /// <see cref="VerifyFileSha256Async"/> so in-memory verification (e.g. a downloaded
+    /// asset that has not been staged to disk yet) reuses the same comparison instead of
+    /// recomputing SHA-256 inline at the call site.
+    /// </summary>
+    /// <returns>
+    /// <c>true</c> when hashes match; <c>false</c> when they differ.
+    /// </returns>
+    public static async Task<bool> VerifyStreamSha256Async(
+        Stream stream,
+        string expectedHex,
+        CancellationToken ct = default
+    )
+    {
+        byte[] hash = await SHA256.HashDataAsync(stream, ct);
         string actual = Convert.ToHexString(hash);
         return string.Equals(actual, expectedHex, StringComparison.OrdinalIgnoreCase);
     }

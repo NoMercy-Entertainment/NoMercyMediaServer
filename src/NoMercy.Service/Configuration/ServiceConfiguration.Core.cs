@@ -22,6 +22,7 @@ using NoMercy.Data.Resolvers;
 using NoMercy.Database;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Startup;
+using NoMercy.Encoder.Subtitles;
 using NoMercy.Events;
 using NoMercy.Events.Audit;
 using NoMercy.MediaProcessing.Collections;
@@ -549,6 +550,14 @@ public static partial class ServiceConfiguration
             // NeedsRecalibration() can honour its 30-day grace window.
             opts.SpeedIndexCachePath = AppFiles.SpeedIndexCachePath;
         });
+
+        // Routes on-demand OCR model pulls through the signed nomercy-tesseract release
+        // (Binaries + BinaryVerification) instead of an unverified raw-branch fetch.
+        // Registered here — not inside AddNoMercyEncoder — because NoMercy.Setup owns
+        // release/manifest verification and NoMercy.Encoder cannot reference it (NoMercy.Setup
+        // already references NoMercy.Encoder). Singleton so repeated language downloads share
+        // one Binaries instance and its manifest cache instead of re-verifying per call.
+        services.AddSingleton<ITesseractModelDownloader, TesseractModelDownloader>();
 
         // Registered here, not in Providers or Encoder: it bridges both and neither
         // may reference the other.
