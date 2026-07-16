@@ -777,4 +777,8 @@
     <Key>Video file not found or you lack access</Key>
     <Value lang="nl">Video file not found or you lack access</Value>
   </Entry>
+  <Entry>
+    <Key>Conflict.</Key>
+    <Value lang="nl">Conflict.</Value>
+  </Entry>
 </I18N>
