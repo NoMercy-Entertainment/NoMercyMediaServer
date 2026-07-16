@@ -41,7 +41,8 @@ public partial class SubtitleOcrEngine(
         int streamIndex,
         string language,
         SubtitleCodecType outputFormat,
-        CancellationToken ct
+        CancellationToken ct,
+        string? outputDirectory = null
     )
     {
         // Pull the language model before invoking FFmpeg so the OCR filter
@@ -62,12 +63,25 @@ public partial class SubtitleOcrEngine(
         IAnalysisProgressObserver observer = progress ?? NullAnalysisProgressObserver.Instance;
         observer.Report(jobId, "ocr", 0, $"starting ocr ({language})");
 
+        string extension = outputFormat == SubtitleCodecType.Srt ? ".srt" : ".vtt";
+        string outputPath = ResolveOutputPath(
+            inputPath,
+            outputDirectory,
+            streamIndex,
+            language,
+            extension
+        );
+
         try
         {
             // Lease every path handed to ffmpeg so future remote drivers can
             // stage them locally and clean up on dispose.
             await using LocalPathLease inputLease = storage.AcquireLocalPath(inputPath);
             await using LocalPathLease ocrLease = storage.AcquireLocalPath(ocrOutput);
+
+            string? outputParentDirectory = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(outputParentDirectory))
+                storage.CreateDirectory(outputParentDirectory);
 
             string[] args =
             [
@@ -79,7 +93,7 @@ public partial class SubtitleOcrEngine(
                 "-i",
                 "color=black:s=hd720",
                 "-filter_complex",
-                $"[0:s:{streamIndex}]ocr=language={language},metadata=print:key=lavfi.ocr.text:file={EscapeFilterPath(ocrLease.Path)}",
+                $"[0:s:{streamIndex}]ocr=language={language}:datapath={EscapeFilterPath(modelDirectory)},metadata=print:key=lavfi.ocr.text:file={EscapeFilterPath(ocrLease.Path)}",
                 "-an",
                 "-f",
                 "null",
@@ -111,10 +125,6 @@ public partial class SubtitleOcrEngine(
 
             byte[] ocrBytes = await storage.ReadAsync(ocrOutput, ct);
             List<SubtitleCue> cues = ParseOcrOutput(Encoding.UTF8.GetString(ocrBytes));
-            string outputPath = Path.ChangeExtension(
-                Path.Combine(Path.GetDirectoryName(inputPath)!, $"{language}_ocr"),
-                outputFormat == SubtitleCodecType.Srt ? ".srt" : ".vtt"
-            );
 
             if (outputFormat == SubtitleCodecType.Srt)
                 await WriteSrtAsync(outputPath, cues, ct);
@@ -129,8 +139,6 @@ public partial class SubtitleOcrEngine(
             );
 
             observer.Report(jobId, "ocr", 100, "done");
-
-            _ = modelDirectory; // referenced for clarity; filter resolves tessdata via TESSDATA_PREFIX if set
 
             return new(outputPath, language, outputFormat, cues.Count);
         }
@@ -228,6 +236,37 @@ public partial class SubtitleOcrEngine(
             cues.Add(new(currentStart, currentLastSeen, currentText));
 
         return cues;
+    }
+
+    /// <summary>
+    /// Resolves where the OCR sidecar lands. With no <paramref name="outputDirectory"/>
+    /// (the ad-hoc dashboard/spot-check callers) it keeps the historical
+    /// next-to-input placement. With an <paramref name="outputDirectory"/> (the
+    /// encode pipeline) it lands in the same <c>subtitles/</c> subfolder and
+    /// <c>{lang}.{type}.{ext}</c> naming the post-encode library scan already
+    /// uses to discover real text-subtitle sidecars (FileManager's
+    /// SubtitleFileRegex) — so the scan picks the OCR output up automatically.
+    /// The stream index rides along in the "type" segment so two same-language
+    /// bitmap streams never collide.
+    /// </summary>
+    private static string ResolveOutputPath(
+        string inputPath,
+        string? outputDirectory,
+        int streamIndex,
+        string language,
+        string extension
+    )
+    {
+        if (outputDirectory is null)
+        {
+            return Path.ChangeExtension(
+                Path.Combine(Path.GetDirectoryName(inputPath)!, $"{language}_ocr"),
+                extension
+            );
+        }
+
+        string subtitleDirectory = Path.Combine(outputDirectory, "subtitles");
+        return Path.Combine(subtitleDirectory, $"{language}.ocr{streamIndex}{extension}");
     }
 
     private async Task WriteWebVttAsync(

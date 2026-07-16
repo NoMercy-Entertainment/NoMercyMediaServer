@@ -777,7 +777,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         }
 
         await PublishStageAsync(fileMetadata, "Checking source subtitles");
-        await RunBitmapSubtitleOcrAsync(fileMetadata, InputFile, sourceStorage);
+        await RunBitmapSubtitleOcrAsync(fileMetadata, InputFile, sourceStorage, destinationStorage);
 
         await PublishStageAsync(fileMetadata, "Refreshing library");
         Library library = folder.FolderLibraries.First().Library;
@@ -1497,7 +1497,12 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         await RecordEncodingHistoryAsync(context, preset, result, InputFile, StorageDriver);
 
         await PublishStageAsync(fileMetadata, "Checking source subtitles");
-        await RunBitmapSubtitleOcrAsync(fileMetadata, InputFile, sourceStorage);
+        await RunBitmapSubtitleOcrAsync(
+            fileMetadata,
+            InputFile,
+            sourceStorage,
+            request.DestinationStorage ?? request.SourceStorage ?? sourceStorage
+        );
 
         await PublishStageAsync(fileMetadata, "Refreshing library");
         await ScanEncodedOutputWithRetryAsync(
@@ -1607,7 +1612,8 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
     private async Task RunBitmapSubtitleOcrAsync(
         FileMetadata fileMetadata,
         string inputPath,
-        IStorage sourceStorage
+        IStorage sourceStorage,
+        IStorage destinationStorage
     )
     {
         IMediaAnalyzer? analyzer = _mediaAnalyzer;
@@ -1642,6 +1648,28 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         if (bitmap.Count == 0)
             return;
 
+        // Write the OCR sidecar into the finalized encode output directory —
+        // not next to the source — so the post-encode library scan picks it
+        // up. GetFullPath only resolves for a LocalStorage destination; a
+        // remote destination (NFS/S3) has no local directory to resolve, so
+        // OCR falls back to writing next to the source and stays diagnosable
+        // instead of throwing.
+        string? ocrOutputDirectory;
+        try
+        {
+            ocrOutputDirectory = destinationStorage.GetFullPath(fileMetadata.Path);
+        }
+        catch (NotSupportedException)
+        {
+            ocrOutputDirectory = null;
+            Log.LogInformation(
+                "OCR sidecar for job {JobId} will land next to the source — destination storage "
+                    + "{StorageType} has no resolvable local directory",
+                fileMetadata.Id,
+                destinationStorage.GetType().Name
+            );
+        }
+
         if (EventBusProvider.IsConfigured)
         {
             await EventBusProvider.Current.PublishAsync(
@@ -1665,7 +1693,8 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                     stream.Index,
                     language,
                     SubtitleCodecType.WebVtt,
-                    CancellationToken.None
+                    CancellationToken.None,
+                    ocrOutputDirectory
                 );
                 Log.LogInformation(
                     "OCR {Language} → {FilePath} ({CueCount} cues)",
@@ -1676,6 +1705,10 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             }
             catch (Exception ex)
             {
+                // Best-effort: OCR is a nice-to-have sidecar, never allowed to
+                // fail an already-completed encode. ex.Message already carries
+                // the real ffmpeg stderr tail (SubtitleOcrEngine embeds it), so
+                // this warning stays actionable instead of a bare "OCR failed".
                 Log.LogWarning(
                     "OCR failed for {InputPath} stream {Index} ({Language}): {Message}",
                     inputPath,

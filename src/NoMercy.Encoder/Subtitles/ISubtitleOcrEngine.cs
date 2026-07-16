@@ -15,12 +15,20 @@ namespace NoMercy.Encoder.Subtitles;
 
 public interface ISubtitleOcrEngine
 {
+    /// <param name="outputDirectory">
+    /// When set, the OCR sidecar is written under
+    /// <c>{outputDirectory}/subtitles/{language}.ocr{streamIndex}.{ext}</c> — the
+    /// same convention the post-encode library scan already discovers text
+    /// subtitle sidecars by. When null (the default), the sidecar is written
+    /// next to <paramref name="inputPath"/> as before.
+    /// </param>
     Task<SubtitleTrack> OcrAsync(
         string inputPath,
         int streamIndex,
         string language,
         SubtitleCodecType outputFormat,
-        CancellationToken ct
+        CancellationToken ct,
+        string? outputDirectory = null
     );
 }
 
