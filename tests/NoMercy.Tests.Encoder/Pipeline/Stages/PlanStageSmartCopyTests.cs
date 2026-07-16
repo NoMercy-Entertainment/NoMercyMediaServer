@@ -179,12 +179,10 @@ public class PlanStageSmartCopyTests
             PlaylistNameTemplate: "video/{label}/playlist"
         );
 
-    // GenerateSpriteVtt defaults true on every profile (see HlsDerivatives) and
-    // ThumbnailPlanBuilder builds a filtergraph-based sprite plan for any
-    // Transcode video output that doesn't opt out — a plan the smart-copy
-    // downgrade must never coexist with (see the ApplySmartCopyDowngrade
-    // thumbnail guard). Every fixture in this file that expects a downgrade
-    // opts out explicitly so the guard doesn't mask what's under test.
+    // GenerateSpriteVtt defaults true on every profile (see HlsDerivatives).
+    // Disabled here to keep these fixtures' asserted plan minimal — a sprite
+    // plan no longer blocks the smart-copy downgrade (see the
+    // WithSpriteVttDefault test below, which leaves it on).
     private static EncodingProfile BuildProfile(
         NoMercy.Encoder.Profiles.VideoOutput video,
         Container container = Container.HlsFmp4
@@ -215,6 +213,36 @@ public class PlanStageSmartCopyTests
         VideoOutputPlan video = Assert.Single(success.Value.OutputPlan.VideoOutputs);
         video.MapLabel.Should().Be("0:v:0");
         video.EncoderName.Should().Be("copy");
+    }
+
+    [Fact]
+    public async Task HevcMain10SourceMatchingHlsFmp4Profile_WithSpriteVttDefault_StillDowngradesToCopy()
+    {
+        // GenerateSpriteVtt defaults true and is left on here (unlike BuildProfile's
+        // opt-out default) — a sprite plan must no longer block the smart-copy
+        // downgrade. BuildStage now emits the sprite via a separate command
+        // instead of the inline "[thumbs]" filtergraph pad, so copy and sprites
+        // coexist (see BuildStageThumbnailCopyTests).
+        MediaInfo media = BuildHevcMain10Media();
+        EncodingProfile profile = new(
+            Id: Ulid.NewUlid(),
+            Name: "SmartCopyWithSprite",
+            Container: Container.HlsFmp4,
+            Video: HevcMain10Video(),
+            Audio: [],
+            Subtitles: []
+        );
+
+        ValidateInput input = new(media, profile);
+        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        VideoOutputPlan video = Assert.Single(success.Value.OutputPlan.VideoOutputs);
+        video.MapLabel.Should().Be("0:v:0");
+        video.EncoderName.Should().Be("copy");
+        success
+            .Value.OutputPlan.Thumbnails.Should()
+            .NotBeNull("sprites still get planned for copy");
     }
 
     [Fact]

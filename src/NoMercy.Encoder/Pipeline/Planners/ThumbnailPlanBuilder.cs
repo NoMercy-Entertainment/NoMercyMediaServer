@@ -25,16 +25,17 @@ public static class ThumbnailPlanBuilder
     {
         ThumbnailOutputPlan? thumbPlan = null;
 
-        // Sprite/thumbnail generation decodes and scales frames — a filtergraph.
-        // ffmpeg forbids feeding a complex filtergraph into a stream-copied
-        // output ("Streamcopy requested for output stream fed from a complex
-        // filtergraph"), so a remux profile (video Policy = Copy, or no video
-        // output at all) can never carry a filtergraph-based thumbnail plan.
-        // Building one anyway makes every remux preset's command abort. A remux
-        // preserves the source untouched; thumbnails are not part of it.
-        bool videoIsTranscoded = profile.Video is { Policy: StreamPolicy.Transcode };
+        // Sprite generation no longer requires the main video output's own
+        // filtergraph: BuildStage routes a copy-video plan's sprite through a
+        // SEPARATE ffmpeg command that reads the source directly via a plain
+        // -vf (no filter_complex, so no conflict with the main command's
+        // stream copy). A plan is therefore built whenever the profile targets
+        // a video output and the source actually has frames to sample —
+        // transcode and copy both qualify now. Audio-only (no profile.Video,
+        // or no source video stream) has no frames to sprite from.
+        bool hasVideoOutput = profile.Video is not null;
 
-        if (media.VideoStreams.Count > 0 && videoIsTranscoded)
+        if (media.VideoStreams.Count > 0 && hasVideoOutput)
         {
             // Explicit profile.Thumbnails wins. Otherwise fall back to
             // HlsDerivatives: when GenerateSpriteVtt is on (the default for HLS),

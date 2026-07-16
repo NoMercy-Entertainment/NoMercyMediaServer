@@ -358,15 +358,6 @@ public class PlanStage(
     ///     the reference <see cref="VideoOutput.ConvertHdrToSdr"/> was left
     ///     false by the profile author — checked independently of
     ///     ConvertHdrToSdr for exactly that gap.</item>
-    ///   <item>No sprite-thumbnail plan will be built for this profile.
-    ///     <see cref="ThumbnailPlanBuilder.Build"/> decodes/scales frames
-    ///     through the same filter graph a copy output bypasses entirely — its
-    ///     own comment documents that a remux profile can never carry one.
-    ///     <see cref="ThumbnailPlanBuilder"/> keys off the raw
-    ///     <c>profile.Video.Policy</c> (pre-downgrade), so it would otherwise
-    ///     still build a "[thumbs]" filter split for a video this method just
-    ///     routed through direct stream copy — an inconsistency ffmpeg rejects
-    ///     with exit -22 ("Output with label 'thumbs' does not exist").</item>
     /// </list>
     ///
     /// On downgrade, <c>Codec</c> is switched to <see cref="VideoCodecType.Copy"/>
@@ -389,12 +380,6 @@ public class PlanStage(
             return videoOutputs;
 
         if (profile.HdrPolicies == HdrPolicies.AlwaysTonemap)
-            return videoOutputs;
-
-        // Evaluated against the pre-downgrade profile — accurate here because
-        // ThumbnailPlanBuilder's own gate is profile.Video.Policy, which this
-        // method has not mutated yet at the point this runs.
-        if (ThumbnailPlanBuilder.Build(profile, media) is not null)
             return videoOutputs;
 
         VideoStreamInfo source = media.VideoStreams[0];
