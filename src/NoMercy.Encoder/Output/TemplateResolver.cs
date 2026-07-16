@@ -13,17 +13,17 @@ namespace NoMercy.Encoder.Output;
 
 /// <summary>
 /// Resolves naming templates used in encoder profiles. Both syntaxes are
-/// supported: legacy <c>:token:</c> and modern <c>{token}</c>. The V2 built-in
-/// presets use the brace form (<c>video/{label}</c>, <c>audio/{lang}-{codec}</c>);
-/// earlier V1 rows persisted with colons (<c>:type:_:framesize:_:colorrange:</c>).
+/// supported: legacy colon-style <c>:token:</c> and brace-style <c>{token}</c>.
+/// Built-in presets use the brace form (<c>video/{label}</c>, <c>audio/{lang}-{codec}</c>);
+/// legacy rows persisted with colons (<c>:type:_:framesize:_:colorrange:</c>).
 ///
 /// Tokens:
 ///   type      → "video" or "audio"
 ///   framesize → "1920x1080"
-///   label     → alias of framesize (V2 brace presets)
+///   label     → alias of framesize (brace-style presets)
 ///   colorrange → "HDR" or "SDR"
 ///   language  → "eng", "und"
-///   lang      → alias of language (V2 brace presets)
+///   lang      → alias of language (brace-style presets)
 ///   codec     → "aac", "eac3", "opus"
 ///   channels  → "2", "6"
 ///   filename  → source filename without extension
@@ -71,7 +71,7 @@ public static class TemplateResolver
         {
             ["type"] = "audio",
             ["language"] = language,
-            // {lang} is the V2 brace-style alias for language.
+            // {lang} is the brace-style alias for language.
             ["lang"] = language,
             ["codec"] = codecName,
             ["channels"] = channels.ToString(),

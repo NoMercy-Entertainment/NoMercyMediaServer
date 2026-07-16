@@ -41,7 +41,7 @@ public static class ThumbnailPlanBuilder
             // build a ThumbnailOutput from SpriteVttThumbnailWidth +
             // SpriteVttIntervalSeconds so sprites land for every HLS preset
             // without each author having to also set the legacy Thumbnails field.
-            // Null HlsDerivatives (V1-backfilled presets) gets treated as a
+            // Null HlsDerivatives (legacy presets) gets treated as a
             // fresh HlsDerivatives() so the sprite-on defaults still apply.
             ThumbnailOutput? thumbConfig = profile.Thumbnails;
             if (thumbConfig is null)

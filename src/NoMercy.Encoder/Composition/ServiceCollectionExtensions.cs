@@ -215,7 +215,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IBundleGarbageCollector, BundleGarbageCollector>();
 
         // Profiles
-        services.AddTransient<IProfileValidator, V2BackedProfileValidator>();
+        services.AddTransient<IProfileValidator, BackedProfileValidator>();
         services.AddTransient<INamePresetResolver, ByNamePresetResolver>();
         services.AddSingleton<IProfileSignatureVerifier, ProfileSignatureVerifier>();
 

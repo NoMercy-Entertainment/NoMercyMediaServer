@@ -11,13 +11,12 @@
 
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Profiles;
-using V2BuiltinPresets = NoMercy.Encoder.Profiles.BuiltinPresets;
 
 namespace NoMercy.Tests.Setup.Seeds;
 
 /// <summary>
 /// Every built-in preset must (a) round-trip through JSON without data loss,
-/// (b) pass V2 ProfileValidator without errors, (c) carry a stable deterministic
+/// (b) pass ProfileValidator without errors, (c) carry a stable deterministic
 /// Id so repeat seeding upserts rather than duplicating rows, and (d) satisfy
 /// codec/container invariants specific to its tier.
 /// </summary>
@@ -26,7 +25,7 @@ public class EncodingPresetsSeedTests
     [Fact]
     public void AllBuiltInPresets_HaveStableIds_AndAreMarkedBuiltIn()
     {
-        EncodingProfile[] presets = V2BuiltinPresets.All();
+        EncodingProfile[] presets = BuiltinPresets.All();
 
         Assert.NotEmpty(presets);
         foreach (EncodingProfile preset in presets)
@@ -40,7 +39,7 @@ public class EncodingPresetsSeedTests
     [Fact]
     public void AllBuiltInPresets_HaveUniqueIds()
     {
-        EncodingProfile[] presets = V2BuiltinPresets.All();
+        EncodingProfile[] presets = BuiltinPresets.All();
         Ulid[] ids = presets.Select(p => p.Id).ToArray();
         Assert.Equal(ids.Length, ids.Distinct().Count());
     }
@@ -48,7 +47,7 @@ public class EncodingPresetsSeedTests
     [Fact]
     public void AllBuiltInPresets_HaveUniqueNames()
     {
-        EncodingProfile[] presets = V2BuiltinPresets.All();
+        EncodingProfile[] presets = BuiltinPresets.All();
         string[] names = presets.Select(p => p.Name).ToArray();
         Assert.Equal(names.Length, names.Distinct().Count());
     }
@@ -56,8 +55,8 @@ public class EncodingPresetsSeedTests
     [Fact]
     public void AllBuiltInPresets_IsIdempotent()
     {
-        EncodingProfile[] a = V2BuiltinPresets.All();
-        EncodingProfile[] b = V2BuiltinPresets.All();
+        EncodingProfile[] a = BuiltinPresets.All();
+        EncodingProfile[] b = BuiltinPresets.All();
 
         Assert.Equal(a.Length, b.Length);
         for (int i = 0; i < a.Length; i++)
@@ -70,7 +69,7 @@ public class EncodingPresetsSeedTests
     [Fact]
     public void AllBuiltInPresets_PassValidationWithoutErrors()
     {
-        EncodingProfile[] presets = V2BuiltinPresets.All();
+        EncodingProfile[] presets = BuiltinPresets.All();
 
         foreach (EncodingProfile preset in presets)
         {
@@ -82,11 +81,17 @@ public class EncodingPresetsSeedTests
         }
     }
 
+    /// <summary>
+    /// x265 spends bitrate on film grain by default, which animation does not
+    /// have; the animation tune redirects it at the flat colour and hard edges
+    /// that anime actually needs. Losing the tune would silently make the preset
+    /// an ordinary 1080p encode wearing the anime name.
+    /// </summary>
     [Fact]
-    public void AnimeHevcPreset_CarriesAnimationTune()
+    public void AnimePreset_CarriesAnimationTune()
     {
-        EncodingProfile[] presets = V2BuiltinPresets.All();
-        EncodingProfile anime = presets.First(p => p.Name == "Anime HEVC 1080p 10-bit");
+        EncodingProfile[] presets = BuiltinPresets.All();
+        EncodingProfile anime = presets.First(p => p.Name == "Anime 1080p HEVC 10-bit");
 
         Assert.NotNull(anime.Video);
         Assert.Equal("animation", anime.Video!.Tune);
@@ -94,36 +99,38 @@ public class EncodingPresetsSeedTests
         Assert.Equal(10, anime.Video.BitDepth);
     }
 
+    /// <summary>
+    /// AlwaysPreserve on an 8-bit output asks the encoder to synthesise HDR from
+    /// an SDR pipeline, which it cannot do and which ProfileRuleValidator rejects
+    /// outright. A preset that preserves HDR must therefore be 10-bit.
+    /// </summary>
     [Fact]
-    public void Chromecast1080pPreset_HasAacAndAc3Audio()
+    public void HdrPreservingPreset_Is10BitOnAnHdrCapableCodec()
     {
-        EncodingProfile[] presets = V2BuiltinPresets.All();
-        EncodingProfile cc = presets.First(p => p.Name == "Chromecast 1080p");
+        EncodingProfile[] presets = BuiltinPresets.All();
 
-        Assert.NotNull(cc.Video);
-        Assert.Equal(VideoCodecType.H264, cc.Video!.Codec);
-        Assert.Equal(1920, cc.Video.Width);
-        Assert.Contains(cc.Audio, a => a.Codec == AudioCodecType.Aac);
-        Assert.Contains(cc.Audio, a => a.Codec == AudioCodecType.Ac3);
-    }
-
-    [Fact]
-    public void AppleTv4kPreset_UsesHevcMain10AndEac3()
-    {
-        EncodingProfile[] presets = V2BuiltinPresets.All();
-        EncodingProfile atv = presets.First(p => p.Name == "Apple TV 4K HEVC");
-
-        Assert.NotNull(atv.Video);
-        Assert.Equal(VideoCodecType.H265, atv.Video!.Codec);
-        Assert.Equal(CodecProfile.Main10, atv.Video.CodecProfile);
-        Assert.Equal(10, atv.Video.BitDepth);
-        Assert.Contains(atv.Audio, a => a.Codec == AudioCodecType.Eac3);
+        foreach (
+            EncodingProfile preset in presets.Where(p =>
+                p.HdrPolicies == HdrPolicies.AlwaysPreserve
+            )
+        )
+        {
+            Assert.NotNull(preset.Video);
+            Assert.True(
+                preset.Video!.BitDepth >= 10,
+                $"{preset.Name} preserves HDR but is {preset.Video.BitDepth}-bit"
+            );
+            Assert.Contains(
+                preset.Video.Codec,
+                new[] { VideoCodecType.H265, VideoCodecType.Av1, VideoCodecType.Vp9 }
+            );
+        }
     }
 
     [Fact]
     public void MusicFlacPreset_IsAudioOnlyInFlac()
     {
-        EncodingProfile[] presets = V2BuiltinPresets.All();
+        EncodingProfile[] presets = BuiltinPresets.All();
         EncodingProfile music = presets.First(p => p.Name == "Music FLAC Lossless");
 
         Assert.Null(music.Video);
@@ -136,7 +143,7 @@ public class EncodingPresetsSeedTests
     [Fact]
     public void MusicMp3Preset_IsAudioOnlyInMp3()
     {
-        EncodingProfile[] presets = V2BuiltinPresets.All();
+        EncodingProfile[] presets = BuiltinPresets.All();
         EncodingProfile music = presets.First(p => p.Name == "Music MP3 320k");
 
         Assert.Null(music.Video);
@@ -150,7 +157,7 @@ public class EncodingPresetsSeedTests
     [Fact]
     public void MusicAacPreset_IsAudioOnlyInAac()
     {
-        EncodingProfile[] presets = V2BuiltinPresets.All();
+        EncodingProfile[] presets = BuiltinPresets.All();
         EncodingProfile music = presets.First(p => p.Name == "Music AAC 256k");
 
         Assert.Null(music.Video);
@@ -161,22 +168,18 @@ public class EncodingPresetsSeedTests
         Assert.Equal(256, music.Audio[0].BitrateKbps);
     }
 
+    /// <summary>
+    /// An archive preset re-encodes video and nothing else. Transcoding audio
+    /// would collapse a surround track to whatever the preset names, which is
+    /// quality loss the "archive" label disclaims.
+    /// </summary>
     [Fact]
-    public void CompressHevcMkvPreset_HasFlacAudio()
+    public void ArchivePreset_CopiesAudioIntoMkv()
     {
-        EncodingProfile[] presets = V2BuiltinPresets.All();
-        EncodingProfile archival = presets.First(p => p.Name == "Compress HEVC 1080p MKV");
+        EncodingProfile[] presets = BuiltinPresets.All();
+        EncodingProfile archival = presets.First(p => p.Name == "HEVC Archive (Visually Lossless)");
 
         Assert.Equal(Container.Mkv, archival.Container);
-        Assert.Equal(AudioCodecType.Flac, archival.Audio[0].Codec);
-    }
-
-    [Fact]
-    public void Web1080pBalanced_ExistsAndMatchesExpectedBuiltinNames()
-    {
-        EncodingProfile[] presets = V2BuiltinPresets.All();
-        Assert.Contains(presets, p => p.Name == "Web 1080p Balanced");
-        Assert.Contains(presets, p => p.Name == "Anime HEVC 1080p 10-bit");
-        Assert.Contains(presets, p => p.Name == "Music FLAC Lossless");
+        Assert.All(archival.Audio, a => Assert.Equal(StreamPolicy.Copy, a.Policy));
     }
 }

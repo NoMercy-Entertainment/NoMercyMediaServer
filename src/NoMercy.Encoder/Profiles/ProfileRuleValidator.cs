@@ -214,7 +214,13 @@ public static class ProfileRuleValidator
 
     private static void EmitVideoWidthInvalid(EncodingProfile profile, List<EncoderRule> rules)
     {
-        if (profile.Video is not { Policy: StreamPolicy.Transcode } video || video.Width > 0)
+        // Null means "keep source width" — a valid, deliberate request (e.g. an
+        // archive preset that re-encodes the codec without rescaling). Only a
+        // width that IS set but is not positive is an error.
+        if (profile.Video is not { Policy: StreamPolicy.Transcode } video || video.Width is null)
+            return;
+
+        if (video.Width.Value > 0)
             return;
 
         rules.Add(
@@ -222,9 +228,10 @@ public static class ProfileRuleValidator
                 Id: EncoderRuleId.VideoWidthInvalid,
                 Severity: EncoderRuleSeverity.Error,
                 Field: "video.width",
-                Message: $"Video width must be a positive integer (got {video.Width}); the encoder "
-                    + "cannot produce a 0-pixel-wide output.",
-                Fix: "Set video.width to a positive value (typical values: 854, 1280, 1920, 2560, 3840)."
+                Message: $"Video width must be null (keep source) or a positive integer "
+                    + $"(got {video.Width}); the encoder cannot produce a 0-pixel-wide output.",
+                Fix: "Set video.width to a positive value (typical values: 854, 1280, 1920, "
+                    + "2560, 3840), or leave it null to keep the source width."
             )
         );
     }
@@ -647,13 +654,19 @@ public static class ProfileRuleValidator
         // detail. The encoder will produce the larger output but it carries the same information
         // as the source — and a poorly-tuned bitrate ladder can hide quality regressions behind
         // the resolution change.
-        if (profile.Video is not { Policy: StreamPolicy.Transcode } video || video.Width <= 0)
+        // A null (or legacy 0) width means "keep source width" — that can never
+        // upscale, so there is nothing to warn about.
+        if (
+            profile.Video is not { Policy: StreamPolicy.Transcode } video
+            || video.Width is not int width
+            || width <= 0
+        )
             return;
         if (source.VideoStreams.Count == 0)
             return;
 
         VideoStreamInfo primary = source.VideoStreams[0];
-        if (primary.Width <= 0 || video.Width <= primary.Width)
+        if (primary.Width <= 0 || width <= primary.Width)
             return;
 
         rules.Add(
@@ -661,7 +674,7 @@ public static class ProfileRuleValidator
                 Id: EncoderRuleId.SourceUpscalingDetected,
                 Severity: EncoderRuleSeverity.Warning,
                 Field: "video.width",
-                Message: $"Target width {video.Width} exceeds source width {primary.Width}; "
+                Message: $"Target width {width} exceeds source width {primary.Width}; "
                     + "the encoder will upscale, adding bytes without adding detail.",
                 Fix: $"Lower video.width to {primary.Width} (or below) to avoid wasted bitrate, "
                     + "or accept the upscale if the larger frame is needed for player compatibility."
@@ -779,16 +792,20 @@ public static class ProfileRuleValidator
         // Level vs resolution check at profile-save time: assume the spec target frame rate
         // (30 fps for SDR, 60 fps for HFR-marked profiles). Without a source we can only check
         // the static side: width × height × DefaultProfileFps vs the level's MaxLumaSamplesPerSec.
+        // A null (or legacy 0) width means "keep source width" — this rule has
+        // no source to derive it from, so it can't reason about the resolution
+        // and must skip rather than false-flag.
         if (
             profile.Video is not { Policy: StreamPolicy.Transcode } video
             || string.IsNullOrEmpty(video.Level)
-            || video.Width <= 0
+            || video.Width is not int width
+            || width <= 0
         )
             return;
 
-        int height = video.Height ?? video.Width * 9 / 16; // fall back to 16:9
+        int height = video.Height ?? width * 9 / 16; // fall back to 16:9
         const double assumedFps = 30.0;
-        long lumaSamplesPerSec = (long)(video.Width * height * assumedFps);
+        long lumaSamplesPerSec = (long)(width * height * assumedFps);
 
         CodecLevelFpsCaps.LevelCap? cap = CodecLevelFpsCaps.Lookup(video.Codec, video.Level);
         if (cap is null || lumaSamplesPerSec <= cap.MaxLumaSamplesPerSec)
@@ -808,7 +825,7 @@ public static class ProfileRuleValidator
                 Id: EncoderRuleId.LevelResolutionMismatch,
                 Severity: EncoderRuleSeverity.Error,
                 Field: "video.level",
-                Message: $"Level {video.Level} cannot sustain {video.Width}x{height} at 30 fps "
+                Message: $"Level {video.Level} cannot sustain {width}x{height} at 30 fps "
                     + $"({lumaSamplesPerSec:N0} luma samples/sec required, "
                     + $"level {video.Level} allows {cap.MaxLumaSamplesPerSec:N0}).",
                 Fix: fix
@@ -854,17 +871,20 @@ public static class ProfileRuleValidator
     )
     {
         // Rough rule of thumb per resolution tier, in kbps. Source: SRGS encoding guidelines.
+        // A null (or legacy 0) width means "keep source width" — this rule has
+        // no source to derive it from, so it can't size the minimum bitrate.
         if (
             profile.Video is not { Policy: StreamPolicy.Transcode } video
             || (
                 video.RateControl != RateControlMode.Vbr && video.RateControl != RateControlMode.Cbr
             )
             || video.BitrateKbps <= 0
-            || video.Width <= 0
+            || video.Width is not int width
+            || width <= 0
         )
             return;
 
-        int minBitrate = MinimumBitrateKbpsFor(video.Width);
+        int minBitrate = MinimumBitrateKbpsFor(width);
         if (video.BitrateKbps >= minBitrate)
             return;
 
@@ -874,7 +894,7 @@ public static class ProfileRuleValidator
                 Severity: EncoderRuleSeverity.Warning,
                 Field: "video.bitrate_kbps",
                 Message: $"Bitrate {video.BitrateKbps} kbps is below the conservative minimum "
-                    + $"({minBitrate} kbps) for {video.Width}-wide output; visible artefacts likely.",
+                    + $"({minBitrate} kbps) for {width}-wide output; visible artefacts likely.",
                 Fix: $"Raise video.bitrate_kbps to at least {minBitrate}, "
                     + "or switch rate_control to CRF for quality-targeted encoding."
             )
@@ -1174,7 +1194,7 @@ public static class ProfileRuleValidator
         // Reverse direction of HDR conversion: the encoder can tonemap HDR -> SDR, but never
         // synthesises HDR from an SDR source (inverse tonemap requires colour-volume metadata
         // the source doesn't have).
-        if (profile.HdrPolicy != HdrPolicy.AlwaysPreserve)
+        if (profile.HdrPolicies != HdrPolicies.AlwaysPreserve)
             return;
 
         if (profile.Video is not { Policy: StreamPolicy.Transcode } video)
@@ -1358,7 +1378,11 @@ public static class ProfileRuleValidator
         if (fps <= 0)
             return;
 
-        long lumaSamplesPerSec = (long)(video.Width * (video.Height ?? primaryVideo.Height) * fps);
+        // A null (or legacy 0) width means "keep source width" — resolve it
+        // against the actual source here, since the source is available.
+        int effectiveWidth = video.Width is int w and > 0 ? w : primaryVideo.Width;
+        int effectiveHeight = video.Height ?? primaryVideo.Height;
+        long lumaSamplesPerSec = (long)(effectiveWidth * effectiveHeight * fps);
 
         CodecLevelFpsCaps.LevelCap? cap = CodecLevelFpsCaps.Lookup(video.Codec, video.Level);
         if (cap is null || lumaSamplesPerSec <= cap.MaxLumaSamplesPerSec)
@@ -1378,7 +1402,7 @@ public static class ProfileRuleValidator
                 Id: EncoderRuleId.LevelFrameRateCapExceeded,
                 Severity: EncoderRuleSeverity.Error,
                 Field: "video.level",
-                Message: $"Source {fps:F2} fps × {video.Width}x{video.Height ?? primaryVideo.Height} "
+                Message: $"Source {fps:F2} fps × {effectiveWidth}x{effectiveHeight} "
                     + $"requires {lumaSamplesPerSec:N0} luma samples/sec; level "
                     + $"{video.Level} allows {cap.MaxLumaSamplesPerSec:N0}.",
                 Fix: fix

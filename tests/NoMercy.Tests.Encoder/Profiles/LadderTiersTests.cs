@@ -132,9 +132,9 @@ public class LadderTiersTests
     }
 
     [Fact]
-    public void Premium_has_4_tiers()
+    public void Premium_has_6_tiers()
     {
-        LadderTiers.Premium.Should().HaveCount(4);
+        LadderTiers.Premium.Should().HaveCount(6);
     }
 
     [Fact]
@@ -150,33 +150,5 @@ public class LadderTiersTests
             .Premium.Select(t => t.RecommendedBitrateHevcKbps)
             .Should()
             .AllSatisfy(b => b.Should().NotBeNull());
-    }
-
-    [Fact]
-    public void Mobile_has_3_tiers()
-    {
-        LadderTiers.Mobile.Should().HaveCount(3);
-    }
-
-    [Fact]
-    public void Mobile_labels_are_correct()
-    {
-        string[] labels = LadderTiers.Mobile.Select(t => t.Label).ToArray();
-        labels.Should().Equal("360p", "480p", "720p");
-    }
-
-    [Fact]
-    public void Mobile_max_height_is_720()
-    {
-        LadderTiers.Mobile.Max(t => t.Height).Should().Be(720);
-    }
-
-    [Fact]
-    public void Mobile_AV1_bitrates_are_all_null()
-    {
-        LadderTiers
-            .Mobile.Select(t => t.RecommendedBitrateAv1Kbps)
-            .Should()
-            .AllSatisfy(b => b.Should().BeNull());
     }
 }

@@ -47,7 +47,7 @@ public class InboxRoutingService
     {
         List<Folder> folders = await context
             .Folders.AsNoTracking()
-            .Include(f => f.EncoderProfileFolder)
+            .Include(f => f.EncodingPresetFolders)
             .Include(f => f.FolderLibraries)
                 .ThenInclude(fl => fl.Library)
             .Where(f => f.FolderLibraries.Any(fl => fl.Library.Type == detectedType))
@@ -64,14 +64,16 @@ public class InboxRoutingService
             if (folderLibrary is null)
                 continue;
 
-            EncoderProfileFolder? profileFolder = folder.EncoderProfileFolder.FirstOrDefault();
+            EncodingPresetFolder? presetFolder = folder
+                .EncodingPresetFolders.OrderByDescending(link => link.IsDefault)
+                .FirstOrDefault();
 
             destinations.Add(
                 new()
                 {
                     LibraryId = folderLibrary.LibraryId,
                     FolderId = folder.Id,
-                    ProfileId = profileFolder?.EncoderProfileId ?? Ulid.Empty,
+                    ProfileId = presetFolder?.PresetId ?? Ulid.Empty,
                     DriverId = folder.DriverId,
                     FolderPath = folder.Path,
                 }

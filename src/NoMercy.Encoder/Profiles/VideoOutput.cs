@@ -16,7 +16,7 @@ namespace NoMercy.Encoder.Profiles;
 public record VideoOutput(
     StreamPolicy Policy,
     VideoCodecType Codec,
-    int Width,
+    int? Width,
     int? Height,
     RateControlMode RateControl,
     int Crf,

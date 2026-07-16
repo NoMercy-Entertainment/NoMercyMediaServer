@@ -103,7 +103,7 @@ public class Encoder(
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)planResult).Value;
 
         // Update observer with resolved stream info from the actual output plan.
-        // Format matches V1: "{index}:{detail}" for dashboard display.
+        // Format: "{index}:{detail}" for dashboard display.
         progress?.OnPlanResolved(
             plan.OutputPlan.VideoOutputs.Select(
                     (v, i) => $"{i}:{v.Width}x{v.Height}_{v.EncoderName}"

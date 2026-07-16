@@ -12,18 +12,23 @@
 namespace NoMercy.Encoder.Profiles;
 
 /// <summary>
-/// Maps old built-in preset identifiers to new ones when a preset is renamed.
-/// Each entry carries both a Ulid redirect (kept in DB) and an optional slug
-/// redirect (used by <see cref="BundleSlugRenamer"/> to rename on-disk bundle
-/// directories and patch their manifest.json files).
+/// Redirects for renamed built-ins. A built-in's id is a hash of its name, so
+/// renaming one mints a new id and leaves every folder linked to the old id
+/// pointing at a preset that no longer ships.
 /// </summary>
 public static class BuiltinPresetRenames
 {
     /// <summary>
-    /// Ulid redirect map. Applied by <see cref="BuiltinPresetSeeder"/> so that
-    /// existing DB rows survive a built-in rename without losing history.
+    /// <c>oldId → newId</c>, applied by <see cref="BuiltinPresetSeeder"/> before
+    /// it prunes built-ins that no longer ship. Add an entry whenever a built-in
+    /// is renamed and the new one is a fair substitute for the old.
+    ///
+    /// Leaving a rename out is safe but lossy in a different way: the seeder
+    /// keeps the retired preset as a user preset instead of redirecting to the
+    /// replacement. Either way a folder link is never dropped on the floor.
     /// </summary>
-    public static readonly IReadOnlyDictionary<Ulid, Ulid> V1ToV2 = new Dictionary<Ulid, Ulid>();
+    public static readonly IReadOnlyDictionary<Ulid, Ulid> IdRedirects =
+        new Dictionary<Ulid, Ulid>();
 
     /// <summary>
     /// Slug redirect map (<c>oldSlug → newSlug</c>). Consumed by

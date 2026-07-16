@@ -13,7 +13,7 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Pipeline;
-using HdrPolicy = NoMercy.Encoder.Profiles.HdrPolicy;
+using NoMercy.Encoder.Profiles;
 
 namespace NoMercy.Tests.Encoder.Hdr;
 
@@ -58,7 +58,7 @@ public class DolbyVisionGateTests
             outputCodec: VideoCodecType.H265,
             outputBitDepth: 10,
             container: OutputFormat.Mp4,
-            policy: HdrPolicy.PassthroughWhenPossible,
+            policies: HdrPolicies.PassthroughWhenPossible,
             decisions: log
         );
 
@@ -82,7 +82,7 @@ public class DolbyVisionGateTests
             outputCodec: VideoCodecType.H265,
             outputBitDepth: 10,
             container: OutputFormat.Mp4,
-            policy: HdrPolicy.AlwaysTonemap,
+            policies: HdrPolicies.AlwaysTonemap,
             decisions: log
         );
 
@@ -105,7 +105,7 @@ public class DolbyVisionGateTests
             outputCodec: VideoCodecType.H264,
             outputBitDepth: 10,
             container: OutputFormat.Mp4,
-            policy: HdrPolicy.PassthroughWhenPossible,
+            policies: HdrPolicies.PassthroughWhenPossible,
             decisions: log
         );
 
@@ -124,7 +124,7 @@ public class DolbyVisionGateTests
             outputCodec: VideoCodecType.Vp9,
             outputBitDepth: 10,
             container: OutputFormat.Mp4,
-            policy: HdrPolicy.PassthroughWhenPossible,
+            policies: HdrPolicies.PassthroughWhenPossible,
             decisions: log
         );
 
@@ -147,7 +147,7 @@ public class DolbyVisionGateTests
             outputCodec: VideoCodecType.H265,
             outputBitDepth: 8,
             container: OutputFormat.Mp4,
-            policy: HdrPolicy.PassthroughWhenPossible,
+            policies: HdrPolicies.PassthroughWhenPossible,
             decisions: log
         );
 
@@ -170,7 +170,7 @@ public class DolbyVisionGateTests
             outputCodec: VideoCodecType.H265,
             outputBitDepth: 10,
             container: OutputFormat.Dash,
-            policy: HdrPolicy.PassthroughWhenPossible,
+            policies: HdrPolicies.PassthroughWhenPossible,
             decisions: log
         );
 
@@ -193,7 +193,7 @@ public class DolbyVisionGateTests
             outputCodec: VideoCodecType.H265,
             outputBitDepth: 10,
             container: OutputFormat.Mp4,
-            policy: HdrPolicy.PassthroughWhenPossible,
+            policies: HdrPolicies.PassthroughWhenPossible,
             decisions: log
         );
 
@@ -211,7 +211,7 @@ public class DolbyVisionGateTests
             outputCodec: VideoCodecType.H265,
             outputBitDepth: 10,
             container: OutputFormat.Mp4,
-            policy: HdrPolicy.PassthroughWhenPossible,
+            policies: HdrPolicies.PassthroughWhenPossible,
             decisions: NewLog()
         );
 
@@ -233,7 +233,7 @@ public class DolbyVisionGateTests
             outputCodec: VideoCodecType.Av1,
             outputBitDepth: 10,
             container: OutputFormat.Mkv,
-            policy: HdrPolicy.PassthroughWhenPossible,
+            policies: HdrPolicies.PassthroughWhenPossible,
             decisions: log
         );
 
@@ -258,7 +258,7 @@ public class DolbyVisionGateTests
             outputCodec: VideoCodecType.H265,
             outputBitDepth: 10,
             container: OutputFormat.Hls,
-            policy: HdrPolicy.PassthroughWhenPossible,
+            policies: HdrPolicies.PassthroughWhenPossible,
             decisions: log,
             hlsUsesFmp4Segments: true
         );
@@ -278,7 +278,7 @@ public class DolbyVisionGateTests
             outputCodec: VideoCodecType.H265,
             outputBitDepth: 10,
             container: OutputFormat.Hls,
-            policy: HdrPolicy.PassthroughWhenPossible,
+            policies: HdrPolicies.PassthroughWhenPossible,
             decisions: log,
             hlsUsesFmp4Segments: false
         );
@@ -302,7 +302,7 @@ public class DolbyVisionGateTests
             outputCodec: VideoCodecType.H265,
             outputBitDepth: 10,
             container: OutputFormat.Mp4,
-            policy: HdrPolicy.AlwaysPreserve,
+            policies: HdrPolicies.AlwaysPreserve,
             decisions: log
         );
 
@@ -324,7 +324,7 @@ public class DolbyVisionGateTests
             VideoCodecType.H265,
             10,
             OutputFormat.Mp4,
-            HdrPolicy.AlwaysTonemap,
+            HdrPolicies.AlwaysTonemap,
             log1
         );
         log1.Snapshot()[0].Message.Should().NotBeNullOrWhiteSpace();
@@ -336,7 +336,7 @@ public class DolbyVisionGateTests
             VideoCodecType.H264,
             10,
             OutputFormat.Mp4,
-            HdrPolicy.PassthroughWhenPossible,
+            HdrPolicies.PassthroughWhenPossible,
             log2
         );
         log2.Snapshot()[0].Message.Should().Contain("H264");
@@ -348,7 +348,7 @@ public class DolbyVisionGateTests
             VideoCodecType.H265,
             8,
             OutputFormat.Mp4,
-            HdrPolicy.PassthroughWhenPossible,
+            HdrPolicies.PassthroughWhenPossible,
             log3
         );
         log3.Snapshot()[0].Message.Should().Contain("8");
@@ -360,7 +360,7 @@ public class DolbyVisionGateTests
             VideoCodecType.H265,
             10,
             OutputFormat.Dash,
-            HdrPolicy.PassthroughWhenPossible,
+            HdrPolicies.PassthroughWhenPossible,
             log4
         );
         log4.Snapshot()[0].Message.Should().Contain("Dash");

@@ -15,1521 +15,625 @@ using NoMercy.Encoder.Codecs;
 
 namespace NoMercy.Encoder.Profiles;
 
+/// <summary>
+/// The presets every server ships with: shrink a library without giving up
+/// quality, fan a title out to a full adaptive streaming set, or hand someone a
+/// single file. Everything else is a user preset built on one of these through
+/// ParentPresetId.
+/// </summary>
 public static class BuiltinPresets
 {
+    /// <summary>
+    /// The preset a folder is linked to when auto-encode is switched on and
+    /// nothing else is chosen. H.264 in MPEG-TS plays on every client NoMercy
+    /// supports, so it is the safe default. <c>DefaultEncodingPresetLinker</c>
+    /// resolves this name.
+    /// </summary>
+    public const string DefaultStreamingPresetName = "H.264 Streaming (Universal)";
+
     public static EncodingProfile[] All() =>
         [
-            Web1080pBalanced(),
-            Web720pFast(),
-            Mobile480pLowBandwidth(),
-            AbrStandard480_720_1080(),
-            AbrPremiumHevc720_1080_2160(),
-            AnimeHevc1080p10bit(),
-            FullRemuxHls(),
-            SmartRemuxHls(),
-            DirectStreamAudioHls(),
-            CompressHevc1080pMkv(),
-            CompressHevc4kMkv(),
-            CompressH264_1080pMkv(),
-            ArchiveRemuxMkv(),
-            MusicFlacLossless(),
-            MusicAac256k(),
-            MusicMp3_320k(),
-            Chromecast1080p(),
-            Chromecast4kHevc(),
-            AppleTvHd1080pHevc(),
-            AppleTv4kHevc(),
-            LegacyDeviceH264Baseline(),
-            Dash1080pBalanced(),
-            YouTubeAbrFullRange(),
+            Remux(),
+            Archive(
+                "HEVC Archive (Visually Lossless)",
+                "HEVC 10-bit at CRF 18, source resolution. Indistinguishable from the source at normal viewing distance and typically 40-60% smaller. Audio and subtitles are copied untouched.",
+                VideoCodecType.H265,
+                EncodingQuality.Ultra
+            ),
+            Archive(
+                "HEVC Space Saver",
+                "HEVC 10-bit at CRF 22, source resolution. The best size-to-quality trade for a large library. Audio and subtitles are copied untouched.",
+                VideoCodecType.H265,
+                EncodingQuality.High
+            ),
+            Archive(
+                "AV1 Archive (Maximum Compression)",
+                "AV1 10-bit at CRF 26, source resolution. Smallest files of any preset here and slow to produce, best for titles you rarely re-encode. Audio and subtitles are copied untouched.",
+                VideoCodecType.Av1,
+                EncodingQuality.VeryHigh
+            ),
+            SingleFileExport(
+                "H.264 MP4 (Universal)",
+                "H.264 MP4 with stereo AAC, source resolution. Plays anywhere.",
+                VideoCodecType.H264,
+                EncodingQuality.Balanced
+            ),
+            SingleFileExport(
+                "HEVC MP4 (High Quality)",
+                "HEVC 10-bit MP4 with stereo AAC, source resolution. Smaller than the H.264 export at the same quality, needs a reasonably modern player.",
+                VideoCodecType.H265,
+                EncodingQuality.High
+            ),
+            TwoPassExport(),
+            LegacyBaseline(),
+            StreamingLadder(
+                DefaultStreamingPresetName,
+                "Full H.264 ladder from 144p to 2160p in MPEG-TS. The widest-reaching option and the default for auto-encode.",
+                VideoCodecType.H264,
+                LadderTiers.YouTube,
+                Container.HlsTs,
+                [AacStereo()]
+            ),
+            StreamingLadder(
+                "HEVC Streaming (Premium)",
+                "HEVC ladder from 360p to 2160p in fMP4, with stereo AAC and 5.1 E-AC-3. Roughly half the bitrate of H.264 for the same picture.",
+                VideoCodecType.H265,
+                LadderTiers.Premium,
+                Container.HlsFmp4,
+                [AacStereo(), Eac3Surround()]
+            ),
+            HdrStreamingLadder(),
+            TonemappedStreamingLadder(),
+            StreamingLadder(
+                "AV1 Streaming (Efficient)",
+                "AV1 ladder from 360p to 2160p in fMP4. The cheapest bitrate per rung, for clients new enough to decode it.",
+                VideoCodecType.Av1,
+                LadderTiers.Premium,
+                Container.HlsFmp4,
+                [AacStereo()]
+            ),
+            StreamingLadder(
+                "DASH Streaming (Universal)",
+                "H.264 ladder from 360p to 2160p in DASH, for clients that speak MPEG-DASH rather than HLS.",
+                VideoCodecType.H264,
+                LadderTiers.Premium,
+                Container.Dash,
+                [AacStereo()]
+            ),
+            DirectStreamAudio(),
+            // Fixed-resolution library presets. The ladders above adapt per source;
+            // these pin an output for a library where every title should land on the
+            // same rung. Height clamps to the source, so a lower-resolution episode
+            // is never upscaled to meet the name.
+            LibraryPreset(
+                "Anime 1080p HEVC 10-bit",
+                "HEVC 10-bit 1080p tuned for animation: flat colour and hard line art get the bitrate that x265's default tuning spends on film grain. CRF 18.",
+                width: 1920,
+                height: 1080,
+                quality: EncodingQuality.Ultra,
+                tune: "animation"
+            ),
+            LibraryPreset(
+                "1080p HEVC 10-bit",
+                "HEVC 10-bit 1080p at CRF 18. Visually lossless against a 1080p source, and the smallest a 1080p library gets without giving up picture.",
+                width: 1920,
+                height: 1080,
+                quality: EncodingQuality.Ultra
+            ),
+            LibraryPreset(
+                "4K HDR HEVC 10-bit",
+                "HEVC 10-bit 2160p with HDR carried through untouched. CRF 18, so the only thing that changes against a 4K HDR source is the codec.",
+                width: 3840,
+                height: 2160,
+                quality: EncodingQuality.Ultra,
+                hdrPolicy: HdrPolicies.AlwaysPreserve,
+                hdrOptions: new() { Force10Bit = true }
+            ),
+            LibraryPreset(
+                "1080p SDR HEVC 10-bit",
+                "HEVC 10-bit 1080p with any HDR source tonemapped down to SDR. The companion to the 4K HDR preset: pair them on a folder so HDR clients take the 4K and everything else gets a correct SDR picture rather than a washed-out one.",
+                width: 1920,
+                height: 1080,
+                quality: EncodingQuality.Ultra,
+                hdrPolicy: HdrPolicies.AlwaysTonemap,
+                convertHdrToSdr: true
+            ),
+            MusicTrack(
+                "Music FLAC Lossless",
+                "Lossless FLAC, stereo, 48 kHz.",
+                Container.Flac,
+                AudioCodecType.Flac,
+                bitrateKbps: 0,
+                sampleRateHz: 48000
+            ),
+            MusicTrack(
+                "Music AAC 256k",
+                "AAC 256 kbps, stereo, 44.1 kHz.",
+                Container.Aac,
+                AudioCodecType.Aac,
+                bitrateKbps: 256,
+                sampleRateHz: 44100
+            ),
+            MusicTrack(
+                "Music MP3 320k",
+                "MP3 320 kbps, stereo, 44.1 kHz.",
+                Container.Mp3,
+                AudioCodecType.Mp3,
+                bitrateKbps: 320,
+                sampleRateHz: 44100
+            ),
         ];
 
+    /// <summary>
+    /// Built-in ids are derived from the name so they stay identical across
+    /// installs. Renaming a preset therefore mints a new id: pair the old and
+    /// new id in <see cref="BuiltinPresetRenames"/> or existing folder links are
+    /// retired rather than carried over.
+    /// </summary>
     private static Ulid IdFromName(string name)
     {
         byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(name));
         return new(hash.AsSpan(0, 16).ToArray());
     }
 
-    private static EncodingProfile Web1080pBalanced()
+    private static AudioOutput AudioTrack(
+        AudioCodecType codec,
+        int bitrateKbps,
+        int sampleRateHz,
+        int channels
+    ) =>
+        new(
+            Policy: StreamPolicy.Transcode,
+            Codec: codec,
+            BitrateKbps: bitrateKbps,
+            Channels: channels,
+            SampleRateHz: sampleRateHz,
+            AllowedLanguages: AllowedLanguages.All,
+            DefaultLanguage: null,
+            Loudness: null,
+            Downmix: null,
+            SegmentNameTemplate: "audio_{lang}_{codec}/audio_{lang}_{codec}",
+            PlaylistNameTemplate: "audio_{lang}_{codec}/audio_{lang}_{codec}"
+        );
+
+    private static AudioOutput AacStereo() => AudioTrack(AudioCodecType.Aac, 192, 48000, 2);
+
+    private static AudioOutput Eac3Surround() => AudioTrack(AudioCodecType.Eac3, 448, 48000, 6);
+
+    private static AudioOutput CopyAudio() =>
+        new(
+            Policy: StreamPolicy.Copy,
+            Codec: AudioCodecType.Copy,
+            BitrateKbps: 0,
+            Channels: 0,
+            SampleRateHz: 0,
+            AllowedLanguages: AllowedLanguages.All,
+            DefaultLanguage: null,
+            Loudness: null,
+            Downmix: null,
+            SegmentNameTemplate: "audio_{lang}_{codec}/audio_{lang}_{codec}",
+            PlaylistNameTemplate: "audio_{lang}_{codec}/audio_{lang}_{codec}"
+        );
+
+    private static SubtitleOutput DefaultSubs() =>
+        new(
+            Policy: SubtitlePolicy.Extract,
+            Codec: SubtitleCodecType.WebVtt,
+            AllowedLanguages: AllowedLanguages.All,
+            IncludeForced: true,
+            OcrLanguage: null,
+            PlaylistNameTemplate: "subtitles/{filename}.{lang}.{type}"
+        );
+
+    private static SubtitleOutput CopySubs() =>
+        new(
+            Policy: SubtitlePolicy.Copy,
+            Codec: SubtitleCodecType.Copy,
+            AllowedLanguages: AllowedLanguages.All,
+            IncludeForced: true,
+            OcrLanguage: null,
+            PlaylistNameTemplate: "subtitles/{filename}.{lang}.{type}"
+        );
+
+    /// <summary>
+    /// CRF video. A null width and height mean "keep the source", which is what
+    /// an archive or export preset wants: rescaling is quality loss, and the
+    /// ladder expander rescales per rung from this reference anyway.
+    /// </summary>
+    private static VideoOutput VideoCrf(
+        VideoCodecType codec,
+        CodecTunings.CodecTuning tuning,
+        int? width = null,
+        int? height = null,
+        CodecProfile? codecProfile = null,
+        string? level = null,
+        string? tune = null,
+        bool convertHdrToSdr = false,
+        int? bitDepth = null
+    ) =>
+        new(
+            Policy: StreamPolicy.Transcode,
+            Codec: codec,
+            Width: width,
+            Height: height,
+            RateControl: RateControlMode.Crf,
+            Crf: tuning.Crf,
+            BitrateKbps: 0,
+            MaxBitrateKbps: null,
+            BufferSizeKbps: null,
+            Preset: tuning.Preset,
+            CodecProfile: codecProfile ?? tuning.Profile,
+            Level: level,
+            Tune: tune,
+            BitDepth: bitDepth ?? tuning.BitDepth,
+            PixelFormat: (bitDepth ?? tuning.BitDepth) == 10 ? "yuv420p10le" : "yuv420p",
+            KeyframeIntervalSeconds: 4,
+            ConvertHdrToSdr: convertHdrToSdr,
+            SegmentNameTemplate: "video_{label}/video_{label}",
+            PlaylistNameTemplate: "video_{label}/video_{label}",
+            CustomArguments: tuning.ExtraArgs
+        );
+
+    private static VideoOutput CopyVideo() =>
+        new(
+            Policy: StreamPolicy.Copy,
+            Codec: VideoCodecType.Copy,
+            Width: null,
+            Height: null,
+            RateControl: RateControlMode.Crf,
+            Crf: 0,
+            BitrateKbps: 0,
+            MaxBitrateKbps: null,
+            BufferSizeKbps: null,
+            Preset: null,
+            CodecProfile: CodecProfile.Auto,
+            Level: null,
+            Tune: null,
+            BitDepth: 8,
+            PixelFormat: null,
+            KeyframeIntervalSeconds: 4,
+            ConvertHdrToSdr: false,
+            SegmentNameTemplate: "video/copy",
+            PlaylistNameTemplate: "video/copy/playlist"
+        );
+
+    private static EncodingProfile SingleFile(
+        string name,
+        Container container,
+        VideoOutput? video,
+        AudioOutput[] audio,
+        SubtitleOutput[] subs,
+        string description,
+        HardwarePreference hw = HardwarePreference.PreferHardware,
+        ClientCompatibility compat = ClientCompatibility.Universal,
+        EncodeMode encodeMode = EncodeMode.SinglePass
+    ) =>
+        new(
+            Id: IdFromName(name),
+            Name: name,
+            Container: container,
+            Video: video,
+            Audio: audio,
+            Subtitles: subs,
+            Thumbnails: null,
+            Ladder: null,
+            Hls: null,
+            HlsDerivatives: null,
+            Dash: null,
+            Drm: null,
+            EncodeMode: encodeMode
+        )
+        {
+            Description = description,
+            IsBuiltin = true,
+            HardwarePreference = hw,
+            ClientCompatibility = compat,
+        };
+
+    private static EncodingProfile Remux() =>
+        SingleFile(
+            name: "Remux (Lossless MKV)",
+            container: Container.Mkv,
+            video: CopyVideo(),
+            audio: [CopyAudio()],
+            subs: [CopySubs()],
+            description: "Copies every track straight into MKV. Nothing is re-encoded, so this only fixes the container and costs a disk pass.",
+            hw: HardwarePreference.PreferQuality
+        );
+
+    /// <summary>
+    /// Re-encodes video only. Audio and subtitles are stream-copied, which keeps
+    /// surround tracks and image subtitles (PGS) exactly as they were: an archive
+    /// preset is meant to lose nothing but bitrate.
+    /// </summary>
+    private static EncodingProfile Archive(
+        string name,
+        string description,
+        VideoCodecType codec,
+        EncodingQuality quality
+    ) =>
+        SingleFile(
+            name: name,
+            container: Container.Mkv,
+            video: VideoCrf(codec, CodecTunings.For(codec, quality)),
+            audio: [CopyAudio()],
+            subs: [CopySubs()],
+            description: description,
+            // Hardware encoders trade quality for bitrate, and an archive encode
+            // is written once and kept. Spend the CPU.
+            hw: HardwarePreference.PreferQuality
+        );
+
+    private static EncodingProfile SingleFileExport(
+        string name,
+        string description,
+        VideoCodecType codec,
+        EncodingQuality quality
+    ) =>
+        SingleFile(
+            name: name,
+            container: Container.Mp4,
+            video: VideoCrf(codec, CodecTunings.For(codec, quality)),
+            audio: [AacStereo()],
+            subs: [DefaultSubs()],
+            description: description
+        );
+
+    /// <summary>
+    /// Two-pass only pays off against a bitrate target, so this pins both the
+    /// rate control and the resolution: a target bitrate is meaningless without
+    /// a known frame size. CRF stays 0 or the rate-control rules reject the
+    /// profile for naming two competing targets.
+    /// </summary>
+    private static EncodingProfile TwoPassExport()
     {
-        const string Name = "Web 1080p Balanced";
-        return new(
-            Id: IdFromName(Name),
-            Name: Name,
-            Container: Container.HlsTs,
-            Video: new(
-                StreamPolicy.Transcode,
+        CodecTunings.CodecTuning tuning = CodecTunings.For(
+            VideoCodecType.H264,
+            EncodingQuality.High
+        );
+
+        VideoOutput video = new(
+            Policy: StreamPolicy.Transcode,
+            Codec: VideoCodecType.H264,
+            Width: 1920,
+            Height: 1080,
+            RateControl: RateControlMode.Vbr,
+            Crf: 0,
+            BitrateKbps: 5000,
+            MaxBitrateKbps: 7500,
+            BufferSizeKbps: 10000,
+            Preset: tuning.Preset,
+            CodecProfile: CodecProfile.High,
+            Level: "4.0",
+            Tune: null,
+            BitDepth: 8,
+            PixelFormat: "yuv420p",
+            KeyframeIntervalSeconds: 4,
+            ConvertHdrToSdr: false,
+            SegmentNameTemplate: "video_{label}/video_{label}",
+            PlaylistNameTemplate: "video_{label}/video_{label}"
+        );
+
+        return SingleFile(
+            name: "H.264 MP4 1080p (2-Pass 5 Mbps)",
+            container: Container.Mp4,
+            video: video,
+            audio: [AacStereo()],
+            subs: [DefaultSubs()],
+            description: "H.264 1080p MP4 at a measured 5 Mbps using two passes. Pick this when the file has to land on a predictable size; the CRF presets give better quality per bit when size is not fixed.",
+            hw: HardwarePreference.PreferQuality,
+            encodeMode: EncodeMode.TwoPass
+        );
+    }
+
+    private static EncodingProfile LegacyBaseline() =>
+        SingleFile(
+            name: "Legacy Device H.264 Baseline",
+            container: Container.Mp4,
+            video: VideoCrf(
                 VideoCodecType.H264,
-                1920,
-                1080,
-                RateControlMode.Crf,
-                22,
-                0,
-                null,
-                null,
-                "medium",
-                CodecProfile.High,
-                "4.0",
-                null,
-                8,
-                "yuv420p",
-                4,
-                false,
-                "video_{label}/video_{label}",
-                "video_{label}/video_{label}"
+                CodecTunings.For(VideoCodecType.H264, EncodingQuality.Fast),
+                codecProfile: CodecProfile.Baseline,
+                level: "4.0",
+                bitDepth: 8
             ),
-            Audio:
-            [
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    192,
-                    2,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
-                ),
-            ],
-            Subtitles:
-            [
-                new(
-                    SubtitlePolicy.Extract,
-                    SubtitleCodecType.WebVtt,
-                    AllowedLanguages.All,
-                    true,
-                    null,
-                    "subtitles/{filename}.{lang}.{type}"
-                ),
-            ],
-            Hls: new(),
-            HlsDerivatives: new()
-        )
-        {
-            Description = "H.264 1080p balanced default for browser playback.",
-            IsBuiltin = true,
-            ClientCompatibility = ClientCompatibility.Universal,
-        };
-    }
+            audio: [AacStereo()],
+            subs: [DefaultSubs()],
+            description: "H.264 Baseline MP4 for hardware that chokes on anything else. Larger than the universal export at the same quality, and the last resort rather than a default.",
+            compat: ClientCompatibility.Universal | ClientCompatibility.LegacyDevices
+        );
 
-    private static EncodingProfile Web720pFast()
-    {
-        const string Name = "Web 720p Fast";
-        return new(
-            Id: IdFromName(Name),
-            Name: Name,
-            Container: Container.HlsTs,
-            Video: new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H264,
-                1280,
-                720,
-                RateControlMode.Crf,
-                23,
-                0,
-                null,
-                null,
-                "fast",
-                CodecProfile.High,
-                "4.0",
-                null,
-                8,
-                "yuv420p",
-                4,
-                false,
-                "video_{label}/video_{label}",
-                "video_{label}/video_{label}"
-            ),
-            Audio:
-            [
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    128,
-                    2,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
-                ),
-            ],
-            Subtitles:
-            [
-                new(
-                    SubtitlePolicy.Extract,
-                    SubtitleCodecType.WebVtt,
-                    AllowedLanguages.All,
-                    true,
-                    null,
-                    "subtitles/{filename}.{lang}.{type}"
-                ),
-            ],
-            Hls: new(),
-            HlsDerivatives: new()
-        )
-        {
-            Description = "H.264 720p fast encode for lower-bandwidth viewers.",
-            IsBuiltin = true,
-            ClientCompatibility = ClientCompatibility.Universal,
-        };
-    }
-
-    private static EncodingProfile Mobile480pLowBandwidth()
-    {
-        const string Name = "Mobile 480p Low Bandwidth";
-        return new(
-            Id: IdFromName(Name),
-            Name: Name,
-            Container: Container.HlsTs,
-            Video: new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H264,
-                854,
-                480,
-                RateControlMode.Crf,
-                26,
-                0,
-                null,
-                null,
-                "fast",
-                CodecProfile.Main,
-                "3.1",
-                null,
-                8,
-                "yuv420p",
-                4,
-                false,
-                "video_{label}/video_{label}",
-                "video_{label}/video_{label}"
-            ),
-            Audio:
-            [
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    96,
-                    2,
-                    44100,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
-                ),
-            ],
-            Subtitles:
-            [
-                new(
-                    SubtitlePolicy.Extract,
-                    SubtitleCodecType.WebVtt,
-                    AllowedLanguages.All,
-                    true,
-                    null,
-                    "subtitles/{filename}.{lang}.{type}"
-                ),
-            ],
-            Hls: new(),
-            HlsDerivatives: new() { SpriteVttIntervalSeconds = 20, SpriteVttThumbnailWidth = 80 }
-        )
-        {
-            Description = "H.264 480p for mobile and low-bandwidth connections.",
-            IsBuiltin = true,
-            ClientCompatibility = ClientCompatibility.Universal,
-        };
-    }
-
-    private static EncodingProfile AbrStandard480_720_1080()
-    {
-        const string Name = "ABR Standard 480/720/1080";
-        return new(
-            Id: IdFromName(Name),
-            Name: Name,
-            Container: Container.HlsTs,
-            Video: null,
-            Audio:
-            [
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    192,
-                    2,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
-                ),
-            ],
-            Subtitles:
-            [
-                new(
-                    SubtitlePolicy.Extract,
-                    SubtitleCodecType.WebVtt,
-                    AllowedLanguages.All,
-                    true,
-                    null,
-                    "subtitles/{filename}.{lang}.{type}"
-                ),
-            ],
-            Hls: new(),
-            HlsDerivatives: new(),
-            Ladder: new()
-            {
-                Mode = LadderMode.Auto,
-                AutoConfig = new()
-                {
-                    Tiers = LadderTiers.Standard,
-                    BitrateStrategy = BitrateStrategy.AppleHlsRecommended,
-                    CodecPolicy = LadderCodecPolicy.Uniform,
-                },
-            }
-        )
-        {
-            Description = "Adaptive bitrate H.264 ladder: 480p / 720p / 1080p.",
-            IsBuiltin = true,
-            ClientCompatibility = ClientCompatibility.Universal,
-        };
-    }
-
-    private static EncodingProfile AbrPremiumHevc720_1080_2160()
-    {
-        const string Name = "ABR Premium HEVC 720/1080/2160";
-        return new(
-            Id: IdFromName(Name),
-            Name: Name,
-            Container: Container.HlsFmp4,
-            Video: null,
-            Audio:
-            [
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Eac3,
-                    448,
-                    6,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_eac3/audio_{lang}_eac3",
-                    "audio_{lang}_eac3/audio_{lang}_eac3"
-                ),
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    192,
-                    2,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_aac/audio_{lang}_aac",
-                    "audio_{lang}_aac/audio_{lang}_aac"
-                ),
-            ],
-            Subtitles:
-            [
-                new(
-                    SubtitlePolicy.Extract,
-                    SubtitleCodecType.WebVtt,
-                    AllowedLanguages.All,
-                    true,
-                    null,
-                    "subtitles/{filename}.{lang}.{type}"
-                ),
-            ],
-            Hls: new(),
-            HlsDerivatives: new(),
-            Ladder: new()
-            {
-                Mode = LadderMode.Auto,
-                AutoConfig = new()
-                {
-                    Tiers = LadderTiers.Premium.Skip(1).ToArray(),
-                    BitrateStrategy = BitrateStrategy.AppleHlsRecommended,
-                    CodecPolicy = LadderCodecPolicy.Uniform,
-                    Crf = 20,
-                },
-            }
-        )
-        {
-            Description = "HEVC Main10 4K ABR ladder with EAC3 5.1 surround for premium devices.",
-            IsBuiltin = true,
-            ClientCompatibility =
-                ClientCompatibility.NativeAndroid
-                | ClientCompatibility.NativeIos
-                | ClientCompatibility.Cast,
-        };
-    }
-
-    private static EncodingProfile AnimeHevc1080p10bit()
-    {
-        const string Name = "Anime HEVC 1080p 10-bit";
-        return new(
-            Id: IdFromName(Name),
-            Name: Name,
-            Container: Container.HlsFmp4,
-            Video: new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H265,
-                1920,
-                1080,
-                RateControlMode.Crf,
-                20,
-                0,
-                null,
-                null,
-                "slow",
-                CodecProfile.Main10,
-                null,
-                "animation",
-                10,
-                "yuv420p10le",
-                4,
-                false,
-                "video_{label}/video_{label}",
-                "video_{label}/video_{label}"
-            ),
-            Audio:
-            [
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    192,
-                    2,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
-                ),
-            ],
-            Subtitles:
-            [
-                new(
-                    SubtitlePolicy.Extract,
-                    SubtitleCodecType.WebVtt,
-                    AllowedLanguages.All,
-                    true,
-                    null,
-                    "subtitles/{filename}.{lang}.{type}"
-                ),
-            ],
-            Hls: new(),
-            HlsDerivatives: new()
-        )
-        {
-            Description = "HEVC Main10 1080p 10-bit tuned for anime with slow preset.",
-            IsBuiltin = true,
-            ClientCompatibility =
-                ClientCompatibility.NativeAndroid
-                | ClientCompatibility.NativeIos
-                | ClientCompatibility.Cast,
-        };
-    }
-
-    private static EncodingProfile FullRemuxHls()
-    {
-        const string Name = "Full Remux HLS";
-        return new(
-            Id: IdFromName(Name),
-            Name: Name,
-            // fMP4 so HEVC sources remux without re-encode; H.264 also works in fMP4.
-            Container: Container.HlsFmp4,
-            Video: new(
-                StreamPolicy.Copy,
-                VideoCodecType.Copy,
-                0,
-                null,
-                RateControlMode.Crf,
-                0,
-                0,
-                null,
-                null,
-                null,
-                CodecProfile.Auto,
-                null,
-                null,
-                8,
-                null,
-                4,
-                false,
-                "video/copy",
-                "video/copy/playlist"
-            ),
-            Audio:
-            [
-                new(
-                    StreamPolicy.Copy,
-                    AudioCodecType.Copy,
-                    0,
-                    2,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_copy/audio_{lang}_copy",
-                    "audio_{lang}_copy/audio_{lang}_copy"
-                ),
-            ],
-            Subtitles:
-            [
-                new(
-                    SubtitlePolicy.Copy,
-                    SubtitleCodecType.Copy,
-                    AllowedLanguages.All,
-                    true,
-                    null,
-                    "subtitles/{filename}.{lang}.{type}"
-                ),
-            ],
-            Hls: new(),
-            HlsDerivatives: new() { GenerateFontsJson = false }
-        )
-        {
-            Description =
-                "Stream-copy remux to HLS fMP4 — no re-encode. Source codec compatibility varies.",
-            IsBuiltin = true,
-            ClientCompatibility = ClientCompatibility.Universal,
-        };
-    }
-
-    private static EncodingProfile SmartRemuxHls()
-    {
-        const string Name = "Smart Remux HLS";
-        return new(
-            Id: IdFromName(Name),
-            Name: Name,
-            // fMP4 so HEVC sources remux cleanly; H.264 also works in fMP4.
-            Container: Container.HlsFmp4,
-            Video: new(
-                StreamPolicy.Copy,
-                VideoCodecType.Copy,
-                0,
-                null,
-                RateControlMode.Crf,
-                0,
-                0,
-                null,
-                null,
-                null,
-                CodecProfile.Auto,
-                null,
-                null,
-                8,
-                null,
-                4,
-                false,
-                "video/copy",
-                "video/copy/playlist"
-            ),
-            Audio:
-            [
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    192,
-                    2,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
-                ),
-            ],
-            Subtitles:
-            [
-                new(
-                    SubtitlePolicy.Extract,
-                    SubtitleCodecType.WebVtt,
-                    AllowedLanguages.All,
-                    true,
-                    null,
-                    "subtitles/{filename}.{lang}.{type}"
-                ),
-            ],
-            Hls: new(),
-            HlsDerivatives: new()
-        )
-        {
-            Description =
-                "Copy video, transcode audio to AAC — smart remux for broad compatibility.",
-            IsBuiltin = true,
-            ClientCompatibility = ClientCompatibility.Universal,
-        };
-    }
-
-    private static EncodingProfile DirectStreamAudioHls()
-    {
-        const string Name = "Direct Stream Audio HLS";
-        return new(
-            Id: IdFromName(Name),
-            Name: Name,
+    /// <summary>
+    /// Audio-only HLS that stream-copies the source. For music libraries served
+    /// over HLS where re-encoding buys nothing.
+    /// </summary>
+    private static EncodingProfile DirectStreamAudio() =>
+        new(
+            Id: IdFromName("Direct Stream Audio HLS"),
+            Name: "Direct Stream Audio HLS",
             Container: Container.AudioHlsFmp4,
             Video: null,
-            Audio:
-            [
-                new(
-                    StreamPolicy.Copy,
-                    AudioCodecType.Aac,
-                    192,
-                    2,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_copy/audio_{lang}_copy",
-                    "audio_{lang}_copy/audio_{lang}_copy"
-                ),
-            ],
+            Audio: [CopyAudio()],
             Subtitles: [],
+            Thumbnails: null,
+            Ladder: null,
             Hls: new(),
             HlsDerivatives: new()
             {
                 GenerateSpriteVtt = false,
                 GenerateThumbnailTrack = false,
                 GenerateFontsJson = false,
-            }
-        )
-        {
-            Description = "Audio-only HLS stream copy — no video, no re-encode.",
-            IsBuiltin = true,
-            ClientCompatibility = ClientCompatibility.Universal,
-        };
-    }
-
-    private static EncodingProfile CompressHevc1080pMkv()
-    {
-        const string Name = "Compress HEVC 1080p MKV";
-        return new(
-            Id: IdFromName(Name),
-            Name: Name,
-            Container: Container.Mkv,
-            Video: new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H265,
-                1920,
-                1080,
-                RateControlMode.Crf,
-                18,
-                0,
-                null,
-                null,
-                "slow",
-                CodecProfile.Main10,
-                null,
-                null,
-                10,
-                "yuv420p10le",
-                4,
-                false,
-                "video_{label}/video_{label}",
-                "video_{label}/video_{label}"
-            ),
-            Audio:
-            [
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Flac,
-                    0,
-                    2,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
-                ),
-            ],
-            Subtitles:
-            [
-                new(
-                    SubtitlePolicy.Copy,
-                    SubtitleCodecType.Copy,
-                    AllowedLanguages.All,
-                    true,
-                    null,
-                    "subtitles/{filename}.{lang}.{type}"
-                ),
-            ]
+            },
+            Dash: null,
+            Drm: null
         )
         {
             Description =
-                "HEVC Main10 CRF 18 slow re-encode to MKV — high quality, smaller storage.",
+                "Segments the source audio into fMP4 HLS without re-encoding it. Nothing is transcoded, so the only cost is the segmenting pass.",
             IsBuiltin = true,
-            // Quality compression — libx265 'slow' at CRF 18 beats NVENC on size/quality.
-            HardwarePreference = HardwarePreference.PreferQuality,
-            ClientCompatibility = ClientCompatibility.NativeAndroid | ClientCompatibility.NativeIos,
-        };
-    }
-
-    private static EncodingProfile CompressHevc4kMkv()
-    {
-        const string Name = "Compress HEVC 4K MKV";
-        return new(
-            Id: IdFromName(Name),
-            Name: Name,
-            Container: Container.Mkv,
-            Video: new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H265,
-                3840,
-                2160,
-                RateControlMode.Crf,
-                18,
-                0,
-                null,
-                null,
-                "slower",
-                CodecProfile.Main10,
-                null,
-                null,
-                10,
-                "yuv420p10le",
-                4,
-                false,
-                "video_{label}/video_{label}",
-                "video_{label}/video_{label}"
-            ),
-            Audio:
-            [
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Flac,
-                    0,
-                    6,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
-                ),
-            ],
-            Subtitles:
-            [
-                new(
-                    SubtitlePolicy.Copy,
-                    SubtitleCodecType.Copy,
-                    AllowedLanguages.All,
-                    true,
-                    null,
-                    "subtitles/{filename}.{lang}.{type}"
-                ),
-            ]
-        )
-        {
-            Description =
-                "HEVC Main10 CRF 18 slower 4K re-encode to MKV — maximum quality compression.",
-            IsBuiltin = true,
-            // Maximum-quality compression — keep libx265 'slower'.
-            HardwarePreference = HardwarePreference.PreferQuality,
-            ClientCompatibility = ClientCompatibility.NativeAndroid | ClientCompatibility.NativeIos,
-        };
-    }
-
-    private static EncodingProfile CompressH264_1080pMkv()
-    {
-        const string Name = "Compress H.264 1080p MKV";
-        return new(
-            Id: IdFromName(Name),
-            Name: Name,
-            Container: Container.Mkv,
-            Video: new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H264,
-                1920,
-                1080,
-                RateControlMode.Crf,
-                20,
-                0,
-                null,
-                null,
-                "slow",
-                CodecProfile.High,
-                "4.0",
-                null,
-                8,
-                "yuv420p",
-                4,
-                false,
-                "video_{label}/video_{label}",
-                "video_{label}/video_{label}"
-            ),
-            Audio:
-            [
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    320,
-                    2,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
-                ),
-            ],
-            Subtitles:
-            [
-                new(
-                    SubtitlePolicy.Copy,
-                    SubtitleCodecType.Copy,
-                    AllowedLanguages.All,
-                    true,
-                    null,
-                    "subtitles/{filename}.{lang}.{type}"
-                ),
-            ]
-        )
-        {
-            Description = "H.264 CRF 20 slow 1080p re-encode to MKV with AAC 320k audio.",
-            IsBuiltin = true,
-            // Quality compression with libx264 'slow' preset.
             HardwarePreference = HardwarePreference.PreferQuality,
             ClientCompatibility = ClientCompatibility.Universal,
         };
-    }
 
-    private static EncodingProfile ArchiveRemuxMkv()
-    {
-        const string Name = "Archive Remux MKV";
-        return new(
-            Id: IdFromName(Name),
-            Name: Name,
-            Container: Container.Mkv,
-            Video: new(
-                StreamPolicy.Copy,
-                VideoCodecType.Copy,
-                0,
-                null,
-                RateControlMode.Crf,
-                0,
-                0,
-                null,
-                null,
-                null,
-                CodecProfile.Auto,
-                null,
-                null,
-                8,
-                null,
-                4,
-                false,
-                "video/copy",
-                "video/copy/playlist"
-            ),
-            Audio:
-            [
-                new(
-                    StreamPolicy.Copy,
-                    AudioCodecType.Copy,
-                    0,
-                    2,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_copy/audio_{lang}_copy",
-                    "audio_{lang}_copy/audio_{lang}_copy"
-                ),
-            ],
-            Subtitles:
-            [
-                new(
-                    SubtitlePolicy.Copy,
-                    SubtitleCodecType.Copy,
-                    AllowedLanguages.All,
-                    true,
-                    null,
-                    "subtitles/{filename}.{lang}.{type}"
-                ),
-            ]
-        )
-        {
-            Description = "Lossless remux to MKV — no re-encode, preserves all source tracks.",
-            IsBuiltin = true,
-            ClientCompatibility = ClientCompatibility.NativeAndroid | ClientCompatibility.NativeIos,
-        };
-    }
+    private static EncodingProfile MusicTrack(
+        string name,
+        string description,
+        Container container,
+        AudioCodecType codec,
+        int bitrateKbps,
+        int sampleRateHz
+    ) =>
+        SingleFile(
+            name: name,
+            container: container,
+            video: null,
+            audio: [AudioTrack(codec, bitrateKbps, sampleRateHz, 2)],
+            subs: [],
+            description: description
+        );
 
-    private static EncodingProfile MusicFlacLossless()
-    {
-        const string Name = "Music FLAC Lossless";
-        return new(
-            Id: IdFromName(Name),
-            Name: Name,
-            Container: Container.Flac,
-            Video: null,
-            Audio:
-            [
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Flac,
-                    0,
-                    2,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
-                ),
-            ],
-            Subtitles: []
-        )
-        {
-            Description = "Lossless FLAC stereo export at 48 kHz.",
-            IsBuiltin = true,
-            ClientCompatibility = ClientCompatibility.Universal,
-        };
-    }
+    /// <summary>
+    /// HDR preserved on the 10-bit rungs, tonemapped SDR on the 8-bit ones.
+    /// PlanStage reads EmitHdrAndSdr and splits ConvertHdrToSdr by bit depth.
+    /// </summary>
+    private static EncodingProfile HdrStreamingLadder() =>
+        StreamingLadder(
+            "HEVC HDR Streaming (Premium)",
+            "The HEVC premium ladder with HDR preserved end to end. Clients that cannot take HDR pull the tonemapped SDR rungs instead.",
+            VideoCodecType.H265,
+            LadderTiers.Premium,
+            Container.HlsFmp4,
+            [AacStereo(), Eac3Surround()],
+            hdrPolicy: HdrPolicies.EmitHdrAndSdr,
+            hdrOptions: new() { Force10Bit = true }
+        );
 
-    private static EncodingProfile MusicAac256k()
-    {
-        const string Name = "Music AAC 256k";
-        return new(
-            Id: IdFromName(Name),
-            Name: Name,
-            Container: Container.Aac,
-            Video: null,
-            Audio:
-            [
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    256,
-                    2,
-                    44100,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
-                ),
-            ],
-            Subtitles: []
-        )
-        {
-            Description = "AAC 256 kbps stereo 44.1 kHz — good quality streaming audio.",
-            IsBuiltin = true,
-            ClientCompatibility = ClientCompatibility.Universal,
-        };
-    }
+    /// <summary>
+    /// Converts HDR sources to SDR outright. AlwaysTonemap only stops the
+    /// tonemap from being suppressed and strips Dolby Vision; PlanStage does not
+    /// set ConvertHdrToSdr for this policy, so the reference output has to ask
+    /// for the conversion itself or the flag never reaches the filter chain.
+    /// </summary>
+    private static EncodingProfile TonemappedStreamingLadder() =>
+        StreamingLadder(
+            "H.264 Streaming (HDR to SDR)",
+            "Tonemaps an HDR source down to 8-bit SDR H.264. For libraries whose clients cannot render HDR at all, where the passthrough ladders would hand them washed-out picture.",
+            VideoCodecType.H264,
+            LadderTiers.YouTube,
+            Container.HlsTs,
+            [AacStereo()],
+            hdrPolicy: HdrPolicies.AlwaysTonemap,
+            convertHdrToSdr: true
+        );
 
-    private static EncodingProfile MusicMp3_320k()
+    /// <summary>
+    /// A single-rendition HLS output at a fixed resolution, for a library where
+    /// every title should land on the same rung rather than fan out into a
+    /// ladder. HEVC 10-bit throughout: 10-bit costs nothing on an 8-bit source
+    /// and removes the banding that 8-bit HEVC introduces in gradients.
+    /// </summary>
+    private static EncodingProfile LibraryPreset(
+        string name,
+        string description,
+        int width,
+        int height,
+        EncodingQuality quality,
+        string? tune = null,
+        HdrPolicies hdrPolicy = HdrPolicies.PassthroughWhenPossible,
+        HdrOptions? hdrOptions = null,
+        bool convertHdrToSdr = false
+    )
     {
-        const string Name = "Music MP3 320k";
-        return new(
-            Id: IdFromName(Name),
-            Name: Name,
-            Container: Container.Mp3,
-            Video: null,
-            Audio:
-            [
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Mp3,
-                    320,
-                    2,
-                    44100,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
-                ),
-            ],
-            Subtitles: []
-        )
-        {
-            Description = "MP3 320 kbps stereo — maximum compatibility for legacy devices.",
-            IsBuiltin = true,
-            ClientCompatibility = ClientCompatibility.Universal,
-        };
-    }
+        CodecTunings.CodecTuning tuning = CodecTunings.For(VideoCodecType.H265, quality);
 
-    private static EncodingProfile Chromecast1080p()
-    {
-        const string Name = "Chromecast 1080p";
         return new(
-            Id: IdFromName(Name),
-            Name: Name,
-            Container: Container.HlsTs,
-            Video: new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H264,
-                1920,
-                1080,
-                RateControlMode.Crf,
-                23,
-                0,
-                null,
-                null,
-                "fast",
-                CodecProfile.High,
-                "4.0",
-                null,
-                8,
-                "yuv420p",
-                4,
-                false,
-                "video_{label}/video_{label}",
-                "video_{label}/video_{label}"
-            ),
-            Audio:
-            [
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    192,
-                    2,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_aac/audio_{lang}_aac",
-                    "audio_{lang}_aac/audio_{lang}_aac"
-                ),
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Ac3,
-                    384,
-                    6,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_ac3/audio_{lang}_ac3",
-                    "audio_{lang}_ac3/audio_{lang}_ac3"
-                ),
-            ],
-            Subtitles:
-            [
-                new(
-                    SubtitlePolicy.Extract,
-                    SubtitleCodecType.WebVtt,
-                    AllowedLanguages.All,
-                    true,
-                    null,
-                    "subtitles/{filename}.{lang}.{type}"
-                ),
-            ],
-            Hls: new(CmafCompatible: false),
-            HlsDerivatives: new()
-        )
-        {
-            Description = "H.264 1080p fast with AAC stereo and AC3 5.1 for Chromecast playback.",
-            IsBuiltin = true,
-            ClientCompatibility = ClientCompatibility.Cast,
-        };
-    }
-
-    private static EncodingProfile Chromecast4kHevc()
-    {
-        const string Name = "Chromecast 4K HEVC";
-        return new(
-            Id: IdFromName(Name),
-            Name: Name,
+            Id: IdFromName(name),
+            Name: name,
             Container: Container.HlsFmp4,
-            Video: new(
-                StreamPolicy.Transcode,
+            Video: VideoCrf(
                 VideoCodecType.H265,
-                3840,
-                2160,
-                RateControlMode.Crf,
-                20,
-                0,
-                null,
-                null,
-                "slow",
-                CodecProfile.Main10,
-                null,
-                null,
-                10,
-                "yuv420p10le",
-                4,
-                false,
-                "video_{label}/video_{label}",
-                "video_{label}/video_{label}"
+                tuning,
+                width: width,
+                height: height,
+                tune: tune,
+                convertHdrToSdr: convertHdrToSdr
             ),
-            Audio:
-            [
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    256,
-                    2,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_aac/audio_{lang}_aac",
-                    "audio_{lang}_aac/audio_{lang}_aac"
-                ),
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Eac3,
-                    448,
-                    6,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_eac3/audio_{lang}_eac3",
-                    "audio_{lang}_eac3/audio_{lang}_eac3"
-                ),
-            ],
-            Subtitles:
-            [
-                new(
-                    SubtitlePolicy.Extract,
-                    SubtitleCodecType.WebVtt,
-                    AllowedLanguages.All,
-                    true,
-                    null,
-                    "subtitles/{filename}.{lang}.{type}"
-                ),
-            ],
-            Hls: new(),
-            HlsDerivatives: new()
-        )
-        {
-            Description =
-                "HEVC Main10 4K with AAC stereo and EAC3 5.1 for Chromecast with Google TV.",
-            IsBuiltin = true,
-            ClientCompatibility = ClientCompatibility.Cast,
-        };
-    }
-
-    private static EncodingProfile AppleTvHd1080pHevc()
-    {
-        const string Name = "Apple TV HD 1080p HEVC";
-        return new(
-            Id: IdFromName(Name),
-            Name: Name,
-            Container: Container.HlsFmp4,
-            Video: new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H265,
-                1920,
-                1080,
-                RateControlMode.Crf,
-                22,
-                0,
-                null,
-                null,
-                "medium",
-                CodecProfile.Main,
-                null,
-                null,
-                8,
-                "yuv420p",
-                4,
-                false,
-                "video_{label}/video_{label}",
-                "video_{label}/video_{label}"
-            ),
-            Audio:
-            [
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    256,
-                    2,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_aac/audio_{lang}_aac",
-                    "audio_{lang}_aac/audio_{lang}_aac"
-                ),
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Eac3,
-                    384,
-                    6,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_eac3/audio_{lang}_eac3",
-                    "audio_{lang}_eac3/audio_{lang}_eac3"
-                ),
-            ],
-            Subtitles:
-            [
-                new(
-                    SubtitlePolicy.Extract,
-                    SubtitleCodecType.WebVtt,
-                    AllowedLanguages.All,
-                    true,
-                    null,
-                    "subtitles/{filename}.{lang}.{type}"
-                ),
-            ],
-            Hls: new(),
-            HlsDerivatives: new()
-        )
-        {
-            Description = "HEVC Main 1080p 8-bit with AAC stereo and EAC3 5.1 for Apple TV HD.",
-            IsBuiltin = true,
-            ClientCompatibility = ClientCompatibility.NativeIos | ClientCompatibility.Cast,
-        };
-    }
-
-    private static EncodingProfile AppleTv4kHevc()
-    {
-        const string Name = "Apple TV 4K HEVC";
-        return new(
-            Id: IdFromName(Name),
-            Name: Name,
-            Container: Container.HlsFmp4,
-            Video: new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H265,
-                3840,
-                2160,
-                RateControlMode.Crf,
-                20,
-                0,
-                null,
-                null,
-                "slow",
-                CodecProfile.Main10,
-                null,
-                null,
-                10,
-                "yuv420p10le",
-                4,
-                false,
-                "video_{label}/video_{label}",
-                "video_{label}/video_{label}"
-            ),
-            Audio:
-            [
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    256,
-                    2,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_aac/audio_{lang}_aac",
-                    "audio_{lang}_aac/audio_{lang}_aac"
-                ),
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Eac3,
-                    448,
-                    6,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_eac3/audio_{lang}_eac3",
-                    "audio_{lang}_eac3/audio_{lang}_eac3"
-                ),
-            ],
-            Subtitles:
-            [
-                new(
-                    SubtitlePolicy.Extract,
-                    SubtitleCodecType.WebVtt,
-                    AllowedLanguages.All,
-                    true,
-                    null,
-                    "subtitles/{filename}.{lang}.{type}"
-                ),
-            ],
-            Hls: new(),
-            HlsDerivatives: new()
-        )
-        {
-            Description =
-                "HEVC Main10 4K with AAC stereo and EAC3 5.1 Dolby Digital Plus for Apple TV 4K.",
-            IsBuiltin = true,
-            ClientCompatibility = ClientCompatibility.NativeIos | ClientCompatibility.Cast,
-        };
-    }
-
-    private static EncodingProfile LegacyDeviceH264Baseline()
-    {
-        const string Name = "Legacy Device H.264 Baseline";
-        return new(
-            Id: IdFromName(Name),
-            Name: Name,
-            Container: Container.Mp4,
-            Video: new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H264,
-                1920,
-                1080,
-                RateControlMode.Crf,
-                24,
-                0,
-                null,
-                null,
-                "fast",
-                CodecProfile.Baseline,
-                "4.0",
-                null,
-                8,
-                "yuv420p",
-                4,
-                false,
-                "video_{label}/video_{label}",
-                "video_{label}/video_{label}"
-            ),
-            Audio:
-            [
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    128,
-                    2,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
-                ),
-            ],
-            Subtitles:
-            [
-                new(
-                    SubtitlePolicy.Extract,
-                    SubtitleCodecType.Srt,
-                    AllowedLanguages.All,
-                    true,
-                    null,
-                    "subtitles/{filename}.{lang}.{type}"
-                ),
-            ]
-        )
-        {
-            Description =
-                "H.264 Baseline 4.0 CRF 24 for legacy devices — maximum compatibility MP4.",
-            IsBuiltin = true,
-            ClientCompatibility = ClientCompatibility.LegacyDevices,
-        };
-    }
-
-    private static EncodingProfile YouTubeAbrFullRange()
-    {
-        const string Name = "YouTube ABR Full Range";
-        return new(
-            Id: IdFromName(Name),
-            Name: Name,
-            Container: Container.HlsFmp4,
-            // Reference Video defines the codec + base settings the auto-ladder
-            // extends across every rung. HEVC Main10 10-bit so HDR sources can
-            // passthrough their PQ/HLG signal at every quality level.
-            Video: new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H265,
-                1920,
-                1080,
-                RateControlMode.Crf,
-                22,
-                0,
-                null,
-                null,
-                "medium",
-                CodecProfile.Main10,
-                null,
-                null,
-                10,
-                "yuv420p10le",
-                4,
-                false,
-                "video_{label}/video_{label}",
-                "video_{label}/video_{label}"
-            ),
-            Audio:
-            [
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    192,
-                    2,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
-                ),
-            ],
-            Subtitles:
-            [
-                new(
-                    SubtitlePolicy.Extract,
-                    SubtitleCodecType.WebVtt,
-                    AllowedLanguages.All,
-                    true,
-                    null,
-                    "subtitles/{filename}.{lang}.{type}"
-                ),
-            ],
+            Audio: [AacStereo(), Eac3Surround()],
+            Subtitles: [DefaultSubs()],
+            Thumbnails: null,
+            Ladder: null,
             Hls: new(),
             HlsDerivatives: new(),
-            Ladder: new()
-            {
-                Mode = LadderMode.Auto,
-                AutoConfig = new()
-                {
-                    Tiers = LadderTiers.YouTube,
-                    BitrateStrategy = BitrateStrategy.AppleHlsRecommended,
-                    // Mixed codec policy mirrors YouTube's actual ladder: H.264 8-bit
-                    // for SD/HD rungs so legacy devices and HEVC-blocked browsers
-                    // (notably desktop Chrome without a hardware HEVC decoder) can
-                    // still play, HEVC Main10 for 1080p+ where the bitrate savings
-                    // matter most and decoders are widespread. Split at 720 keeps
-                    // 720p H.264 as the highest-compat fallback variant.
-                    CodecPolicy = LadderCodecPolicy.Mixed,
-                    LowTierCodec = VideoCodecType.H264,
-                    HighTierCodec = VideoCodecType.H265,
-                    MixedPolicySplitHeight = 720,
-                    // Also ship a 1080p H.264 8-bit variant alongside the 1080p
-                    // HEVC rung. HEVC-blocked browsers can then climb past 720p
-                    // to a real 1080p quality instead of capping at HD.
-                    H264FallbackHeights = [1080],
-                    Crf = 22,
-                    MaxRungs = 9,
-                    // YouTube ships every rung regardless of source bitrate — the whole
-                    // point is to serve high-quality variants when bandwidth allows. Default
-                    // NeverUpsource cuts 1080p+ on well-compressed sources.
-                    NeverUpsource = false,
-                    // 50% gap collapse drops 1080p (5000) next to 1440p (9000) because
-                    // their ratio is only 44%. YouTube keeps every named tier.
-                    MinTierGapPercent = 0,
-                },
-            }
+            Dash: null,
+            Drm: null
         )
         {
-            Description =
-                "Mixed-codec ABR ladder spanning 144p → 2160p, mirroring YouTube's actual "
-                + "device-targeted ladder. SD / HD rungs (≤720p) encode in H.264 High 8-bit "
-                + "for maximum browser + legacy-device compatibility; 1080p+ rungs encode in "
-                + "HEVC Main10 10-bit where bitrate savings matter most and modern decoders "
-                + "are widespread. HDR sources keep their HDR signal on the HEVC tier via "
-                + "passthrough; SDR sources stay SDR. Prefers a hardware encoder "
-                + "(NVENC / AMF / QSV / VideoToolbox) when one is detected.",
+            Description = description,
             IsBuiltin = true,
-            HardwarePreference = HardwarePreference.PreferHardware,
-            // HDR sources split coverage by bit depth: 10-bit HEVC rungs
-            // preserve HDR via passthrough, 8-bit H.264 rungs (driven by
-            // H264FallbackHeights) carry the tonemapped SDR copy. SDR sources
-            // just emit SDR.
-            HdrPolicy = HdrPolicy.EmitHdrAndSdr,
-            ClientCompatibility =
-                ClientCompatibility.BrowserMse
-                | ClientCompatibility.NativeAndroid
-                | ClientCompatibility.NativeIos
-                | ClientCompatibility.Cast
-                | ClientCompatibility.LegacyDevices,
+            ClientCompatibility = ClientCompatibility.Universal,
+            HardwarePreference = HardwarePreference.PreferQuality,
+            BitDepthPolicy = BitDepthPolicy.WarnAndDowngrade,
+            HdrPolicies = hdrPolicy,
+            HdrOptions = hdrOptions,
         };
     }
 
-    private static EncodingProfile Dash1080pBalanced()
+    /// <summary>
+    /// An adaptive ladder. The codec and quality build the reference
+    /// <see cref="VideoOutput"/> that AutoLadderExpander rescales per rung:
+    /// with no reference it logs and emits no video at all, so Video must never
+    /// be null here.
+    /// </summary>
+    private static EncodingProfile StreamingLadder(
+        string name,
+        string description,
+        VideoCodecType codec,
+        LadderTier[] tiers,
+        Container container,
+        AudioOutput[] audio,
+        HdrPolicies hdrPolicy = HdrPolicies.PassthroughWhenPossible,
+        HdrOptions? hdrOptions = null,
+        bool convertHdrToSdr = false,
+        ClientCompatibility compat = ClientCompatibility.Universal
+    )
     {
-        const string Name = "DASH 1080p Balanced";
+        CodecTunings.CodecTuning tuning = CodecTunings.For(codec, EncodingQuality.Streaming);
+
+        AutoLadderConfig autoConfig = new()
+        {
+            Tiers = tiers,
+            BitrateStrategy = BitrateStrategy.AppleHlsRecommended,
+            CodecPolicy = LadderCodecPolicy.Uniform,
+            Crf = tuning.Crf,
+            MaxRungs = Math.Max(1, tiers.Length),
+            MinRungs = 1,
+            NeverUpscale = true,
+            VbrCeilingMultiplier = 1.5,
+            BufferSizeMultiplier = 2.0,
+        };
+
         return new(
-            Id: IdFromName(Name),
-            Name: Name,
-            Container: Container.Dash,
-            Video: new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H264,
-                1920,
-                1080,
-                RateControlMode.Crf,
-                22,
-                0,
-                null,
-                null,
-                "medium",
-                CodecProfile.High,
-                "4.0",
-                null,
-                8,
-                "yuv420p",
-                4,
-                false,
-                "video_{label}/video_{label}",
-                "video_{label}/video_{label}"
-            ),
-            Audio:
-            [
-                new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    192,
-                    2,
-                    48000,
-                    AllowedLanguages.All,
-                    null,
-                    null,
-                    null,
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
-                ),
-            ],
-            Subtitles:
-            [
-                new(
-                    SubtitlePolicy.Extract,
-                    SubtitleCodecType.WebVtt,
-                    AllowedLanguages.All,
-                    true,
-                    null,
-                    "subtitles/{filename}.{lang}.{type}"
-                ),
-            ],
-            Dash: new()
+            Id: IdFromName(name),
+            Name: name,
+            Container: container,
+            Video: VideoCrf(codec, tuning, convertHdrToSdr: convertHdrToSdr),
+            Audio: audio,
+            Subtitles: [DefaultSubs()],
+            Thumbnails: null,
+            Ladder: new() { Mode = LadderMode.Auto, AutoConfig = autoConfig },
+            Hls: container is Container.HlsTs or Container.HlsFmp4 ? new() : null,
+            HlsDerivatives: container is Container.HlsTs or Container.HlsFmp4 ? new() : null,
+            Dash: null,
+            Drm: null
         )
         {
-            Description = "H.264 1080p balanced for DASH adaptive streaming.",
+            Description = description,
             IsBuiltin = true,
-            ClientCompatibility = ClientCompatibility.Universal,
+            ClientCompatibility = compat,
+            HardwarePreference = HardwarePreference.PreferHardware,
+            BitDepthPolicy = BitDepthPolicy.WarnAndDowngrade,
+            HdrPolicies = hdrPolicy,
+            HdrOptions = hdrOptions,
         };
     }
 }

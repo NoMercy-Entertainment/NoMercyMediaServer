@@ -153,7 +153,7 @@ public partial class SubtitleOcrEngine(
     /// <c>lavfi.ocr.text=</c> blocks. We stream the file line-by-line, tracking
     /// the current pts and the most recent text, and emit a cue every time the
     /// text changes — collapsing runs of identical text into one cue that spans
-    /// the full duration the text was visible. Matches V1 behavior.
+    /// the full duration the text was visible.
     /// </summary>
     internal static List<SubtitleCue> ParseOcrOutput(string content)
     {

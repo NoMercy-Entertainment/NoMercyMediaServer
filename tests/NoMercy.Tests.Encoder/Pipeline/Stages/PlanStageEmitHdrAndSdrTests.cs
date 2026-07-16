@@ -19,13 +19,14 @@ using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
+using NoMercy.Encoder.Profiles;
 using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
 using Container = NoMercy.Encoder.Profiles.Container;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
-using HdrPolicy = NoMercy.Encoder.Profiles.HdrPolicy;
 using LadderConfig = NoMercy.Encoder.Profiles.LadderConfig;
 using LadderMode = NoMercy.Encoder.Profiles.LadderMode;
 using LadderRung = NoMercy.Encoder.Profiles.LadderRung;
+using RateControlMode = NoMercy.Encoder.Codecs.RateControlMode;
 using StreamPolicy = NoMercy.Encoder.Profiles.StreamPolicy;
 using V2RateControlMode = NoMercy.Encoder.Profiles.RateControlMode;
 
@@ -133,7 +134,7 @@ public class PlanStageEmitHdrAndSdrTests
             Subtitles: []
         )
         {
-            HdrPolicy = HdrPolicy.EmitHdrAndSdr,
+            HdrPolicies = HdrPolicies.EmitHdrAndSdr,
             Ladder = new()
             {
                 Mode = LadderMode.Manual,

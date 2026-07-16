@@ -11,6 +11,7 @@
 
 using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
@@ -32,7 +33,6 @@ using NoMercy.Storage;
 using NoMercyQueue;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 
-using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
@@ -60,11 +60,12 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
         if (folder is null)
             return;
 
-        List<EncoderProfile> profiles = folder
-            .EncoderProfileFolder.Select(e => e.EncoderProfile)
+        List<EncodingPreset> presets = folder
+            .EncodingPresetFolders.Where(link => link.Preset is not null)
+            .Select(link => link.Preset!)
             .ToList();
 
-        foreach (EncoderProfile profile in profiles)
+        foreach (EncodingPreset preset in presets)
         {
             Track track = new()
             {
@@ -78,9 +79,31 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
 
             try
             {
-                if (profile.AudioProfiles.Length == 0)
+                EncodingProfile encodingProfile;
+                try
                 {
-                    Log.LogInformation("Skipping profile {Name}: no audio profiles configured", profile.Name);
+                    encodingProfile = PresetResolver.Resolve(
+                        preset.Id,
+                        new DbPresetLookup(context)
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Log.LogWarning(
+                        "Skipping preset '{Name}' ({Id}): resolve failed — {Message}",
+                        preset.Name,
+                        preset.Id,
+                        ex.Message
+                    );
+                    continue;
+                }
+
+                if (encodingProfile.Audio.Length == 0)
+                {
+                    Log.LogInformation(
+                        "Skipping preset {Name}: no audio outputs configured",
+                        preset.Name
+                    );
                     continue;
                 }
 
@@ -92,39 +115,10 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
                             JobId = track.Id.GetHashCode(),
                             InputPath = MediaFile.Path,
                             OutputPath = FolderMetaData.BasePath,
-                            ProfileName = profile.Name,
+                            ProfileName = preset.Name,
                         }
                     );
                 }
-
-                EncodingProfile encodingProfile = V2ProfileFactory.FromV1(
-                    profile.Id,
-                    profile.Name,
-                    profile.Container ?? "mp3",
-                    [],
-                    profile
-                        .AudioProfiles.Select(a => new V1AudioProfile(
-                            a.Codec,
-                            a.Channels,
-                            a.SampleRate,
-                            a.SegmentName,
-                            a.PlaylistName,
-                            a.AllowedLanguages,
-                            a.CustomArguments,
-                            a.Loudness,
-                            a.Downmix,
-                            a.CustomPanMatrix
-                        ))
-                        .ToArray(),
-                    profile
-                        .SubtitleProfiles.Select(s => new V1SubtitleProfile(
-                            s.Codec,
-                            s.PlaylistName,
-                            s.AllowedLanguages,
-                            s.CustomArguments
-                        ))
-                        .ToArray()
-                );
 
                 IEncodingOrchestrator orchestrator = _encodingOrchestrator!;
 
@@ -159,7 +153,13 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
                     );
                 }
 
-                Log.LogInformation("Encoded {Path} → {OutputPath} in {TotalSeconds:F1}s ({Unknown})", MediaFile.Path, encodeResult.OutputPath, encodeResult.Duration.TotalSeconds, encodeResult.Metrics?.EncoderUsed ?? "unknown");
+                Log.LogInformation(
+                    "Encoded {Path} → {OutputPath} in {TotalSeconds:F1}s ({Unknown})",
+                    MediaFile.Path,
+                    encodeResult.OutputPath,
+                    encodeResult.Duration.TotalSeconds,
+                    encodeResult.Metrics?.EncoderUsed ?? "unknown"
+                );
 
                 await AddRecording(folder);
 
@@ -231,7 +231,8 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
             artistRepository,
             musicGenreRepository,
             jobDispatcher,
-            StorageFactory, LoggerFactory.CreateLogger<ArtistManager>()
+            StorageFactory,
+            LoggerFactory.CreateLogger<ArtistManager>()
         );
 
         RecordingRepository recordingRepository = new(context);
@@ -240,7 +241,8 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
             musicGenreRepository,
             artistRepository,
             StorageDriver,
-            StorageFactory, LoggerFactory.CreateLogger<RecordingManager>()
+            StorageFactory,
+            LoggerFactory.CreateLogger<RecordingManager>()
         );
 
         await using MediaScan mediaScan = new(StorageDriver);

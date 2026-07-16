@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
+using NoMercy.Encoder.Profiles;
 using NoMercy.MediaProcessing.Libraries;
 
 namespace NoMercy.Tests.MediaProcessing.Libraries;
@@ -72,8 +73,11 @@ public class DefaultEncodingPresetLinkerTests : IDisposable
     {
         EncodingPreset preset = new()
         {
+            // Bound to the constant, not a literal: the linker resolves the
+            // default by name, so a rename that missed this test would leave it
+            // green while every new folder silently lost auto-encode.
             Id = Ulid.NewUlid(),
-            Name = "ABR Standard 480/720/1080",
+            Name = BuiltinPresets.DefaultStreamingPresetName,
             ProfileJson = "{}",
             IsBuiltIn = true,
         };

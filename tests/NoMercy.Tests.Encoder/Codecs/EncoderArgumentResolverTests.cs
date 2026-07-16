@@ -240,6 +240,30 @@ public class EncoderArgumentResolverTests
     }
 
     [Fact]
+    public void ResolveDimensions_NullWidth_KeepsSourceWidth()
+    {
+        // An archive preset re-encodes the codec without rescaling: null width
+        // means "keep source width", never the 2-pixel-wide floor a literal
+        // 0 used to collapse to.
+        VideoOutput profile = MakeVideoOutput(width: null);
+        (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 3840, 1606);
+        w.Should().Be(3840, "null width means keep the source width");
+        h.Should().Be(1606, "height derives from the source aspect ratio");
+    }
+
+    [Fact]
+    public void ResolveDimensions_LegacyZeroWidth_KeepsSourceWidth()
+    {
+        // Presets persisted before this field went nullable stored Width: 0.
+        // That must resolve exactly like null — keep the source width —
+        // never the 2-pixel-wide floor 0 used to collapse to.
+        VideoOutput profile = MakeVideoOutput(width: 0);
+        (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 3840, 2160);
+        w.Should().Be(3840, "legacy 0 width means keep the source width, same as null");
+        h.Should().Be(2160);
+    }
+
+    [Fact]
     public void ResolveDimensions_ForcesEvenHeight()
     {
         VideoOutput profile = MakeVideoOutput(width: 853); // 853x480 → 853*(480/1920) = 213.25
@@ -488,7 +512,7 @@ public class EncoderArgumentResolverTests
         return new(ffmpegName, encoder, device, defaultRateControl);
     }
 
-    private static VideoOutput MakeVideoOutput(int width, int? height = null) =>
+    private static VideoOutput MakeVideoOutput(int? width, int? height = null) =>
         new(
             Policy: StreamPolicy.Transcode,
             Codec: VideoCodecType.H264,

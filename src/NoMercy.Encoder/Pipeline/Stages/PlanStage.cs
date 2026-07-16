@@ -107,7 +107,7 @@ public class PlanStage(
             // SDR source: this block is skipped (IsHdr gate); rungs emit
             // SDR as-is from EnumerateVideo regardless of bit depth.
             if (
-                profile.HdrPolicy == HdrPolicy.EmitHdrAndSdr
+                profile.HdrPolicies == HdrPolicies.EmitHdrAndSdr
                 && input.Media.VideoStreams.Count > 0
                 && input.Media.VideoStreams[0].IsHdr
             )
@@ -436,7 +436,7 @@ public class PlanStage(
         // Resolve tonemap strategy once — shared across all video outputs that need HDR→SDR.
         // When HdrPolicy is AlwaysPreserve, skip tonemapping entirely regardless of source.
         bool sourceIsHdr = media.VideoStreams.Count > 0 && media.VideoStreams[0].IsHdr;
-        bool tonemapSuppressed = profile.HdrPolicy == HdrPolicy.AlwaysPreserve;
+        bool tonemapSuppressed = profile.HdrPolicies == HdrPolicies.AlwaysPreserve;
 
         TonemapStrategy? tonemap =
             sourceIsHdr && !tonemapSuppressed
@@ -455,7 +455,7 @@ public class PlanStage(
         // stay in lockstep so VideoOutputPlan count matches resolvedCodecs
         // count — 10-bit rung → HDR-only, 8-bit rung → SDR-only.
         if (
-            profile.HdrPolicy == HdrPolicy.EmitHdrAndSdr
+            profile.HdrPolicies == HdrPolicies.EmitHdrAndSdr
             && media.VideoStreams.Count > 0
             && media.VideoStreams[0].IsHdr
         )
@@ -735,7 +735,7 @@ public class PlanStage(
             primaryCodec,
             primaryBitDepth,
             outputFormat,
-            profile.HdrPolicy,
+            profile.HdrPolicies,
             context.DecisionsOrNoOp,
             hlsUsesFmp4Segments
         );

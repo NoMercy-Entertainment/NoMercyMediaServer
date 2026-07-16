@@ -11,4 +11,9 @@
 
 namespace NoMercy.Encoder.Profiles;
 
-public record HdrOptions(string Algorithm = "hable", int? PeakNits = null, string? LutPath = null);
+public record HdrOptions(
+    string Algorithm = "hable", 
+    int? PeakNits = null, 
+    string? LutPath = null,
+    bool Force10Bit = false
+    );

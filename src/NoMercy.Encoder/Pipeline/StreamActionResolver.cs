@@ -188,9 +188,11 @@ public class StreamActionResolver
             return StreamAction.Transcode;
         }
 
-        // Resolution must match.  Profile.Height is nullable; when null it
-        // means "same as source", so we skip the height check.
-        bool widthMatches = source.Width == profile.Width;
+        // Resolution must match. Profile.Width is nullable like Height: null,
+        // or a legacy persisted 0, means "keep source" and that axis always
+        // matches. Profile.Height keeps its existing null-only rule.
+        int? profileWidth = profile.Width;
+        bool widthMatches = profileWidth is null or <= 0 || source.Width == profileWidth.Value;
         bool heightMatches = profile.Height is null || source.Height == profile.Height;
 
         if (!widthMatches || !heightMatches)

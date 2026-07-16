@@ -136,7 +136,7 @@ public class ServiceRegistrationTests : IDisposable
         ServiceProvider provider = BuildProvider();
         IProfileValidator validator = provider.GetRequiredService<IProfileValidator>();
         validator.Should().NotBeNull();
-        validator.Should().BeOfType<V2BackedProfileValidator>();
+        validator.Should().BeOfType<BackedProfileValidator>();
     }
 
     [Fact]

@@ -104,153 +104,25 @@ public static class LadderTiers
             RecommendedBitrateVp9Kbps: null
         ),
     ];
+    public static readonly LadderTier[] YouTube =
+    [
+        new(256, 144, "144p", 80, 80, 60, 60),
+        new(426, 240, "240p", 150, 150, 120, 120),
+        new(640, 360, "360p", 400, 350, 300, 300),
+        new(854, 480, "480p", 1000, 900, 800, 800),
+        new(1280, 720, "720p", 2500, 2000, 1800, 1800),
+        new(1920, 1080, "1080p", 4500, 3500, 3000, 3000),
+        new(2560, 1440, "1440p", 10000, 8000, 7000, 7000),
+        new(3840, 2160, "2160p", 20000, 16000, 14000, 14000)
+    ];
 
     public static readonly LadderTier[] Premium =
     [
-        new(
-            854,
-            480,
-            "480p",
-            RecommendedBitrateH264Kbps: 1500,
-            RecommendedBitrateHevcKbps: 1000,
-            RecommendedBitrateAv1Kbps: null,
-            RecommendedBitrateVp9Kbps: null
-        ),
-        new(
-            1280,
-            720,
-            "720p",
-            RecommendedBitrateH264Kbps: 3000,
-            RecommendedBitrateHevcKbps: 1600,
-            RecommendedBitrateAv1Kbps: null,
-            RecommendedBitrateVp9Kbps: null
-        ),
-        new(
-            1920,
-            1080,
-            "1080p",
-            RecommendedBitrateH264Kbps: 6000,
-            RecommendedBitrateHevcKbps: 3400,
-            RecommendedBitrateAv1Kbps: null,
-            RecommendedBitrateVp9Kbps: null
-        ),
-        new(
-            3840,
-            2160,
-            "2160p",
-            RecommendedBitrateH264Kbps: 24000,
-            RecommendedBitrateHevcKbps: 11600,
-            RecommendedBitrateAv1Kbps: null,
-            RecommendedBitrateVp9Kbps: null
-        ),
-    ];
-
-    public static readonly LadderTier[] Mobile =
-    [
-        new(
-            640,
-            360,
-            "360p",
-            RecommendedBitrateH264Kbps: 365,
-            RecommendedBitrateHevcKbps: 200,
-            RecommendedBitrateAv1Kbps: null,
-            RecommendedBitrateVp9Kbps: null
-        ),
-        new(
-            854,
-            480,
-            "480p",
-            RecommendedBitrateH264Kbps: 1100,
-            RecommendedBitrateHevcKbps: 600,
-            RecommendedBitrateAv1Kbps: null,
-            RecommendedBitrateVp9Kbps: null
-        ),
-        new(
-            1280,
-            720,
-            "720p",
-            RecommendedBitrateH264Kbps: 2000,
-            RecommendedBitrateHevcKbps: 1200,
-            RecommendedBitrateAv1Kbps: null,
-            RecommendedBitrateVp9Kbps: null
-        ),
-    ];
-
-    // YouTube SDR/HDR upload-style bitrate guidance for the full 144p → 2160p range.
-    // H.264 numbers track YouTube's "Recommended upload bitrate" table.
-    public static readonly LadderTier[] YouTube =
-    [
-        new(
-            256,
-            144,
-            "144p",
-            RecommendedBitrateH264Kbps: 80,
-            RecommendedBitrateHevcKbps: 60,
-            RecommendedBitrateAv1Kbps: 40,
-            RecommendedBitrateVp9Kbps: 52
-        ),
-        new(
-            426,
-            240,
-            "240p",
-            RecommendedBitrateH264Kbps: 300,
-            RecommendedBitrateHevcKbps: 200,
-            RecommendedBitrateAv1Kbps: 150,
-            RecommendedBitrateVp9Kbps: 195
-        ),
-        new(
-            640,
-            360,
-            "360p",
-            RecommendedBitrateH264Kbps: 700,
-            RecommendedBitrateHevcKbps: 500,
-            RecommendedBitrateAv1Kbps: 350,
-            RecommendedBitrateVp9Kbps: 455
-        ),
-        new(
-            854,
-            480,
-            "480p",
-            RecommendedBitrateH264Kbps: 1500,
-            RecommendedBitrateHevcKbps: 1000,
-            RecommendedBitrateAv1Kbps: 750,
-            RecommendedBitrateVp9Kbps: 975
-        ),
-        new(
-            1280,
-            720,
-            "720p",
-            RecommendedBitrateH264Kbps: 4000,
-            RecommendedBitrateHevcKbps: 2500,
-            RecommendedBitrateAv1Kbps: 1800,
-            RecommendedBitrateVp9Kbps: 2600
-        ),
-        new(
-            1920,
-            1080,
-            "1080p",
-            RecommendedBitrateH264Kbps: 8000,
-            RecommendedBitrateHevcKbps: 5000,
-            RecommendedBitrateAv1Kbps: 3500,
-            RecommendedBitrateVp9Kbps: 5200
-        ),
-        new(
-            2560,
-            1440,
-            "1440p",
-            RecommendedBitrateH264Kbps: 16000,
-            RecommendedBitrateHevcKbps: 9000,
-            RecommendedBitrateAv1Kbps: 6500,
-            RecommendedBitrateVp9Kbps: 10400
-        ),
-        new(
-            3840,
-            2160,
-            "2160p",
-            RecommendedBitrateH264Kbps: 35000,
-            RecommendedBitrateHevcKbps: 18000,
-            RecommendedBitrateAv1Kbps: 12000,
-            RecommendedBitrateVp9Kbps: 22750
-        ),
+        new(640, 360, "360p", 600, 500, 450, 450),
+        new(854, 480, "480p", 1500, 1200, 1000, 1000),
+        new(1280, 720, "720p", 3500, 3000, 2500, 2500),
+        new(1920, 1080, "1080p", 7000, 6000, 5000, 5000),
+        new(2560, 1440, "1440p", 14000, 12000, 10000, 10000),
+        new(3840, 2160, "2160p", 30000, 25000, 22000, 22000)
     ];
 }

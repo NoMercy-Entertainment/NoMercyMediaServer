@@ -12,7 +12,7 @@
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
-using HdrPolicy = NoMercy.Encoder.Profiles.HdrPolicy;
+using NoMercy.Encoder.Profiles;
 
 namespace NoMercy.Encoder.Hdr;
 
@@ -67,7 +67,7 @@ public static class DolbyVisionGate
         VideoCodecType outputCodec,
         int outputBitDepth,
         OutputFormat container,
-        HdrPolicy policy,
+        HdrPolicies policies,
         IDecisionLogSink decisions,
         bool hlsUsesFmp4Segments = true
     )
@@ -81,7 +81,7 @@ public static class DolbyVisionGate
             );
 
         // --- Condition: AlwaysTonemap forces strip ----------------------------
-        if (policy == HdrPolicy.AlwaysTonemap)
+        if (policies == HdrPolicies.AlwaysTonemap)
         {
             string reason = "hdr_policy = AlwaysTonemap forces tonemap to SDR";
             decisions.Add(
