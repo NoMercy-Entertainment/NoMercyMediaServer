@@ -107,10 +107,10 @@ public static class BuiltinPresets
             // is never upscaled to meet the name.
             LibraryPreset(
                 "Anime 1080p HEVC 10-bit",
-                "HEVC 10-bit 1080p tuned for animation: flat colour and hard line art get the bitrate that x265's default tuning spends on film grain. CRF 18.",
+                "HEVC 10-bit 1080p tuned for animation: flat colour and hard line art get the bitrate that x265's default tuning spends on film grain. CRF 20, which lands at roughly source size against the x265 10-bit releases anime usually arrives as.",
                 width: 1920,
                 height: 1080,
-                quality: EncodingQuality.Ultra,
+                quality: EncodingQuality.VeryHigh,
                 tune: "animation"
             ),
             LibraryPreset(
