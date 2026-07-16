@@ -189,6 +189,8 @@ public interface ILibraryRepository
 
     Task UpdateLibraryAsync(Library library);
 
+    Task SetLibraryLanguagesAsync(Ulid libraryId, IEnumerable<int> languageIds);
+
     Task DeleteLibraryAsync(Library library);
 
     Task<int> AddEncodingPresetFolderAsync(EncodingPresetFolder encodingPresetFolder);

@@ -23,7 +23,7 @@ public interface IDriverRepository
 
     Task<bool> NameExistsAsync(string name, Ulid? excludeId = null);
 
-    Task<int> FolderCountAsync(Ulid driverId);
+    Task<int> LibraryFolderCountAsync(Ulid driverId);
 
     Task<Driver> CreateDriverAsync(Driver driver);
 

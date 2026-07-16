@@ -46,9 +46,11 @@ public class DriverRepository(MediaContext context) : IDriverRepository
         );
     }
 
-    public Task<int> FolderCountAsync(Ulid driverId)
+    public Task<int> LibraryFolderCountAsync(Ulid driverId)
     {
-        return context.Folders.CountAsync(f => f.DriverId == driverId);
+        return context.Folders.CountAsync(f =>
+            f.DriverId == driverId && f.FolderLibraries.Count > 0
+        );
     }
 
     public async Task<Driver> CreateDriverAsync(Driver driver)
@@ -65,9 +67,12 @@ public class DriverRepository(MediaContext context) : IDriverRepository
         return driver;
     }
 
-    public Task<int> DeleteDriverAsync(Driver driver)
+    public async Task<int> DeleteDriverAsync(Driver driver)
     {
-        context.Drivers.Remove(driver);
-        return context.SaveChangesAsync();
+        await context
+            .Folders.Where(f => f.DriverId == driver.Id && f.FolderLibraries.Count == 0)
+            .ExecuteDeleteAsync();
+
+        return await context.Drivers.Where(d => d.Id == driver.Id).ExecuteDeleteAsync();
     }
 }
