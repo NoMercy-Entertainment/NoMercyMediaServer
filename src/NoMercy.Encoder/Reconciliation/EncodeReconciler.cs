@@ -148,14 +148,11 @@ public class EncodeReconciler : IEncodeReconciler
     }
 
     /// <summary>
-    /// manifest.json is not yet wired into the real encode pipeline —
-    /// <c>EncodingContext.MediaItem</c> is never populated by any
-    /// production caller today, so <c>FinalizeStage</c> never actually
-    /// writes one. Reading it here is forward-compatible: the moment that
-    /// wiring lands, every existing library starts getting
-    /// fingerprint-aware reconciliation with no change required here. A
-    /// missing or unreadable manifest is never an error — it is exactly
-    /// the expected, common case right now.
+    /// Reads the fingerprint a finalized encode stamped into manifest.json.
+    /// Anything encoded before that stamp existed has no manifest, so a
+    /// missing or unreadable one is never an error — it is the expected case
+    /// for every pre-existing library and falls through to the real on-disk
+    /// listing instead.
     /// </summary>
     private static async Task<string?> TryReadManifestFingerprintAsync(
         string trimmedRoot,

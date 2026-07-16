@@ -35,14 +35,11 @@ public interface IEncodeReconciler
     /// a master playlist, <c>chapters.vtt</c>, <c>fonts.json</c> — all
     /// directly under the media folder, per <see cref="Output.TemplateResolver"/>'s
     /// naming tokens) — and additionally reads <c>manifest.json</c> for a
-    /// stored profile fingerprint when one is present. Manifest reading is
-    /// forward-compatible rather than load-bearing today: <c>EncodingContext.MediaItem</c>
-    /// is not yet populated by any production caller, so
-    /// <see cref="Pipeline.Stages.FinalizeStage"/> never actually writes a
-    /// manifest in practice yet — every real output on disk today hits the
-    /// "no fingerprint, fall back to the real listing" branch, which is
-    /// exactly the legacy/backward-compat path reconciliation must handle
-    /// correctly regardless.
+    /// stored profile fingerprint when one is present. Output encoded before
+    /// the fingerprint existed carries no manifest and hits the "no
+    /// fingerprint, fall back to the real listing" branch, which stays the
+    /// common case for a long while yet and is exactly the legacy path
+    /// reconciliation must keep handling correctly.
     /// </summary>
     /// <param name="mediaRootPath">
     /// The media item's folder, scope-relative to <paramref name="destinationStorage"/>
