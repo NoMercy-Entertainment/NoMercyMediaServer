@@ -439,6 +439,25 @@ public class LiveTranscodeService(
         return LiveResult.Ok(new ReportPositionResponse(clampedSeconds, isPaused));
     }
 
+    public LiveResult ReportBufferHealth(string sessionId, ReportBufferHealthRequest request)
+    {
+        if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
+            return SessionGoneOrNotFound(sessionId);
+
+        double clampedBufferedSeconds = Math.Max(0, request.BufferedSeconds);
+        double clampedBandwidthKbps = Math.Max(0, request.ObservedBandwidthKbps);
+
+        runtime.Session.ReportClientBufferHealth(
+            TimeSpan.FromSeconds(clampedBufferedSeconds),
+            (int)clampedBandwidthKbps
+        );
+        runtime.TouchLastAccess();
+
+        return LiveResult.Ok(
+            new ReportBufferHealthResponse(clampedBufferedSeconds, clampedBandwidthKbps)
+        );
+    }
+
     public async Task<LiveResult> ChangeQualityAsync(
         string sessionId,
         ChangeQualityRequest request,

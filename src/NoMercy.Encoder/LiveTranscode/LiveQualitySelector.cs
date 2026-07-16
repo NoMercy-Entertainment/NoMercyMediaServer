@@ -163,6 +163,32 @@ public class LiveQualitySelector(ICodecResolver codecResolver, IHardwareCapabili
         return optimal;
     }
 
+    public LiveQuality SelectForBandwidth(
+        LiveQuality[] available,
+        int observedBandwidthKbps,
+        double usableFraction,
+        LiveQuality current
+    )
+    {
+        if (available.Length == 0)
+            return current;
+
+        double budgetKbps = observedBandwidthKbps * usableFraction;
+
+        // `available` is ordered highest-to-lowest resolution (GetAvailableQualities
+        // walks ResolutionTiers top-down), so the first tier whose bitrate fits the
+        // budget is the highest one the downlink can sustain.
+        foreach (LiveQuality quality in available)
+        {
+            if (quality.BitrateKbps <= budgetKbps)
+                return quality;
+        }
+
+        // Nothing fits — a heavily constrained downlink. The lowest tier is still
+        // the best available option; never leave the caller without a selection.
+        return available[^1];
+    }
+
     // Choose the transcode target codec by honouring the CLIENT's own
     // preference order. A client lists codecs best-first: browsers put H264
     // first because it is the most reliably MSE-decodable, then HEVC/AV1 as

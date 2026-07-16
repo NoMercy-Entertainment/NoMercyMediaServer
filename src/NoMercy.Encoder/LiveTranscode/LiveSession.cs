@@ -40,6 +40,15 @@ public class LiveSession : ILiveSession
     private int _state = (int)LiveSessionState.Starting;
     private long _playbackPositionTicks;
 
+    // Client-reported network health: download-buffer depth (seconds of media
+    // downloaded but not yet played) and observed downlink in kbps. MinValue
+    // ticks below means "no report yet" — HasFreshClientHealth reads a huge age
+    // against that default, so an old client that never reports keeps the
+    // network axis skipped, exactly like the playhead fields above.
+    private long _clientBufferedAheadTicks;
+    private int _observedBandwidthKbps;
+    private long _lastClientHealthUtcTicks = DateTime.MinValue.Ticks;
+
     // UTC ticks of the last authoritative playhead report. MinValue-relative
     // default (0) means "no authoritative report yet" — DateTime.UtcNow minus
     // DateTime(0) is always well outside AuthoritativePlayheadWindow, so a
@@ -364,6 +373,26 @@ public class LiveSession : ILiveSession
 
     public void MarkTranscodeStart() =>
         Interlocked.Exchange(ref _lastTranscodeStartTicks, DateTime.UtcNow.Ticks);
+
+    public TimeSpan ClientBufferedAhead => new(Interlocked.Read(ref _clientBufferedAheadTicks));
+
+    public int ObservedBandwidthKbps => Volatile.Read(ref _observedBandwidthKbps);
+
+    public void ReportClientBufferHealth(TimeSpan bufferedAhead, int observedBandwidthKbps)
+    {
+        Interlocked.Exchange(ref _clientBufferedAheadTicks, bufferedAhead.Ticks);
+        Volatile.Write(ref _observedBandwidthKbps, observedBandwidthKbps);
+        Interlocked.Exchange(ref _lastClientHealthUtcTicks, DateTime.UtcNow.Ticks);
+    }
+
+    public bool HasFreshClientHealth(TimeSpan maxAge)
+    {
+        DateTime lastReport = new(
+            Interlocked.Read(ref _lastClientHealthUtcTicks),
+            DateTimeKind.Utc
+        );
+        return DateTime.UtcNow - lastReport <= maxAge;
+    }
 
     public ValueTask DisposeAsync()
     {

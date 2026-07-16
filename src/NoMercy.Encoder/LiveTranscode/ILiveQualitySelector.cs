@@ -29,4 +29,19 @@ public interface ILiveQualitySelector
         SpeedIndex speeds,
         IResourceBudget budget
     );
+
+    /// <summary>
+    /// Fits a quality tier directly to a client's observed downlink: the
+    /// highest tier in <paramref name="available"/> whose bitrate does not
+    /// exceed <c>observedBandwidthKbps * usableFraction</c>. Never returns
+    /// empty — falls back to the lowest tier when nothing fits, and to
+    /// <paramref name="current"/> when <paramref name="available"/> itself is
+    /// empty, so a caller is never left without a quality to select.
+    /// </summary>
+    LiveQuality SelectForBandwidth(
+        LiveQuality[] available,
+        int observedBandwidthKbps,
+        double usableFraction,
+        LiveQuality current
+    );
 }
