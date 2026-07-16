@@ -247,7 +247,7 @@ public static partial class ServiceConfiguration
         services.AddSingleton<IConnectivityStrategy>(sp => new CloudflareTunnelStrategy(
             sp.GetRequiredService<ILogger<CloudflareTunnelStrategy>>(),
             sp.GetRequiredService<IConnectivityStatus>(),
-            () => Task.FromResult(string.Empty) // Register.GetTunnelAvailability
+            () => sp.GetRequiredService<IServerRegistrationService>().GetTunnelAvailability()
         ));
 
         // Add Auth services
