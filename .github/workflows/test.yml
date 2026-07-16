@@ -64,10 +64,43 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="$(gh release list --repo NoMercy-Entertainment/nomercy-ffmpeg --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName')"
           dest="$HOME/.local/share/NoMercy_dev/binaries/ffmpeg"
           mkdir -p "$dest"
-          gh release download "$tag" --repo NoMercy-Entertainment/nomercy-ffmpeg --pattern 'ffmpeg-*-linux-x86_64-*.tar.gz' --dir /tmp/nmff --clobber
+
+          # A degraded GitHub API yields an empty tag rather than an error, and
+          # `gh release download ""` then fails with a bare "release not found"
+          # that reads like the release was deleted. Retry, and never carry an
+          # empty tag forward.
+          tag=""
+          for attempt in 1 2 3 4 5; do
+            if tag="$(gh release list --repo NoMercy-Entertainment/nomercy-ffmpeg --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName')" && [ -n "$tag" ]; then
+              break
+            fi
+            tag=""
+            echo "Attempt $attempt: could not resolve the latest nomercy-ffmpeg tag; retrying in $((attempt * 10))s"
+            sleep $((attempt * 10))
+          done
+
+          if [ -z "$tag" ]; then
+            echo "::error::Could not resolve the latest nomercy-ffmpeg release tag after 5 attempts (GitHub API degraded?)."
+            exit 1
+          fi
+
+          downloaded=""
+          for attempt in 1 2 3 4 5; do
+            if gh release download "$tag" --repo NoMercy-Entertainment/nomercy-ffmpeg --pattern 'ffmpeg-*-linux-x86_64-*.tar.gz' --dir /tmp/nmff --clobber; then
+              downloaded=1
+              break
+            fi
+            echo "Attempt $attempt: downloading nomercy-ffmpeg $tag failed; retrying in $((attempt * 10))s"
+            sleep $((attempt * 10))
+          done
+
+          if [ -z "$downloaded" ]; then
+            echo "::error::Could not download nomercy-ffmpeg $tag after 5 attempts."
+            exit 1
+          fi
+
           tar -xzf /tmp/nmff/ffmpeg-*-linux-x86_64-*.tar.gz -C "$dest"
           chmod +x "$dest/ffmpeg" "$dest/ffprobe"
           echo "NOMERCY_FFMPEG_PATH=$dest/ffmpeg" >> "$GITHUB_ENV"
@@ -104,10 +137,43 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="$(gh release list --repo NoMercy-Entertainment/nomercy-ffmpeg --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName')"
           dest="$HOME/.local/share/NoMercy_dev/binaries/ffmpeg"
           mkdir -p "$dest"
-          gh release download "$tag" --repo NoMercy-Entertainment/nomercy-ffmpeg --pattern 'ffmpeg-*-linux-x86_64-*.tar.gz' --dir /tmp/nmff --clobber
+
+          # A degraded GitHub API yields an empty tag rather than an error, and
+          # `gh release download ""` then fails with a bare "release not found"
+          # that reads like the release was deleted. Retry, and never carry an
+          # empty tag forward.
+          tag=""
+          for attempt in 1 2 3 4 5; do
+            if tag="$(gh release list --repo NoMercy-Entertainment/nomercy-ffmpeg --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName')" && [ -n "$tag" ]; then
+              break
+            fi
+            tag=""
+            echo "Attempt $attempt: could not resolve the latest nomercy-ffmpeg tag; retrying in $((attempt * 10))s"
+            sleep $((attempt * 10))
+          done
+
+          if [ -z "$tag" ]; then
+            echo "::error::Could not resolve the latest nomercy-ffmpeg release tag after 5 attempts (GitHub API degraded?)."
+            exit 1
+          fi
+
+          downloaded=""
+          for attempt in 1 2 3 4 5; do
+            if gh release download "$tag" --repo NoMercy-Entertainment/nomercy-ffmpeg --pattern 'ffmpeg-*-linux-x86_64-*.tar.gz' --dir /tmp/nmff --clobber; then
+              downloaded=1
+              break
+            fi
+            echo "Attempt $attempt: downloading nomercy-ffmpeg $tag failed; retrying in $((attempt * 10))s"
+            sleep $((attempt * 10))
+          done
+
+          if [ -z "$downloaded" ]; then
+            echo "::error::Could not download nomercy-ffmpeg $tag after 5 attempts."
+            exit 1
+          fi
+
           tar -xzf /tmp/nmff/ffmpeg-*-linux-x86_64-*.tar.gz -C "$dest"
           chmod +x "$dest/ffmpeg" "$dest/ffprobe"
           echo "NOMERCY_FFMPEG_PATH=$dest/ffmpeg" >> "$GITHUB_ENV"
