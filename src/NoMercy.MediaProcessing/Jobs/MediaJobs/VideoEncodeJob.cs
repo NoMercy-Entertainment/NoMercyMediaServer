@@ -25,6 +25,8 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
+using NoMercy.Encoder.Metadata;
+using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Orchestration;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
@@ -44,6 +46,7 @@ using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Resources;
 using Serilog.Events;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
+using MediaType = NoMercy.Encoder.Naming.MediaType;
 using QueueJobDispatcher = NoMercyQueue.JobDispatcher;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -804,7 +807,14 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             Options: new(FinalizeOnly: true),
             MediaTitle: fileMetadata.FileName,
             SourceStorage: sourceStorage,
-            DestinationStorage: destinationStorage
+            DestinationStorage: destinationStorage,
+            // Safe ONLY because FinalizeOnly is true above — Build/Execute never
+            // run for this request, so BuildStage's metadata-injection path (which
+            // activates whenever MediaItem is non-null) never sees this value.
+            // Drives BundleLayout resolution + manifest.json/reconstruction.json
+            // in FinalizeStage. Null when the source has no resolvable movie/
+            // episode (e.g. a disc rip) — degrades to today's behavior exactly.
+            MediaItem: fileMetadata.MediaItem
         );
 
         await PublishStageAsync(fileMetadata, "Publishing artifacts");
@@ -1961,6 +1971,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         string basePath = folderName;
         int baseId = movie?.Id ?? episode!.Id;
         string? imgPath = movie?.Backdrop ?? episode?.Still;
+        MediaItemRef mediaItem = BuildMediaItemRef(movie, episode);
 
         return new()
         {
@@ -1971,7 +1982,37 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             Path = basePath,
             Id = baseId,
             ImgPath = imgPath,
+            MediaItem = mediaItem,
         };
+    }
+
+    /// <summary>
+    /// Builds the reconstruction-metadata reference for the movie or episode
+    /// being encoded. <paramref name="movie"/> and <paramref name="episode"/>
+    /// are mutually exclusive — exactly one is non-null (callers already
+    /// verified that before reaching this point).
+    /// </summary>
+    private static MediaItemRef BuildMediaItemRef(Movie? movie, Episode? episode)
+    {
+        if (movie is not null)
+            return new MovieMediaRef(
+                Type: MediaType.Movie,
+                Id: movie.Id,
+                Title: movie.Title,
+                Year: movie.ReleaseDate?.Year,
+                Description: movie.Overview
+            );
+
+        return new EpisodeMediaRef(
+            Type: MediaType.Episode,
+            Id: episode!.Id,
+            Title: episode.Title ?? episode.CreateTitle(),
+            Year: episode.AirDate?.Year,
+            ShowTitle: episode.Tv.Title,
+            SeasonNumber: episode.SeasonNumber,
+            EpisodeNumber: episode.EpisodeNumber,
+            Description: episode.Overview
+        );
     }
 
     // ------------------------------------------------------------------
@@ -2008,6 +2049,15 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         public string Path { get; set; } = string.Empty;
         public int Id { get; set; }
         public string? ImgPath { get; set; }
+
+        /// <summary>
+        /// The resolved movie/episode reference for reconstruction-metadata
+        /// wiring. Only ever set on the <see cref="EncodingRequest"/> used for
+        /// the coordinator's FinalizeOnly pass (<see cref="HandleFinalizeAsync"/>)
+        /// — never on a request that reaches BuildStage — so populating it can
+        /// never change the ffmpeg command that produced the output.
+        /// </summary>
+        public MediaItemRef? MediaItem { get; set; }
     }
 
     private static async Task PublishStageAsync(FileMetadata fileMetadata, string message)

@@ -108,13 +108,8 @@ public class BundleGarbageCollectorTests : IDisposable
         IDbContextFactory<MediaContext> factory
     )
     {
-        BundleManifestWriter writer = new(storage);
-        return new(
-            storage,
-            factory,
-            writer,
-            NullLogger<BundleGarbageCollector>.Instance
-        );
+        BundleManifestWriter writer = new();
+        return new(storage, factory, writer, NullLogger<BundleGarbageCollector>.Instance);
     }
 
     // -----------------------------------------------------------------------

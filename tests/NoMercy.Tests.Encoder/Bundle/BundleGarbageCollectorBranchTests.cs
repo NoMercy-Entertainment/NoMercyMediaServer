@@ -85,13 +85,8 @@ public class BundleGarbageCollectorBranchTests
         IDbContextFactory<MediaContext> factory
     )
     {
-        BundleManifestWriter writer = new(storage);
-        return new(
-            storage,
-            factory,
-            writer,
-            NullLogger<BundleGarbageCollector>.Instance
-        );
+        BundleManifestWriter writer = new();
+        return new(storage, factory, writer, NullLogger<BundleGarbageCollector>.Instance);
     }
 
     [Fact]
@@ -263,7 +258,7 @@ public class BundleGarbageCollectorBranchTests
             .Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
-        BundleManifestWriter writer = new(storage);
+        BundleManifestWriter writer = new();
         BundleGarbageCollector gc = new(
             storage,
             factoryMock.Object,

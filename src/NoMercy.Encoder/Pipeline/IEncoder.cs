@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Encoder.Decomposition;
+using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
@@ -60,7 +61,18 @@ public record EncodingRequest(
     /// When source and destination folders differ (e.g. source on SMB,
     /// output on local SSD) pass separate instances here.
     /// </summary>
-    IStorage? DestinationStorage = null
+    IStorage? DestinationStorage = null,
+    /// <summary>
+    /// The library item being encoded (movie or episode). Set ONLY on requests
+    /// where <see cref="EncodingOptions.FinalizeOnly"/> is true (the coordinator's
+    /// post-encode pass) — Build/Execute never run for that pass, so populating
+    /// this field cannot change the ffmpeg command that produced the output.
+    /// Drives <see cref="Naming.BundleLayout"/> resolution in PlanStage and the
+    /// manifest.json / reconstruction.json writes in FinalizeStage. Null (the
+    /// default) preserves today's behavior exactly: no layout, no reconstruction
+    /// artifacts — the source has no resolvable library item (e.g. a disc rip).
+    /// </summary>
+    MediaItemRef? MediaItem = null
 )
 {
     /// <summary>

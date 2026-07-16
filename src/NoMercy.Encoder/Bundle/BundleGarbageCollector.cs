@@ -124,7 +124,7 @@ public class BundleGarbageCollector(
 
             // Exactly one JSON file — must be manifest.json.
             string manifestPath = jsonFiles[0].Path;
-            BundleManifest? manifest = await manifests.ReadAsync(manifestPath, ct);
+            BundleManifest? manifest = await manifests.ReadAsync(storage, manifestPath, ct);
             if (manifest is null)
             {
                 logger.LogWarning("Could not read manifest at {Path} — skipping", manifestPath);
@@ -146,7 +146,12 @@ public class BundleGarbageCollector(
             }
 
             // Reconcile on-disk files against the manifest file list.
-            ReconcileReport report = await manifests.ReconcileAsync(bundleDir, manifest, ct);
+            ReconcileReport report = await manifests.ReconcileAsync(
+                storage,
+                bundleDir,
+                manifest,
+                ct
+            );
 
             if (report.ExtraFiles.Count > 0)
                 logger.LogWarning(

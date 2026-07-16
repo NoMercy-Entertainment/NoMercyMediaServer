@@ -48,6 +48,9 @@ public class Encoder(
             DestinationStorage = request.DestinationStorage ?? request.SourceStorage,
             OutputDirectory = request.OutputDirectory,
             InputPath = request.InputPath,
+            // Threaded through unchanged — see EncodingRequest.MediaItem for why
+            // this is safe only when the caller sets it on a FinalizeOnly request.
+            MediaItem = request.MediaItem,
         };
         Stopwatch stopwatch = Stopwatch.StartNew();
 

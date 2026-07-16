@@ -52,7 +52,7 @@ public class BundleManifestWriterBranchTests
     public async Task ReconcileAsync_reports_both_extra_AND_missing_in_single_call()
     {
         TestStorage storage = new();
-        BundleManifestWriter writer = new(storage);
+        BundleManifestWriter writer = new();
 
         BundleManifest manifest = SampleManifest("a.m3u8", "b.m4s", "c.m4s");
 
@@ -64,6 +64,7 @@ public class BundleManifestWriterBranchTests
         // c.m4s missing.
 
         ReconcileReport report = await writer.ReconcileAsync(
+            storage,
             bundleDir,
             manifest,
             CancellationToken.None
@@ -79,7 +80,7 @@ public class BundleManifestWriterBranchTests
         // The HashSet uses OrdinalIgnoreCase — disk "init.mp4" matches
         // manifest "INIT.mp4" so the bundle isn't flagged as extra/missing.
         TestStorage storage = new();
-        BundleManifestWriter writer = new(storage);
+        BundleManifestWriter writer = new();
 
         BundleManifest manifest = SampleManifest("video/INIT.mp4", "video/SEG_001.M4S");
 
@@ -88,6 +89,7 @@ public class BundleManifestWriterBranchTests
         storage.Seed($"{bundleDir}/video/seg_001.m4s", [0x01]);
 
         ReconcileReport report = await writer.ReconcileAsync(
+            storage,
             bundleDir,
             manifest,
             CancellationToken.None
@@ -101,11 +103,12 @@ public class BundleManifestWriterBranchTests
     public async Task ReconcileAsync_empty_manifest_and_empty_disk_returns_empty_report()
     {
         TestStorage storage = new();
-        BundleManifestWriter writer = new(storage);
+        BundleManifestWriter writer = new();
 
         BundleManifest manifest = SampleManifest();
 
         ReconcileReport report = await writer.ReconcileAsync(
+            storage,
             "encodes/empty",
             manifest,
             CancellationToken.None
@@ -122,13 +125,14 @@ public class BundleManifestWriterBranchTests
         // logic must normalize so reading "encodes/x/" + "f.m3u8" matches a
         // disk path "encodes/x/f.m3u8".
         TestStorage storage = new();
-        BundleManifestWriter writer = new(storage);
+        BundleManifestWriter writer = new();
 
         BundleManifest manifest = SampleManifest("file.m3u8");
 
         storage.Seed("encodes/x/file.m3u8", [0x01]);
 
         ReconcileReport report = await writer.ReconcileAsync(
+            storage,
             "encodes/x/",
             manifest,
             CancellationToken.None
@@ -142,13 +146,13 @@ public class BundleManifestWriterBranchTests
     public async Task WriteAsync_then_ReadAsync_round_trips_manifest_with_all_fields()
     {
         TestStorage storage = new();
-        BundleManifestWriter writer = new(storage);
+        BundleManifestWriter writer = new();
 
         BundleManifest original = SampleManifest("master.m3u8", "init.mp4", "seg_00001.m4s");
 
         const string path = "encodes/web-1080p/manifest.json";
-        await writer.WriteAsync(path, original, CancellationToken.None);
-        BundleManifest? read = await writer.ReadAsync(path, CancellationToken.None);
+        await writer.WriteAsync(storage, path, original, CancellationToken.None);
+        BundleManifest? read = await writer.ReadAsync(storage, path, CancellationToken.None);
 
         read.Should().NotBeNull();
         read.Should().BeEquivalentTo(original);
@@ -160,12 +164,12 @@ public class BundleManifestWriterBranchTests
         // Corrupt manifest.json on disk — ReadAsync should let JsonConvert
         // return null rather than crashing the caller.
         TestStorage storage = new();
-        BundleManifestWriter writer = new(storage);
+        BundleManifestWriter writer = new();
 
         storage.Seed("encodes/x/manifest.json", Encoding.UTF8.GetBytes("not valid json"));
 
         Func<Task<BundleManifest?>> act = () =>
-            writer.ReadAsync("encodes/x/manifest.json", CancellationToken.None);
+            writer.ReadAsync(storage, "encodes/x/manifest.json", CancellationToken.None);
 
         // Newtonsoft's DeserializeObject<T> on malformed JSON throws JsonException
         // — accept either NotThrow (returns null) or the throw, then document
