@@ -18,6 +18,7 @@ using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
+using NoMercy.Encoder.Reconciliation;
 using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Pipeline.Stages;
@@ -29,7 +30,14 @@ public record FinalizeInput(
     string MediaTitle,
     IProgressObserver? Progress = null,
     // Null means "use spec defaults" — not "skip everything".
-    HlsDerivatives? HlsDerivatives = null
+    HlsDerivatives? HlsDerivatives = null,
+    // The RESOLVED profile actually applied to this encode. Used to stamp
+    // manifest.json with a profile fingerprint so a later reconciliation
+    // pass can tell "preset edited in place, same id" apart from "genuinely
+    // unchanged". Null for callers that predate reconciliation (Preview) —
+    // the manifest is then written without a fingerprint, same as any
+    // pre-reconciliation output.
+    EncodingProfile? Profile = null
 );
 
 public record FinalizeOutput(string OutputPath, long OutputSizeBytes);
@@ -188,7 +196,14 @@ public class FinalizeStage(
             if (input.Plan.Layout is BundleLayout layout)
             {
                 if (manifestWriter is not null)
-                    await WriteManifestAsync(effectiveStorage, layout, allEntries, context, ct);
+                    await WriteManifestAsync(
+                        effectiveStorage,
+                        layout,
+                        allEntries,
+                        context,
+                        input.Profile,
+                        ct
+                    );
 
                 if (reconstructionWriter is not null && context.MediaInfo is not null)
                     await WriteReconstructionAsync(
@@ -245,6 +260,7 @@ public class FinalizeStage(
         BundleLayout layout,
         IReadOnlyList<StorageEntry> allEntries,
         EncodingContext context,
+        EncodingProfile? profile,
         CancellationToken ct
     )
     {
@@ -288,7 +304,8 @@ public class FinalizeStage(
             CreatedAt: DateTime.UtcNow,
             CompletedAt: DateTime.UtcNow,
             MediaKey: layout.MediaKey,
-            Files: relFiles
+            Files: relFiles,
+            ProfileFingerprint: profile is not null ? ProfileFingerprint.Compute(profile) : null
         );
 
         await manifestWriter!.WriteAsync(layout.ManifestPath, manifest, ct);

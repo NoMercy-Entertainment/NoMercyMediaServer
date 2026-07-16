@@ -27,5 +27,9 @@ public record BundleManifest(
     [property: JsonProperty("created_at")] DateTime CreatedAt,
     [property: JsonProperty("completed_at")] DateTime? CompletedAt,
     [property: JsonProperty("media_key")] string MediaKey,
-    [property: JsonProperty("files")] IReadOnlyList<string> Files
+    [property: JsonProperty("files")] IReadOnlyList<string> Files,
+    // Null for every manifest written before fingerprinting shipped. The
+    // reconciler treats that as "same profile, unknown version" rather than
+    // "profile changed" — see NoMercy.Encoder.Reconciliation.EncodeReconciler.
+    [property: JsonProperty("profile_fingerprint")] string? ProfileFingerprint = null
 );

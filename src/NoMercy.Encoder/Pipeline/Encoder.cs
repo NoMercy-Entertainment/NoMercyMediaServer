@@ -208,7 +208,8 @@ public class Encoder(
                 request.OutputDirectory,
                 request.ResolvedTitle,
                 Progress: progress,
-                HlsDerivatives: request.Profile.HlsDerivatives
+                HlsDerivatives: request.Profile.HlsDerivatives,
+                Profile: request.Profile
             );
             StageResult finalizeResult = await finalizeStage.ExecuteAsync(
                 finalizeInput,
