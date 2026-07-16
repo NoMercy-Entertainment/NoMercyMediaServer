@@ -506,6 +506,39 @@ public class ChromeCastService : IChromeCastService
         }
     }
 
+    // The Sharpcaster heartbeat is disabled process-wide (re-enabling it crashes
+    // .NET via an async-void SocketException on disconnect — see
+    // DisableSharpcasterHeartbeat). The trade-off: cast_shell drops idle sockets
+    // and, with no heartbeat, the client's Disconnected event never fires to evict
+    // the dead pool entry — so a cast that reuses such an entry writes to a closed
+    // socket (WSAECONNABORTED). When a caller detects that (a failed status probe),
+    // evict the stale client and build a fresh connection.
+    private async Task<ChromecastClient?> ForceReconnectAsync(string name)
+    {
+        if (ClientPool.TryRemove(name, out ChromecastClient? stale))
+        {
+            try
+            {
+                DisableSharpcasterHeartbeat(stale);
+            }
+            catch
+            {
+                // best-effort
+            }
+
+            try
+            {
+                await stale.DisconnectAsync();
+            }
+            catch
+            {
+                // best-effort — the socket is already gone
+            }
+        }
+
+        return await GetOrCreateClientAsync(name);
+    }
+
     // --- Public API (name-explicit overloads) ---
 
     /// <summary>
@@ -593,11 +626,41 @@ public class ChromeCastService : IChromeCastService
         }
         catch (Exception ex)
         {
+            // A write failure here means the pooled connection is dead: cast_shell
+            // dropped the idle socket and — with the heartbeat disabled — no
+            // Disconnected event fired to evict the stale pool entry, so we just
+            // pulled a client writing to a closed socket. Rebuild the connection
+            // once and re-probe before attempting LAUNCH.
             _logger.LogInformation(
-                "LaunchAndroidReceiver pre-LAUNCH GET_STATUS failed for {Target}: {Message}",
+                "LaunchAndroidReceiver pre-LAUNCH GET_STATUS failed for {Target}: {Message} — reconnecting stale client",
                 target,
                 ex.Message
             );
+
+            ChromecastClient? reconnected = await ForceReconnectAsync(target);
+            if (reconnected is null)
+            {
+                _logger.LogInformation(
+                    "LaunchAndroidReceiver: reconnect to {Target} failed — aborting launch",
+                    target
+                );
+                return;
+            }
+
+            client = reconnected;
+
+            try
+            {
+                await client.ReceiverChannel.GetChromecastStatusAsync();
+            }
+            catch (Exception retryEx)
+            {
+                _logger.LogInformation(
+                    "LaunchAndroidReceiver: GET_STATUS still failing for {Target} after reconnect: {Message}",
+                    target,
+                    retryEx.Message
+                );
+            }
         }
 
         int requestId = Interlocked.Increment(ref _androidLaunchRequestId);
@@ -611,13 +674,30 @@ public class ChromeCastService : IChromeCastService
             target
         );
 
+        // If the receiver is already running our app (panel already on,
+        // e.g. mid-playback or idle on our splash) cast_shell treats a
+        // repeat LAUNCH as a no-op from its point of view and never emits a
+        // NEW RECEIVER_STATUS broadcast — nothing about the top-level
+        // Application object changed. The event-based watcher below would
+        // then wait out the full timeout and "retry" for a device that was
+        // never actually broken. The pre-LAUNCH GET_STATUS above already
+        // refreshed client.ChromecastStatus, so use that snapshot to treat
+        // an already-active app as an immediate ack. LAUNCH is still sent
+        // (below) so the running app receives the fresh customData/session
+        // info — only the wait-for-broadcast confirmation is skipped.
+        bool alreadyRunning = string.Equals(
+            client.ChromecastStatus?.Application?.AppId,
+            "925B4C3C",
+            StringComparison.OrdinalIgnoreCase
+        );
+
         // Watch for cast_shell's reply on this request id. RECEIVER_STATUS
         // arrives back on the receiver channel when cast_shell accepts the
         // LAUNCH — if we don't see ChromecastStatus.Application.AppId match
         // ours within 1.5s, retry once. Single retry is enough; the failure
         // mode is a timing race during the first cold connect, not a hard
         // protocol break.
-        bool launchAccepted = false;
+        bool launchAccepted = alreadyRunning;
         EventHandler<ChromecastStatus>? watcher = null;
         watcher = (sender, status) =>
         {
