@@ -44,7 +44,8 @@ public interface IMediaBlueprintWriter
         string? profileFingerprint,
         DateTime createdAt,
         DateTime completedAt,
-        CancellationToken ct
+        CancellationToken ct,
+        string? originalSourcePath = null
     );
 
     /// <summary>

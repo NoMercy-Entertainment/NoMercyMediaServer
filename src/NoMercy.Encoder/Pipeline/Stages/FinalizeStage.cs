@@ -255,17 +255,25 @@ public class FinalizeStage(
         }
 
         string encoderVersion = typeof(FinalizeStage).Assembly.GetName().Version?.ToString() ?? "3";
-        // The folder this encode ends up in, not the staging directory it was
-        // assembled in — that one is deleted the moment the encode publishes. Also
-        // the media folder root .nomercy.json is written into.
+        // The real media folder this encode ends up in — recorded INSIDE the file
+        // as output_location. NOT where the file is written: every encode runs in a
+        // staging temp dir and PublishTempDirAsync sweeps that dir's contents to the
+        // real folder afterward. Writing to OriginalOutputDirectory here put the
+        // blueprint outside the temp dir, so publish never carried it and it never
+        // reached the media folder.
         string mediaRoot = context.OriginalOutputDirectory ?? outputDirectory;
 
         // Layout is only ever resolved (PlanStage) when context.MediaItem is set —
         // see OutputNamingResolver.Resolve's caller — so MediaItem is guaranteed
         // non-null here.
+        //
+        // Write to outputDirectory (the staging temp dir where video_*/, audio_*/
+        // etc. are assembled) so the blueprint publishes to the media root exactly
+        // like every rendition does. originalSourcePath carries the real source, not
+        // the staging lease MediaInfo.FilePath points at.
         await blueprintWriter!.WriteAsync(
             effectiveStorage,
-            mediaRoot,
+            outputDirectory,
             context.MediaInfo!,
             BlueprintIdentityFactory.From(context.MediaItem!),
             plan,
@@ -276,15 +284,17 @@ public class FinalizeStage(
             profileFingerprint: profile is not null ? ProfileFingerprint.Compute(profile) : null,
             createdAt: DateTime.UtcNow,
             completedAt: DateTime.UtcNow,
-            ct
+            ct,
+            originalSourcePath: context.OriginalInputPath
         );
 
         logger.LogInformation(
-            "[{CorrelationId}] Wrote {FileName} → {Path} ({FileCount} files)",
+            "[{CorrelationId}] Wrote {FileName} into staging {StagingDir} ({FileCount} files); publishes to media root {MediaRoot}",
             context.CorrelationId,
             MediaBlueprintWriter.FileName,
-            mediaRoot,
-            relFiles.Count
+            outputDirectory,
+            relFiles.Count,
+            mediaRoot
         );
     }
 }

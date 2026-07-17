@@ -27,7 +27,11 @@ public interface IMediaBlueprintBuilder
     /// an empty <see cref="MediaBlueprint.Encodes"/> list. Callers append
     /// encode entries once a preset run completes.
     /// </summary>
-    MediaBlueprint BuildFromSource(MediaInfo source, BlueprintIdentity identity);
+    MediaBlueprint BuildFromSource(
+        MediaInfo source,
+        BlueprintIdentity identity,
+        string? originalSourcePath = null
+    );
 
     /// <summary>
     /// Builds one <see cref="BlueprintEncode"/> entry for a completed preset

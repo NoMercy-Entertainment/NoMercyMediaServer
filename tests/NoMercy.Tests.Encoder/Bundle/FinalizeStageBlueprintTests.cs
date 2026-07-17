@@ -201,11 +201,19 @@ public class FinalizeStageBlueprintTests
     }
 
     [Fact]
-    public async Task Blueprint_NamesTheDestination_NotTheStagingDirectoryItWasAssembledIn()
+    public async Task Blueprint_IsWrittenIntoStaging_SoPublishCarriesIt_AndNamesTheDestination()
     {
+        // Every encode runs in a staging temp dir; PublishTempDirAsync sweeps that
+        // dir's contents to the real folder afterward. The blueprint MUST be written
+        // into staging (alongside video_*/, audio_*/) so it publishes exactly like a
+        // rendition — writing it to the destination directly through the staging
+        // storage lands it at a stray path that publish never sees, and the file
+        // never reaches the media folder. Its output_location still names the real
+        // destination.
         TestStorage storage = new();
         const string stagingDir = "cache/encoder/Fight Club (1999)";
         const string destination = "Films/Fight Club (1999)";
+        const string sourceMkv = "Films/Fight Club (1999)/Fight Club (1999).mkv";
         BundleLayout layout = MakeHlsLayout();
         OutputPlan plan = MakeOutputPlan(layout);
 
@@ -221,6 +229,7 @@ public class FinalizeStageBlueprintTests
             MediaItem = new MovieMediaRef(MediaType.Movie, 550, "Fight Club", 1999),
             MediaInfo = MinimalMediaInfo(),
             OriginalOutputDirectory = destination,
+            OriginalInputPath = sourceMkv,
         };
 
         StageResult result = await stage.ExecuteAsync(
@@ -231,15 +240,15 @@ public class FinalizeStageBlueprintTests
 
         result.Should().BeOfType<StageSuccess<FinalizeOutput>>();
 
-        // The blueprint lands at the real destination, not the staging
-        // directory that gets deleted once the encode publishes.
-        storage.ReadString($"{destination}/{MediaBlueprintWriter.FileName}").Should().NotBeNull();
-        storage.ReadString($"{stagingDir}/{MediaBlueprintWriter.FileName}").Should().BeNull();
+        // Written INTO the staging dir (publish relocates it to the media root).
+        string? json = storage.ReadString($"{stagingDir}/{MediaBlueprintWriter.FileName}");
+        json.Should().NotBeNull(".nomercy.json must be written into staging so publish carries it");
 
-        MediaBlueprint blueprint = JsonConvert.DeserializeObject<MediaBlueprint>(
-            storage.ReadString($"{destination}/{MediaBlueprintWriter.FileName}")!
-        )!;
+        MediaBlueprint blueprint = JsonConvert.DeserializeObject<MediaBlueprint>(json!)!;
+        // The record names the real destination, not the staging scaffolding.
         blueprint.Encodes[0].OutputLocation.Should().Be(destination);
+        // And the real source, not the staging lease MediaInfo.FilePath points at.
+        blueprint.Source.Path.Should().Be(sourceMkv);
     }
 
     [Fact]

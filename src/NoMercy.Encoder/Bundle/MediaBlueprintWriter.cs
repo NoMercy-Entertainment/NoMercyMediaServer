@@ -42,7 +42,8 @@ public class MediaBlueprintWriter(IMediaBlueprintBuilder builder) : IMediaBluepr
         string? profileFingerprint,
         DateTime createdAt,
         DateTime completedAt,
-        CancellationToken ct
+        CancellationToken ct,
+        string? originalSourcePath = null
     )
     {
         BlueprintEncode encode = builder.BuildEncode(
@@ -59,7 +60,7 @@ public class MediaBlueprintWriter(IMediaBlueprintBuilder builder) : IMediaBluepr
 
         MediaBlueprint? existing = await ReadAsync(storage, mediaRootPath, ct);
         MediaBlueprint blueprint = existing is null
-            ? builder.BuildFromSource(source, identity) with
+            ? builder.BuildFromSource(source, identity, originalSourcePath) with
             {
                 Encodes = [encode],
             }

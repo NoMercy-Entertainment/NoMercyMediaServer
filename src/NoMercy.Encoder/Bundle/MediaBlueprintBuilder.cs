@@ -24,11 +24,22 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
 {
     private const int CurrentVersion = 1;
 
-    public MediaBlueprint BuildFromSource(MediaInfo source, BlueprintIdentity identity)
+    public MediaBlueprint BuildFromSource(
+        MediaInfo source,
+        BlueprintIdentity identity,
+        string? originalSourcePath = null
+    )
     {
+        // MediaInfo.FilePath is the staging lease the analyzer was pointed at,
+        // which is released the moment the encode ends. Recording it would
+        // describe the source by a path that no longer exists — the one thing a
+        // reconstruction blueprint must never do. OriginalInputPath carries the
+        // real source, so prefer it and fall back only when no caller threaded it.
+        string sourcePath = originalSourcePath ?? source.FilePath;
+
         BlueprintSource blueprintSource = new(
-            Path: source.FilePath,
-            Filename: Path.GetFileName(source.FilePath),
+            Path: sourcePath,
+            Filename: Path.GetFileName(sourcePath),
             Container: source.Format,
             SizeBytes: source.FileSizeBytes,
             DurationSeconds: source.Duration.TotalSeconds,
