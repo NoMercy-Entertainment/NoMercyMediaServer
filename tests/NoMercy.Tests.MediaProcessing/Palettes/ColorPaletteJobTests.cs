@@ -145,6 +145,31 @@ public class ColorPaletteJobTests : IDisposable
     }
 
     [Fact]
+    public async Task Stored_empty_braces_is_terminal_and_does_not_regenerate()
+    {
+        // The other half of NoImage_result_persists_terminal_empty_braces: what it
+        // writes must also stop the next pass. Re-reading "{}" as "still pending"
+        // regenerated it, wrote "{}" again, and left the row pending forever —
+        // 50,622 images and 494 people looped like this on the dev library. Only a
+        // thrown exception means "retry"; a stored value means "answered".
+        bool generated = false;
+        (ColorPaletteJob job, StubSource source) = Build(
+            current: "{}",
+            generate: () =>
+            {
+                generated = true;
+                return Task.FromResult(PaletteResult.NoImage());
+            }
+        );
+        PaletteSourceRegistry registry = new([source]);
+
+        await job.HandleCore(_db, registry);
+
+        generated.Should().BeFalse("\"{}\" is PaletteResult.NoImage's Permanent marker");
+        source.PersistCalled.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task Unknown_entity_type_returns_without_error()
     {
         ColorPaletteJob job = new("unknown_type", "42");

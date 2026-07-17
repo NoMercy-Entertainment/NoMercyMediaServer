@@ -271,7 +271,7 @@ public class JobDispatcher : IJobDispatcher
                 .GetAwaiter()
                 .GetResult();
 
-            return string.IsNullOrEmpty(current) || current == "{}";
+            return string.IsNullOrEmpty(current);
         }
         catch
         {

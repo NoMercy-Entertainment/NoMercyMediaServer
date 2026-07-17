@@ -54,12 +54,20 @@ public class ColorPaletteJob : IShouldQueue
             if (source is null)
                 return;
 
+            // "{}" is not "unpainted" — it is the marker PaletteResult.NoImage
+            // persists for an entity that has no image to sample, and it says so
+            // with Permanent: true. Treating it as pending re-ran generation on
+            // every pass, wrote "{}" again, and left the row looking pending
+            // forever: 50,622 images and 494 people on the dev library churned
+            // like this indefinitely. Any persisted value is terminal — transient
+            // failures throw before they can persist (see below), so a stored
+            // value only ever means "answered".
             string? current = await source.CurrentPaletteAsync(
                 db,
                 EntityId,
                 CancellationToken.None
             );
-            if (!string.IsNullOrEmpty(current) && current != "{}")
+            if (!string.IsNullOrEmpty(current))
                 return;
 
             // Transient failures (network, IO, timeout) propagate as exceptions so the
