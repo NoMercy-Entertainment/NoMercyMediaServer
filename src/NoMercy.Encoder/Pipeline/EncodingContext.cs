@@ -76,7 +76,18 @@ public record EncodingContext(
     /// </summary>
     IReadOnlyList<TrackMetadata>? DbTracks = null,
     string? OutputDirectory = null,
-    string? InputPath = null
+    string? InputPath = null,
+    /// <summary>
+    /// The real source, when <see cref="InputPath"/> points at a staging lease
+    /// that will be deleted after the encode. Null when nothing was staged.
+    /// </summary>
+    string? OriginalInputPath = null,
+    /// <summary>
+    /// The real destination, when <see cref="OutputDirectory"/> points at a
+    /// staging directory that gets published and removed. Null when nothing was
+    /// staged.
+    /// </summary>
+    string? OriginalOutputDirectory = null
 )
 {
     /// <summary>

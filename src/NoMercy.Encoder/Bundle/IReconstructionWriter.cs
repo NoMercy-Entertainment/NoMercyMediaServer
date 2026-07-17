@@ -22,20 +22,35 @@ public interface IReconstructionWriter
     /// Build a <see cref="Reconstruction"/> record from the encode inputs.
     /// Pure function — does not perform any I/O.
     /// </summary>
-    Reconstruction Build(MediaInfo mediaInfo, OutputPlan plan, BundleLayout layout);
+    /// <param name="originalSourcePath">
+    /// The real source, when <paramref name="mediaInfo"/> describes a staging
+    /// lease rather than the file itself. Null when they are the same.
+    /// </param>
+    Reconstruction Build(
+        MediaInfo mediaInfo,
+        OutputPlan plan,
+        BundleLayout layout,
+        string? originalSourcePath = null
+    );
 
     /// <summary>
     /// Serialise <paramref name="mediaInfo"/> + <paramref name="plan"/> into
     /// <paramref name="path"/> inside <paramref name="storage"/>.
     /// Writes unconditionally — even for copy-mode (lossless) encodes.
     /// </summary>
+    /// <param name="originalSourcePath">
+    /// The real source, when <paramref name="mediaInfo"/> describes a staging
+    /// lease that will be released after the encode. Null when the analyzer read
+    /// the source directly and MediaInfo.FilePath is already the real thing.
+    /// </param>
     Task WriteAsync(
         IStorage storage,
         string path,
         MediaInfo mediaInfo,
         OutputPlan plan,
         BundleLayout layout,
-        CancellationToken ct
+        CancellationToken ct,
+        string? originalSourcePath = null
     );
 
     /// <summary>

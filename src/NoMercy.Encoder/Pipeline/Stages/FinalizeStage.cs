@@ -260,7 +260,8 @@ public class FinalizeStage(
             context.MediaInfo!,
             plan,
             layout,
-            ct
+            ct,
+            context.OriginalInputPath
         );
 
         logger.LogInformation(
@@ -288,7 +289,12 @@ public class FinalizeStage(
             outputDirectory,
             layout.BundleDirectory
         );
-        string dirPrefix = bundleDirectory.TrimEnd('/') + "/";
+        // Relative to the media folder, which is where the encoder actually writes
+        // video_*/, audio_*/ and the rest. Measuring against the bundle directory
+        // instead — a subdirectory none of those files are in — meant no entry
+        // ever matched the prefix, so every one was recorded as an absolute path
+        // into a staging directory that no longer exists once the encode publishes.
+        string dirPrefix = outputDirectory.TrimEnd('/') + "/";
 
         List<string> relFiles = [];
         foreach (StorageEntry entry in allEntries)
@@ -323,7 +329,9 @@ public class FinalizeStage(
             MediaType: mediaTypeStr,
             MediaId: context.MediaItem?.Id ?? 0,
             MediaExternalId: null,
-            MediaFolder: outputDirectory,
+            // The folder this bundle ends up in, not the staging directory it was
+            // assembled in — that one is deleted the moment the encode publishes.
+            MediaFolder: context.OriginalOutputDirectory ?? outputDirectory,
             Container: layout.ContainerString,
             CreatedAt: DateTime.UtcNow,
             CompletedAt: DateTime.UtcNow,

@@ -205,6 +205,12 @@ public class EncodingOrchestrator(
                     OutputDirectory = tempDir,
                     SourceStorage = storage,
                     DestinationStorage = storage,
+                    // Both paths above are about to stop existing — the lease is
+                    // released and the temp dir is published and deleted. Carry
+                    // what they stand in for, or the manifest and reconstruction
+                    // written downstream describe only the scaffolding.
+                    OriginalInputPath = request.InputPath,
+                    OriginalOutputDirectory = request.OutputDirectory,
                 };
 
                 result = await strategy.EncodeAsync(stagedRequest, progress, ct);
@@ -559,6 +565,7 @@ public class EncodingOrchestrator(
             InputPath = lease.Path,
             SourceStorage = storage,
             DestinationStorage = storage,
+            OriginalInputPath = request.InputPath,
         };
 
         OutputPlan? plan = await encoder.PlanAsync(stagedRequest, ct);

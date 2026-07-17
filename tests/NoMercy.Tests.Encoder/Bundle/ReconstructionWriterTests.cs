@@ -65,13 +65,7 @@ file static class ReconstructionTestData
             ],
             SubtitleStreams:
             [
-                new(
-                    Index: 2,
-                    Codec: "ass",
-                    Language: "eng",
-                    IsDefault: false,
-                    IsForced: false
-                ),
+                new(Index: 2, Codec: "ass", Language: "eng", IsDefault: false, IsForced: false),
             ],
             Chapters: [],
             Attachments: []
@@ -385,6 +379,62 @@ public class ReconstructionWriterTests
         // sha256 is intentionally empty — deferred (see Reconstruction.cs TODO)
         result.Source.Sha256.Should().BeNullOrEmpty();
         result.Version.Should().Be(1);
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 5b: a staged source is described by the file it stands for
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public void Build_Source_NamesTheRealSource_NotTheStagingLeaseItWasAnalysedThrough()
+    {
+        // A remote source is copied to a local lease so ffprobe can read it, and
+        // the lease is released the moment the encode ends. MediaInfo therefore
+        // describes a path that is about to stop existing — recording it would
+        // leave the reconstruction unable to name what was encoded.
+        MediaInfo media = ReconstructionTestData.MinimalMediaInfo(
+            @"C:\cache\temp\nomercy-remote-0da187041d6e4686ac8d683fb8cd4241"
+        );
+        BundleLayout layout = ReconstructionTestData.MkvLayout();
+        OutputPlan plan = new(
+            Format: OutputFormat.Mkv,
+            VideoOutputs: [],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null,
+            Layout: layout
+        );
+
+        Reconstruction result = _writer.Build(
+            media,
+            plan,
+            layout,
+            originalSourcePath: "Download/complete/Show/fight-club.mkv"
+        );
+
+        result.Source.OriginalPath.Should().Be("Download/complete/Show/fight-club.mkv");
+        result.Source.OriginalFilename.Should().Be("fight-club.mkv");
+    }
+
+    [Fact]
+    public void Build_Source_FallsBackToMediaInfo_WhenNothingWasStaged()
+    {
+        // A local source is analysed in place, so MediaInfo already names the real
+        // file and there is no original to pass.
+        MediaInfo media = ReconstructionTestData.MinimalMediaInfo("/nas/films/fight-club.mkv");
+        BundleLayout layout = ReconstructionTestData.MkvLayout();
+        OutputPlan plan = new(
+            Format: OutputFormat.Mkv,
+            VideoOutputs: [],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null,
+            Layout: layout
+        );
+
+        Reconstruction result = _writer.Build(media, plan, layout, originalSourcePath: null);
+
+        result.Source.OriginalPath.Should().Be("/nas/films/fight-club.mkv");
     }
 
     // -----------------------------------------------------------------------

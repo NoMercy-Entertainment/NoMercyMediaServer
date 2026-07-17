@@ -51,6 +51,8 @@ public class Encoder(
             // Pure identity — safe to thread through on every request. See
             // EncodingRequest.MediaItem / EncodingOptions.EnableMetadataInjection.
             MediaItem = request.MediaItem,
+            OriginalInputPath = request.OriginalInputPath,
+            OriginalOutputDirectory = request.OriginalOutputDirectory,
             EnableMetadataInjection = request.Options?.EnableMetadataInjection ?? false,
         };
         Stopwatch stopwatch = Stopwatch.StartNew();
@@ -426,6 +428,8 @@ public class Encoder(
             // reconstruction path — so dropping it here produced plans that could
             // never describe or revert themselves, no matter what the caller set.
             MediaItem = request.MediaItem,
+            OriginalInputPath = request.OriginalInputPath,
+            OriginalOutputDirectory = request.OriginalOutputDirectory,
         };
 
         StageResult analyzeResult = await analyzeStage.ExecuteAsync(request.InputPath, context, ct);

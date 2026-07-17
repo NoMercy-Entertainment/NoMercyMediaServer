@@ -73,7 +73,23 @@ public record EncodingRequest(
     /// See <see cref="EncodingOptions.EnableMetadataInjection"/> for the separate
     /// opt-in that actually changes the command.
     /// </summary>
-    MediaItemRef? MediaItem = null
+    MediaItemRef? MediaItem = null,
+    /// <summary>
+    /// The caller's real source, when <see cref="InputPath"/> has been rewritten
+    /// to a local staging lease. The lease is deleted once the encode finishes,
+    /// so anything describing what was encoded — reconstruction.json above all —
+    /// has to name this instead. Null when no staging happened and InputPath is
+    /// already the real thing.
+    /// </summary>
+    string? OriginalInputPath = null,
+    /// <summary>
+    /// The caller's real destination, when <see cref="OutputDirectory"/> has been
+    /// rewritten to a staging directory. Same reasoning as
+    /// <see cref="OriginalInputPath"/>: the staging directory is emptied into the
+    /// destination and removed, so a manifest naming it describes a place that no
+    /// longer exists. Null when no staging happened.
+    /// </summary>
+    string? OriginalOutputDirectory = null
 )
 {
     /// <summary>

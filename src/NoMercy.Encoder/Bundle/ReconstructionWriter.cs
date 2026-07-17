@@ -35,9 +35,14 @@ public class ReconstructionWriter : IReconstructionWriter
     // Public API
     // -----------------------------------------------------------------------
 
-    public Reconstruction Build(MediaInfo mediaInfo, OutputPlan plan, BundleLayout layout)
+    public Reconstruction Build(
+        MediaInfo mediaInfo,
+        OutputPlan plan,
+        BundleLayout layout,
+        string? originalSourcePath = null
+    )
     {
-        ReconstructionSource source = BuildSource(mediaInfo);
+        ReconstructionSource source = BuildSource(mediaInfo, originalSourcePath);
         List<ReconstructionTrack> tracks = BuildTracks(mediaInfo, plan, layout);
         ReconstructionAssets assets = BuildAssets(mediaInfo, layout);
         string commandTemplate = BuildCommandTemplate(layout, tracks);
@@ -60,10 +65,11 @@ public class ReconstructionWriter : IReconstructionWriter
         MediaInfo mediaInfo,
         OutputPlan plan,
         BundleLayout layout,
-        CancellationToken ct
+        CancellationToken ct,
+        string? originalSourcePath = null
     )
     {
-        Reconstruction reconstruction = Build(mediaInfo, plan, layout);
+        Reconstruction reconstruction = Build(mediaInfo, plan, layout, originalSourcePath);
         string json = JsonConvert.SerializeObject(reconstruction, SerializerSettings);
         await storage.WriteAsync(path, Encoding.UTF8.GetBytes(json), ct);
     }
@@ -86,12 +92,17 @@ public class ReconstructionWriter : IReconstructionWriter
     // Source fingerprint
     // -----------------------------------------------------------------------
 
-    private static ReconstructionSource BuildSource(MediaInfo mediaInfo)
+    private static ReconstructionSource BuildSource(MediaInfo mediaInfo, string? originalSourcePath)
     {
-        string filename = Path.GetFileName(mediaInfo.FilePath);
+        // MediaInfo.FilePath is whatever the analyzer was pointed at, which for a
+        // remote source is a local staging lease that is released as soon as the
+        // encode ends. Naming it here described the encode by a file that no
+        // longer exists — the one thing reconstruction data must never do.
+        string sourcePath = originalSourcePath ?? mediaInfo.FilePath;
+        string filename = Path.GetFileName(sourcePath);
 
         return new(
-            OriginalPath: mediaInfo.FilePath,
+            OriginalPath: sourcePath,
             OriginalFilename: filename,
             SizeBytes: mediaInfo.FileSizeBytes,
             // sha256: not computed — would require a full re-read of the source
@@ -362,20 +373,11 @@ public class ReconstructionWriter : IReconstructionWriter
         foreach (ChapterInfo ch in mediaInfo.Chapters)
         {
             chapters.Add(
-                new(
-                    Start: ch.Start.TotalSeconds,
-                    End: ch.End.TotalSeconds,
-                    Title: ch.Title
-                )
+                new(Start: ch.Start.TotalSeconds, End: ch.End.TotalSeconds, Title: ch.Title)
             );
         }
 
-        return new(
-            Fonts: fonts,
-            CoverArt: [],
-            Chapters: chapters,
-            Attachments: attachments
-        );
+        return new(Fonts: fonts, CoverArt: [], Chapters: chapters, Attachments: attachments);
     }
 
     // -----------------------------------------------------------------------
