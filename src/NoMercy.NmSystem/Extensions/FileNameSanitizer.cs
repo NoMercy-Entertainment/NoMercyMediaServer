@@ -133,42 +133,29 @@ public static class FileNameSanitizer
     /// without mingling it with the season/episode markers or the episode title it
     /// gets concatenated with. A value already within the limit is returned
     /// unchanged, so short titles keep their exact existing paths. An over-long
-    /// value is cut on a token boundary and stamped with a short, stable digest of
-    /// the ORIGINAL value, so two different long titles that share a prefix can
-    /// never resolve to the same folder. Deterministic — the same title always
-    /// produces the same shortened form, so a later rescan reconstructs the
-    /// identical path.
+    /// value is cut on a token boundary, which keeps the name readable — it is
+    /// still the start of the real title, just fewer words of it.
+    ///
+    /// Nothing is appended to disambiguate. The name this lands in already
+    /// carries what separates two media items: an episode has its SxxEyy marker,
+    /// a movie its release year. A digest here bought nothing they don't already
+    /// provide, cost nine of the fifty characters, and turned a title into
+    /// something unreadable.
+    ///
+    /// Deterministic — the same title always produces the same shortened form, so
+    /// a later rescan reconstructs the identical path.
     /// </summary>
     public static string Shorten(this string? self, int maxLength = MaxTitleComponentLength)
     {
         if (string.IsNullOrEmpty(self) || self.Length <= maxLength)
             return self ?? string.Empty;
 
-        string digest = _stableTitleDigest(self);
-        int keep = Math.Max(1, maxLength - digest.Length - 1);
-
-        string head = self[..keep];
+        string head = self[..maxLength];
         int boundary = head.LastIndexOfAny(TitleTokenBoundaries);
-        if (boundary >= keep / 2)
+        if (boundary >= maxLength / 2)
             head = head[..boundary];
 
-        return head.Trim('.', ' ', '-', '_') + "." + digest;
-    }
-
-    /// <summary>
-    /// FNV-1a 32-bit digest as 8 lowercase hex chars. Non-cryptographic and stable
-    /// across runs (unlike <see cref="string.GetHashCode()"/>); used purely to keep
-    /// two different long titles from colliding on disk after truncation.
-    /// </summary>
-    private static string _stableTitleDigest(string value)
-    {
-        uint hash = 2166136261;
-        foreach (char c in value)
-        {
-            hash ^= c;
-            hash *= 16777619;
-        }
-        return hash.ToString("x8");
+        return head.Trim('.', ' ', '-', '_');
     }
 
     public static string NormalizeForComparison(this string name)
