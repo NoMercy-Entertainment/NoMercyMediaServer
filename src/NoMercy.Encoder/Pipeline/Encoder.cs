@@ -421,6 +421,11 @@ public class Encoder(
         {
             SourceStorage = request.SourceStorage,
             DestinationStorage = request.DestinationStorage ?? request.SourceStorage,
+            // Same identity EncodeAsync threads through. PlanStage resolves the
+            // BundleLayout from it, and a plan without one carries no manifest or
+            // reconstruction path — so dropping it here produced plans that could
+            // never describe or revert themselves, no matter what the caller set.
+            MediaItem = request.MediaItem,
         };
 
         StageResult analyzeResult = await analyzeStage.ExecuteAsync(request.InputPath, context, ct);
