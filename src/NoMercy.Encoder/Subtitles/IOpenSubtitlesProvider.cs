@@ -58,6 +58,10 @@ public interface IOpenSubtitlesProvider
         CancellationToken ct
     );
 
+    /// <summary>
+    /// Returns the subtitle's cue bytes, already unwrapped from any transport compression the
+    /// provider applies. Callers may decode the result as text directly.
+    /// </summary>
     Task<byte[]> DownloadSubtitleAsync(string downloadUrl, CancellationToken ct);
 
     bool IsRateLimited { get; }

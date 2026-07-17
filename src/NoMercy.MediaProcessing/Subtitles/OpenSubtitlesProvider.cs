@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.IO.Compression;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Providers.OpenSubtitles.Client;
@@ -184,7 +185,27 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
         }
 
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
+        byte[] payload = await response.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
+
+        return Decompress(payload);
+    }
+
+    /// <summary>
+    /// SubDownloadLink serves the cue file gzipped in the response body rather than as a
+    /// Content-Encoding, so HttpClient never unwraps it. Sniffed by magic number instead of the
+    /// URL suffix because the link is a VRF-signed redirect that carries no extension, and
+    /// OpenSubtitles serves some candidates uncompressed.
+    /// </summary>
+    private static byte[] Decompress(byte[] payload)
+    {
+        if (payload.Length < 2 || payload[0] != 0x1F || payload[1] != 0x8B)
+            return payload;
+
+        using MemoryStream source = new(payload);
+        using GZipStream gzip = new(source, CompressionMode.Decompress);
+        using MemoryStream destination = new();
+        gzip.CopyTo(destination);
+        return destination.ToArray();
     }
 
     private void MarkRateLimited()
