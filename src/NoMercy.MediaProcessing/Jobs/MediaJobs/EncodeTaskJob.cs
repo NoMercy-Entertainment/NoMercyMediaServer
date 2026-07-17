@@ -20,6 +20,7 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Execution;
+using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Orchestration;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
@@ -154,7 +155,14 @@ public class EncodeTaskJob
             Profile: encodingProfile,
             MediaTitle: fileMetadata.FileName,
             SourceStorage: sourceStorage,
-            DestinationStorage: destinationStorage
+            DestinationStorage: destinationStorage,
+            // A bundled Whole task finalizes itself rather than deferring to the
+            // coordinator, so it is the run that has to write manifest.json and
+            // reconstruction.json — and it can only do that when it knows which
+            // media it is encoding. Without this the plan carries no BundleLayout
+            // and both files are silently skipped, leaving the output with no
+            // record of how to reproduce or revert it.
+            MediaItem: fileMetadata.MediaItem
         );
 
         // Propagate StatsFilePath from the task descriptor so TwoPassStrategyBase
@@ -389,6 +397,7 @@ public class EncodeTaskJob
             FileName = fileName,
             Path = basePath,
             Id = baseId,
+            MediaItem = MediaItemRefFactory.Create(movie, episode),
         };
     }
 
@@ -400,5 +409,14 @@ public class EncodeTaskJob
         public string FileName { get; set; } = string.Empty;
         public string Path { get; set; } = string.Empty;
         public int Id { get; set; }
+
+        /// <summary>
+        /// Identifies the movie/episode being encoded. PlanStage needs it to
+        /// resolve a BundleLayout, without which FinalizeStage writes neither
+        /// manifest.json nor reconstruction.json. Pure identity: it never reaches
+        /// the ffmpeg command, which is gated separately on
+        /// EncodingOptions.EnableMetadataInjection.
+        /// </summary>
+        public MediaItemRef? MediaItem { get; set; }
     }
 }

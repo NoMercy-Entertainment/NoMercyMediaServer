@@ -293,8 +293,76 @@ public class EncodeReconcilerDecideTests
     }
 
     // ------------------------------------------------------------------
+    // ── Chapters vs a source that has none ───────────────────────────────────
+    // FinalizeStage writes chapters.vtt only when the source has chapters, so a
+    // source with none can never satisfy a demand for it. Asking anyway left the
+    // media permanently incomplete: every dispatch flagged Chapters missing,
+    // decomposition had no Chapters task to offer, and the job fell back to a
+    // full re-encode — of a file that was already finished.
+
+    [Fact]
+    public void Decide_DoesNotAskForChapters_WhenTheSourceHasNone()
+    {
+        EncodingProfile profile = MakeHlsProfile();
+        ExistingOutputSnapshot existing = new(
+            ProfileFingerprint.Compute(profile),
+            FilesWithoutChapters(),
+            ValidOcrSidecarCount: 0
+        );
+
+        ReconciliationDecision decision = _reconciler.Decide(
+            new(
+                profile,
+                IsSingleFileOutput: false,
+                BitmapSubtitleStreamCount: 0,
+                existing,
+                SourceChapterCount: 0
+            )
+        );
+
+        decision.MissingKinds.Should().NotContain(EncodeTaskKind.Chapters);
+        decision
+            .Action.Should()
+            .Be(
+                ReconciliationAction.Skip,
+                "everything the source can produce is present, so there is nothing to do"
+            );
+    }
+
+    [Fact]
+    public void Decide_StillAsksForChapters_WhenTheSourceHasThemAndTheVttIsMissing()
+    {
+        EncodingProfile profile = MakeHlsProfile();
+        ExistingOutputSnapshot existing = new(
+            ProfileFingerprint.Compute(profile),
+            FilesWithoutChapters(),
+            ValidOcrSidecarCount: 0
+        );
+
+        ReconciliationDecision decision = _reconciler.Decide(
+            new(
+                profile,
+                IsSingleFileOutput: false,
+                BitmapSubtitleStreamCount: 0,
+                existing,
+                SourceChapterCount: 6
+            )
+        );
+
+        decision
+            .MissingKinds.Should()
+            .Contain(
+                EncodeTaskKind.Chapters,
+                "the source has chapters, so a missing chapters.vtt is a real gap"
+            );
+    }
+
+    // ------------------------------------------------------------------
     // Fixtures
     // ------------------------------------------------------------------
+
+    private static List<ExistingOutputEntry> FilesWithoutChapters() =>
+        AllPresentFiles().Where(f => f.RelativePath != "chapters.vtt").ToList();
 
     // Names here mirror what the encoder actually writes. The sprite pair in
     // particular comes from ThumbnailGenerator's `thumbs_{W}x{H}` shape at the

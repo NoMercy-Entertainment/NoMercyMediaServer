@@ -51,6 +51,8 @@ public class Encoder(
             // Pure identity — safe to thread through on every request. See
             // EncodingRequest.MediaItem / EncodingOptions.EnableMetadataInjection.
             MediaItem = request.MediaItem,
+            OriginalInputPath = request.OriginalInputPath,
+            OriginalOutputDirectory = request.OriginalOutputDirectory,
             EnableMetadataInjection = request.Options?.EnableMetadataInjection ?? false,
         };
         Stopwatch stopwatch = Stopwatch.StartNew();
@@ -206,13 +208,34 @@ public class Encoder(
         else
         {
             progress?.OnStageStarted("Finalize");
+
+            // An aux-only bundle (no video and no audio — e.g. a thumbnails top-up)
+            // produces no variant playlists, so there is nothing for a master to
+            // list. FinalizeStage would otherwise measure the FULL plan's variants
+            // against this run's staging directory, find none of them, and fail the
+            // task on "Master playlist would list zero variants" — which cost the
+            // job its post-encode phase, and with it the subtitle OCR. The master
+            // already on disk describes the variants that really exist; leave it be.
+            HlsDerivatives? derivatives = request.Profile.HlsDerivatives;
+            if (request.Options?.TaskFilter?.IsAuxOnlyBundle == true)
+            {
+                derivatives = (derivatives ?? new HlsDerivatives()) with
+                {
+                    GenerateMasterPlaylist = false,
+                };
+                logger.LogInformation(
+                    "[{CorrelationId}] Aux-only bundle — leaving the existing master playlist untouched.",
+                    context.CorrelationId
+                );
+            }
+
             FinalizeInput finalizeInput = new(
                 executionResults,
                 plan.OutputPlan,
                 request.OutputDirectory,
                 request.ResolvedTitle,
                 Progress: progress,
-                HlsDerivatives: request.Profile.HlsDerivatives,
+                HlsDerivatives: derivatives,
                 Profile: request.Profile
             );
             StageResult finalizeResult = await finalizeStage.ExecuteAsync(
@@ -400,6 +423,13 @@ public class Encoder(
         {
             SourceStorage = request.SourceStorage,
             DestinationStorage = request.DestinationStorage ?? request.SourceStorage,
+            // Same identity EncodeAsync threads through. PlanStage resolves the
+            // BundleLayout from it, and a plan without one carries no manifest or
+            // reconstruction path — so dropping it here produced plans that could
+            // never describe or revert themselves, no matter what the caller set.
+            MediaItem = request.MediaItem,
+            OriginalInputPath = request.OriginalInputPath,
+            OriginalOutputDirectory = request.OriginalOutputDirectory,
         };
 
         StageResult analyzeResult = await analyzeStage.ExecuteAsync(request.InputPath, context, ct);

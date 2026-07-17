@@ -766,9 +766,27 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             relativeOutputPath.Replace('/', Path.DirectorySeparatorChar)
         );
 
+        // A dispatch-time bundle is a Whole task, and a Whole task is "the only
+        // execution": it runs FinalizeStage itself and publishes the tempDir to the
+        // destination, which is precisely why the tempDir is empty by the time we
+        // get here. Only per-stream slices defer their finalize to this pass, and a
+        // run made entirely of bundles has nothing left for it to do.
+        //
+        // The emptiness check below is meant to catch children that produced
+        // nothing. Applying it to a run whose bundles already published turned a
+        // success into a failure and skipped everything after it — the subtitle
+        // OCR, the library refresh, the completion event — for every bundled
+        // encode.
+        bool bundlesSelfFinalized =
+            state.Bundles is { Length: > 0 } bundles
+            && bundles.All(bundle => bundle.Kind == EncodeTaskKind.Whole);
+
         if (
-            !Directory.Exists(tempDir)
-            || !Directory.EnumerateFiles(tempDir, "*.m3u8", SearchOption.AllDirectories).Any()
+            !bundlesSelfFinalized
+            && (
+                !Directory.Exists(tempDir)
+                || !Directory.EnumerateFiles(tempDir, "*.m3u8", SearchOption.AllDirectories).Any()
+            )
         )
         {
             Log.LogError(
@@ -828,52 +846,66 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             MediaItem: fileMetadata.MediaItem
         );
 
-        await PublishStageAsync(fileMetadata, "Publishing artifacts");
-        try
+        // The bundles already finalized and published themselves. Running the
+        // pipeline again over the tempDir they emptied would only rediscover that
+        // there is nothing there. Fall through to post-encode, which is the part
+        // that still has work to do.
+        if (bundlesSelfFinalized)
         {
-            EncodingResult publishResult = await orchestrator.EncodeAsync(finalizeRequest);
-            if (!publishResult.Success)
-            {
-                string err =
-                    publishResult.Error?.Message
-                    ?? publishResult.EnrichedError?.Message
-                    ?? "finalize-only pass failed with no details";
-                Log.LogError(
-                    "[VideoEncodeJob] Coordinator finalize failed for GroupTag={GroupTag}: {Err}",
-                    state.GroupTag,
-                    err
-                );
-
-                await new IncompleteEncodeRecorder().RecordAsync(
-                    context,
-                    mediaId: fileMetadata.Id,
-                    folderId: FolderId.ToString(),
-                    title: fileMetadata.Title,
-                    missingKeys: ["finalize"],
-                    lastError: err,
-                    attemptsMade: 0,
-                    ct: CancellationToken.None
-                );
-
-                await EncoderCardTerminator.PublishFailedAsync(
-                    fileMetadata.Id,
-                    fileMetadata.Title,
-                    InputFile,
-                    err,
-                    "FinalizeFailed"
-                );
-
-                return;
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.LogError(
-                "[VideoEncodeJob] Coordinator finalize threw for GroupTag={GroupTag}: {Message}",
-                state.GroupTag,
-                ex.Message
+            Log.LogInformation(
+                "[VideoEncodeJob] Finalize: bundles for GroupTag={GroupTag} finalized and published themselves; continuing to post-encode.",
+                state.GroupTag
             );
-            throw;
+        }
+        else
+        {
+            await PublishStageAsync(fileMetadata, "Publishing artifacts");
+            try
+            {
+                EncodingResult publishResult = await orchestrator.EncodeAsync(finalizeRequest);
+                if (!publishResult.Success)
+                {
+                    string err =
+                        publishResult.Error?.Message
+                        ?? publishResult.EnrichedError?.Message
+                        ?? "finalize-only pass failed with no details";
+                    Log.LogError(
+                        "[VideoEncodeJob] Coordinator finalize failed for GroupTag={GroupTag}: {Err}",
+                        state.GroupTag,
+                        err
+                    );
+
+                    await new IncompleteEncodeRecorder().RecordAsync(
+                        context,
+                        mediaId: fileMetadata.Id,
+                        folderId: FolderId.ToString(),
+                        title: fileMetadata.Title,
+                        missingKeys: ["finalize"],
+                        lastError: err,
+                        attemptsMade: 0,
+                        ct: CancellationToken.None
+                    );
+
+                    await EncoderCardTerminator.PublishFailedAsync(
+                        fileMetadata.Id,
+                        fileMetadata.Title,
+                        InputFile,
+                        err,
+                        "FinalizeFailed"
+                    );
+
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.LogError(
+                    "[VideoEncodeJob] Coordinator finalize threw for GroupTag={GroupTag}: {Message}",
+                    state.GroupTag,
+                    ex.Message
+                );
+                throw;
+            }
         }
 
         await PublishStageAsync(fileMetadata, "Checking source subtitles");
@@ -1741,7 +1773,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                 )
             );
 
-        int bitmapSubtitleCount = await CountBitmapSubtitleStreamsAsync(sourceStorage);
+        SourceReconciliationFacts source = await ProbeSourceForReconciliationAsync(sourceStorage);
 
         ExistingOutputSnapshot existing = await reconciler.InspectAsync(
             fileMetadata.Path,
@@ -1753,23 +1785,32 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             new(
                 encodingProfile,
                 IsSingleFileContainer(encodingProfile.Container),
-                bitmapSubtitleCount,
-                existing
+                source.BitmapSubtitleStreamCount,
+                existing,
+                SourceChapterCount: source.ChapterCount
             )
         );
     }
 
     /// <summary>
-    /// Counts bitmap (PGS/VobSub/DVB) subtitle streams on the SOURCE file —
-    /// the streams <see cref="RunBitmapSubtitleOcrAsync"/> would OCR. Reuses
-    /// the same analyzer call that method makes; the extra ffprobe pass is
-    /// negligible next to the encode it lets reconciliation skip.
+    /// What reconciliation needs to know about the SOURCE: how many bitmap
+    /// (PGS/VobSub/DVB) subtitle streams <see cref="RunBitmapSubtitleOcrAsync"/>
+    /// would OCR, and whether there are chapters for FinalizeStage to write.
+    /// Both come from one analyzer call; the ffprobe pass is negligible next to
+    /// the encode it lets reconciliation skip.
     /// </summary>
-    private async Task<int> CountBitmapSubtitleStreamsAsync(IStorage sourceStorage)
+    private readonly record struct SourceReconciliationFacts(
+        int BitmapSubtitleStreamCount,
+        int ChapterCount
+    );
+
+    private async Task<SourceReconciliationFacts> ProbeSourceForReconciliationAsync(
+        IStorage sourceStorage
+    )
     {
         IMediaAnalyzer? analyzer = _mediaAnalyzer;
         if (analyzer is null)
-            return 0;
+            return new(0, 0);
 
         try
         {
@@ -1778,16 +1819,22 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                 sourceStorage,
                 CancellationToken.None
             );
-            return mediaInfo.SubtitleStreams.Count(subtitle => !subtitle.IsTextBased);
+            return new(
+                mediaInfo.SubtitleStreams.Count(subtitle => !subtitle.IsTextBased),
+                mediaInfo.Chapters.Count
+            );
         }
         catch (Exception ex)
         {
+            // Assuming none leaves reconciliation expecting nothing extra, which
+            // degrades to "the output as it stands is complete" rather than to a
+            // re-encode we cannot justify.
             Log.LogWarning(
-                "Could not analyze {InputFile} for reconciliation OCR count — assuming none: {Message}",
+                "Could not analyze {InputFile} for reconciliation — assuming no bitmap subtitles and no chapters: {Message}",
                 InputFile,
                 ex.Message
             );
-            return 0;
+            return new(0, 0);
         }
     }
 
@@ -1983,7 +2030,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         string basePath = folderName;
         int baseId = movie?.Id ?? episode!.Id;
         string? imgPath = movie?.Backdrop ?? episode?.Still;
-        MediaItemRef mediaItem = BuildMediaItemRef(movie, episode);
+        MediaItemRef mediaItem = MediaItemRefFactory.Create(movie, episode);
 
         return new()
         {
@@ -2004,29 +2051,6 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
     /// are mutually exclusive — exactly one is non-null (callers already
     /// verified that before reaching this point).
     /// </summary>
-    private static MediaItemRef BuildMediaItemRef(Movie? movie, Episode? episode)
-    {
-        if (movie is not null)
-            return new MovieMediaRef(
-                Type: MediaType.Movie,
-                Id: movie.Id,
-                Title: movie.Title,
-                Year: movie.ReleaseDate?.Year,
-                Description: movie.Overview
-            );
-
-        return new EpisodeMediaRef(
-            Type: MediaType.Episode,
-            Id: episode!.Id,
-            Title: episode.Title ?? episode.CreateTitle(),
-            Year: episode.AirDate?.Year,
-            ShowTitle: episode.Tv.Title,
-            SeasonNumber: episode.SeasonNumber,
-            EpisodeNumber: episode.EpisodeNumber,
-            Description: episode.Overview
-        );
-    }
-
     // ------------------------------------------------------------------
     // Task-ID parsing helpers
     // ------------------------------------------------------------------
