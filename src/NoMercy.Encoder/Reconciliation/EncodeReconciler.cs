@@ -14,6 +14,7 @@ using Newtonsoft.Json;
 using NoMercy.Encoder.Bundle;
 using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Subtitles;
 using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Reconciliation;
@@ -27,12 +28,6 @@ namespace NoMercy.Encoder.Reconciliation;
 /// </summary>
 public class EncodeReconciler : IEncodeReconciler
 {
-    /// <summary>Bitmap subtitle containers the OCR pass reads from. A text
-    /// sidecar next to one of these, carrying the same <c>{lang}.{type}</c>, is
-    /// that track's OCR result — the same pairing the library scan uses to
-    /// decide whether a bitmap subtitle is orphaned.</summary>
-    private static readonly string[] BitmapSidecarExtensions = [".mks", ".sup", ".idx", ".vob"];
-
     /// <summary>Text sidecar formats the OCR pass can emit.</summary>
     private static readonly string[] TextSidecarExtensions = [".vtt", ".srt"];
 
@@ -288,11 +283,24 @@ public class EncodeReconciler : IEncodeReconciler
                 textKeys.Add(textKey);
         }
 
+        // A bitmap track is only counted as OCR'd when a text sidecar carries the
+        // same {lang}.{type} — the same pairing the library scan uses to decide
+        // whether a bitmap subtitle is orphaned, and it reads bitmap-ness from
+        // SubtitleClassifier so both agree on what a bitmap sidecar is.
         return files.Count(f =>
             f.IsValid
-            && TryReadSubtitleKey(f.RelativePath, BitmapSidecarExtensions, out string bitmapKey)
+            && TryReadBitmapSubtitleKey(f.RelativePath, out string bitmapKey)
             && textKeys.Contains(bitmapKey)
         );
+    }
+
+    private static bool TryReadBitmapSubtitleKey(string relativePath, out string key)
+    {
+        key = string.Empty;
+        string extension = Path.GetExtension(Path.GetFileName(relativePath));
+
+        return SubtitleClassifier.IsBitmapSidecarExtension(extension)
+            && TryReadSubtitleKey(relativePath, [extension], out key);
     }
 
     /// <summary>

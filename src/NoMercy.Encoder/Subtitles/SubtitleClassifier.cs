@@ -41,10 +41,26 @@ public static class SubtitleClassifier
         "dvb_subtitle",
     ];
 
+    // Extensions the subtitle extraction pass writes for a bitmap track. These
+    // carry picture data (or, for .mks, a Matroska container wrapping it) and
+    // cannot be served to a player as a text sidecar — only the OCR pass's .vtt
+    // sibling can. The extraction pass writes .mks, so a list of just sup/vob
+    // let every bitmap track through and it was published as a track the player
+    // could list but never render.
+    private static readonly HashSet<string> BitmapSidecarExtensions = ["mks", "sup", "idx", "vob"];
+
     public static bool IsTextBased(string codec) => TextCodecs.Contains(codec.ToLowerInvariant());
 
     public static bool IsBitmapBased(string codec) =>
         BitmapCodecs.Contains(codec.ToLowerInvariant());
+
+    /// <summary>
+    /// True when a sidecar file's extension denotes a bitmap subtitle. The single
+    /// source of truth for callers that only have a filename to go on — the
+    /// library scan and the playback track list both classify that way.
+    /// </summary>
+    public static bool IsBitmapSidecarExtension(string extension) =>
+        BitmapSidecarExtensions.Contains(extension.TrimStart('.').ToLowerInvariant());
 
     // Title takes priority over disposition flags so signs/songs and SDH
     // tracks land in the right slot even when the muxer mis-flagged them.
