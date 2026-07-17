@@ -27,12 +27,14 @@ namespace NoMercy.Encoder.Reconciliation;
 /// </summary>
 public class EncodeReconciler : IEncodeReconciler
 {
-    /// <summary>Subtitle sidecars produced by the OCR pass embed this marker
-    /// in their filename — see <c>SubtitleOcrEngine.ResolveOutputPath</c>
-    /// (<c>{lang}.ocr{streamIndex}.{ext}</c>). Declared-subtitle extraction
-    /// never emits this marker, so it is what tells the two apart even
-    /// though both land in the same <c>subtitles/</c> folder.</summary>
-    private const string OcrMarker = ".ocr";
+    /// <summary>Bitmap subtitle containers the OCR pass reads from. A text
+    /// sidecar next to one of these, carrying the same <c>{lang}.{type}</c>, is
+    /// that track's OCR result — the same pairing the library scan uses to
+    /// decide whether a bitmap subtitle is orphaned.</summary>
+    private static readonly string[] BitmapSidecarExtensions = [".mks", ".sup", ".idx", ".vob"];
+
+    /// <summary>Text sidecar formats the OCR pass can emit.</summary>
+    private static readonly string[] TextSidecarExtensions = [".vtt", ".srt"];
 
     public ReconciliationDecision Decide(ReconciliationInput input)
     {
@@ -135,7 +137,7 @@ public class EncodeReconciler : IEncodeReconciler
             // exception remotely), so this is intentionally broad.
         }
 
-        int ocrCount = files.Count(f => f.IsValid && IsOcrSidecar(f.RelativePath));
+        int ocrCount = CountOcredBitmapSidecars(files);
 
         string? fingerprint = await TryReadManifestFingerprintAsync(
             trimmedRoot,
@@ -195,9 +197,13 @@ public class EncodeReconciler : IEncodeReconciler
         bool needsOcr
     )
     {
+        // The container itself, not a sidecar beside it: subtitles/ can be
+        // populated (by extraction or by OCR) while the mp4/mkv this decision is
+        // about is missing entirely.
         bool desiredAnyStream = profile.Video is not null || profile.Audio.Length > 0;
         bool hasValidOutput = existing.BundleFiles.Any(f =>
-            f.IsValid && !IsOcrSidecar(f.RelativePath)
+            f.IsValid
+            && !f.RelativePath.StartsWith("subtitles/", StringComparison.OrdinalIgnoreCase)
         );
 
         if (desiredAnyStream && !hasValidOutput)
@@ -261,8 +267,55 @@ public class EncodeReconciler : IEncodeReconciler
         );
     }
 
-    private static bool IsOcrSidecar(string relativePath) =>
-        Path.GetFileName(relativePath).Contains(OcrMarker, StringComparison.OrdinalIgnoreCase);
+    /// <summary>
+    /// Counts bitmap subtitle sidecars that already have their OCR result: a
+    /// text sidecar carrying the same <c>{lang}.{type}</c>. An OCR sidecar is
+    /// named as its bitmap track's sibling (see <c>OcrSidecarTarget</c>) — it
+    /// carries no marker distinguishing it from a declared text subtitle, and
+    /// must not, because that name is exactly what makes a player list it.
+    /// Pairing is therefore the only honest way to ask "has OCR run for this
+    /// track", and it is the same question the library scan's orphan check asks.
+    /// </summary>
+    internal static int CountOcredBitmapSidecars(IReadOnlyCollection<ExistingOutputEntry> files)
+    {
+        HashSet<string> textKeys = new(StringComparer.OrdinalIgnoreCase);
+        foreach (ExistingOutputEntry file in files)
+        {
+            if (
+                file.IsValid
+                && TryReadSubtitleKey(file.RelativePath, TextSidecarExtensions, out string textKey)
+            )
+                textKeys.Add(textKey);
+        }
+
+        return files.Count(f =>
+            f.IsValid
+            && TryReadSubtitleKey(f.RelativePath, BitmapSidecarExtensions, out string bitmapKey)
+            && textKeys.Contains(bitmapKey)
+        );
+    }
+
+    /// <summary>
+    /// Reads the <c>{lang}.{type}</c> key out of a <c>{name}.{lang}.{type}.{ext}</c>
+    /// sidecar filename, when its extension is one of <paramref name="extensions"/>.
+    /// Mirrors <c>FileManager.SubtitleFileRegex</c>.
+    /// </summary>
+    private static bool TryReadSubtitleKey(string relativePath, string[] extensions, out string key)
+    {
+        key = string.Empty;
+        string fileName = Path.GetFileName(relativePath);
+        string extension = Path.GetExtension(fileName);
+
+        if (!extensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
+            return false;
+
+        string[] parts = Path.GetFileNameWithoutExtension(fileName).Split('.');
+        if (parts.Length < 2)
+            return false;
+
+        key = $"{parts[^2]}|{parts[^1]}";
+        return true;
+    }
 
     private static bool HasValidUnder(
         IReadOnlyCollection<ExistingOutputEntry> files,
@@ -272,14 +325,13 @@ public class EncodeReconciler : IEncodeReconciler
             f.IsValid && f.RelativePath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
         );
 
-    /// <summary>Declared (profile-driven) subtitle extraction, as opposed to
-    /// a bitmap-source OCR sidecar — both share the <c>subtitles/</c>
-    /// folder, so the OCR marker is what separates them.</summary>
+    /// <summary>Whether the subtitle pass produced anything at all. An OCR
+    /// sidecar is indistinguishable from a declared one by name (deliberately —
+    /// see <see cref="CountOcredBitmapSidecars"/>), and both mean the same thing
+    /// here: the subtitle stage ran and left output.</summary>
     private static bool HasValidDeclaredSubtitle(IReadOnlyCollection<ExistingOutputEntry> files) =>
         files.Any(f =>
-            f.IsValid
-            && f.RelativePath.StartsWith("subtitles/", StringComparison.OrdinalIgnoreCase)
-            && !IsOcrSidecar(f.RelativePath)
+            f.IsValid && f.RelativePath.StartsWith("subtitles/", StringComparison.OrdinalIgnoreCase)
         );
 
     private static bool HasValidNamed(

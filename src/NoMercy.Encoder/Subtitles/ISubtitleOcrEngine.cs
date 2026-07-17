@@ -24,22 +24,6 @@ public interface ISubtitleOcrEngine
     /// filtergraph with "Stream specifier ':s:N' matches no streams" and the
     /// OCR sidecar is never written.
     /// </param>
-    /// <param name="outputDirectory">
-    /// When set, the OCR sidecar is written under
-    /// <c>{outputDirectory}/subtitles/{language}.ocr{streamIndex}.{ext}</c> — the
-    /// same convention the post-encode library scan already discovers text
-    /// subtitle sidecars by. Interpreted against <paramref name="outputStorage"/>
-    /// when that is supplied, so it can be the encode's storage-relative output
-    /// key rather than a local directory. When null (the default), the sidecar is
-    /// written next to <paramref name="inputPath"/>.
-    /// </param>
-    /// <param name="outputStorage">
-    /// The storage <paramref name="outputDirectory"/> is addressed against. Supply
-    /// it whenever the encode's destination is a non-local driver: without it the
-    /// sidecar is written through the engine's own local storage, and a
-    /// storage-relative key then resolves against the server's working directory
-    /// instead of the library. Null (the default) keeps the injected storage.
-    /// </param>
     /// <param name="sourceStorage">
     /// The storage <paramref name="inputPath"/> is addressed against — mirrors
     /// <see cref="Analysis.IMediaAnalyzer.AnalyzeAsync(string, IStorage, CancellationToken)"/>.
@@ -49,15 +33,21 @@ public interface ISubtitleOcrEngine
     /// and the OCR run dies before ffmpeg ever starts. Null (the default) keeps
     /// the injected storage for callers that already hold a resolved local path.
     /// </param>
+    /// <param name="sidecar">
+    /// Where the sidecar belongs within an encode bundle, and under which name —
+    /// see <see cref="OcrSidecarTarget"/>, which is what makes the result pair
+    /// with its bitmap track and reach a player. Null (the default) writes it
+    /// next to <paramref name="inputPath"/>, for callers spot-checking a file
+    /// that is not part of a bundle.
+    /// </param>
     Task<SubtitleTrack> OcrAsync(
         string inputPath,
         int streamIndex,
         string language,
         SubtitleCodecType outputFormat,
         CancellationToken ct,
-        string? outputDirectory = null,
         IStorage? sourceStorage = null,
-        IStorage? outputStorage = null
+        OcrSidecarTarget? sidecar = null
     );
 }
 

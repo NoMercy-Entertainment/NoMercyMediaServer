@@ -1893,6 +1893,14 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         // working directory instead of the library.
         string ocrOutputDirectory = fileMetadata.Path;
 
+        // Classified across every subtitle stream at once, never per stream: the
+        // variant depends on a track's peers in the same language, and the
+        // sidecar has to carry the same one as the .mks the extraction pass wrote
+        // or the two never pair up.
+        IReadOnlyList<string> variants = SubtitleClassifier.ResolveVariants(
+            mediaInfo.SubtitleStreams
+        );
+
         if (EventBusProvider.IsConfigured)
         {
             await EventBusProvider.Current.PublishAsync(
@@ -1918,9 +1926,13 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                     language,
                     SubtitleCodecType.WebVtt,
                     CancellationToken.None,
-                    ocrOutputDirectory,
                     sourceStorage,
-                    destinationStorage
+                    new OcrSidecarTarget(
+                        Storage: destinationStorage,
+                        OutputDirectory: ocrOutputDirectory,
+                        MediaTitle: fileMetadata.FileName,
+                        Variant: variants[subtitleIndex]
+                    )
                 );
                 Log.LogInformation(
                     "OCR {Language} → {FilePath} ({CueCount} cues)",

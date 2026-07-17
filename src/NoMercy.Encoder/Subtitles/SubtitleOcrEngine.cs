@@ -42,9 +42,8 @@ public partial class SubtitleOcrEngine(
         string language,
         SubtitleCodecType outputFormat,
         CancellationToken ct,
-        string? outputDirectory = null,
         IStorage? sourceStorage = null,
-        IStorage? outputStorage = null
+        OcrSidecarTarget? sidecar = null
     )
     {
         // Input and sidecar each live wherever their caller says, which is rarely
@@ -53,7 +52,7 @@ public partial class SubtitleOcrEngine(
         // on the local disk, and the sidecar is written under the server's working
         // directory. The temp metadata file is the only genuinely local artefact.
         IStorage inputStorage = sourceStorage ?? storage;
-        IStorage sidecarStorage = outputStorage ?? storage;
+        IStorage sidecarStorage = sidecar?.Storage ?? storage;
 
         // Pull the language model before invoking FFmpeg so the OCR filter
         // actually has training data when it runs.
@@ -74,13 +73,7 @@ public partial class SubtitleOcrEngine(
         observer.Report(jobId, "ocr", 0, $"starting ocr ({language})");
 
         string extension = outputFormat == SubtitleCodecType.Srt ? ".srt" : ".vtt";
-        string outputPath = ResolveOutputPath(
-            inputPath,
-            outputDirectory,
-            streamIndex,
-            language,
-            extension
-        );
+        string outputPath = ResolveOutputPath(inputPath, sidecar, language, extension);
 
         try
         {
@@ -261,13 +254,12 @@ public partial class SubtitleOcrEngine(
     /// </summary>
     private static string ResolveOutputPath(
         string inputPath,
-        string? outputDirectory,
-        int streamIndex,
+        OcrSidecarTarget? sidecar,
         string language,
         string extension
     )
     {
-        if (outputDirectory is null)
+        if (sidecar is null)
         {
             return Path.ChangeExtension(
                 Path.Combine(Path.GetDirectoryName(inputPath)!, $"{language}_ocr"),
@@ -275,8 +267,12 @@ public partial class SubtitleOcrEngine(
             );
         }
 
-        string subtitleDirectory = Path.Combine(outputDirectory, "subtitles");
-        return Path.Combine(subtitleDirectory, $"{language}.ocr{streamIndex}{extension}");
+        // subtitles/{filename}.{lang}.{type} — the extraction pass's template
+        // (BuiltinPresets), which is what makes this the .mks/.sup's sibling and
+        // therefore a track the library scan pairs and the player lists.
+        // Forward slashes: this is a storage key, not a local path.
+        return $"{sidecar.OutputDirectory.TrimEnd('/')}/subtitles/"
+            + $"{sidecar.MediaTitle}.{language}.{sidecar.Variant}{extension}";
     }
 
     private static async Task WriteWebVttAsync(
