@@ -125,7 +125,7 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
                 p.DownloadSubtitleAsync(
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>(),
-                    It.IsAny<bool>()
+                    priority: true
                 )
             )
             .ReturnsAsync(downloadPayload);
@@ -287,7 +287,7 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
                 p.DownloadSubtitleAsync(
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>(),
-                    It.IsAny<bool>()
+                    priority: true
                 )
             )
             .ThrowsAsync(new OpenSubtitlesRateLimitException());

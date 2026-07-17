@@ -22,12 +22,24 @@ results="$(mktemp -d)"
 projects="$(find "$repo/tests" -name '*.csproj' | grep -E 'NoMercy\.Tests\.' | sort)"
 [ -n "$filter" ] && projects="$(printf '%s\n' "$projects" | grep -iE "$filter")"
 
+# Build once, up front, then run every assembly with --no-build. Each `dotnet
+# test` would otherwise rebuild the src/ projects they all share, and parallel
+# builds race on the same output DLLs -- MSB3021 "being used by another process"
+# fails an assembly for reasons that have nothing to do with its tests.
+echo "Building solution once (parallel test runs then use --no-build)..."
+if ! dotnet build "$repo/NoMercy.Server.sln" -p:AllowMissingPrunePackageData=true \
+  --nologo -clp:ErrorsOnly > "$results/build.log" 2>&1; then
+  echo "BUILD FAILED -- tests not run:"
+  tail -30 "$results/build.log"
+  exit 1
+fi
+
 run_one() {
   local proj="$1" name root start rc
   name="$(basename "$proj" .csproj)"
   root="$(mktemp -d "/tmp/nm-${name}.XXXXXX")"
   start=$(date +%s)
-  NOMERCY_APP_PATH="$root" dotnet test "$proj" \
+  NOMERCY_APP_PATH="$root" dotnet test "$proj" --no-build \
     -p:AllowMissingPrunePackageData=true --nologo -clp:ErrorsOnly \
     >"$results/$name.log" 2>&1
   rc=$?
