@@ -93,6 +93,23 @@ public class EventBusProgressObserver : IProgressObserver
         _isHdr = isHdr;
     }
 
+    /// <summary>
+    /// What this run is actually encoding, from the streams the plan resolved to.
+    /// A decomposed bundle carries only its slice — an audio-only top-up has no
+    /// video streams — so a fixed "Encoding video" lied on the dashboard whenever
+    /// the run was not, in fact, encoding video.
+    /// </summary>
+    private string EncodeActivityMessage()
+    {
+        if (_videoStreams.Count > 0)
+            return "Encoding video";
+        if (_audioStreams.Count > 0)
+            return "Encoding audio";
+        if (_subtitleStreams.Count > 0)
+            return "Encoding subtitles";
+        return "Encoding";
+    }
+
     public void OnStageStarted(string stageName)
     {
         Publish(status: "encoding", message: $"Stage: {stageName}");
@@ -125,7 +142,7 @@ public class EventBusProgressObserver : IProgressObserver
                     process_id = progress.ProcessId,
                     title = _title,
                     status = "running",
-                    message = "Encoding video",
+                    message = EncodeActivityMessage(),
                     progress = progress.PercentComplete,
                     speed = progress.CurrentSpeed ?? 0,
                     fps = progress.CurrentFps ?? 0,
