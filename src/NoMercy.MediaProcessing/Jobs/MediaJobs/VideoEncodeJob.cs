@@ -1933,7 +1933,8 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                     language,
                     SubtitleCodecType.WebVtt,
                     CancellationToken.None,
-                    ocrOutputDirectory
+                    ocrOutputDirectory,
+                    sourceStorage
                 );
                 Log.LogInformation(
                     "OCR {Language} → {FilePath} ({CueCount} cues)",

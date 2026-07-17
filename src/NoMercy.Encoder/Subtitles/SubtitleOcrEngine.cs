@@ -42,9 +42,17 @@ public partial class SubtitleOcrEngine(
         string language,
         SubtitleCodecType outputFormat,
         CancellationToken ct,
-        string? outputDirectory = null
+        string? outputDirectory = null,
+        IStorage? sourceStorage = null
     )
     {
+        // The source may live on a different driver than this engine's injected
+        // storage, which is local: a library folder on NFS/S3 addresses its files
+        // relative to that driver's root, so resolving the input against local
+        // storage looks for it under the wrong root entirely. Only the INPUT is
+        // affected — the temp metadata file and the sidecar are always local.
+        IStorage inputStorage = sourceStorage ?? storage;
+
         // Pull the language model before invoking FFmpeg so the OCR filter
         // actually has training data when it runs.
         string modelPath = await modelManager.EnsureLanguageModelAsync(language, ct);
@@ -76,7 +84,7 @@ public partial class SubtitleOcrEngine(
         {
             // Lease every path handed to ffmpeg so future remote drivers can
             // stage them locally and clean up on dispose.
-            await using LocalPathLease inputLease = storage.AcquireLocalPath(inputPath);
+            await using LocalPathLease inputLease = inputStorage.AcquireLocalPath(inputPath);
             await using LocalPathLease ocrLease = storage.AcquireLocalPath(ocrOutput);
 
             string? outputParentDirectory = Path.GetDirectoryName(outputPath);
