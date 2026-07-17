@@ -217,14 +217,14 @@ public class Encoder(
             // job its post-encode phase, and with it the subtitle OCR. The master
             // already on disk describes the variants that really exist; leave it be.
             HlsDerivatives? derivatives = request.Profile.HlsDerivatives;
-            if (request.Options?.TaskFilter?.IsAuxOnlyBundle == true)
+            if (request.Options?.TaskFilter?.LeavesMasterPlaylistAlone == true)
             {
                 derivatives = (derivatives ?? new HlsDerivatives()) with
                 {
                     GenerateMasterPlaylist = false,
                 };
                 logger.LogInformation(
-                    "[{CorrelationId}] Aux-only bundle — leaving the existing master playlist untouched.",
+                    "[{CorrelationId}] Bundle covers a subset of renditions — leaving the existing master playlist untouched.",
                     context.CorrelationId
                 );
             }
