@@ -1879,9 +1879,9 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             return;
         }
 
-        List<SubtitleStreamInfo> bitmap = mediaInfo
-            .SubtitleStreams.Where(subtitle => !subtitle.IsTextBased)
-            .ToList();
+        IReadOnlyList<BitmapSubtitleRef> bitmap = BitmapSubtitleSelector.Select(
+            mediaInfo.SubtitleStreams
+        );
 
         if (bitmap.Count == 0)
             return;
@@ -1921,14 +1921,15 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             );
         }
 
-        foreach (SubtitleStreamInfo stream in bitmap)
+        foreach ((int subtitleIndex, SubtitleStreamInfo stream) in bitmap)
         {
             string language = stream.Language ?? "eng";
+
             try
             {
                 SubtitleTrack track = await ocrEngine.OcrAsync(
                     inputPath,
-                    stream.Index,
+                    subtitleIndex,
                     language,
                     SubtitleCodecType.WebVtt,
                     CancellationToken.None,
@@ -1948,8 +1949,9 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                 // the real ffmpeg stderr tail (SubtitleOcrEngine embeds it), so
                 // this warning stays actionable instead of a bare "OCR failed".
                 Log.LogWarning(
-                    "OCR failed for {InputPath} stream {Index} ({Language}): {Message}",
+                    "OCR failed for {InputPath} subtitle {SubtitleIndex} / abs stream {Index} ({Language}): {Message}",
                     inputPath,
+                    subtitleIndex,
                     stream.Index,
                     language,
                     ex.Message

@@ -15,6 +15,14 @@ namespace NoMercy.Encoder.Subtitles;
 
 public interface ISubtitleOcrEngine
 {
+    /// <param name="streamIndex">
+    /// Position among the file's SUBTITLE streams only — the <c>N</c> in
+    /// ffmpeg's <c>[0:s:N]</c>, not the absolute <c>MediaInfo</c>/ffprobe stream
+    /// index. For a file whose first subtitle sits at absolute index 3, its
+    /// value here is 0. Passing the absolute index makes ffmpeg reject the
+    /// filtergraph with "Stream specifier ':s:N' matches no streams" and the
+    /// OCR sidecar is never written.
+    /// </param>
     /// <param name="outputDirectory">
     /// When set, the OCR sidecar is written under
     /// <c>{outputDirectory}/subtitles/{language}.ocr{streamIndex}.{ext}</c> — the

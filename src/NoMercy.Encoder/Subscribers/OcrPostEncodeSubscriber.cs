@@ -93,18 +93,18 @@ public sealed class OcrPostEncodeSubscriber : IDisposable
             return;
         }
 
-        for (int i = 0; i < info.SubtitleStreams.Count; i++)
+        foreach (
+            (int subtitleIndex, SubtitleStreamInfo stream) in BitmapSubtitleSelector.Select(
+                info.SubtitleStreams
+            )
+        )
         {
-            SubtitleStreamInfo stream = info.SubtitleStreams[i];
-            if (!SubtitleClassifier.IsBitmapBased(stream.Codec))
-                continue;
-
             try
             {
                 await _ocrEngine
                     .OcrAsync(
                         @event.OutputPath,
-                        i,
+                        subtitleIndex,
                         stream.Language ?? "eng",
                         SubtitleCodecType.WebVtt,
                         ct
@@ -113,7 +113,7 @@ public sealed class OcrPostEncodeSubscriber : IDisposable
 
                 _logger.LogInformation(
                     "OcrPostEncode: wrote OCR sidecar for stream {Index} ({Codec}/{Lang}) of job {JobId}",
-                    i,
+                    subtitleIndex,
                     stream.Codec,
                     stream.Language,
                     @event.JobId
@@ -126,7 +126,7 @@ public sealed class OcrPostEncodeSubscriber : IDisposable
                 _logger.LogWarning(
                     ex,
                     "OcrPostEncode: OCR failed for stream {Index} of job {JobId}",
-                    i,
+                    subtitleIndex,
                     @event.JobId
                 );
             }
