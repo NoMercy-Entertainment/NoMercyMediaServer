@@ -13,6 +13,7 @@ using System.IO.Compression;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.Providers.Helpers;
 using NoMercy.Providers.OpenSubtitles.Client;
 using NoMercy.Providers.OpenSubtitles.Models;
 
@@ -31,6 +32,19 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
     private DateTimeOffset _rateLimitedUntil = DateTimeOffset.MinValue;
     private static readonly TimeSpan RateLimitBackoff = TimeSpan.FromMinutes(5);
 
+    // Searches queue inside OpenSubtitlesBaseClient, keyed on its named client. Downloads hit a
+    // different host and so never passed through it: a sweep issued them as fast as its loop ran.
+    // One at a time, one second apart, is far above what a paced backlog needs and keeps the
+    // interactive lane responsive — priority work drains before any of it.
+    private static readonly Providers.Helpers.Queue DownloadQueue = new(
+        new()
+        {
+            Concurrent = 1,
+            Interval = 1000,
+            Start = true,
+        }
+    );
+
     public bool IsRateLimited => DateTimeOffset.UtcNow < _rateLimitedUntil;
 
     public OpenSubtitlesProvider(
@@ -46,7 +60,8 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
         string movieHash,
         long fileSize,
         string[] languages,
-        CancellationToken ct
+        CancellationToken ct,
+        bool priority = false
     )
     {
         if (IsRateLimited)
@@ -69,7 +84,7 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
             {
                 ct.ThrowIfCancellationRequested();
                 SubtitleSearchResponse? response = await client
-                    .SearchSubtitlesByHash(movieHash, fileSize, language)
+                    .SearchSubtitlesByHash(movieHash, fileSize, language, priority)
                     .ConfigureAwait(false);
 
                 results.AddRange(OpenSubtitlesResponseParser.Parse(response, "moviehash"));
@@ -87,7 +102,8 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
     public async Task<IReadOnlyList<OpenSubtitlesSearchResult>> SearchByFilenameAsync(
         string filename,
         string[] languages,
-        CancellationToken ct
+        CancellationToken ct,
+        bool priority = false
     )
     {
         if (IsRateLimited)
@@ -110,7 +126,7 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
             {
                 ct.ThrowIfCancellationRequested();
                 SubtitleSearchResponse? response = await client
-                    .SearchSubtitles(filename, language)
+                    .SearchSubtitles(filename, language, priority)
                     .ConfigureAwait(false);
 
                 results.AddRange(OpenSubtitlesResponseParser.Parse(response, "filename"));
@@ -131,7 +147,8 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
         int? episode,
         int? year,
         string[] languages,
-        CancellationToken ct
+        CancellationToken ct,
+        bool priority = false
     )
     {
         if (IsRateLimited)
@@ -155,7 +172,7 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
             {
                 ct.ThrowIfCancellationRequested();
                 SubtitleSearchResponse? response = await client
-                    .SearchSubtitles(query, language)
+                    .SearchSubtitles(query, language, priority)
                     .ConfigureAwait(false);
 
                 results.AddRange(OpenSubtitlesResponseParser.Parse(response, "title"));
@@ -170,11 +187,18 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
         }
     }
 
-    public async Task<byte[]> DownloadSubtitleAsync(string downloadUrl, CancellationToken ct)
+    public Task<byte[]> DownloadSubtitleAsync(
+        string downloadUrl,
+        CancellationToken ct,
+        bool priority = false
+    )
     {
-        HttpClient client = _httpClientFactory.CreateClient(
-            Providers.Helpers.HttpClientNames.OpenSubtitlesDownload
-        );
+        return DownloadQueue.Enqueue(() => FetchAsync(downloadUrl, ct), downloadUrl, priority);
+    }
+
+    private async Task<byte[]> FetchAsync(string downloadUrl, CancellationToken ct)
+    {
+        HttpClient client = _httpClientFactory.CreateClient(HttpClientNames.OpenSubtitlesDownload);
         using HttpResponseMessage response = await client
             .GetAsync(downloadUrl, ct)
             .ConfigureAwait(false);

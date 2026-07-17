@@ -40,13 +40,15 @@ public interface IOpenSubtitlesProvider
         string movieHash,
         long fileSize,
         string[] languages,
-        CancellationToken ct
+        CancellationToken ct,
+        bool priority = false
     );
 
     Task<IReadOnlyList<OpenSubtitlesSearchResult>> SearchByFilenameAsync(
         string filename,
         string[] languages,
-        CancellationToken ct
+        CancellationToken ct,
+        bool priority = false
     );
 
     Task<IReadOnlyList<OpenSubtitlesSearchResult>> SearchByTitleAsync(
@@ -55,14 +57,23 @@ public interface IOpenSubtitlesProvider
         int? episode,
         int? year,
         string[] languages,
-        CancellationToken ct
+        CancellationToken ct,
+        bool priority = false
     );
 
     /// <summary>
     /// Returns the subtitle's cue bytes, already unwrapped from any transport compression the
     /// provider applies. Callers may decode the result as text directly.
     /// </summary>
-    Task<byte[]> DownloadSubtitleAsync(string downloadUrl, CancellationToken ct);
+    /// <param name="priority">
+    /// True for a request someone is waiting on, which jumps the rate-limit queue ahead of any
+    /// backlog work. Background sweeps must pass false or they starve playback.
+    /// </param>
+    Task<byte[]> DownloadSubtitleAsync(
+        string downloadUrl,
+        CancellationToken ct,
+        bool priority = false
+    );
 
     bool IsRateLimited { get; }
 }

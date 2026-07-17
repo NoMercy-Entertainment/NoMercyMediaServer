@@ -153,7 +153,8 @@ public class SubtitlesController(
                 fileSize,
                 languages,
                 SearchTimeout,
-                ct
+                ct,
+                priority: true
             );
 
         if (candidates.Count == 0)
@@ -161,7 +162,8 @@ public class SubtitlesController(
                 file.Filename,
                 languages,
                 SearchTimeout,
-                ct
+                ct,
+                priority: true
             );
 
         if (candidates.Count == 0)
@@ -179,7 +181,8 @@ public class SubtitlesController(
                 year,
                 languages,
                 SearchTimeout,
-                ct
+                ct,
+                priority: true
             );
         }
 
@@ -284,7 +287,9 @@ public class SubtitlesController(
         byte[] rawBytes;
         try
         {
-            rawBytes = await openSubtitlesAdapter.DownloadAsync(candidate, ct);
+            // Someone is sat in front of the player waiting on this, so it jumps the queue ahead
+            // of whatever the backlog sweep has already stacked up.
+            rawBytes = await openSubtitlesAdapter.DownloadAsync(candidate, ct, priority: true);
         }
         catch (OpenSubtitlesRateLimitException)
         {
