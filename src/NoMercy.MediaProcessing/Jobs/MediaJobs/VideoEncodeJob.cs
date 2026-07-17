@@ -1886,27 +1886,12 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         if (bitmap.Count == 0)
             return;
 
-        // Write the OCR sidecar into the finalized encode output directory —
-        // not next to the source — so the post-encode library scan picks it
-        // up. GetFullPath only resolves for a LocalStorage destination; a
-        // remote destination (NFS/S3) has no local directory to resolve, so
-        // OCR falls back to writing next to the source and stays diagnosable
-        // instead of throwing.
-        string? ocrOutputDirectory;
-        try
-        {
-            ocrOutputDirectory = destinationStorage.GetFullPath(fileMetadata.Path);
-        }
-        catch (NotSupportedException)
-        {
-            ocrOutputDirectory = null;
-            Log.LogInformation(
-                "OCR sidecar for job {JobId} will land next to the source — destination storage "
-                    + "{StorageType} has no resolvable local directory",
-                fileMetadata.Id,
-                destinationStorage.GetType().Name
-            );
-        }
+        // The encode's own output directory, addressed against the destination
+        // storage rather than resolved to a local path: a remote destination
+        // (NFS/S3) has none, and falling back to "next to the source" wrote the
+        // sidecar to a driver-relative path that landed under the server's
+        // working directory instead of the library.
+        string ocrOutputDirectory = fileMetadata.Path;
 
         if (EventBusProvider.IsConfigured)
         {
@@ -1934,7 +1919,8 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                     SubtitleCodecType.WebVtt,
                     CancellationToken.None,
                     ocrOutputDirectory,
-                    sourceStorage
+                    sourceStorage,
+                    destinationStorage
                 );
                 Log.LogInformation(
                     "OCR {Language} → {FilePath} ({CueCount} cues)",

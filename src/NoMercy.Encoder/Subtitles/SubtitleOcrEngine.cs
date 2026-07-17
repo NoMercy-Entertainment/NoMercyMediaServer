@@ -43,15 +43,17 @@ public partial class SubtitleOcrEngine(
         SubtitleCodecType outputFormat,
         CancellationToken ct,
         string? outputDirectory = null,
-        IStorage? sourceStorage = null
+        IStorage? sourceStorage = null,
+        IStorage? outputStorage = null
     )
     {
-        // The source may live on a different driver than this engine's injected
-        // storage, which is local: a library folder on NFS/S3 addresses its files
-        // relative to that driver's root, so resolving the input against local
-        // storage looks for it under the wrong root entirely. Only the INPUT is
-        // affected — the temp metadata file and the sidecar are always local.
+        // Input and sidecar each live wherever their caller says, which is rarely
+        // this engine's injected storage: that one is local, so a key relative to
+        // an NFS/S3 driver resolves under the wrong root — the input is looked for
+        // on the local disk, and the sidecar is written under the server's working
+        // directory. The temp metadata file is the only genuinely local artefact.
         IStorage inputStorage = sourceStorage ?? storage;
+        IStorage sidecarStorage = outputStorage ?? storage;
 
         // Pull the language model before invoking FFmpeg so the OCR filter
         // actually has training data when it runs.
@@ -89,7 +91,7 @@ public partial class SubtitleOcrEngine(
 
             string? outputParentDirectory = Path.GetDirectoryName(outputPath);
             if (!string.IsNullOrEmpty(outputParentDirectory))
-                storage.CreateDirectory(outputParentDirectory);
+                sidecarStorage.CreateDirectory(outputParentDirectory);
 
             string[] args =
             [
@@ -135,9 +137,9 @@ public partial class SubtitleOcrEngine(
             List<SubtitleCue> cues = ParseOcrOutput(Encoding.UTF8.GetString(ocrBytes));
 
             if (outputFormat == SubtitleCodecType.Srt)
-                await WriteSrtAsync(outputPath, cues, ct);
+                await WriteSrtAsync(sidecarStorage, outputPath, cues, ct);
             else
-                await WriteWebVttAsync(outputPath, cues, ct);
+                await WriteWebVttAsync(sidecarStorage, outputPath, cues, ct);
 
             logger.LogInformation(
                 "OCR produced {CueCount} cues for {Language} → {Path}",
@@ -277,7 +279,8 @@ public partial class SubtitleOcrEngine(
         return Path.Combine(subtitleDirectory, $"{language}.ocr{streamIndex}{extension}");
     }
 
-    private async Task WriteWebVttAsync(
+    private static async Task WriteWebVttAsync(
+        IStorage sidecarStorage,
         string path,
         IEnumerable<SubtitleCue> cues,
         CancellationToken ct
@@ -297,10 +300,11 @@ public partial class SubtitleOcrEngine(
             index++;
         }
 
-        await storage.WriteAsync(path, Encoding.UTF8.GetBytes(sb.ToString()), ct);
+        await sidecarStorage.WriteAsync(path, Encoding.UTF8.GetBytes(sb.ToString()), ct);
     }
 
-    private async Task WriteSrtAsync(
+    private static async Task WriteSrtAsync(
+        IStorage sidecarStorage,
         string path,
         IEnumerable<SubtitleCue> cues,
         CancellationToken ct
@@ -317,7 +321,7 @@ public partial class SubtitleOcrEngine(
             index++;
         }
 
-        await storage.WriteAsync(path, Encoding.UTF8.GetBytes(sb.ToString()), ct);
+        await sidecarStorage.WriteAsync(path, Encoding.UTF8.GetBytes(sb.ToString()), ct);
     }
 
     private static string FormatVttTime(double seconds)

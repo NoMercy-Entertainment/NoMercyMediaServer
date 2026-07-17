@@ -28,8 +28,17 @@ public interface ISubtitleOcrEngine
     /// When set, the OCR sidecar is written under
     /// <c>{outputDirectory}/subtitles/{language}.ocr{streamIndex}.{ext}</c> — the
     /// same convention the post-encode library scan already discovers text
-    /// subtitle sidecars by. When null (the default), the sidecar is written
-    /// next to <paramref name="inputPath"/> as before.
+    /// subtitle sidecars by. Interpreted against <paramref name="outputStorage"/>
+    /// when that is supplied, so it can be the encode's storage-relative output
+    /// key rather than a local directory. When null (the default), the sidecar is
+    /// written next to <paramref name="inputPath"/>.
+    /// </param>
+    /// <param name="outputStorage">
+    /// The storage <paramref name="outputDirectory"/> is addressed against. Supply
+    /// it whenever the encode's destination is a non-local driver: without it the
+    /// sidecar is written through the engine's own local storage, and a
+    /// storage-relative key then resolves against the server's working directory
+    /// instead of the library. Null (the default) keeps the injected storage.
     /// </param>
     /// <param name="sourceStorage">
     /// The storage <paramref name="inputPath"/> is addressed against — mirrors
@@ -47,7 +56,8 @@ public interface ISubtitleOcrEngine
         SubtitleCodecType outputFormat,
         CancellationToken ct,
         string? outputDirectory = null,
-        IStorage? sourceStorage = null
+        IStorage? sourceStorage = null,
+        IStorage? outputStorage = null
     );
 }
 
