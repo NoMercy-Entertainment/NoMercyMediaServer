@@ -105,6 +105,7 @@ public class EncodeReconciler : IEncodeReconciler
 
     public async Task<ExistingOutputSnapshot> InspectAsync(
         string mediaRootPath,
+        string presetId,
         IStorage destinationStorage,
         CancellationToken ct
     )
@@ -139,8 +140,9 @@ public class EncodeReconciler : IEncodeReconciler
 
         int ocrCount = CountOcredBitmapSidecars(files);
 
-        string? fingerprint = await TryReadManifestFingerprintAsync(
+        string? fingerprint = await TryReadBlueprintFingerprintAsync(
             trimmedRoot,
+            presetId,
             files,
             destinationStorage,
             ct
@@ -150,40 +152,47 @@ public class EncodeReconciler : IEncodeReconciler
     }
 
     /// <summary>
-    /// Reads the fingerprint a finalized encode stamped into manifest.json.
-    /// Anything encoded before that stamp existed has no manifest, so a
-    /// missing or unreadable one is never an error — it is the expected case
-    /// for every pre-existing library and falls through to the real on-disk
-    /// listing instead.
+    /// Reads the fingerprint a finalized encode stamped into this preset's
+    /// entry in the media item's <c>.nomercy.json</c> blueprint. Anything
+    /// encoded before that stamp existed (or before the blueprint shipped)
+    /// carries none, so a missing file, a missing preset entry, or an
+    /// unreadable one is never an error — it is the expected case for every
+    /// pre-existing library and falls through to the real on-disk listing
+    /// instead.
     /// </summary>
-    private static async Task<string?> TryReadManifestFingerprintAsync(
+    private static async Task<string?> TryReadBlueprintFingerprintAsync(
         string trimmedRoot,
+        string presetId,
         IReadOnlyCollection<ExistingOutputEntry> files,
         IStorage destinationStorage,
         CancellationToken ct
     )
     {
-        ExistingOutputEntry? manifestEntry = files.FirstOrDefault(f =>
+        ExistingOutputEntry? blueprintEntry = files.FirstOrDefault(f =>
             string.Equals(
                 Path.GetFileName(f.RelativePath),
-                "manifest.json",
+                MediaBlueprintWriter.FileName,
                 StringComparison.OrdinalIgnoreCase
             )
         );
 
-        if (manifestEntry is null || !manifestEntry.IsValid)
+        if (blueprintEntry is null || !blueprintEntry.IsValid)
             return null;
 
         try
         {
             byte[] bytes = await destinationStorage.ReadAsync(
-                $"{trimmedRoot}/{manifestEntry.RelativePath}",
+                $"{trimmedRoot}/{blueprintEntry.RelativePath}",
                 ct
             );
-            BundleManifest? manifest = JsonConvert.DeserializeObject<BundleManifest>(
+            MediaBlueprint? blueprint = JsonConvert.DeserializeObject<MediaBlueprint>(
                 Encoding.UTF8.GetString(bytes)
             );
-            return manifest?.ProfileFingerprint;
+            return blueprint
+                ?.Encodes.FirstOrDefault(e =>
+                    string.Equals(e.PresetId, presetId, StringComparison.OrdinalIgnoreCase)
+                )
+                ?.ProfileFingerprint;
         }
         catch (Exception)
         {

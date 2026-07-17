@@ -14,9 +14,10 @@ namespace NoMercy.Encoder.Bundle;
 public interface IBundleGarbageCollector
 {
     /// <summary>
-    /// Walks <paramref name="libraryRoot"/> for <c>encodes/*/manifest.json</c>
-    /// files, reconciles each manifest against DB preset rows and on-disk files,
-    /// and returns orphan bundles that should be reviewed for purge.
+    /// Walks <paramref name="libraryRoot"/> for every per-media-item
+    /// <c>.nomercy.json</c> blueprint, checks each <c>encodes[]</c> entry
+    /// against DB preset rows, and returns orphan entries whose preset no
+    /// longer exists and should be reviewed for purge.
     /// </summary>
     Task<IReadOnlyList<BundleOrphan>> SweepAsync(string libraryRoot, CancellationToken ct);
 }

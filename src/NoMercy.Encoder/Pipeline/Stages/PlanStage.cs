@@ -933,7 +933,11 @@ public class PlanStage(
                                     ? tonemapPlan.FilterStringFragment
                                     : null,
                                 CropFilter: cropFilter,
-                                IsHdrOutput: preservesHdr
+                                IsHdrOutput: preservesHdr,
+                                // Every rung here is built from media.VideoStreams[0] —
+                                // the source stream this output was planned against. See
+                                // VideoOutputPlan.SourceStreamIndex.
+                                SourceStreamIndex: media.VideoStreams[0].Index
                             );
                         }
                     )

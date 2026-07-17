@@ -1802,6 +1802,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
 
         ExistingOutputSnapshot existing = await reconciler.InspectAsync(
             fileMetadata.Path,
+            encodingProfile.Id.ToString(),
             destinationStorage,
             CancellationToken.None
         );

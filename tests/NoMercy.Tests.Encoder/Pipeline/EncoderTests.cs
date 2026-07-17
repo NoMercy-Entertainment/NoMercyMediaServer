@@ -113,8 +113,7 @@ public class EncoderTests : IDisposable
             outputFactory,
             NullLogger<FinalizeStage>.Instance,
             TestStorageFactory.CreateLocal(),
-            manifestWriter: new BundleManifestWriter(),
-            reconstructionWriter: new ReconstructionWriter()
+            blueprintWriter: new MediaBlueprintWriter(new MediaBlueprintBuilder())
         );
 
         _encoder = new(
@@ -722,13 +721,13 @@ public class EncoderTests : IDisposable
     }
 
     [Fact]
-    public async Task CriterionA_InlineWholeTaskShapedRequest_WritesManifestAndReconstruction()
+    public async Task CriterionA_InlineWholeTaskShapedRequest_WritesBlueprint()
     {
         // Criterion A: the exact request shape VideoEncodeJob.RunInlineAsync
         // sends to Encoder.EncodeAsync (Options left null — Build+Execute+
-        // Finalize all run, no FinalizeOnly) must still produce both sidecar
-        // artifacts once MediaItem is attached, not only the coordinator's
-        // separate FinalizeOnly pass.
+        // Finalize all run, no FinalizeOnly) must still produce the
+        // .nomercy.json blueprint once MediaItem is attached, not only the
+        // coordinator's separate FinalizeOnly pass.
         SetupSuccessPath();
         string outputDirectory = CreateSeededOutputDirectory();
 
@@ -743,32 +742,23 @@ public class EncoderTests : IDisposable
         EncodingResult result = await _encoder.EncodeAsync(request);
         result.Success.Should().BeTrue();
 
-        string bundleDir = Path.Combine(outputDirectory, "encodes", "test");
-        string manifestPath = Path.Combine(bundleDir, "manifest.json");
-        string reconstructionPath = Path.Combine(bundleDir, "reconstruction.json");
+        // At the media folder root — never nested under encodes/{slug}/.
+        string blueprintPath = Path.Combine(outputDirectory, MediaBlueprintWriter.FileName);
 
-        File.Exists(manifestPath)
+        File.Exists(blueprintPath)
             .Should()
-            .BeTrue("the inline Whole-task path must write manifest.json");
-        File.Exists(reconstructionPath)
-            .Should()
-            .BeTrue("the inline Whole-task path must write reconstruction.json");
+            .BeTrue("the inline Whole-task path must write .nomercy.json");
 
-        BundleManifest? manifest = JsonConvert.DeserializeObject<BundleManifest>(
-            File.ReadAllText(manifestPath)
+        MediaBlueprint? blueprint = JsonConvert.DeserializeObject<MediaBlueprint>(
+            File.ReadAllText(blueprintPath)
         );
-        manifest.Should().NotBeNull();
-        manifest!.MediaType.Should().Be("movie");
-        manifest.MediaId.Should().Be(550);
-        manifest.Files.Should().NotBeEmpty();
-
-        Reconstruction? reconstruction = JsonConvert.DeserializeObject<Reconstruction>(
-            File.ReadAllText(reconstructionPath)
-        );
-        reconstruction.Should().NotBeNull();
-        reconstruction!.Source.OriginalPath.Should().Be("/movies/test.mkv");
-        reconstruction.Tracks.Should().NotBeEmpty();
-        reconstruction.CommandTemplate.Should().NotBeNullOrWhiteSpace();
+        blueprint.Should().NotBeNull();
+        blueprint!.Identity.Type.Should().Be("movie");
+        blueprint.Identity.TmdbId.Should().Be(550);
+        blueprint.Source.Path.Should().Be("/movies/test.mkv");
+        blueprint.Encodes.Should().ContainSingle();
+        blueprint.Encodes[0].Tracks.Should().NotBeEmpty();
+        blueprint.Encodes[0].ReconstructionCommandTemplate.Should().NotBeNullOrWhiteSpace();
     }
 
     private static bool ContainsPair(string[] args, string flag, string value)
@@ -786,9 +776,9 @@ public class EncoderTests : IDisposable
     {
         // The real per-encode file set (video_*/audio_*/master m3u8) must be
         // byte-for-byte the same set of relative paths whether or not
-        // MediaItem (and therefore BundleLayout) is resolved — the layout only
-        // adds NEW sidecar files under encodes/{slug}/, it never renames or
-        // relocates anything BuildStage already writes.
+        // MediaItem (and therefore BundleLayout) is resolved — attaching a
+        // MediaItem only adds the .nomercy.json blueprint at the media root,
+        // it never renames or relocates anything BuildStage already writes.
         SetupSuccessPath();
 
         // Explicit, identical MediaTitle on both requests — otherwise the
@@ -820,22 +810,20 @@ public class EncoderTests : IDisposable
             Directory
                 .EnumerateFiles(root, "*", SearchOption.AllDirectories)
                 .Select(f => Path.GetRelativePath(root, f).Replace('\\', '/'))
-                .Where(rel => !rel.StartsWith("encodes/", StringComparison.OrdinalIgnoreCase))
+                .Where(rel =>
+                    !rel.Equals(MediaBlueprintWriter.FileName, StringComparison.OrdinalIgnoreCase)
+                )
                 .OrderBy(rel => rel, StringComparer.Ordinal);
 
         RealFiles(withoutItemDir).Should().BeEquivalentTo(RealFiles(withItemDir));
 
-        // The new sidecars land ONLY under encodes/{slug}/ — never at the root
-        // next to the real media files.
-        Directory
-            .EnumerateFiles(withItemDir, "*.json", SearchOption.AllDirectories)
-            .Select(f => Path.GetRelativePath(withItemDir, f).Replace('\\', '/'))
-            .Should()
-            .OnlyContain(rel => rel.StartsWith("encodes/", StringComparison.OrdinalIgnoreCase));
+        // The new sidecar lands ONLY at the media folder root — never nested
+        // under a preset-scoped sub-directory.
+        File.Exists(Path.Combine(withItemDir, MediaBlueprintWriter.FileName)).Should().BeTrue();
     }
 
     [Fact]
-    public async Task CriterionC_MovieEncode_WritesManifestAndReconstruction_WithMeaningfulContent()
+    public async Task CriterionC_MovieEncode_WritesBlueprint_WithMeaningfulContent()
     {
         SetupSuccessPath();
         string outputDirectory = CreateSeededOutputDirectory();
@@ -851,51 +839,42 @@ public class EncoderTests : IDisposable
         EncodingResult result = await _encoder.EncodeAsync(request);
         result.Success.Should().BeTrue();
 
-        string bundleDir = Path.Combine(outputDirectory, "encodes", "test");
-        string manifestPath = Path.Combine(bundleDir, "manifest.json");
-        string reconstructionPath = Path.Combine(bundleDir, "reconstruction.json");
-
-        File.Exists(manifestPath)
+        // At the media folder root — never nested under encodes/{slug}/.
+        string blueprintPath = Path.Combine(outputDirectory, MediaBlueprintWriter.FileName);
+        File.Exists(blueprintPath)
             .Should()
-            .BeTrue("manifest.json must be written for a movie encode");
-        File.Exists(reconstructionPath)
-            .Should()
-            .BeTrue("reconstruction.json must be written for a movie encode");
+            .BeTrue(".nomercy.json must be written for a movie encode");
 
-        BundleManifest? manifest = JsonConvert.DeserializeObject<BundleManifest>(
-            File.ReadAllText(manifestPath)
+        MediaBlueprint? blueprint = JsonConvert.DeserializeObject<MediaBlueprint>(
+            File.ReadAllText(blueprintPath)
         );
-        manifest.Should().NotBeNull();
-        manifest!.MediaType.Should().Be("movie");
-        manifest.MediaId.Should().Be(550);
-        manifest.PresetSlug.Should().Be("test");
-        manifest.Files.Should().NotBeEmpty();
+        blueprint.Should().NotBeNull();
+        blueprint!.Identity.Type.Should().Be("movie");
+        blueprint.Identity.TmdbId.Should().Be(550);
+        blueprint.Source.Path.Should().Be("/movies/test.mkv");
+        blueprint.Source.Container.Should().Be("matroska");
 
-        Reconstruction? reconstruction = JsonConvert.DeserializeObject<Reconstruction>(
-            File.ReadAllText(reconstructionPath)
-        );
-        reconstruction.Should().NotBeNull();
-        reconstruction!.Source.OriginalPath.Should().Be("/movies/test.mkv");
-        reconstruction.Source.Container.Should().Be("matroska");
-        reconstruction.Tracks.Should().NotBeEmpty();
-        reconstruction.CommandTemplate.Should().NotBeNullOrWhiteSpace();
+        BlueprintEncode encode = blueprint.Encodes.Should().ContainSingle().Which;
+        encode.PresetSlug.Should().Be("test");
+        encode.Tracks.Should().NotBeEmpty();
+        encode.ReconstructionCommandTemplate.Should().NotBeNullOrWhiteSpace();
         // BuildProfile()'s video rung transcodes h264 -> libx264 (CRF) — never
         // a stream copy — so it is lossy and must surface a warning explaining
         // what is not losslessly recoverable.
-        reconstruction.LossyWarnings.Should().NotBeEmpty();
-        reconstruction.LossyWarnings.Should().Contain(w => w.Contains("video"));
+        encode.LossyWarnings.Should().NotBeEmpty();
+        encode.LossyWarnings.Should().Contain(w => w.Contains("video"));
         // Source audio is already AAC and the profile also targets AAC — the
         // planner smart-copies instead of re-encoding, so this track is
         // genuinely lossless. Asserting on the track itself (not just "some
         // warning exists") proves the fidelity classification is accurate,
         // not just present.
-        reconstruction
+        encode
             .Tracks.Should()
             .Contain(t => t.Kind == "audio" && t.Fidelity == "lossless" && t.Policy == "copy");
     }
 
     [Fact]
-    public async Task CriterionC_EpisodeEncode_WritesManifestAndReconstruction()
+    public async Task CriterionC_EpisodeEncode_WritesBlueprint()
     {
         SetupSuccessPath();
         string outputDirectory = CreateSeededOutputDirectory();
@@ -911,17 +890,17 @@ public class EncoderTests : IDisposable
         EncodingResult result = await _encoder.EncodeAsync(request);
         result.Success.Should().BeTrue();
 
-        string manifestPath = Path.Combine(outputDirectory, "encodes", "test", "manifest.json");
-        File.Exists(manifestPath)
+        string blueprintPath = Path.Combine(outputDirectory, MediaBlueprintWriter.FileName);
+        File.Exists(blueprintPath)
             .Should()
-            .BeTrue("manifest.json must be written for an episode encode");
+            .BeTrue(".nomercy.json must be written for an episode encode");
 
-        BundleManifest? manifest = JsonConvert.DeserializeObject<BundleManifest>(
-            File.ReadAllText(manifestPath)
+        MediaBlueprint? blueprint = JsonConvert.DeserializeObject<MediaBlueprint>(
+            File.ReadAllText(blueprintPath)
         );
-        manifest.Should().NotBeNull();
-        manifest!.MediaType.Should().Be("episode");
-        manifest.MediaId.Should().Be(62085);
+        blueprint.Should().NotBeNull();
+        blueprint!.Identity.Type.Should().Be("episode");
+        blueprint.Identity.TmdbId.Should().Be(62085);
     }
 
     [Fact]

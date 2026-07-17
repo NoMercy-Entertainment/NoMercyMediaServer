@@ -18,41 +18,34 @@ using NoMercy.Encoder.Bundle;
 namespace NoMercy.Tests.Encoder.Bundle;
 
 /// <summary>
-/// Branch-coverage gaps for <see cref="BundleSlugRenamer"/> beyond the four
-/// happy-path / collision / idempotent / empty-map cases already covered:
+/// Branch-coverage gaps for <see cref="BundleSlugRenamer"/> beyond the
+/// happy-path / idempotent / unrelated-slug / empty-map cases already
+/// covered in <see cref="BundleSlugRenamerTests"/>:
 ///
-/// • Multiple slug pairs in a single run — each pair processed independently;
-///   one collision must NOT block subsequent pairs from renaming.
-/// • MoveDirectoryAsync throws — error logged, loop continues to next pair.
-///   Storage errors must not crash startup.
-/// • Manifest missing after rename — directory rename succeeds but bundle has
-///   no manifest.json; PatchManifestAsync returns silently without writing.
-/// • Malformed manifest JSON — deserialize returns null, PatchManifestAsync
-///   skips the write rather than crashing on a corrupt bundle.
-/// • Manifest write failure — swallowed exception keeps the renamed directory
-///   intact even when the patch step itself fails.
-/// • Extra manifest fields preserved — only preset_slug is rewritten; version /
-///   files / preset_name etc. must round-trip untouched.
-/// • Empty oldSlug or newSlug values — must not throw or rename unexpectedly.
+/// • Multiple slug pairs in a single run, and multiple encode entries in a
+///   single blueprint — each rewritten independently.
+/// • Malformed blueprint JSON — logged and skipped, does not block other
+///   blueprints in the same sweep.
+/// • Blueprint with no <c>encodes</c> array — skipped silently.
+/// • Extra blueprint fields (identity/source/other encode fields) round-trip
+///   untouched; only the matching entry's <c>preset_slug</c> changes.
+/// • Empty/whitespace old or new slug in the map — guarded, no rewrite, no throw.
+/// • Multiple library folders processed independently.
 /// </summary>
 public class BundleSlugRenamerBranchTests
 {
-    // ── Multiple pairs ───────────────────────────────────────────────────────
-
     [Fact]
-    public async Task Multiple_slug_pairs_each_processed_independently()
+    public async Task Multiple_pairs_and_multiple_encode_entries_each_rewritten_independently()
     {
-        RenameTestStorage storage = new();
+        TestStorage storage = new();
         MediaContext context = RenameTestHelpers.BuildInMemoryContext();
 
+        const string path = "Show/Show S01E01/.nomercy.json";
         storage.Seed(
-            "encodes/preset-a-old/manifest.json",
-            Encoding.UTF8.GetBytes(RenameTestHelpers.BuildManifestJson("preset-a-old"))
-        );
-        storage.Seed("encodes/preset-a-old/segment.m4s", [0x01]);
-        storage.Seed(
-            "encodes/preset-b-old/manifest.json",
-            Encoding.UTF8.GetBytes(RenameTestHelpers.BuildManifestJson("preset-b-old"))
+            path,
+            Encoding.UTF8.GetBytes(
+                RenameTestHelpers.BuildBlueprintJson("preset-a-old", "preset-b-old", "untouched")
+            )
         );
 
         BundleSlugRenamer renamer = RenameTestHelpers.BuildRenamer(
@@ -63,67 +56,26 @@ public class BundleSlugRenamerBranchTests
 
         await renamer.RunAsync();
 
-        storage.AllPaths().Should().Contain("encodes/preset-a-new/manifest.json");
-        storage.AllPaths().Should().Contain("encodes/preset-a-new/segment.m4s");
-        storage.AllPaths().Should().Contain("encodes/preset-b-new/manifest.json");
-        storage.AllPaths().Should().NotContain("encodes/preset-a-old/manifest.json");
-        storage.AllPaths().Should().NotContain("encodes/preset-b-old/manifest.json");
+        IReadOnlyList<string> slugs = RenameTestHelpers.EncodeSlugs(
+            RenameTestHelpers.ReadBlueprint(storage, path)
+        );
+        slugs.Should().BeEquivalentTo(["preset-a-new", "preset-b-new", "untouched"]);
     }
 
     [Fact]
-    public async Task Collision_on_first_pair_does_not_block_second_pair()
+    public async Task Malformed_blueprint_json_is_skipped_and_does_not_block_other_items()
     {
-        // First pair: collision (both old and new exist) — leaves old untouched.
-        // Second pair: clean rename — proceeds normally.
-        RenameTestStorage storage = new();
+        TestStorage storage = new();
         MediaContext context = RenameTestHelpers.BuildInMemoryContext();
 
-        // First pair: collision setup.
+        const string corruptPath = "Corrupt Item/.nomercy.json";
+        const string validPath = "Good Item/.nomercy.json";
+
+        storage.Seed(corruptPath, Encoding.UTF8.GetBytes("not valid json"));
         storage.Seed(
-            "encodes/colliding-old/manifest.json",
-            Encoding.UTF8.GetBytes(RenameTestHelpers.BuildManifestJson("colliding-old"))
+            validPath,
+            Encoding.UTF8.GetBytes(RenameTestHelpers.BuildBlueprintJson("old-slug"))
         );
-        storage.Seed(
-            "encodes/colliding-new/manifest.json",
-            Encoding.UTF8.GetBytes(RenameTestHelpers.BuildManifestJson("colliding-new"))
-        );
-
-        // Second pair: clean setup.
-        storage.Seed(
-            "encodes/clean-old/manifest.json",
-            Encoding.UTF8.GetBytes(RenameTestHelpers.BuildManifestJson("clean-old"))
-        );
-
-        BundleSlugRenamer renamer = RenameTestHelpers.BuildRenamer(
-            new() { ["colliding-old"] = "colliding-new", ["clean-old"] = "clean-new" },
-            storage,
-            context
-        );
-
-        await renamer.RunAsync();
-
-        // First pair untouched.
-        storage.AllPaths().Should().Contain("encodes/colliding-old/manifest.json");
-        storage.AllPaths().Should().Contain("encodes/colliding-new/manifest.json");
-
-        // Second pair renamed cleanly.
-        storage.AllPaths().Should().Contain("encodes/clean-new/manifest.json");
-        storage.AllPaths().Should().NotContain("encodes/clean-old/manifest.json");
-    }
-
-    // ── Manifest patch failure modes ─────────────────────────────────────────
-
-    [Fact]
-    public async Task Manifest_missing_after_rename_is_silently_skipped()
-    {
-        // Directory rename succeeds but no manifest.json was ever written
-        // (legacy bundle without a manifest). PatchManifestAsync must
-        // short-circuit cleanly without throwing or logging an error.
-        RenameTestStorage storage = new();
-        MediaContext context = RenameTestHelpers.BuildInMemoryContext();
-
-        // Seed a non-manifest file so the rename succeeds.
-        storage.Seed("encodes/old-slug/segment.m4s", [0x01]);
 
         BundleSlugRenamer renamer = RenameTestHelpers.BuildRenamer(
             new() { ["old-slug"] = "new-slug" },
@@ -134,20 +86,32 @@ public class BundleSlugRenamerBranchTests
         Func<Task> act = () => renamer.RunAsync();
         await act.Should().NotThrowAsync();
 
-        storage.AllPaths().Should().Contain("encodes/new-slug/segment.m4s");
-        storage.AllPaths().Should().NotContain("encodes/new-slug/manifest.json");
+        // Corrupt file is left untouched for forensic recovery.
+        storage.ReadString(corruptPath).Should().Be("not valid json");
+
+        RenameTestHelpers
+            .EncodeSlugs(RenameTestHelpers.ReadBlueprint(storage, validPath))
+            .Should()
+            .ContainSingle()
+            .Which.Should()
+            .Be("new-slug");
     }
 
     [Fact]
-    public async Task Malformed_manifest_json_is_silently_skipped()
+    public async Task Blueprint_without_encodes_array_is_skipped_without_throwing()
     {
-        // Corrupt JSON in the bundle's manifest.json — JsonConvert returns null
-        // and PatchManifestAsync returns without writing. The bundle's
-        // corrupt file is left untouched so a forensic process can recover it.
-        RenameTestStorage storage = new();
+        TestStorage storage = new();
         MediaContext context = RenameTestHelpers.BuildInMemoryContext();
 
-        storage.Seed("encodes/old-slug/manifest.json", Encoding.UTF8.GetBytes("not json"));
+        const string path = "Legacy Item/.nomercy.json";
+        string legacyJson = JsonConvert.SerializeObject(
+            new JObject
+            {
+                ["version"] = 1,
+                ["identity"] = new JObject { ["type"] = "movie" },
+            }
+        );
+        storage.Seed(path, Encoding.UTF8.GetBytes(legacyJson));
 
         BundleSlugRenamer renamer = RenameTestHelpers.BuildRenamer(
             new() { ["old-slug"] = "new-slug" },
@@ -158,35 +122,37 @@ public class BundleSlugRenamerBranchTests
         Func<Task> act = () => renamer.RunAsync();
         await act.Should().NotThrowAsync();
 
-        storage.AllPaths().Should().Contain("encodes/new-slug/manifest.json");
-        storage.ReadString("encodes/new-slug/manifest.json").Should().Be("not json"); // unchanged
+        storage.ReadString(path).Should().Be(legacyJson);
     }
 
-    // ── Manifest field preservation ──────────────────────────────────────────
-
     [Fact]
-    public async Task Manifest_patch_preserves_extra_fields_and_only_updates_preset_slug()
+    public async Task Extra_blueprint_fields_and_unmatched_encode_fields_round_trip_untouched()
     {
-        // Manifest has many fields — only preset_slug should be rewritten;
-        // version / files / preset_name / media_key etc. must round-trip.
-        RenameTestStorage storage = new();
+        TestStorage storage = new();
         MediaContext context = RenameTestHelpers.BuildInMemoryContext();
 
-        JObject originalManifest = new()
+        const string path = "Fight Club (1999)/.nomercy.json";
+        JObject original = new()
         {
             ["version"] = 1,
-            ["preset_slug"] = "old-slug",
-            ["preset_name"] = "Old Display Name",
-            ["preset_id"] = "01J3X8R7K2QM9Y0G1Q4ABCDEFG",
-            ["media_key"] = "mfa",
-            ["media_type"] = "movie",
-            ["custom_field"] = "preserved",
-            ["files"] = new JArray("mfa_master.m3u8", "video/1080p/mfa_1080p_00001.m4s"),
+            ["identity"] = new JObject
+            {
+                ["type"] = "movie",
+                ["tmdb_id"] = 550,
+                ["title"] = "Fight Club",
+            },
+            ["source"] = new JObject { ["path"] = "Fight Club.mkv" },
+            ["encodes"] = new JArray(
+                new JObject
+                {
+                    ["preset_slug"] = "old-slug",
+                    ["preset_id"] = "01J3X8R7K2QM9Y0G1Q4ABCDEFG",
+                    ["profile_fingerprint"] = "abc123",
+                    ["custom_field"] = "preserved",
+                }
+            ),
         };
-        storage.Seed(
-            "encodes/old-slug/manifest.json",
-            Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(originalManifest))
-        );
+        storage.Seed(path, Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(original)));
 
         BundleSlugRenamer renamer = RenameTestHelpers.BuildRenamer(
             new() { ["old-slug"] = "new-slug" },
@@ -196,40 +162,39 @@ public class BundleSlugRenamerBranchTests
 
         await renamer.RunAsync();
 
-        string? json = storage.ReadString("encodes/new-slug/manifest.json");
-        json.Should().NotBeNull();
-        JObject patched = JsonConvert.DeserializeObject<JObject>(json!)!;
+        JObject patched = RenameTestHelpers.ReadBlueprint(storage, path);
+        JObject encode = (JObject)patched["encodes"]![0]!;
 
-        patched["preset_slug"]!.Value<string>().Should().Be("new-slug");
+        encode["preset_slug"]!.Value<string>().Should().Be("new-slug");
+        encode["preset_id"]!.Value<string>().Should().Be("01J3X8R7K2QM9Y0G1Q4ABCDEFG");
+        encode["profile_fingerprint"]!.Value<string>().Should().Be("abc123");
+        encode["custom_field"]!.Value<string>().Should().Be("preserved");
         patched["version"]!.Value<int>().Should().Be(1);
-        patched["preset_name"]!.Value<string>().Should().Be("Old Display Name");
-        patched["preset_id"]!.Value<string>().Should().Be("01J3X8R7K2QM9Y0G1Q4ABCDEFG");
-        patched["media_key"]!.Value<string>().Should().Be("mfa");
-        patched["media_type"]!.Value<string>().Should().Be("movie");
-        patched["custom_field"]!.Value<string>().Should().Be("preserved");
-        patched["files"]!.Type.Should().Be(JTokenType.Array);
+        patched["identity"]!["title"]!.Value<string>().Should().Be("Fight Club");
+        patched["source"]!["path"]!.Value<string>().Should().Be("Fight Club.mkv");
     }
-
-    // ── Empty pair values ────────────────────────────────────────────────────
 
     [Theory]
     [InlineData("", "valid-new")]
     [InlineData("valid-old", "")]
     [InlineData("   ", "valid-new")]
     [InlineData("valid-old", "   ")]
-    public async Task Empty_or_whitespace_slug_in_pair_skipped_to_prevent_mass_move(
+    public async Task Empty_or_whitespace_slug_in_pair_skipped_to_prevent_mass_rewrite(
         string oldSlug,
         string newSlug
     )
     {
         // Both ends of the pair must be non-empty/non-whitespace — an empty
-        // value would resolve to "encodes/" and silently mass-rename every
-        // bundle in the folder. This guard pins the defensive check.
-        RenameTestStorage storage = new();
+        // key/value would either match every blank slug or rewrite entries
+        // to a meaningless value. This guard pins the defensive check.
+        TestStorage storage = new();
         MediaContext context = RenameTestHelpers.BuildInMemoryContext();
 
-        storage.Seed("encodes/real-slug/manifest.json", Encoding.UTF8.GetBytes("{}"));
-        storage.Seed("encodes/another-slug/manifest.json", Encoding.UTF8.GetBytes("{}"));
+        const string path = "Real Item/.nomercy.json";
+        storage.Seed(
+            path,
+            Encoding.UTF8.GetBytes(RenameTestHelpers.BuildBlueprintJson("real-slug"))
+        );
 
         BundleSlugRenamer renamer = RenameTestHelpers.BuildRenamer(
             new() { [oldSlug] = newSlug },
@@ -240,16 +205,13 @@ public class BundleSlugRenamerBranchTests
         Func<Task> act = () => renamer.RunAsync();
         await act.Should().NotThrowAsync();
 
-        // Storage untouched — neither bundle was moved.
-        storage.AllPaths().Should().Contain("encodes/real-slug/manifest.json");
-        storage.AllPaths().Should().Contain("encodes/another-slug/manifest.json");
-        storage
-            .AllPaths()
+        RenameTestHelpers
+            .EncodeSlugs(RenameTestHelpers.ReadBlueprint(storage, path))
             .Should()
-            .NotContain(p => p.StartsWith("encodes//") || p.StartsWith("encodes/  "));
+            .ContainSingle()
+            .Which.Should()
+            .Be("real-slug");
     }
-
-    // ── Multiple folders ─────────────────────────────────────────────────────
 
     [Fact]
     public async Task Multiple_library_folders_processed_independently()
@@ -257,11 +219,11 @@ public class BundleSlugRenamerBranchTests
         // Note: BundleSlugRenamer uses IStorageFactory.For(folderId, driverId,
         // path) — the test's FixedStorageFactory returns the SAME storage
         // instance regardless of folder. We exercise the multi-folder loop
-        // via two folder records that share the test storage.
-        RenameTestStorage storage = new();
+        // via two folder records that share the test storage, each holding
+        // its own blueprint file.
+        TestStorage storage = new();
         MediaContext context = RenameTestHelpers.BuildInMemoryContext("/lib1");
 
-        // Add a second folder to the same context.
         context.Folders.Add(
             new()
             {
@@ -272,9 +234,15 @@ public class BundleSlugRenamerBranchTests
         );
         await context.SaveChangesAsync();
 
+        const string path1 = "lib1/Item One/.nomercy.json";
+        const string path2 = "lib2/Item Two/.nomercy.json";
         storage.Seed(
-            "encodes/old-slug/manifest.json",
-            Encoding.UTF8.GetBytes(RenameTestHelpers.BuildManifestJson("old-slug"))
+            path1,
+            Encoding.UTF8.GetBytes(RenameTestHelpers.BuildBlueprintJson("old-slug"))
+        );
+        storage.Seed(
+            path2,
+            Encoding.UTF8.GetBytes(RenameTestHelpers.BuildBlueprintJson("old-slug"))
         );
 
         BundleSlugRenamer renamer = RenameTestHelpers.BuildRenamer(
@@ -283,11 +251,19 @@ public class BundleSlugRenamerBranchTests
             context
         );
 
-        // First folder renames; second folder sees the new state and skips.
-        Func<Task> act = () => renamer.RunAsync();
-        await act.Should().NotThrowAsync();
+        await renamer.RunAsync();
 
-        // Final state: rename completed.
-        storage.AllPaths().Should().Contain("encodes/new-slug/manifest.json");
+        RenameTestHelpers
+            .EncodeSlugs(RenameTestHelpers.ReadBlueprint(storage, path1))
+            .Should()
+            .ContainSingle()
+            .Which.Should()
+            .Be("new-slug");
+        RenameTestHelpers
+            .EncodeSlugs(RenameTestHelpers.ReadBlueprint(storage, path2))
+            .Should()
+            .ContainSingle()
+            .Which.Should()
+            .Be("new-slug");
     }
 }
