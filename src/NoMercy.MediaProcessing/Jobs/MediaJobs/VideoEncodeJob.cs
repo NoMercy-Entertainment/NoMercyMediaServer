@@ -1773,7 +1773,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                 )
             );
 
-        int bitmapSubtitleCount = await CountBitmapSubtitleStreamsAsync(sourceStorage);
+        SourceReconciliationFacts source = await ProbeSourceForReconciliationAsync(sourceStorage);
 
         ExistingOutputSnapshot existing = await reconciler.InspectAsync(
             fileMetadata.Path,
@@ -1785,23 +1785,32 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             new(
                 encodingProfile,
                 IsSingleFileContainer(encodingProfile.Container),
-                bitmapSubtitleCount,
-                existing
+                source.BitmapSubtitleStreamCount,
+                existing,
+                SourceChapterCount: source.ChapterCount
             )
         );
     }
 
     /// <summary>
-    /// Counts bitmap (PGS/VobSub/DVB) subtitle streams on the SOURCE file —
-    /// the streams <see cref="RunBitmapSubtitleOcrAsync"/> would OCR. Reuses
-    /// the same analyzer call that method makes; the extra ffprobe pass is
-    /// negligible next to the encode it lets reconciliation skip.
+    /// What reconciliation needs to know about the SOURCE: how many bitmap
+    /// (PGS/VobSub/DVB) subtitle streams <see cref="RunBitmapSubtitleOcrAsync"/>
+    /// would OCR, and whether there are chapters for FinalizeStage to write.
+    /// Both come from one analyzer call; the ffprobe pass is negligible next to
+    /// the encode it lets reconciliation skip.
     /// </summary>
-    private async Task<int> CountBitmapSubtitleStreamsAsync(IStorage sourceStorage)
+    private readonly record struct SourceReconciliationFacts(
+        int BitmapSubtitleStreamCount,
+        int ChapterCount
+    );
+
+    private async Task<SourceReconciliationFacts> ProbeSourceForReconciliationAsync(
+        IStorage sourceStorage
+    )
     {
         IMediaAnalyzer? analyzer = _mediaAnalyzer;
         if (analyzer is null)
-            return 0;
+            return new(0, 0);
 
         try
         {
@@ -1810,16 +1819,22 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                 sourceStorage,
                 CancellationToken.None
             );
-            return mediaInfo.SubtitleStreams.Count(subtitle => !subtitle.IsTextBased);
+            return new(
+                mediaInfo.SubtitleStreams.Count(subtitle => !subtitle.IsTextBased),
+                mediaInfo.Chapters.Count
+            );
         }
         catch (Exception ex)
         {
+            // Assuming none leaves reconciliation expecting nothing extra, which
+            // degrades to "the output as it stands is complete" rather than to a
+            // re-encode we cannot justify.
             Log.LogWarning(
-                "Could not analyze {InputFile} for reconciliation OCR count — assuming none: {Message}",
+                "Could not analyze {InputFile} for reconciliation — assuming no bitmap subtitles and no chapters: {Message}",
                 InputFile,
                 ex.Message
             );
-            return 0;
+            return new(0, 0);
         }
     }
 

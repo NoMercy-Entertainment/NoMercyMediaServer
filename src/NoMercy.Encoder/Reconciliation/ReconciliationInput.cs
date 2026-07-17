@@ -35,10 +35,18 @@ namespace NoMercy.Encoder.Reconciliation;
 /// the file is always fully re-encoded, regardless of fingerprint or what is
 /// already present.
 /// </param>
+/// <param name="SourceChapterCount">
+/// Number of chapters on the SOURCE file. FinalizeStage only writes chapters.vtt
+/// when the source has at least one, so expecting the file from a source with
+/// none asks for something no encode will ever produce — the media reads as
+/// incomplete forever and re-encodes on every dispatch. Zero when the source has
+/// no chapters, which for a short is the normal case.
+/// </param>
 public sealed record ReconciliationInput(
     EncodingProfile Profile,
     bool IsSingleFileOutput,
     int BitmapSubtitleStreamCount,
     ExistingOutputSnapshot Existing,
-    bool Force = false
+    bool Force = false,
+    int SourceChapterCount = 0
 );

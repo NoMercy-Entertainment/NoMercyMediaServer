@@ -65,7 +65,12 @@ public class EncodeReconciler : IEncodeReconciler
                 profile.Thumbnails is not null
                 || (profile.HlsDerivatives ?? new HlsDerivatives()).GenerateSpriteVtt
             );
-        bool desiredChapters = profile.HlsDerivatives?.GenerateChapters ?? true;
+        // Only expect chapters.vtt from a source that has chapters to write —
+        // FinalizeStage applies the same condition. Asking for it from a source
+        // with none can never be satisfied, so the media reads as incomplete on
+        // every pass and re-encodes in full, forever.
+        bool desiredChapters =
+            (profile.HlsDerivatives?.GenerateChapters ?? true) && input.SourceChapterCount > 0;
         bool desiredMasterPlaylist = profile.HlsDerivatives?.GenerateMasterPlaylist ?? true;
 
         // A missing or empty master playlist means the previous finalize
