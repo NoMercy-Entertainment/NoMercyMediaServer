@@ -23,6 +23,21 @@ namespace NoMercy.Database.Models.Queue;
 // that is a full scan of the (large, history-retaining) queue table — seconds per
 // enqueue, which surfaced as multi-second endpoints that dispatch a job inline.
 [Index(nameof(Payload))]
+// Every worker poll reserves via (Queue, ReservedAt IS NULL, Attempts, AvailableAt)
+// ordered by (Priority desc, CreatedAt, Id). The sort index above cannot serve that
+// — the predicate leads with Queue — so SQLite fell back to SCAN + a temp B-tree
+// over the whole table: ~2.7s per reserve at 116k rows, taken while JobQueue holds
+// its global write lock, which serialises every worker on every queue. Leading with
+// Queue and ReservedAt turns it into a SEARCH and lets the trailing columns satisfy
+// the ORDER BY. Measured 2741ms -> 87ms on a copy of a real 2.5GB queue.db.
+[Index(
+    nameof(Queue),
+    nameof(ReservedAt),
+    nameof(Priority),
+    nameof(CreatedAt),
+    nameof(Id),
+    IsDescending = new[] { false, false, true, false, false }
+)]
 public class QueueJob
 {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
