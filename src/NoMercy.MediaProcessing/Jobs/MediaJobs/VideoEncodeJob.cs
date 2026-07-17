@@ -766,9 +766,22 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             relativeOutputPath.Replace('/', Path.DirectorySeparatorChar)
         );
 
+        // An aux-only run rebuilds a derivative (the thumbnail strip) and nothing
+        // else. It writes no variant playlist and publishes its own output, so an
+        // empty tempDir is the expected result rather than a sign the children
+        // produced nothing. Treating it as the failure below cost the run its
+        // post-encode phase — including the subtitle OCR that runs there — for
+        // work that had in fact succeeded.
+        bool isAuxOnlyRun =
+            state.Bundles is { Length: > 0 } bundles
+            && bundles.All(bundle => bundle.IsAuxOnlyBundle);
+
         if (
-            !Directory.Exists(tempDir)
-            || !Directory.EnumerateFiles(tempDir, "*.m3u8", SearchOption.AllDirectories).Any()
+            !isAuxOnlyRun
+            && (
+                !Directory.Exists(tempDir)
+                || !Directory.EnumerateFiles(tempDir, "*.m3u8", SearchOption.AllDirectories).Any()
+            )
         )
         {
             Log.LogError(
@@ -828,52 +841,67 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             MediaItem: fileMetadata.MediaItem
         );
 
-        await PublishStageAsync(fileMetadata, "Publishing artifacts");
-        try
+        // The aux-only bundle already finalized and published itself — it is a
+        // Whole task, and those do not defer to this pass. Running the pipeline
+        // again over the now-empty tempDir would only rediscover that there is
+        // nothing there. Fall through to post-encode, which is the part that
+        // still has work to do.
+        if (isAuxOnlyRun)
         {
-            EncodingResult publishResult = await orchestrator.EncodeAsync(finalizeRequest);
-            if (!publishResult.Success)
-            {
-                string err =
-                    publishResult.Error?.Message
-                    ?? publishResult.EnrichedError?.Message
-                    ?? "finalize-only pass failed with no details";
-                Log.LogError(
-                    "[VideoEncodeJob] Coordinator finalize failed for GroupTag={GroupTag}: {Err}",
-                    state.GroupTag,
-                    err
-                );
-
-                await new IncompleteEncodeRecorder().RecordAsync(
-                    context,
-                    mediaId: fileMetadata.Id,
-                    folderId: FolderId.ToString(),
-                    title: fileMetadata.Title,
-                    missingKeys: ["finalize"],
-                    lastError: err,
-                    attemptsMade: 0,
-                    ct: CancellationToken.None
-                );
-
-                await EncoderCardTerminator.PublishFailedAsync(
-                    fileMetadata.Id,
-                    fileMetadata.Title,
-                    InputFile,
-                    err,
-                    "FinalizeFailed"
-                );
-
-                return;
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.LogError(
-                "[VideoEncodeJob] Coordinator finalize threw for GroupTag={GroupTag}: {Message}",
-                state.GroupTag,
-                ex.Message
+            Log.LogInformation(
+                "[VideoEncodeJob] Finalize: aux-only run for GroupTag={GroupTag} published its own output; continuing to post-encode.",
+                state.GroupTag
             );
-            throw;
+        }
+        else
+        {
+            await PublishStageAsync(fileMetadata, "Publishing artifacts");
+            try
+            {
+                EncodingResult publishResult = await orchestrator.EncodeAsync(finalizeRequest);
+                if (!publishResult.Success)
+                {
+                    string err =
+                        publishResult.Error?.Message
+                        ?? publishResult.EnrichedError?.Message
+                        ?? "finalize-only pass failed with no details";
+                    Log.LogError(
+                        "[VideoEncodeJob] Coordinator finalize failed for GroupTag={GroupTag}: {Err}",
+                        state.GroupTag,
+                        err
+                    );
+
+                    await new IncompleteEncodeRecorder().RecordAsync(
+                        context,
+                        mediaId: fileMetadata.Id,
+                        folderId: FolderId.ToString(),
+                        title: fileMetadata.Title,
+                        missingKeys: ["finalize"],
+                        lastError: err,
+                        attemptsMade: 0,
+                        ct: CancellationToken.None
+                    );
+
+                    await EncoderCardTerminator.PublishFailedAsync(
+                        fileMetadata.Id,
+                        fileMetadata.Title,
+                        InputFile,
+                        err,
+                        "FinalizeFailed"
+                    );
+
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.LogError(
+                    "[VideoEncodeJob] Coordinator finalize threw for GroupTag={GroupTag}: {Message}",
+                    state.GroupTag,
+                    ex.Message
+                );
+                throw;
+            }
         }
 
         await PublishStageAsync(fileMetadata, "Checking source subtitles");

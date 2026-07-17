@@ -215,7 +215,7 @@ public class Encoder(
             // job its post-encode phase, and with it the subtitle OCR. The master
             // already on disk describes the variants that really exist; leave it be.
             HlsDerivatives? derivatives = request.Profile.HlsDerivatives;
-            if (IsAuxOnlyBundle(request.Options?.TaskFilter))
+            if (request.Options?.TaskFilter?.IsAuxOnlyBundle == true)
             {
                 derivatives = (derivatives ?? new HlsDerivatives()) with
                 {
@@ -441,17 +441,6 @@ public class Encoder(
 
         return ((StageSuccess<ExecutionPlan>)planResult).Value.OutputPlan;
     }
-
-    /// <summary>
-    /// A bundled Whole task that carries neither a video nor an audio output —
-    /// what the coordinator dispatches when only a derivative (the thumbnail
-    /// strip) needs rebuilding. It writes no variant playlists, so anything that
-    /// describes variants must be left to the runs that produce them. Null slice
-    /// indexes mean "all outputs", which is the ordinary full bundle.
-    /// </summary>
-    internal static bool IsAuxOnlyBundle(DecomposedTask? task) =>
-        task is { Kind: EncodeTaskKind.Whole, VideoSliceIndexes.Length: 0 }
-        && task.AudioSliceIndexes is { Length: 0 };
 
     private static PreviewResult PreviewFail(EncodingError error, TimeSpan elapsed)
     {

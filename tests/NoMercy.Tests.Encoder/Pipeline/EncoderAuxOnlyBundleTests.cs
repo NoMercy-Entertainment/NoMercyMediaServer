@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Encoder.Decomposition;
-using EncoderPipeline = NoMercy.Encoder.Pipeline.Encoder;
 
 namespace NoMercy.Tests.Encoder.Pipeline;
 
@@ -41,15 +40,14 @@ public class EncoderAuxOnlyBundleTests
             IncludeThumbnails: thumbs
         );
 
+    private static bool Is(DecomposedTask? task) => task?.IsAuxOnlyBundle == true;
+
     [Fact]
     public void ThumbnailsOnlyBundle_IsAuxOnly()
     {
         // What the coordinator dispatches when only the thumbnail strip is
         // missing: a Whole bundle covering no streams at all.
-        EncoderPipeline
-            .IsAuxOnlyBundle(Task(EncodeTaskKind.Whole, video: [], audio: [], thumbs: true))
-            .Should()
-            .BeTrue();
+        Is(Task(EncodeTaskKind.Whole, video: [], audio: [], thumbs: true)).Should().BeTrue();
     }
 
     [Fact]
@@ -57,26 +55,20 @@ public class EncoderAuxOnlyBundleTests
     {
         // Null slice indexes mean "every output" — the ordinary whole encode,
         // which must still write its master playlist.
-        EncoderPipeline.IsAuxOnlyBundle(Task(EncodeTaskKind.Whole)).Should().BeFalse();
+        Is(Task(EncodeTaskKind.Whole)).Should().BeFalse();
     }
 
     [Fact]
     public void BundleCarryingVideo_IsNotAuxOnly()
     {
-        EncoderPipeline
-            .IsAuxOnlyBundle(Task(EncodeTaskKind.Whole, video: [0], audio: []))
-            .Should()
-            .BeFalse();
+        Is(Task(EncodeTaskKind.Whole, video: [0], audio: [])).Should().BeFalse();
     }
 
     [Fact]
     public void BundleCarryingAudio_IsNotAuxOnly()
     {
         // Audio alone still produces a variant playlist the master must list.
-        EncoderPipeline
-            .IsAuxOnlyBundle(Task(EncodeTaskKind.Whole, video: [], audio: [0]))
-            .Should()
-            .BeFalse();
+        Is(Task(EncodeTaskKind.Whole, video: [], audio: [0])).Should().BeFalse();
     }
 
     [Fact]
@@ -85,16 +77,13 @@ public class EncoderAuxOnlyBundleTests
         // Only Whole-kind bundles reach the finalize branch this guards; a
         // per-stream task already defers to the coordinator's FinalizeOnly pass,
         // and must not be mistaken for a bundle.
-        EncoderPipeline
-            .IsAuxOnlyBundle(Task(EncodeTaskKind.Thumbnails, video: [], audio: []))
-            .Should()
-            .BeFalse();
+        Is(Task(EncodeTaskKind.Thumbnails, video: [], audio: [])).Should().BeFalse();
     }
 
     [Fact]
     public void NoTaskFilter_IsNotAuxOnly()
     {
         // A plain undecomposed encode has no filter at all.
-        EncoderPipeline.IsAuxOnlyBundle(null).Should().BeFalse();
+        Is(null).Should().BeFalse();
     }
 }

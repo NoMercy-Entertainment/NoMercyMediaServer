@@ -144,4 +144,18 @@ public record DecomposedTask(
     /// (default) = read the original source.
     /// </summary>
     string? InputArtifactKey = null
-);
+)
+{
+    /// <summary>
+    /// A bundle that rebuilds only a derivative — the thumbnail strip — and
+    /// carries no video and no audio. It encodes nothing, so it writes no variant
+    /// playlist, and anything describing variants (the master playlist) or reading
+    /// them back out of the staging directory has nothing to work with and must
+    /// leave that job to the runs that do produce them. Null slice indexes mean
+    /// "every output", which is the ordinary full bundle.
+    /// </summary>
+    public bool IsAuxOnlyBundle =>
+        Kind == EncodeTaskKind.Whole
+        && VideoSliceIndexes is { Length: 0 }
+        && AudioSliceIndexes is { Length: 0 };
+}
