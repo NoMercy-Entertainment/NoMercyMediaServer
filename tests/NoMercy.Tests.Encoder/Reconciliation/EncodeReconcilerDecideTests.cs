@@ -138,6 +138,30 @@ public class EncodeReconcilerDecideTests
     }
 
     [Fact]
+    public void Decide_ReturnsPartialAudioOnly_WhenTheAudioRenditionIsMissing()
+    {
+        // The video-present / audio-missing case: deleting an audio_* rendition
+        // must top up only the audio, exactly as a missing subtitle or thumbnail
+        // does — never a full re-encode of the video that is already on disk.
+        // Confirmed live against a real special (0 video / 1 audio bundle); pinned
+        // here so that decomposed-bundle path cannot regress unseen.
+        EncodingProfile profile = MakeHlsProfile();
+        string fingerprint = ProfileFingerprint.Compute(profile);
+        List<ExistingOutputEntry> files = AllPresentFiles()
+            .Where(f => !f.RelativePath.StartsWith("audio_", StringComparison.Ordinal))
+            .ToList();
+        ExistingOutputSnapshot existing = new(fingerprint, files, ValidOcrSidecarCount: 0);
+
+        ReconciliationDecision decision = _reconciler.Decide(
+            new(profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 0, existing)
+        );
+
+        decision.Action.Should().Be(ReconciliationAction.Partial);
+        decision.MissingKinds.Should().ContainSingle().Which.Should().Be(EncodeTaskKind.Audio);
+        decision.MissingKinds.Should().NotContain(EncodeTaskKind.Video);
+    }
+
+    [Fact]
     public void Decide_ReturnsFull_WhenTheProfileFingerprintDiffers()
     {
         EncodingProfile profile = MakeHlsProfile();
