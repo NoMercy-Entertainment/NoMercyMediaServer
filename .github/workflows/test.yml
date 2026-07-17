@@ -189,9 +189,25 @@ jobs:
           --blame-hang-timeout 10m
           --filter "Category=Integration"
 
+      # A full build of this solution is ~9.5GB of output — ~7GB of it is tests/,
+      # because each of the 20 test projects copies the whole native dependency
+      # closure (SkiaSharp, Magick.NET) for EVERY runtime identifier: ~360MB of
+      # runtimes/ per project, of which the runner executes exactly one platform.
+      # Keeping the Debug tree while Release builds needs ~19GB on a ~14GB runner,
+      # which is what exhausted the disk: every step passed and then the runner
+      # died writing its own _diag log, surfacing as a failure with no failing
+      # step and no test output. The two configurations are never needed at once.
+      - name: Drop the Debug output before building Release
+        run: |
+          echo "before:"
+          df -h / | tail -1
+          find . -type d \( -path '*/bin/Debug' -o -path '*/obj/Debug' \) -prune -exec rm -rf {} + || true
+          echo "after:"
+          df -h / | tail -1
+
       - name: Run performance tests
         run: >
-          dotnet test NoMercy.Server.sln 
+          dotnet test NoMercy.Server.sln
           --configuration Release
           --no-restore
           --verbosity minimal
