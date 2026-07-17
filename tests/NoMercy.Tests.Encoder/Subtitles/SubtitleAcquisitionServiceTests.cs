@@ -24,8 +24,30 @@ namespace NoMercy.Tests.Encoder.Subtitles;
 /// blocked by a subtitle acquisition fault — every adapter exception lands
 /// as an empty result, not a propagating throw.
 /// </summary>
-public class SubtitleAcquisitionServiceTests
+public class SubtitleAcquisitionServiceTests : IDisposable
 {
+    // The hash strategy only runs when the source is readable, so a source that exists is part of
+    // the fixture rather than a detail: point these at a missing path and every test below
+    // silently exercises the filename fallback instead of the chain it names.
+    private readonly string _sourcePath = Path.Combine(
+        Path.GetTempPath(),
+        $"nomercy-subs-{Guid.NewGuid():N}.mkv"
+    );
+
+    public SubtitleAcquisitionServiceTests()
+    {
+        byte[] content = new byte[256 * 1024];
+        Random.Shared.NextBytes(content);
+        File.WriteAllBytes(_sourcePath, content);
+    }
+
+    public void Dispose()
+    {
+        if (File.Exists(_sourcePath))
+            File.Delete(_sourcePath);
+        GC.SuppressFinalize(this);
+    }
+
     private static SubtitleAcquisitionService BuildService(
         out Mock<IOpenSubtitlesAdapter> adapter,
         out Mock<IStorage> storage
@@ -36,14 +58,14 @@ public class SubtitleAcquisitionServiceTests
         return new(adapter.Object, storage.Object, NullLogger<SubtitleAcquisitionService>.Instance);
     }
 
-    private static AcquisitionRequest MakeRequest(
+    private AcquisitionRequest MakeRequest(
         SubtitleAcquisitionConfig? config = null,
         string[]? languagesAlreadyInSource = null,
         double? sourceFps = null
     ) =>
         new(
-            SourcePath: "/media/movie.mkv",
-            SourceFileSize: 1_000_000_000,
+            SourcePath: _sourcePath,
+            SourceFileSize: new FileInfo(_sourcePath).Length,
             SourceFilename: "movie.mkv",
             MediaTitle: "The Movie",
             Season: null,
@@ -98,9 +120,7 @@ public class SubtitleAcquisitionServiceTests
             out Mock<IOpenSubtitlesAdapter> adapter,
             out _
         );
-        AcquisitionRequest request = MakeRequest(
-            new() { Enabled = true, Languages = [] }
-        );
+        AcquisitionRequest request = MakeRequest(new() { Enabled = true, Languages = [] });
 
         IReadOnlyList<AcquiredSubtitle> result = await subject.AcquireAsync(
             request,
@@ -336,6 +356,118 @@ public class SubtitleAcquisitionServiceTests
             Times.Never,
             "filename search must not fire when hash already matched"
         );
+    }
+
+    [Fact]
+    public async Task AcquireAsync_UnreadableSource_SkipsTheHashSearchEntirely()
+    {
+        // A source the service cannot open yields no moviehash, so the hash search must not run:
+        // hashing the file size instead produces a value that cannot match, spending a request per
+        // item to guarantee a miss and still falling through.
+        SubtitleAcquisitionService subject = BuildService(
+            out Mock<IOpenSubtitlesAdapter> adapter,
+            out Mock<IStorage> storage
+        );
+        StubStorage(storage);
+
+        adapter
+            .Setup(a =>
+                a.SearchByFilenameAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<TimeSpan>(),
+                    It.IsAny<CancellationToken>(),
+                    It.IsAny<bool>()
+                )
+            )
+            .ReturnsAsync([Candidate()]);
+        adapter
+            .Setup(a =>
+                a.DownloadAsync(It.IsAny<SubtitleCandidate>(), It.IsAny<CancellationToken>())
+            )
+            .ReturnsAsync([1, 2, 3]);
+
+        AcquisitionRequest request = MakeRequest(
+            new()
+            {
+                Enabled = true,
+                Languages = ["eng"],
+                Strategy = SubtitleMatchStrategy.HashThenFilename,
+            }
+        ) with
+        {
+            SourcePath = Path.Combine(
+                Path.GetTempPath(),
+                $"nomercy-missing-{Guid.NewGuid():N}.mkv"
+            ),
+        };
+
+        _ = await subject.AcquireAsync(request, CancellationToken.None);
+
+        adapter.Verify(
+            a =>
+                a.SearchByHashAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<long>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<TimeSpan>(),
+                    It.IsAny<CancellationToken>(),
+                    It.IsAny<bool>()
+                ),
+            Times.Never,
+            "hash search must not fire when the source yields no moviehash"
+        );
+    }
+
+    [Fact]
+    public async Task AcquireAsync_UnreadableSource_StillAcquiresViaFilename()
+    {
+        SubtitleAcquisitionService subject = BuildService(
+            out Mock<IOpenSubtitlesAdapter> adapter,
+            out Mock<IStorage> storage
+        );
+        StubStorage(storage);
+
+        adapter
+            .Setup(a =>
+                a.SearchByFilenameAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<TimeSpan>(),
+                    It.IsAny<CancellationToken>(),
+                    It.IsAny<bool>()
+                )
+            )
+            .ReturnsAsync([Candidate()]);
+        adapter
+            .Setup(a =>
+                a.DownloadAsync(It.IsAny<SubtitleCandidate>(), It.IsAny<CancellationToken>())
+            )
+            .ReturnsAsync([1, 2, 3]);
+
+        AcquisitionRequest request = MakeRequest(
+            new()
+            {
+                Enabled = true,
+                Languages = ["eng"],
+                Strategy = SubtitleMatchStrategy.HashThenFilename,
+            }
+        ) with
+        {
+            SourcePath = Path.Combine(
+                Path.GetTempPath(),
+                $"nomercy-missing-{Guid.NewGuid():N}.mkv"
+            ),
+        };
+
+        IReadOnlyList<AcquiredSubtitle> result = await subject.AcquireAsync(
+            request,
+            CancellationToken.None
+        );
+
+        Assert.Single(result);
+        // Never a hash match, so it can never be reported as an exact one.
+        Assert.False(result[0].IsExactMatch);
     }
 
     [Fact]
