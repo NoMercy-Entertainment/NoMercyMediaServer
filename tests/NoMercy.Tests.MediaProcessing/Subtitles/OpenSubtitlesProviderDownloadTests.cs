@@ -16,6 +16,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.MediaProcessing.Subtitles;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Tests.MediaProcessing.Subtitles;
 
@@ -128,5 +129,32 @@ public class OpenSubtitlesProviderDownloadTests
                 );
             }
         }
+    }
+}
+
+/// <summary>
+/// OpenSubtitles silently drops a sublanguageid it does not recognise and answers with a fulltext
+/// match across every language, so a 2-letter code returns everything-but-the-language-asked-for.
+/// These pin the codes the provider puts on the wire.
+/// </summary>
+public class OpenSubtitlesLanguageCodeTests
+{
+    [Theory]
+    [InlineData("nl", "dut")]
+    [InlineData("de", "ger")]
+    [InlineData("en", "eng")]
+    public void WatchRequestLanguage_BecomesTheCodeTheApiAccepts(string watch, string wire)
+    {
+        Culture.BibliographicLanguageCode(watch).Should().Be(wire);
+    }
+
+    [Fact]
+    public void TheCodesInTheLiveSearchResponse_RoundTripUnchanged()
+    {
+        // SubLanguageID values from a real What If...? S01E01 response.
+        string[] fromResponse = ["jpn", "hun", "pob", "slv", "spa"];
+
+        foreach (string code in fromResponse)
+            Culture.BibliographicLanguageCode(code).Should().Be(code);
     }
 }
