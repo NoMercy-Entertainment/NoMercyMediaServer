@@ -448,26 +448,49 @@ public class BuildStage(
                 );
             }
 
-            FfmpegCommand mainCommand = builder.Build(options.FfmpegPath, input.OutputDirectory);
-            bool copyMode = IsCopyMode(input.Plan.OutputPlan);
-            mainCommand = MetadataInjectionBuilder.InjectMetadataArgs(
-                metadataInjector,
-                metadataMerger,
-                mainCommand,
-                context.MediaItem,
-                context,
-                copyMode,
-                context.EnableMetadataInjection
-            );
+            // A decomposed bundle can leave the main builder with nothing to write:
+            // a Thumbnails-only task has no video or audio rung, and its sprite is
+            // emitted as its own command below. ffmpeg rejects an output-less
+            // invocation outright ("At least one output file must be specified",
+            // exit 1), which failed the task and made VideoEncodeJob skip
+            // post-encode — losing the subtitle OCR that runs there. The work still
+            // happens; it just all lives in the auxiliary commands.
+            List<FfmpegCommand> allCommands = [];
 
-            logger.LogInformation(
-                "[{CorrelationId}] FFmpeg command: {Executable} {Args}",
-                context.CorrelationId,
-                mainCommand.Executable,
-                string.Join(" ", mainCommand.Arguments)
-            );
+            if (builder.HasOutputs)
+            {
+                FfmpegCommand mainCommand = builder.Build(
+                    options.FfmpegPath,
+                    input.OutputDirectory
+                );
+                bool copyMode = IsCopyMode(input.Plan.OutputPlan);
+                mainCommand = MetadataInjectionBuilder.InjectMetadataArgs(
+                    metadataInjector,
+                    metadataMerger,
+                    mainCommand,
+                    context.MediaItem,
+                    context,
+                    copyMode,
+                    context.EnableMetadataInjection
+                );
 
-            List<FfmpegCommand> allCommands = [mainCommand];
+                logger.LogInformation(
+                    "[{CorrelationId}] FFmpeg command: {Executable} {Args}",
+                    context.CorrelationId,
+                    mainCommand.Executable,
+                    string.Join(" ", mainCommand.Arguments)
+                );
+
+                allCommands.Add(mainCommand);
+            }
+            else
+            {
+                logger.LogInformation(
+                    "[{CorrelationId}] No encoded output in this bundle; running only its auxiliary commands.",
+                    context.CorrelationId
+                );
+            }
+
             allCommands.AddRange(spriteCommands);
 
             // Run-once semantics: when tasks are decomposed, fonts are extracted by

@@ -53,6 +53,13 @@ public class FfmpegCommandBuilder
         return this;
     }
 
+    /// <summary>
+    /// Whether anything has been added for this command to write. ffmpeg refuses
+    /// to run without one ("At least one output file must be specified"), so a
+    /// caller that may end up with nothing to encode must check before building.
+    /// </summary>
+    public bool HasOutputs => _outputs.Count > 0;
+
     public FfmpegCommand Build(string ffmpegPath, string? workingDirectory = null)
     {
         List<string> args = [];

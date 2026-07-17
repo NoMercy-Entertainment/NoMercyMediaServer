@@ -347,4 +347,35 @@ public class BuildStageThumbnailCopyTests
         sprite.Arguments.Should().Contain("0:v:0");
         sprite.Arguments.Should().NotContain("[thumbs]");
     }
+
+    [Fact]
+    public async Task ThumbnailsOnlyBundle_EmitsNoMainCommand_OnlyTheSprite()
+    {
+        // The shape a decomposed Thumbnails task produces: nothing to encode, one
+        // sprite to write. Handing ffmpeg a command with no output at all makes it
+        // exit 1 ("At least one output file must be specified"), which fails the
+        // task and costs the job its whole post-encode phase.
+        OutputPlan outputPlan = new(
+            Format: OutputFormat.Hls,
+            VideoOutputs: [],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: new(160, 90, 10)
+        );
+
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
+        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildMediaInfo());
+
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
+
+        result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
+        FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
+
+        commands
+            .Should()
+            .ContainSingle("only the sprite command has anything to write")
+            .Which.Arguments.Should()
+            .Contain("spritevtt");
+    }
 }
