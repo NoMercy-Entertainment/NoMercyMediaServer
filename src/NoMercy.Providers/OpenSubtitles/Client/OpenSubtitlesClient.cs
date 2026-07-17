@@ -26,7 +26,13 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
                 new() { Value = new() { String = "" } },
                 new() { Value = new() { String = "" } },
                 new() { Value = new() { String = "dut" } },
-                new() { Value = new() { String = ExternalServicesConfig.Current.UserAgent } },
+                new()
+                {
+                    Value = new()
+                    {
+                        String = ExternalServicesConfig.Current.OpenSubtitlesUserAgent,
+                    },
+                },
             ],
         };
 

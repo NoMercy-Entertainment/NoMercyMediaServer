@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.Helpers;
 
@@ -102,7 +103,10 @@ public static partial class ServiceConfiguration
                 client.BaseAddress = new("https://api.opensubtitles.org/xml-rpc");
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new("text/xml"));
-                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
+                client.DefaultRequestHeaders.Add(
+                    "User-Agent",
+                    ExternalServicesConfig.Current.OpenSubtitlesUserAgent
+                );
                 client.Timeout = defaultTimeout;
             }
         );
@@ -111,7 +115,10 @@ public static partial class ServiceConfiguration
             HttpClientNames.OpenSubtitlesDownload,
             client =>
             {
-                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
+                client.DefaultRequestHeaders.Add(
+                    "User-Agent",
+                    ExternalServicesConfig.Current.OpenSubtitlesUserAgent
+                );
                 client.Timeout = defaultTimeout;
             }
         );
