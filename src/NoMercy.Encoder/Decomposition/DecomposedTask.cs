@@ -143,7 +143,18 @@ public record DecomposedTask(
     /// file. Skips re-decode + re-tonemap with no generational loss. Null
     /// (default) = read the original source.
     /// </summary>
-    string? InputArtifactKey = null
+    string? InputArtifactKey = null,
+    /// <summary>
+    /// This bundle fills gaps in an existing encode (reconciliation returned
+    /// Partial) rather than producing the whole thing. Its plan is sliced to only
+    /// the missing renditions, so it must never rewrite the master playlist: the
+    /// master already lists every rendition, and regenerating it from this subset
+    /// would drop the ones this bundle did not touch. A partial top-up cannot add
+    /// or remove a rendition — that needs a profile change, which mismatches the
+    /// fingerprint and forces a full re-encode — so leaving the master alone is
+    /// always correct.
+    /// </summary>
+    bool IsPartialTopUp = false
 )
 {
     /// <summary>
@@ -158,4 +169,11 @@ public record DecomposedTask(
         Kind == EncodeTaskKind.Whole
         && VideoSliceIndexes is { Length: 0 }
         && AudioSliceIndexes is { Length: 0 };
+
+    /// <summary>
+    /// True when this bundle must not (re)write shared, whole-media artifacts —
+    /// the master playlist above all. Both an aux-only bundle and a partial
+    /// top-up describe less than the complete rendition set.
+    /// </summary>
+    public bool LeavesMasterPlaylistAlone => IsAuxOnlyBundle || IsPartialTopUp;
 }

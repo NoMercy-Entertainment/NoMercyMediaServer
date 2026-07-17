@@ -26,7 +26,8 @@ public class EncoderAuxOnlyBundleTests
         EncodeTaskKind kind,
         int[]? video = null,
         int[]? audio = null,
-        bool? thumbs = null
+        bool? thumbs = null,
+        bool partial = false
     ) =>
         new(
             TaskId: "task-0",
@@ -37,10 +38,14 @@ public class EncoderAuxOnlyBundleTests
             Resources: null,
             VideoSliceIndexes: video,
             AudioSliceIndexes: audio,
-            IncludeThumbnails: thumbs
+            IncludeThumbnails: thumbs,
+            IsPartialTopUp: partial
         );
 
     private static bool Is(DecomposedTask? task) => task?.IsAuxOnlyBundle == true;
+
+    private static bool LeavesMaster(DecomposedTask? task) =>
+        task?.LeavesMasterPlaylistAlone == true;
 
     [Fact]
     public void ThumbnailsOnlyBundle_IsAuxOnly()
@@ -69,6 +74,45 @@ public class EncoderAuxOnlyBundleTests
     {
         // Audio alone still produces a variant playlist the master must list.
         Is(Task(EncodeTaskKind.Whole, video: [], audio: [0])).Should().BeFalse();
+    }
+
+    // ── Leaving the master alone: aux-only OR a partial top-up ───────────────
+    // The master lists every rendition. A bundle covering less than the whole set
+    // must not regenerate it from its slice, or it drops the renditions it did not
+    // touch — which is exactly how an audio-only re-encode wiped the video entry.
+
+    [Fact]
+    public void AudioOnlyPartialTopUp_LeavesTheMasterAlone()
+    {
+        // The audio-only rebuild: video already on disk, only the audio rendition
+        // regenerated. Its sliced plan has no video, so it must not rewrite the
+        // master that still correctly lists both.
+        LeavesMaster(Task(EncodeTaskKind.Whole, video: [], audio: [0], partial: true))
+            .Should()
+            .BeTrue();
+    }
+
+    [Fact]
+    public void VideoOnlyPartialTopUp_LeavesTheMasterAlone()
+    {
+        LeavesMaster(Task(EncodeTaskKind.Whole, video: [0], audio: [], partial: true))
+            .Should()
+            .BeTrue();
+    }
+
+    [Fact]
+    public void AuxOnlyBundle_LeavesTheMasterAlone_EvenWhenNotFlaggedPartial()
+    {
+        LeavesMaster(Task(EncodeTaskKind.Whole, video: [], audio: [], thumbs: true))
+            .Should()
+            .BeTrue();
+    }
+
+    [Fact]
+    public void FullBundle_WritesTheMaster()
+    {
+        // Not a top-up and not aux-only: the ordinary full encode owns the master.
+        LeavesMaster(Task(EncodeTaskKind.Whole, video: [0], audio: [0])).Should().BeFalse();
     }
 
     [Fact]

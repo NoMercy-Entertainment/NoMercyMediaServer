@@ -305,6 +305,12 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                 string groupTag = Ulid.NewUlid().ToString();
                 DecomposedTask[] tasks = await orchestrator.DecomposeAsync(request, groupTag);
 
+                // A partial top-up rebuilds only the missing renditions; a bundle
+                // built from it must not rewrite the master, which already lists
+                // the whole set. Cleared if the filter empties and we fall back to
+                // a full re-encode below.
+                bool isPartialTopUp = false;
+
                 // Partial with a non-empty MissingKinds only ever happens for
                 // decomposable (HLS/DASH) strategies — DecideSingleFile never
                 // returns Partial with missing kinds, only Skip/Full — so
@@ -318,6 +324,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                     tasks = tasks
                         .Where(task => reconciliation.MissingKinds.Contains(task.Kind))
                         .ToArray();
+                    isPartialTopUp = true;
 
                     if (tasks.Length == 0)
                     {
@@ -327,6 +334,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                             preset.Name
                         );
                         tasks = await orchestrator.DecomposeAsync(request, groupTag);
+                        isPartialTopUp = false;
                     }
                 }
 
@@ -349,7 +357,13 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                     continue;
                 }
 
-                await DispatchDecomposedAsync(tasks, preset.Id, fileMetadata, stopwatch);
+                await DispatchDecomposedAsync(
+                    tasks,
+                    preset.Id,
+                    fileMetadata,
+                    stopwatch,
+                    isPartialTopUp
+                );
             }
             catch (Exception ex)
             {
@@ -1051,7 +1065,8 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         DecomposedTask[] tasks,
         Ulid presetId,
         FileMetadata fileMetadata,
-        Stopwatch stopwatch
+        Stopwatch stopwatch,
+        bool isPartialTopUp = false
     )
     {
         int parentJobId = _selfJobId;
@@ -1119,7 +1134,12 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             // current bundle's BundledTaskIds, then dispatches the next on
             // wake-up. One ffmpeg in flight per source — never N parallel
             // bundles racing the GPU / CPU / shared writes.
-            DecomposedTask[] bundles = BuildResourceBundles(tasks, parentJobId, groupTag);
+            DecomposedTask[] bundles = BuildResourceBundles(
+                tasks,
+                parentJobId,
+                groupTag,
+                isPartialTopUp
+            );
 
             if (bundles.Length == 0)
             {
@@ -1289,7 +1309,8 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
     private DecomposedTask[] BuildResourceBundles(
         DecomposedTask[] tasks,
         int parentJobId,
-        string groupTag
+        string groupTag,
+        bool isPartialTopUp = false
     )
     {
         DecomposedTask[] stamped = tasks
@@ -1373,7 +1394,8 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                     chaptersForBundle,
                     parentJobId,
                     groupTag,
-                    bundleIndex
+                    bundleIndex,
+                    isPartialTopUp
                 )
             );
         }
@@ -1407,7 +1429,8 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                     chaptersForBundle: chapterIndexes,
                     parentJobId,
                     groupTag,
-                    0
+                    0,
+                    isPartialTopUp
                 )
             );
         }
@@ -1498,7 +1521,8 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         int[] chaptersForBundle,
         int parentJobId,
         string groupTag,
-        int bundleIndex
+        int bundleIndex,
+        bool isPartialTopUp = false
     )
     {
         string[] bundledIds = containedTaskIndexes.Select(idx => allTasks[idx].TaskId).ToArray();
@@ -1529,7 +1553,8 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             VideoSliceIndexes: videoSliceIndexes,
             AudioSliceIndexes: audioSliceIndexes,
             SubtitleSliceIndexes: subSliceIndexes,
-            IncludeThumbnails: thumbsForBundle ? null : false
+            IncludeThumbnails: thumbsForBundle ? null : false,
+            IsPartialTopUp: isPartialTopUp
         );
     }
 
