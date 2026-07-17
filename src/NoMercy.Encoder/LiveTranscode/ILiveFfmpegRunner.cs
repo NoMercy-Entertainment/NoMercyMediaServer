@@ -37,7 +37,12 @@ public record LiveRunInput(
     // AudioStreamIndex ("-vn -map 0:a:N"), for a source that has no pre-encoded
     // renditions (a raw remux). Each source language runs as its own audio-only
     // transcode so the master can list every language and switch between them.
-    bool AudioRenditionOnly = false
+    bool AudioRenditionOnly = false,
+    // Absolute source position where already-transcoded content resumes; the run
+    // stops there ("-t", not "-to" — see LiveFfmpegArgumentBuilder) instead of
+    // re-encoding over it. Null runs to EOF, the pre-existing behavior. Resolved
+    // by LiveGapPlanner from the session's on-disk segment coverage.
+    TimeSpan? StopPosition = null
 );
 
 /// <summary>

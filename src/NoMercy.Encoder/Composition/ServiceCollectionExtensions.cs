@@ -388,6 +388,9 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IHardwareBenchmark>().GetCachedIndex()
         );
         services.AddTransient<ILiveFfmpegRunner, LiveFfmpegRunner>();
+        // Stateless — reads the scratch directory fresh on every call, so one
+        // shared instance across every live session is safe.
+        services.AddSingleton<ILiveSegmentInventory, LiveSegmentInventory>();
         services.AddSingleton<ILiveEncoder, LiveEncoder>();
         services.AddSingleton<ILiveStreamingService, LiveStreamingService>();
         services.AddTransient<ILivePlaylistBuilder, LivePlaylistBuilder>();

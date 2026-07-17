@@ -115,14 +115,19 @@ public class LiveEncoderTests
             LiveTranscodeCachePath = Path.Combine(Path.GetTempPath(), "nomercy-live-tests"),
         };
 
+        NoMercy.Storage.IStorage storage = TestStorageFactory.CreateLocal();
+        ILiveSegmentInventory segmentInventory = TestStorageFactory.CreateSegmentInventory(storage);
+
         return new(
             selector,
             manager,
             new LiveStreamingService(
                 NullLogger<LiveStreamingService>.Instance,
-                TestStorageFactory.CreateLocal()
+                storage,
+                segmentInventory
             ),
             new NoOpLiveFfmpegRunner(),
+            segmentInventory,
             encoderOptions,
             speedIndex,
             budget,

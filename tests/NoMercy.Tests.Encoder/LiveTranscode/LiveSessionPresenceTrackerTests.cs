@@ -49,9 +49,11 @@ public class LiveSessionPresenceTrackerTests
         string sessionId
     ) Build(int graceSeconds = 1)
     {
+        NoMercy.Storage.IStorage storage = TestStorageFactory.CreateLocal();
         LiveStreamingService service = new(
             NullLogger<LiveStreamingService>.Instance,
-            TestStorageFactory.CreateLocal()
+            storage,
+            TestStorageFactory.CreateSegmentInventory(storage)
         );
 
         LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());

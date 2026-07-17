@@ -9,6 +9,9 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging.Abstractions;
+using NoMercy.Encoder.LiveTranscode;
+using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Validation;
 
@@ -25,4 +28,13 @@ internal static class TestStorageFactory
         LocalStorageDriver driver = new();
         return new(driver, new([], driver));
     }
+
+    /// <summary>
+    /// Real <see cref="LiveSegmentInventory"/> over <paramref name="storage"/> —
+    /// shared by every test that constructs a real <see cref="LiveStreamingService"/>,
+    /// so the required <c>ILiveSegmentInventory</c> dependency isn't hand-rolled at
+    /// each call site.
+    /// </summary>
+    public static ILiveSegmentInventory CreateSegmentInventory(IStorage storage) =>
+        new LiveSegmentInventory(storage, NullLogger<LiveSegmentInventory>.Instance);
 }

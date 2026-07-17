@@ -44,6 +44,16 @@ public class LiveSessionIdleReaperBranchTests
             CanRealtime: true
         );
 
+    private static LiveStreamingService NewStreamingService()
+    {
+        NoMercy.Storage.IStorage storage = TestStorageFactory.CreateLocal();
+        return new(
+            NullLogger<LiveStreamingService>.Instance,
+            storage,
+            TestStorageFactory.CreateSegmentInventory(storage)
+        );
+    }
+
     private static LiveSessionIdleReaper BuildReaper(
         ILiveStreamingService streamingService,
         ISessionManager sessionManager,
@@ -79,10 +89,7 @@ public class LiveSessionIdleReaperBranchTests
     [Fact]
     public async Task SweepAsync_complete_session_is_not_evicted()
     {
-        LiveStreamingService realService = new(
-            NullLogger<LiveStreamingService>.Instance,
-            TestStorageFactory.CreateLocal()
-        );
+        LiveStreamingService realService = NewStreamingService();
         LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
         realService.Register(session, TimeSpan.FromSeconds(4));
 
@@ -123,10 +130,7 @@ public class LiveSessionIdleReaperBranchTests
         // Use real LiveStreamingService + a stub session manager that throws
         // on RemoveSession for the first idle session. The reaper must still
         // process the second idle session.
-        LiveStreamingService streamingService = new(
-            NullLogger<LiveStreamingService>.Instance,
-            TestStorageFactory.CreateLocal()
-        );
+        LiveStreamingService streamingService = NewStreamingService();
 
         LiveSession first = new(Ulid.NewUlid().ToString(), MakeQuality());
         LiveSession second = new(Ulid.NewUlid().ToString(), MakeQuality());

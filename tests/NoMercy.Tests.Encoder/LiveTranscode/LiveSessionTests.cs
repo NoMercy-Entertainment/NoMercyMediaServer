@@ -163,15 +163,20 @@ public class LiveSessionTests
     }
 
     [Fact]
-    public async Task SeekAsync_InvokesBufferResetCallback()
+    public async Task SeekAsync_DoesNotInvokeBufferResetCallback()
     {
+        // A seek changes only the playhead — same quality, same absolute segment
+        // indices, deterministic content — so nothing is invalidated. Invoking the
+        // callback here is what used to wipe the coverage-aware buffer/on-disk
+        // state on every seek and made re-watching already-transcoded ground
+        // re-encode. Only ChangeQualityAsync still resets.
         LiveSession session = new("sess-001", MakeQuality());
         bool resetCalled = false;
         session.AttachBufferResetCallback(() => resetCalled = true);
 
         await session.SeekAsync(TimeSpan.FromSeconds(30), CancellationToken.None);
 
-        resetCalled.Should().BeTrue();
+        resetCalled.Should().BeFalse();
     }
 
     [Fact]
@@ -200,13 +205,16 @@ public class LiveSessionTests
     }
 
     [Fact]
-    public async Task SeekAsync_RuntimeBuffer_IsClearedOnSeek()
+    public async Task SeekAsync_RuntimeBuffer_IsNotClearedOnSeek()
     {
+        // Same quality + absolute segment indices means a seek invalidates
+        // nothing — the buffer-reset callback (wired to LiveRuntimeSession.ResetBuffer
+        // by LiveStreamingService.Register) fires on quality change only, so a
+        // segment buffered before the seek must still be there after it.
         LiveSession session = new("sess-001", MakeQuality());
         LiveRuntimeSession runtime = new(session, TimeSpan.FromSeconds(6));
         session.AttachBufferResetCallback(() => runtime.ResetBuffer());
 
-        // Buffer a few segments before the seek.
         Segment seg0 = new(0, TimeSpan.Zero, TimeSpan.FromSeconds(6), "/tmp/seg0.ts", 100);
         Segment seg1 = new(
             1,
@@ -219,11 +227,10 @@ public class LiveSessionTests
         runtime.BufferSegment(seg1);
         runtime.HighestSegmentIndex.Should().Be(1);
 
-        // Seek — the callback must wipe the buffer.
         await session.SeekAsync(TimeSpan.FromSeconds(60), CancellationToken.None);
 
-        runtime.SnapshotSegments().Should().BeEmpty();
-        runtime.HighestSegmentIndex.Should().Be(-1);
+        runtime.SnapshotSegments().Should().HaveCount(2);
+        runtime.HighestSegmentIndex.Should().Be(1);
     }
 
     // ──────────────────────────────────────────────────────────────────────────

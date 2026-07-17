@@ -107,6 +107,23 @@ internal static class LiveFfmpegArgumentBuilder
                 AppendAudio(args, input, action);
         }
 
+        // Stop where already-transcoded content resumes (see LiveGapPlanner).
+        // "-t" is measured on the timeline BEFORE "-output_ts_offset" below, so it
+        // counts from the "-ss" seek position, not from the shifted output PTS —
+        // which is why the bound is expressed as a duration from this run's start
+        // rather than as an absolute "-to" against the offset output clock.
+        if (input.StopPosition is { } stopPosition)
+        {
+            double startSeconds = (double)startIndex * input.SegmentDurationSeconds;
+            double durationSeconds = stopPosition.TotalSeconds - startSeconds;
+
+            if (durationSeconds > 0)
+            {
+                args.Add("-t");
+                args.Add(FormatSeconds(durationSeconds));
+            }
+        }
+
         // Absolute output timestamps. A runner spawned by a seek uses "-ss" before
         // the input, which resets output PTS to ~0. hls.js then has to reconcile a
         // segment whose PTS starts at 0 against a playlist that places it deep in

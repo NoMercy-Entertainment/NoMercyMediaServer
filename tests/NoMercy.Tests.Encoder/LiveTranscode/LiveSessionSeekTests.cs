@@ -188,4 +188,37 @@ public class LiveSessionSeekTests
         // And it must be a different registration than the cancelled old one.
         tokenBefore.IsCancellationRequested.Should().BeTrue();
     }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Coverage regression wall: seek must not invalidate what is already
+    // transcoded; a quality change genuinely must.
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task SeekAsync_DoesNotInvokeBufferResetCallback()
+    {
+        LiveSession session = new("seek-009", MakeQuality());
+        bool resetCalled = false;
+        session.AttachBufferResetCallback(() => resetCalled = true);
+        session.AttachRunnerFactory((_, _) => Task.CompletedTask);
+
+        await session.SeekAsync(TimeSpan.FromSeconds(45), CancellationToken.None);
+
+        resetCalled.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ChangeQualityAsync_InvokesBufferResetCallback()
+    {
+        LiveSession session = new("seek-010", MakeQuality());
+        bool resetCalled = false;
+        session.AttachBufferResetCallback(() => resetCalled = true);
+        session.AttachRunnerFactory((_, _) => Task.CompletedTask);
+
+        LiveQuality newQuality = MakeQuality() with { Id = "720p", Label = "720p" };
+
+        await session.ChangeQualityAsync("720p", newQuality, CancellationToken.None);
+
+        resetCalled.Should().BeTrue();
+    }
 }

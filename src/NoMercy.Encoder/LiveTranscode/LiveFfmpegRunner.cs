@@ -196,10 +196,18 @@ public class LiveFfmpegRunner(
             if (lease is not null)
                 resourceBudget.Release(lease);
 
-            // Conditional: a per-seek/resume runner whose CTS has already been
-            // superseded by a newer one must not end the whole session's
-            // segment stream — see LiveSession.CompleteIfCurrentRunner.
-            session.CompleteIfCurrentRunner(ct);
+            // A bounded run (LiveRunInput.StopPosition set) finished the gap it was
+            // spawned to fill, not the file — it reached content an earlier runner
+            // generation already produced. Completing the channel here would end
+            // the whole session even though playback continues; park it idle
+            // instead so a later seek/resume can spawn a fresh runner against the
+            // same live channel. An unbounded run (StopPosition null) genuinely
+            // ran to EOF, so CompleteIfCurrentRunner's superseded-generation guard
+            // applies as before — see LiveSession.CompleteIfCurrentRunner.
+            if (input.StopPosition is null)
+                session.CompleteIfCurrentRunner(ct);
+            else
+                session.MarkRunnerIdle(ct);
         }
     }
 

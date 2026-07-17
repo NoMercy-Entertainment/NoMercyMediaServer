@@ -34,6 +34,16 @@ public class LiveSessionIdleReaperTests
             CanRealtime: true
         );
 
+    private static LiveStreamingService NewStreamingService()
+    {
+        NoMercy.Storage.IStorage storage = TestStorageFactory.CreateLocal();
+        return new(
+            NullLogger<LiveStreamingService>.Instance,
+            storage,
+            TestStorageFactory.CreateSegmentInventory(storage)
+        );
+    }
+
     /// <summary>
     /// Builds a LiveStreamingService pre-populated with a session whose
     /// LastAccess is offset by <paramref name="lastAccessOffset"/> from now.
@@ -42,10 +52,7 @@ public class LiveSessionIdleReaperTests
         TimeSpan lastAccessOffset
     )
     {
-        LiveStreamingService service = new(
-            NullLogger<LiveStreamingService>.Instance,
-            TestStorageFactory.CreateLocal()
-        );
+        LiveStreamingService service = NewStreamingService();
 
         LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
         service.Register(session, TimeSpan.FromSeconds(4));
@@ -167,10 +174,7 @@ public class LiveSessionIdleReaperTests
     [Fact]
     public async Task SweepAsync_IdleAudioRenditionChild_IsNotEvicted()
     {
-        LiveStreamingService service = new(
-            NullLogger<LiveStreamingService>.Instance,
-            TestStorageFactory.CreateLocal()
-        );
+        LiveStreamingService service = NewStreamingService();
 
         LiveSession child = new(Ulid.NewUlid().ToString(), MakeQuality());
         service.Register(child, TimeSpan.FromSeconds(4), isAudioRenditionChild: true);
@@ -191,10 +195,7 @@ public class LiveSessionIdleReaperTests
     [Fact]
     public async Task SweepAsync_MixedSessions_OnlyIdleEvicted()
     {
-        LiveStreamingService service = new(
-            NullLogger<LiveStreamingService>.Instance,
-            TestStorageFactory.CreateLocal()
-        );
+        LiveStreamingService service = NewStreamingService();
 
         LiveSession active = new(Ulid.NewUlid().ToString(), MakeQuality());
         LiveSession idle = new(Ulid.NewUlid().ToString(), MakeQuality());
