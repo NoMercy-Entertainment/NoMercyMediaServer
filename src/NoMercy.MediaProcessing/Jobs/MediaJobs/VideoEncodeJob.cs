@@ -2011,7 +2011,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         string basePath = folderName;
         int baseId = movie?.Id ?? episode!.Id;
         string? imgPath = movie?.Backdrop ?? episode?.Still;
-        MediaItemRef mediaItem = BuildMediaItemRef(movie, episode);
+        MediaItemRef mediaItem = MediaItemRefFactory.Create(movie, episode);
 
         return new()
         {
@@ -2032,29 +2032,6 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
     /// are mutually exclusive — exactly one is non-null (callers already
     /// verified that before reaching this point).
     /// </summary>
-    private static MediaItemRef BuildMediaItemRef(Movie? movie, Episode? episode)
-    {
-        if (movie is not null)
-            return new MovieMediaRef(
-                Type: MediaType.Movie,
-                Id: movie.Id,
-                Title: movie.Title,
-                Year: movie.ReleaseDate?.Year,
-                Description: movie.Overview
-            );
-
-        return new EpisodeMediaRef(
-            Type: MediaType.Episode,
-            Id: episode!.Id,
-            Title: episode.Title ?? episode.CreateTitle(),
-            Year: episode.AirDate?.Year,
-            ShowTitle: episode.Tv.Title,
-            SeasonNumber: episode.SeasonNumber,
-            EpisodeNumber: episode.EpisodeNumber,
-            Description: episode.Overview
-        );
-    }
-
     // ------------------------------------------------------------------
     // Task-ID parsing helpers
     // ------------------------------------------------------------------
