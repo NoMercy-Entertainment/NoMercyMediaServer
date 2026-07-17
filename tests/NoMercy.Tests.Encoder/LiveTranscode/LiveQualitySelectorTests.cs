@@ -331,4 +331,75 @@ public class LiveQualitySelectorTests
         optimal.Width.Should().Be(854);
         optimal.Height.Should().Be(480);
     }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // SelectForBandwidth — fits a tier directly to the client's observed
+    // downlink at usableFraction, independent of the encoder-lead signal.
+    // ──────────────────────────────────────────────────────────────────────────
+
+    private static LiveQuality MakeTier(string id, int bitrateKbps) =>
+        new(
+            Id: id,
+            Label: id,
+            Width: 1920,
+            Height: 1080,
+            Codec: VideoCodecType.H264,
+            BitrateKbps: bitrateKbps,
+            Encoder: "libx264",
+            IsHardwareAccelerated: false,
+            ExpectedSpeed: 2.0,
+            CanRealtime: true
+        );
+
+    private static readonly LiveQuality Tier1080 = MakeTier("1080p", 8000);
+    private static readonly LiveQuality Tier720 = MakeTier("720p", 4000);
+    private static readonly LiveQuality Tier480 = MakeTier("480p", 2000);
+    private static readonly LiveQuality[] Tiers = [Tier1080, Tier720, Tier480];
+
+    [Fact]
+    public void SelectForBandwidth_AmpleBandwidth_PicksHighestTier()
+    {
+        // 10000 kbps * 0.8 = 8000 kbps usable — exactly fits the 1080p tier.
+        LiveQuality selected = _gpuSelector.SelectForBandwidth(Tiers, 10000, 0.8, Tier480);
+
+        selected.Id.Should().Be("1080p");
+    }
+
+    [Fact]
+    public void SelectForBandwidth_MidBandwidth_PicksMiddleTier()
+    {
+        // 5500 kbps * 0.8 = 4400 kbps usable — too little for 1080p (8000),
+        // fits 720p (4000).
+        LiveQuality selected = _gpuSelector.SelectForBandwidth(Tiers, 5500, 0.8, Tier1080);
+
+        selected.Id.Should().Be("720p");
+    }
+
+    [Fact]
+    public void SelectForBandwidth_ExactBoundary_FitsTheBoundaryTier()
+    {
+        // 4000 kbps * 1.0 = 4000 kbps usable — exactly equals the 720p tier's
+        // bitrate, so the boundary itself must fit (<=), not be excluded.
+        LiveQuality selected = _gpuSelector.SelectForBandwidth(Tiers, 4000, 1.0, Tier480);
+
+        selected.Id.Should().Be("720p");
+    }
+
+    [Fact]
+    public void SelectForBandwidth_StarvedBandwidth_FallsBackToLowestTier()
+    {
+        // 500 kbps * 0.8 = 400 kbps usable — fits nothing; must fall back to
+        // the lowest tier rather than return empty.
+        LiveQuality selected = _gpuSelector.SelectForBandwidth(Tiers, 500, 0.8, Tier1080);
+
+        selected.Id.Should().Be("480p");
+    }
+
+    [Fact]
+    public void SelectForBandwidth_EmptyAvailable_FallsBackToCurrent()
+    {
+        LiveQuality selected = _gpuSelector.SelectForBandwidth([], 10000, 0.8, Tier720);
+
+        selected.Id.Should().Be("720p");
+    }
 }

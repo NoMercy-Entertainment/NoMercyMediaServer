@@ -81,6 +81,10 @@ public class BuildingBlockReplacementTests
             Task.FromResult(0);
 
         public int CountFontAttachments(IReadOnlyList<AttachmentInfo> attachments) => 0;
+
+        public IReadOnlyList<AttachmentDumpTarget> ResolveAttachmentDumpTargets(
+            IReadOnlyList<AttachmentInfo> attachments
+        ) => [];
     }
 
     private sealed class FakeFontExtractor : IFontExtractor
@@ -96,5 +100,9 @@ public class BuildingBlockReplacementTests
             Task.FromResult(0);
 
         public int CountFontAttachments(IReadOnlyList<AttachmentInfo> attachments) => 0;
+
+        public IReadOnlyList<AttachmentDumpTarget> ResolveAttachmentDumpTargets(
+            IReadOnlyList<AttachmentInfo> attachments
+        ) => [];
     }
 }

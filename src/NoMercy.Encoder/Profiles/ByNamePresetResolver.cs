@@ -18,10 +18,10 @@ public record PresetResolveRequest(string Name, string ProfileJson, string? Pare
 
 /// <summary>
 /// Name-based preset lookup used by the dashboard controllers to walk a
-/// parent chain via human-readable names. Distinct from V2's
-/// <see cref="V2.IPresetLookup"/> which keys by <see cref="Ulid"/> for the
-/// canonical resolver. Once the dashboard migrates fully to ULID-based
-/// inheritance, this interface and its by-name resolver can be retired.
+/// parent chain via human-readable names. Distinct from <see cref="IPresetLookup"/>,
+/// which keys by <see cref="Ulid"/> for the canonical resolver. Once the
+/// dashboard moves fully to id-based inheritance, this interface and its
+/// by-name resolver can be retired.
 /// </summary>
 public interface INamePresetLookup
 {

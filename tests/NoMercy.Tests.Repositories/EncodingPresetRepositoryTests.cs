@@ -61,10 +61,17 @@ public class EncodingPresetRepositoryTests : IDisposable
         await _repository.CreateAsync(Build(name: "zzz-user", isBuiltIn: false));
         await _repository.CreateAsync(Build(name: "aaa-builtin", isBuiltIn: true));
 
+        // Seeded baseline data (e.g. the shared "Default HLS" preset) may add
+        // other non-builtin rows to the page, so assert relative order between
+        // the two rows this test controls rather than absolute page positions.
         List<EncodingPreset> page = await _repository.ListAsync();
 
-        Assert.Equal("aaa-builtin", page[0].Name);
-        Assert.Equal("zzz-user", page[1].Name);
+        int builtinIndex = page.FindIndex(p => p.Name == "aaa-builtin");
+        int userIndex = page.FindIndex(p => p.Name == "zzz-user");
+
+        Assert.True(builtinIndex >= 0, "aaa-builtin should be present in the page");
+        Assert.True(userIndex >= 0, "zzz-user should be present in the page");
+        Assert.True(builtinIndex < userIndex, "built-in presets must sort before user presets");
     }
 
     [Fact]
@@ -133,13 +140,15 @@ public class EncodingPresetRepositoryTests : IDisposable
     [Fact]
     public async Task GetTotalCountAsync_CountsEveryRow()
     {
+        int before = await _repository.GetTotalCountAsync();
+
         await _repository.CreateAsync(Build(name: "a"));
         await _repository.CreateAsync(Build(name: "b"));
         await _repository.CreateAsync(Build(name: "c"));
 
         int count = await _repository.GetTotalCountAsync();
 
-        Assert.Equal(3, count);
+        Assert.Equal(before + 3, count);
     }
 
     public void Dispose()

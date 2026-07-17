@@ -53,6 +53,11 @@ internal sealed class TestStorage : IStorage
 
     public bool Exists(string path) => _files.ContainsKey(path);
 
+    // Overrides IStorage's default (Driver.CombinePath) — Driver throws on this
+    // double, so FinalizeStage's path-joining needs a working stand-in.
+    public string CombinePath(string parent, string child) =>
+        string.IsNullOrEmpty(parent) ? child : $"{parent.TrimEnd('/')}/{child.TrimStart('/')}";
+
     public IReadOnlyList<StorageEntry> List(string path, string? pattern, bool recursive)
     {
         string prefix = path.TrimEnd('/') + "/";
@@ -66,12 +71,7 @@ internal sealed class TestStorage : IStorage
             if (!recursive && rel.Contains('/'))
                 continue;
             entries.Add(
-                new(
-                    key,
-                    IsDirectory: false,
-                    SizeBytes: _files[key].Length,
-                    LastModified: now
-                )
+                new(key, IsDirectory: false, SizeBytes: _files[key].Length, LastModified: now)
             );
         }
         return entries;
@@ -201,10 +201,11 @@ public class BundleManifestWriterTests
     public async Task WriteAsync_PersistsManifestJson()
     {
         TestStorage storage = new();
-        BundleManifestWriter writer = new(storage);
+        BundleManifestWriter writer = new();
         BundleManifest manifest = SampleManifest();
 
         await writer.WriteAsync(
+            storage,
             "encodes/web-1080p/manifest.json",
             manifest,
             CancellationToken.None
@@ -220,9 +221,10 @@ public class BundleManifestWriterTests
     public async Task ReadAsync_ReturnsNullWhenMissing()
     {
         TestStorage storage = new();
-        BundleManifestWriter writer = new(storage);
+        BundleManifestWriter writer = new();
 
         BundleManifest? result = await writer.ReadAsync(
+            storage,
             "encodes/web-1080p/manifest.json",
             CancellationToken.None
         );
@@ -235,7 +237,7 @@ public class BundleManifestWriterTests
     {
         // Manifest claims 3 files; disk has those 3 + 1 extra.
         TestStorage storage = new();
-        BundleManifestWriter writer = new(storage);
+        BundleManifestWriter writer = new();
         BundleManifest manifest = SampleManifest(); // files: master + 2 segments
 
         // Seed the 3 manifest files + 1 extra.
@@ -245,6 +247,7 @@ public class BundleManifestWriterTests
         storage.Seed($"{bundleDir}/extra_orphan.ts", [0x02]);
 
         ReconcileReport report = await writer.ReconcileAsync(
+            storage,
             bundleDir,
             manifest,
             CancellationToken.None
@@ -259,7 +262,7 @@ public class BundleManifestWriterTests
     {
         // Manifest claims 3 files; disk only has 2.
         TestStorage storage = new();
-        BundleManifestWriter writer = new(storage);
+        BundleManifestWriter writer = new();
         BundleManifest manifest = SampleManifest(); // files: master + 2 segments
 
         string bundleDir = "encodes/web-1080p";
@@ -269,6 +272,7 @@ public class BundleManifestWriterTests
         // manifest.Files[2] is intentionally absent.
 
         ReconcileReport report = await writer.ReconcileAsync(
+            storage,
             bundleDir,
             manifest,
             CancellationToken.None

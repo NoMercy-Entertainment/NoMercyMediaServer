@@ -83,6 +83,20 @@ public class LiveTranscodeController(ILiveTranscodeService service) : BaseContro
         return MapResult(service.ReportPosition(sessionId, request));
     }
 
+    /// <summary>
+    /// REST fallback for clients that don't use the SignalR
+    /// <c>LiveTranscodeHub.ReportBufferHealth</c> method to report their
+    /// download-buffer depth and observed downlink.
+    /// </summary>
+    [HttpPost("sessions/{sessionId}/buffer-health")]
+    public IActionResult ReportBufferHealth(
+        string sessionId,
+        [FromBody] ReportBufferHealthRequest request
+    )
+    {
+        return MapResult(service.ReportBufferHealth(sessionId, request));
+    }
+
     [HttpPost("sessions/{sessionId}/quality")]
     public async Task<IActionResult> ChangeQuality(
         string sessionId,

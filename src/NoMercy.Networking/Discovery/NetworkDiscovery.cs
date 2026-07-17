@@ -32,6 +32,7 @@ public class NetworkDiscovery : INetworkDiscovery
     private string? _externalIp;
     private INatDevice? _device;
     private bool _hasFoundDevice;
+    private bool _containerIpWarned;
 
     private readonly IAuthTokenStore _authTokenStore;
     private readonly IConnectivityStatus _connectivityStatus;
@@ -328,6 +329,36 @@ public class NetworkDiscovery : INetworkDiscovery
     }
 
     private string GetInternalIp()
+    {
+        string resolved = ResolveInternalIp();
+
+        // Inside a container the routing interface IS the container interface, so no
+        // amount of probing can discover the host's LAN IP — it has to be supplied.
+        // Registering the container address anyway publishes a DNS record that no
+        // client on the LAN can route to, which presents as "the server won't start".
+        // The InternalIp getter re-resolves on every read, so this latches to keep one
+        // actionable line in the log instead of a repeating wall of it.
+        if (
+            !_containerIpWarned
+            && Screen.IsDocker
+            && IsDockerOrWslAddress(IPAddress.Parse(resolved))
+        )
+        {
+            _containerIpWarned = true;
+            _logger.LogError(
+                "Internal IP resolved to {Resolved}, a container-internal address that LAN clients "
+                    + "cannot route to, so the server will advertise an unreachable address. Set "
+                    + "NOMERCY_INTERNAL_IP (or --internal-ip) to this host's LAN IP; with the "
+                    + "supplied compose files, export HOST_IP=$(hostname -I | awk '{{print $1}}') "
+                    + "before 'docker compose up'.",
+                resolved
+            );
+        }
+
+        return resolved;
+    }
+
+    private string ResolveInternalIp()
     {
         // Prefer the UDP socket method — it returns the IP of the interface that would
         // route to the internet, which is always the real LAN adapter, never Docker/WSL.

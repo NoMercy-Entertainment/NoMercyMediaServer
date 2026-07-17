@@ -152,21 +152,16 @@ public class AutoEncodeSubscriberLifecycleTests
     }
 
     [Fact]
-    public async Task ScanEvent_ForV2PresetMappedFolderWithVideoFile_DispatchesVideoEncodeJob()
+    public async Task ScanEvent_ForPresetMappedFolderWithVideoFile_DispatchesVideoEncodeJob()
     {
-        // The dispatch gate reads the same V2 EncodingPresetFolders table
-        // VideoEncodeJob resolves its presets from — a folder with a V2 link
-        // must dispatch, regardless of whether a V1 link also exists.
+        // The dispatch gate reads the same EncodingPresetFolders table
+        // VideoEncodeJob resolves its presets from — a folder with a preset
+        // link must dispatch.
         Ulid libraryId = Ulid.NewUlid();
         Ulid mediaId = Ulid.NewUlid();
 
         IDbContextFactory<MediaContext> factory = ContextFactory(out SqliteConnection connection);
-        (int movieId, Ulid presetId) = SeedPresetMappedMovie(
-            factory,
-            libraryId,
-            mediaId,
-            linkV1: false
-        );
+        (int movieId, Ulid presetId) = SeedPresetMappedMovie(factory, libraryId, mediaId);
 
         List<VideoEncodeJob> dispatched = [];
         Mock<IJobDispatcher> dispatcher = new();
@@ -203,45 +198,6 @@ public class AutoEncodeSubscriberLifecycleTests
         dispatched[0]
             .PresetId.Should()
             .Be(presetId, "the job must run the library's assigned preset");
-        connection.Dispose();
-    }
-
-    [Fact]
-    public async Task ScanEvent_ForFolderWithOnlyLegacyV1Link_DispatchesNothing()
-    {
-        // Regression pin for the V1/V2 split-brain fix: a folder that only
-        // has a legacy EncoderProfileFolder (V1) link — no V2
-        // EncodingPresetFolder — must NOT dispatch even though the library
-        // has auto-encode-on-scan on and a preset assigned. The live
-        // dispatch gate reads V2 exclusively, matching what VideoEncodeJob
-        // executes.
-        Ulid libraryId = Ulid.NewUlid();
-        Ulid mediaId = Ulid.NewUlid();
-
-        IDbContextFactory<MediaContext> factory = ContextFactory(out SqliteConnection connection);
-        int movieId = SeedV1OnlyMappedMovie(factory, libraryId, mediaId);
-
-        Mock<IJobDispatcher> dispatcher = new();
-        InMemoryEventBus bus = new();
-        AutoEncodeSubscriber subscriber = new(
-            bus,
-            NullLogger<AutoEncodeSubscriber>.Instance,
-            NoOpStorage(),
-            factory,
-            dispatcher.Object,
-            EnabledConfigStore()
-        );
-        await subscriber.StartAsync(CancellationToken.None);
-
-        await bus.PublishAsync(
-            new MediaFilesScannedEvent { MediaId = movieId, LibraryId = libraryId }
-        );
-
-        dispatcher.Verify(
-            d => d.Dispatch(It.IsAny<IShouldQueue>(), It.IsAny<string>(), It.IsAny<int>()),
-            Times.Never,
-            "a V1-only link must not drive the V2 dispatch gate"
-        );
         connection.Dispose();
     }
 
@@ -289,7 +245,6 @@ public class AutoEncodeSubscriberLifecycleTests
             factory,
             libraryId,
             mediaId,
-            linkV1: false,
             autoEncodeOnScan: false
         );
 
@@ -329,7 +284,6 @@ public class AutoEncodeSubscriberLifecycleTests
             factory,
             libraryId,
             mediaId,
-            linkV1: false,
             autoEncodeOnScan: true,
             assignEncodePreset: false
         );
@@ -361,7 +315,6 @@ public class AutoEncodeSubscriberLifecycleTests
         IDbContextFactory<MediaContext> factory,
         Ulid libraryId,
         Ulid mediaId,
-        bool linkV1,
         bool autoEncodeOnScan = true,
         bool assignEncodePreset = true
     )
@@ -408,15 +361,6 @@ public class AutoEncodeSubscriberLifecycleTests
             }
         );
 
-        if (linkV1)
-        {
-            EncoderProfile profile = new() { Id = Ulid.NewUlid(), Name = "Archive 1080p (v1)" };
-            context.EncoderProfiles.Add(profile);
-            context.EncoderProfileFolder.Add(
-                new() { EncoderProfileId = profile.Id, FolderId = folderId }
-            );
-        }
-
         int movieId = 4242;
         context.VideoFiles.Add(
             new()
@@ -435,58 +379,25 @@ public class AutoEncodeSubscriberLifecycleTests
         return (movieId, preset.Id);
     }
 
-    private static int SeedV1OnlyMappedMovie(
+    private static void SeedGateOnlyLibrary(
         IDbContextFactory<MediaContext> factory,
         Ulid libraryId,
-        Ulid mediaId
+        bool autoEncodeOnScan,
+        bool assignEncodePreset
     )
     {
         using MediaContext context = factory.CreateDbContext();
-
-        Ulid driverId = Ulid.NewUlid();
-        Ulid folderId = Ulid.NewUlid();
-        const string folderPath = "/media/movies";
 
         Library library = new()
         {
             Id = libraryId,
             Title = "Movies",
-            AutoEncodeOnScan = true,
-            EncodePresetId = Ulid.NewUlid(),
+            AutoEncodeOnScan = autoEncodeOnScan,
+            EncodePresetId = assignEncodePreset ? Ulid.NewUlid() : null,
         };
         context.Libraries.Add(library);
 
-        Folder folder = new()
-        {
-            Id = folderId,
-            Path = folderPath,
-            DriverId = driverId,
-        };
-        context.Folders.Add(folder);
-        context.FolderLibrary.Add(new() { FolderId = folderId, LibraryId = libraryId });
-
-        EncoderProfile profile = new() { Id = Ulid.NewUlid(), Name = "Archive 1080p" };
-        context.EncoderProfiles.Add(profile);
-        context.EncoderProfileFolder.Add(
-            new() { EncoderProfileId = profile.Id, FolderId = folderId }
-        );
-
-        int movieId = 4343;
-        context.VideoFiles.Add(
-            new()
-            {
-                Id = Ulid.NewUlid(),
-                MovieId = movieId,
-                HostFolder = folderPath,
-                Filename = "/Movie.mkv",
-                Quality = "1080p",
-                Share = "local",
-                Languages = "eng",
-            }
-        );
-
         context.SaveChanges();
-        return movieId;
     }
 
     private static void SeedGateOnlyLibrary(

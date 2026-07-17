@@ -371,47 +371,72 @@ public class BuildStage(
 
             // Thumbnail sprite — the spritevtt muxer generates both the sprite
             // sheet (.webp) and the companion VTT cue file in one pass.
+            List<FfmpegCommand> spriteCommands = [];
             if (input.Plan.OutputPlan.Thumbnails is not null && context.MediaInfo is not null)
             {
                 ThumbnailOutputPlan thumbs = input.Plan.OutputPlan.Thumbnails;
 
-                // The normal filter graph defines a [thumbs] pad; the PGS overlay
-                // path bypasses it, so read from the dedicated split pad it
-                // produced instead — otherwise -map [thumbs] references a label
-                // that no filtergraph defines and ffmpeg aborts.
-                string thumbnailMapLabel = pgsThumbnailLabel ?? "[thumbs]";
+                if (AllVideoOutputsAreCopy(input.Plan.OutputPlan))
+                {
+                    // A stream-copied video output carries no filtergraph, so a
+                    // [thumbs] pad on the main builder would reference a label
+                    // nothing defines — ffmpeg aborts with exit -22 ("Streamcopy
+                    // requested for output stream fed from a complex
+                    // filtergraph"). Build the sprite as a SEPARATE command that
+                    // reads the source directly through a plain -vf instead —
+                    // matching the font/bitmap-subtitle pattern below. Filenames
+                    // must stay byte-identical to the inline path so the VTT
+                    // references the player follows still resolve.
+                    spriteCommands.Add(
+                        new FfmpegCommandBuilder()
+                            .WithGlobalOptions(new(ProgressPipe: false, Overwrite: true))
+                            .AddInput(new(input.InputPath))
+                            .AddOutput(
+                                new(
+                                    FilePath: $"thumbs_{thumbs.Width}x{thumbs.Height}.webp",
+                                    MapStreams: ["0:v:0"],
+                                    ExtraFlags: new()
+                                    {
+                                        ["-vf"] =
+                                            $"fps=1/{thumbs.IntervalSeconds},scale={thumbs.Width}:-2",
+                                        ["-f"] = "spritevtt",
+                                        ["-vtt_filename"] =
+                                            $"thumbs_{thumbs.Width}x{thumbs.Height}.vtt",
+                                    }
+                                )
+                            )
+                            .Build(options.FfmpegPath, input.OutputDirectory)
+                    );
+                }
+                else
+                {
+                    // The normal filter graph defines a [thumbs] pad; the PGS overlay
+                    // path bypasses it, so read from the dedicated split pad it
+                    // produced instead — otherwise -map [thumbs] references a label
+                    // that no filtergraph defines and ffmpeg aborts.
+                    string thumbnailMapLabel = pgsThumbnailLabel ?? "[thumbs]";
 
-                builder.AddOutput(
-                    new(
-                        FilePath: $"thumbs_{thumbs.Width}x{thumbs.Height}.webp",
-                        MapStreams: [thumbnailMapLabel],
-                        ExtraFlags: new()
-                        {
-                            ["-f"] = "spritevtt",
-                            ["-vtt_filename"] = $"thumbs_{thumbs.Width}x{thumbs.Height}.vtt",
-                        }
-                    )
-                );
+                    builder.AddOutput(
+                        new(
+                            FilePath: $"thumbs_{thumbs.Width}x{thumbs.Height}.webp",
+                            MapStreams: [thumbnailMapLabel],
+                            ExtraFlags: new()
+                            {
+                                ["-f"] = "spritevtt",
+                                ["-vtt_filename"] = $"thumbs_{thumbs.Width}x{thumbs.Height}.vtt",
+                            }
+                        )
+                    );
+                }
             }
 
-            // Text subtitles go in the main command (single-pass).
-            // Bitmap subtitles need separate extraction (FFmpeg can't mux dvd_subtitle to .sub+.idx).
-            List<FfmpegCommand> bitmapSubCommands = [];
+            // Text subtitles go in the main command (single-pass). Bitmap
+            // subtitles (and, when this task owns font extraction, font
+            // attachments) are pulled out into ExtractionCommandBuilder below.
             if (input.Plan.OutputPlan.SubtitleOutputs.Length > 0 && context.MediaInfo is not null)
             {
                 SubtitleCommandBuilder.AddTextSubtitleOutputs(
                     builder,
-                    input.Plan.OutputPlan,
-                    context.MediaInfo,
-                    input.OutputDirectory,
-                    input.MediaTitle,
-                    subtitleExtractor,
-                    effectiveStorage
-                );
-
-                bitmapSubCommands = SubtitleCommandBuilder.BuildBitmapSubtitleCommands(
-                    options.FfmpegPath,
-                    input.InputPath,
                     input.Plan.OutputPlan,
                     context.MediaInfo,
                     input.OutputDirectory,
@@ -429,7 +454,8 @@ public class BuildStage(
                 mainCommand,
                 context.MediaItem,
                 context,
-                copyMode
+                copyMode,
+                context.EnableMetadataInjection
             );
 
             logger.LogInformation(
@@ -440,12 +466,8 @@ public class BuildStage(
             );
 
             List<FfmpegCommand> allCommands = [mainCommand];
-            allCommands.AddRange(bitmapSubCommands);
+            allCommands.AddRange(spriteCommands);
 
-            // Font extraction — only when the source has embedded attachments (fonts).
-            // This requires a separate command because -dump_attachment is incompatible
-            // with encoding outputs.
-            //
             // Run-once semantics: when tasks are decomposed, fonts are extracted by
             // EXACTLY ONE task to keep the on-disk fonts/ dir stable. We gate on the
             // first video task (OutputIndex=0) or the Thumbnails task when there is
@@ -464,17 +486,42 @@ public class BuildStage(
                     && input.Plan.OutputPlan.VideoOutputs.Length == 0
                 );
 
-            if (isFontOwner && context.MediaInfo is not null && context.MediaInfo.HasAttachments)
+            IReadOnlyList<AttachmentInfo> attachmentsToExtract =
+                isFontOwner && context.MediaInfo is not null && context.MediaInfo.HasAttachments
+                    ? context.MediaInfo.Attachments
+                    : [];
+
+            // Bitmap subtitles and (when this task owns them) font attachments are
+            // pulled out into ONE dedicated ffmpeg command. input.InputPath is
+            // frequently a remote source (NFS/SMB/S3), so every extra "-i" is a
+            // full network re-read of a multi-GB file — merging what used to be
+            // one command per bitmap subtitle stream plus one for fonts turns
+            // N+1 network reads into exactly one. Kept separate from the main
+            // encode command so an extraction failure never sinks an otherwise
+            // successful, hours-long encode.
+            if (
+                context.MediaInfo is not null
+                && (
+                    input.Plan.OutputPlan.SubtitleOutputs.Length > 0
+                    || attachmentsToExtract.Count > 0
+                )
+            )
             {
-                string fontDir = effectiveStorage.CombinePath(input.OutputDirectory, "fonts");
-                effectiveStorage.CreateDirectory(fontDir);
-                FfmpegCommand fontCommand = fontExtractor.BuildExtractionCommand(
+                FfmpegCommand? extractionCommand = ExtractionCommandBuilder.BuildCommand(
                     options.FfmpegPath,
                     input.InputPath,
                     input.OutputDirectory,
-                    context.MediaInfo.Attachments
+                    input.Plan.OutputPlan,
+                    context.MediaInfo,
+                    input.MediaTitle,
+                    subtitleExtractor,
+                    fontExtractor,
+                    effectiveStorage,
+                    attachmentsToExtract
                 );
-                allCommands.Add(fontCommand);
+
+                if (extractionCommand is not null)
+                    allCommands.Add(extractionCommand);
             }
 
             return new StageSuccess<FfmpegCommand[]>(allCommands.ToArray());
@@ -559,6 +606,24 @@ public class BuildStage(
 
         return false;
     }
+
+    /// <summary>
+    /// True only when EVERY video output in the plan is stream-copied — the
+    /// pure-remux case where no bracket-labeled (filtergraph) video output
+    /// exists at all, so a "[thumbs]" pad on the main builder has nothing to
+    /// reference. A mixed ladder (one rung smart-copied, another transcoded —
+    /// see PlanStage.ApplySmartCopyDowngrade) still has a live filtergraph for
+    /// the transcoded rung, so the inline "[thumbs]" split stays valid there;
+    /// only a fully-copied plan needs the sprite pulled into a separate
+    /// command. Deliberately narrower than <see cref="IsCopyMode"/>, which
+    /// also flags audio-only copy and would wrongly reroute a plan whose
+    /// video is still transcoded.
+    /// </summary>
+    internal static bool AllVideoOutputsAreCopy(OutputPlan plan) =>
+        plan.VideoOutputs.Length > 0
+        && plan.VideoOutputs.All(v =>
+            string.Equals(v.EncoderName, "copy", StringComparison.OrdinalIgnoreCase)
+        );
 
     /// <summary>
     /// Converts a crash-checkpoint progress position into an input seek

@@ -83,4 +83,35 @@ public interface ILiveSession : IAsyncDisposable
     /// Called once by <see cref="LiveStreamingService"/> after registration.
     /// </summary>
     void AttachBufferResetCallback(Action callback);
+
+    /// <summary>
+    /// The client's last-reported download-buffer depth: seconds of media it
+    /// holds downloaded but not yet played. This is a NETWORK signal, distinct
+    /// from <see cref="BufferAhead"/> (an encoder-capacity signal — how far the
+    /// transcoder ran ahead of the playhead). Zero until the first report.
+    /// </summary>
+    TimeSpan ClientBufferedAhead { get; }
+
+    /// <summary>
+    /// The client's last-reported measured/estimated downlink, in kbps. Zero
+    /// until the first report.
+    /// </summary>
+    int ObservedBandwidthKbps { get; }
+
+    /// <summary>
+    /// Records the client's download-buffer depth and observed downlink, and
+    /// stamps the report time used by <see cref="HasFreshClientHealth"/>. Called
+    /// from <c>LiveTranscodeHub.ReportBufferHealth</c> (SignalR) or the REST
+    /// buffer-health endpoint — whichever the client uses.
+    /// </summary>
+    void ReportClientBufferHealth(TimeSpan bufferedAhead, int observedBandwidthKbps);
+
+    /// <summary>
+    /// True when a <see cref="ReportClientBufferHealth"/> report landed within
+    /// <paramref name="maxAge"/> of now. An old client that never calls it (or a
+    /// report older than the staleness window) makes this false, which is what
+    /// keeps the network axis of the buffer-adaptive sweep skipped for that
+    /// session — the pre-existing encoder-lead-only behavior applies unchanged.
+    /// </summary>
+    bool HasFreshClientHealth(TimeSpan maxAge);
 }

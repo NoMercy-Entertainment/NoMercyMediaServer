@@ -26,7 +26,13 @@ public static class MetadataInjectionBuilder
     /// Splices -metadata / per-stream metadata / disposition / attachment
     /// args from <paramref name="mediaItem"/> into <paramref name="command"/>
     /// just before the last argument (output filename). When no injector is
-    /// configured or the media item is null, the command is returned unchanged.
+    /// configured, the media item is null, or <paramref name="enableInjection"/>
+    /// is false, the command is returned unchanged.
+    ///
+    /// <paramref name="enableInjection"/> is a deliberately separate signal from
+    /// <paramref name="mediaItem"/> — MediaItem is pure identity (set on every
+    /// request to drive manifest/reconstruction writes) and must never by itself
+    /// change the ffmpeg command. Only this explicit flag may do that.
     ///
     /// For copy-mode encodes (<paramref name="isCopyMode"/> true), MetadataMerger
     /// is called first to apply field-level source-vs-DB precedence rules.
@@ -39,10 +45,11 @@ public static class MetadataInjectionBuilder
         FfmpegCommand command,
         MediaItemRef? mediaItem,
         EncodingContext context,
-        bool isCopyMode
+        bool isCopyMode,
+        bool enableInjection
     )
     {
-        if (metadataInjector is null || mediaItem is null)
+        if (!enableInjection || metadataInjector is null || mediaItem is null)
             return command;
 
         IReadOnlyList<TrackMetadata> tracks = ResolveTracksForInjection(

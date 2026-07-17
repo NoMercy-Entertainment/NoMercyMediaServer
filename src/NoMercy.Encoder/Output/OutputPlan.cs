@@ -115,8 +115,27 @@ public record AudioOutputPlan(
     string? AudioFilter = null,
     // Per-audio CustomArguments escape hatch, merged by output strategies into the
     // OutputOptions for this stream. Empty (default) = no extra flags.
-    Dictionary<string, string>? ExtraFlags = null
-);
+    Dictionary<string, string>? ExtraFlags = null,
+    // The real ffprobe codec_name of the matched source stream (e.g. "opus",
+    // "aac"), independent of EncoderName. Only meaningful for Action == Copy —
+    // EncoderName resolves to the literal "copy" pseudo-encoder for a copied
+    // stream, so CodecToken below falls back to this field to name the
+    // on-disk rendition after what the bytes actually are.
+    string? SourceCodecName = null
+)
+{
+    /// <summary>
+    /// The value that fills the <c>{codec}</c> / <c>:codec:</c> naming-template
+    /// token. For a stream-copied output this must be the real source codec
+    /// (e.g. "opus"), never the literal "copy" pseudo-encoder name — two
+    /// same-language tracks copied from different source codecs would
+    /// otherwise both resolve to "audio_eng_copy" and collide on disk.
+    /// </summary>
+    public string CodecToken =>
+        Action == StreamAction.Copy && !string.IsNullOrEmpty(SourceCodecName)
+            ? SourceCodecName
+            : EncoderName.Replace("libfdk_", "").Replace("lib", "");
+}
 
 public record SubtitleOutputPlan(
     SubtitleCodecType OutputCodec,

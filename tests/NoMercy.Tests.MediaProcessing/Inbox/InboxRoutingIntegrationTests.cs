@@ -70,11 +70,7 @@ public sealed class InboxRoutingIntegrationTests : IDisposable
             .Setup(r => r.Resolve(It.IsAny<Ulid>()))
             .Returns(("local", "{\"rootPath\":\"\"}"));
 
-        _storageFactory = new(
-            realDriver,
-            NullLogger<StorageFactory>.Instance,
-            resolverMock.Object
-        );
+        _storageFactory = new(realDriver, NullLogger<StorageFactory>.Instance, resolverMock.Object);
 
         _dispatcherMock = new();
     }
@@ -108,7 +104,7 @@ public sealed class InboxRoutingIntegrationTests : IDisposable
     }
 
     /// <summary>
-    /// Seeds: Library + Folder (pointing at libDir) + EncoderProfileFolder + FolderLibrary.
+    /// Seeds: Library + Folder (pointing at libDir) + EncodingPresetFolder + FolderLibrary.
     /// Returns the seeded destination ready for use in a RouteOutcome.
     /// </summary>
     private InboxDestination SeedLibraryDestination(
@@ -135,17 +131,18 @@ public sealed class InboxRoutingIntegrationTests : IDisposable
             DriverId = _sharedDriverId,
         };
 
-        EncoderProfileFolder profileFolder = new()
+        EncodingPresetFolder profileFolder = new()
         {
-            EncoderProfileId = profileId,
+            PresetId = profileId,
             FolderId = folderId,
+            IsDefault = true,
         };
 
         FolderLibrary folderLibrary = new() { FolderId = folderId, LibraryId = libraryId };
 
         context.Libraries.Add(library);
         context.Folders.Add(folder);
-        context.EncoderProfileFolder.Add(profileFolder);
+        context.EncodingPresetFolders.Add(profileFolder);
         context.FolderLibrary.Add(folderLibrary);
         context.SaveChanges();
 

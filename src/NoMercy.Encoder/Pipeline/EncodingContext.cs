@@ -42,7 +42,27 @@ public record EncodingContext(
     IDecisionLogSink? Decisions = null,
     IStorage? SourceStorage = null,
     IStorage? DestinationStorage = null,
+    /// <summary>
+    /// The library item being encoded (movie or episode). Pure identity — drives
+    /// <see cref="Naming.OutputNamingResolver.Resolve"/> → <see cref="Naming.BundleLayout"/>
+    /// → the manifest.json / reconstruction.json writes in FinalizeStage. Safe to
+    /// set on EVERY request, including ones where Build/Execute run, because it no
+    /// longer has any effect on the emitted ffmpeg command — see
+    /// <see cref="EnableMetadataInjection"/> for the separate opt-in that controls
+    /// that. Null (the default) preserves today's behavior exactly: no layout, no
+    /// reconstruction artifacts — used when the source has no resolvable library
+    /// item (e.g. a disc rip).
+    /// </summary>
     MediaItemRef? MediaItem = null,
+    /// <summary>
+    /// Explicit opt-in for BuildStage to splice -metadata / per-stream metadata /
+    /// disposition args (via <see cref="Metadata.MetadataInjector"/>) into the main
+    /// ffmpeg command. Deliberately separate from <see cref="MediaItem"/> — MediaItem
+    /// is pure identity and must be safe to set on every request; this flag is the
+    /// only thing allowed to change the command. Defaults to false so every existing
+    /// production request keeps emitting the exact command it does today.
+    /// </summary>
+    bool EnableMetadataInjection = false,
     /// <summary>
     /// Source-file stream metadata for copy-mode encodes. Populated by the
     /// caller (typically the job that dispatches the encode) from the

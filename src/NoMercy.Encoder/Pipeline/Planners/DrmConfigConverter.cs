@@ -16,7 +16,7 @@ using LegacyDrmMethod = NoMercy.Encoder.BuildingBlocks.Drm.DrmMethod;
 namespace NoMercy.Encoder.Pipeline.Stages;
 
 /// <summary>
-/// Converts a V2 <see cref="DrmConfig"/> into the legacy DRM config shape
+/// Converts <see cref="DrmConfig"/> into the legacy DRM config shape
 /// consumed by the output pipeline. Extracted from PlanStage.
 /// </summary>
 public static class DrmConfigConverter

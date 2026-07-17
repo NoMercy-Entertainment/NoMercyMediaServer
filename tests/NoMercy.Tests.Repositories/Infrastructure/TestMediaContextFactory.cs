@@ -304,15 +304,21 @@ public static class TestMediaContextFactory
         context.Folders.Add(movieFolder);
         context.FolderLibrary.Add(new(SeedConstants.MovieFolderId, SeedConstants.MovieLibraryId));
 
-        EncoderProfile encoderProfile = new()
+        EncodingPreset encodingPreset = new()
         {
-            Id = SeedConstants.EncoderProfileId,
+            Id = SeedConstants.EncodingPresetId,
             Name = "Default HLS",
-            Container = "hls",
+            ProfileJson = "{}",
+            IsBuiltIn = false,
         };
-        context.EncoderProfiles.Add(encoderProfile);
-        context.EncoderProfileFolder.Add(
-            new(SeedConstants.EncoderProfileId, SeedConstants.MovieFolderId)
+        context.EncodingPresets.Add(encodingPreset);
+        context.EncodingPresetFolders.Add(
+            new()
+            {
+                PresetId = SeedConstants.EncodingPresetId,
+                FolderId = SeedConstants.MovieFolderId,
+                IsDefault = true,
+            }
         );
 
         Language english = new()

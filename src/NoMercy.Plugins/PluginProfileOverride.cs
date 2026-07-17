@@ -13,8 +13,8 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Plugins.Abstractions;
 using EncoderMediaInfo = NoMercy.Encoder.Analysis.MediaInfo;
-using EncoderProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 using EncoderVideoOutput = NoMercy.Encoder.Profiles.VideoOutput;
+using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 using PluginProfile = NoMercy.Plugins.Abstractions.EncodingProfile;
 
 namespace NoMercy.Plugins;
@@ -32,7 +32,7 @@ namespace NoMercy.Plugins;
 /// </summary>
 public class PluginProfileOverride(IPluginManager pluginManager) : IProfileOverride
 {
-    public EncoderProfile Apply(EncoderProfile configured, EncoderMediaInfo media)
+    public EncodingProfile Apply(EncodingProfile configured, EncoderMediaInfo media)
     {
         MediaInfo pluginMedia = ToPluginMediaInfo(media);
 
@@ -40,7 +40,7 @@ public class PluginProfileOverride(IPluginManager pluginManager) : IProfileOverr
         {
             PluginProfile? pluginProfile = plugin.GetProfile(pluginMedia);
             if (pluginProfile is not null)
-                return ToEncoderProfile(pluginProfile);
+                return ToEncodingProfile(pluginProfile);
         }
 
         return configured;
@@ -66,7 +66,7 @@ public class PluginProfileOverride(IPluginManager pluginManager) : IProfileOverr
         };
     }
 
-    private static EncoderProfile ToEncoderProfile(PluginProfile profile)
+    private static EncodingProfile ToEncodingProfile(PluginProfile profile)
     {
         VideoCodecType videoCodec =
             CodecFamilyClassifier.ClassifyVideo(profile.VideoCodec) ?? VideoCodecType.H264;
@@ -80,7 +80,7 @@ public class PluginProfileOverride(IPluginManager pluginManager) : IProfileOverr
             Video: new(
                 Policy: Encoder.Profiles.StreamPolicy.Transcode,
                 Codec: videoCodec,
-                Width: profile.Width ?? 0,
+                Width: profile.Width,
                 Height: profile.Height,
                 RateControl: profile.VideoBitrate is > 0
                     ? Encoder.Profiles.RateControlMode.Vbr

@@ -276,11 +276,11 @@ public class LibraryRepositoryTests : IDisposable
 
         FolderLibrary folderLibrary = movieLibrary.FolderLibraries.First();
         Assert.NotNull(folderLibrary.Folder);
-        Assert.NotEmpty(folderLibrary.Folder.EncoderProfileFolder);
+        Assert.NotEmpty(folderLibrary.Folder.EncodingPresetFolders);
 
-        EncoderProfileFolder epf = folderLibrary.Folder.EncoderProfileFolder.First();
-        Assert.NotNull(epf.EncoderProfile);
-        Assert.Equal("Default HLS", epf.EncoderProfile.Name);
+        EncodingPresetFolder link = folderLibrary.Folder.EncodingPresetFolders.First();
+        Assert.NotNull(link.Preset);
+        Assert.Equal("Default HLS", link.Preset!.Name);
     }
 
     [Fact]
@@ -307,7 +307,7 @@ public class LibraryRepositoryTests : IDisposable
         List<FolderDto> folders = await _repository.GetFoldersAsync();
 
         Assert.NotEmpty(folders);
-        // FolderDto uses Select projection so EncoderProfileFolder may not be loaded
+        // FolderDto uses Select projection so EncodingPresetFolders may not be loaded
         // in the projection query, but should not throw
     }
 
@@ -322,54 +322,57 @@ public class LibraryRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task SyncEncoderProfileFolderAsync_ReplacesOldMappingWithNew()
+    public async Task SyncEncodingPresetFolderAsync_ReplacesOldMappingWithNew()
     {
-        EncoderProfile newProfile = new() { Id = Ulid.NewUlid(), Name = "New Profile", Container = "hls" };
-        _context.EncoderProfiles.Add(newProfile);
+        EncodingPreset newPreset = new()
+        {
+            Id = Ulid.NewUlid(),
+            Name = "New Profile",
+            ProfileJson = "{}",
+            IsBuiltIn = false,
+        };
+        _context.EncodingPresets.Add(newPreset);
         await _context.SaveChangesAsync();
 
         Folder folder = await _context.Folders.FirstAsync(f => f.Id == SeedConstants.MovieFolderId);
 
-        List<EncoderProfileFolder> newMappings =
+        List<EncodingPresetFolder> newMappings =
         [
-            new(newProfile.Id, SeedConstants.MovieFolderId),
+            new() { PresetId = newPreset.Id, FolderId = SeedConstants.MovieFolderId },
         ];
 
-        await _repository.SyncEncoderProfileFolderAsync(newMappings, [folder]);
+        await _repository.SyncEncodingPresetFolderAsync(newMappings, [folder]);
 
-        List<EncoderProfileFolder> stored = await _context
-            .EncoderProfileFolder.Where(epf => epf.FolderId == SeedConstants.MovieFolderId)
+        List<EncodingPresetFolder> stored = await _context
+            .EncodingPresetFolders.Where(link => link.FolderId == SeedConstants.MovieFolderId)
             .ToListAsync();
 
         Assert.Single(stored);
-        Assert.Equal(newProfile.Id, stored[0].EncoderProfileId);
-        Assert.DoesNotContain(
-            stored,
-            epf => epf.EncoderProfileId == SeedConstants.EncoderProfileId
-        );
+        Assert.Equal(newPreset.Id, stored[0].PresetId);
+        Assert.DoesNotContain(stored, link => link.PresetId == SeedConstants.EncodingPresetId);
     }
 
     [Fact]
-    public async Task SyncEncoderProfileFolderAsync_RollsBackDeleteWhenInsertFails()
+    public async Task SyncEncodingPresetFolderAsync_RollsBackDeleteWhenInsertFails()
     {
         Folder folder = await _context.Folders.FirstAsync(f => f.Id == SeedConstants.MovieFolderId);
 
-        // Non-existent EncoderProfileId violates the FK on upsert, so the
-        // whole sync (delete + insert) must roll back as one unit — the
-        // original mapping seeded in SeedData must survive.
-        List<EncoderProfileFolder> invalidMappings =
+        // Non-existent PresetId violates the FK on upsert, so the whole sync
+        // (delete + insert) must roll back as one unit — the original
+        // mapping seeded in SeedData must survive.
+        List<EncodingPresetFolder> invalidMappings =
         [
-            new(Ulid.NewUlid(), SeedConstants.MovieFolderId),
+            new() { PresetId = Ulid.NewUlid(), FolderId = SeedConstants.MovieFolderId },
         ];
 
-        await Assert.ThrowsAnyAsync<Exception>(
-            () => _repository.SyncEncoderProfileFolderAsync(invalidMappings, [folder])
+        await Assert.ThrowsAnyAsync<Exception>(() =>
+            _repository.SyncEncodingPresetFolderAsync(invalidMappings, [folder])
         );
 
-        EncoderProfileFolder? original = await _context.EncoderProfileFolder.FirstOrDefaultAsync(
-            epf =>
-                epf.FolderId == SeedConstants.MovieFolderId
-                && epf.EncoderProfileId == SeedConstants.EncoderProfileId
+        EncodingPresetFolder? original = await _context.EncodingPresetFolders.FirstOrDefaultAsync(
+            link =>
+                link.FolderId == SeedConstants.MovieFolderId
+                && link.PresetId == SeedConstants.EncodingPresetId
         );
 
         Assert.NotNull(original);

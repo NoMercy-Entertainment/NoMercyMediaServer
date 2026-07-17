@@ -53,6 +53,7 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
     private string _surroundInputFile = string.Empty;
     private string _subtitleInputFile = string.Empty;
     private string _audioOnlyInputFile = string.Empty;
+    private string _opusInputFile = string.Empty;
     private ServiceProvider _serviceProvider = null!;
     private string? _ffmpegPath;
     private string? _ffprobePath;
@@ -152,6 +153,35 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
         ]);
         if (subExit != 0)
             throw new InvalidOperationException("JSON oracle subtitle clip generation failed.");
+
+        // H.264 video + Opus stereo audio — proves a Copy-policy audio output
+        // carries a codec HlsFmp4 didn't support before this slice (Opus)
+        // through a real stream-copy remux, not a re-encode.
+        _opusInputFile = Path.Combine(_testDir, "src_opus.mkv");
+        int opusExit = await RunFfmpegAsync([
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=320x180:rate=25:duration=12",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:duration=12:sample_rate=48000",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "ultrafast",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "libopus",
+            "-b:a",
+            "96k",
+            _opusInputFile,
+        ]);
+        if (opusExit != 0)
+            throw new InvalidOperationException("JSON oracle Opus clip generation failed.");
 
         // Audio-only source for FLAC/AAC/MP3 container profiles that have no video.
         _audioOnlyInputFile = Path.Combine(_testDir, "src_audio.flac");
@@ -625,6 +655,169 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
                 """,
             "subtitle",
         ];
+
+        // Case 5 — HLS fMP4 stream-COPY video + sprite thumbnails (the copy+sprite
+        // fix under test): Container.HlsFmp4=3, StreamPolicy.Copy=1,
+        // VideoCodecType.Copy=4, AudioCodecType.Aac=0. HlsDerivatives is left null
+        // so it defaults to GenerateSpriteVtt=true — proving the two-command
+        // remux (main copy playlist + separate sprite command) survives a real
+        // ffmpeg run instead of aborting with exit -22.
+        yield return
+        [
+            "HlsFmp4CopyVideoWithSprite",
+            """
+                {
+                  "Id": "01ARZ3NDEKTSV4RRFFQ69G5FB0",
+                  "Name": "Test HLS fMP4 copy+sprite",
+                  "Container": 3,
+                  "Video": {
+                    "Policy": 1,
+                    "Codec": 4,
+                    "Width": null,
+                    "Height": null,
+                    "RateControl": 0,
+                    "Crf": 0,
+                    "BitrateKbps": 0,
+                    "MaxBitrateKbps": null,
+                    "BufferSizeKbps": null,
+                    "Preset": null,
+                    "CodecProfile": 0,
+                    "Level": null,
+                    "Tune": null,
+                    "BitDepth": 8,
+                    "PixelFormat": null,
+                    "KeyframeIntervalSeconds": 4,
+                    "ConvertHdrToSdr": false,
+                    "SegmentNameTemplate": "video/video",
+                    "PlaylistNameTemplate": "video/video",
+                    "CustomArguments": null
+                  },
+                  "Audio": [
+                    {
+                      "Policy": 0,
+                      "Codec": 0,
+                      "BitrateKbps": 192,
+                      "Channels": 2,
+                      "SampleRateHz": 48000,
+                      "AllowedLanguages": ["*"],
+                      "DefaultLanguage": null,
+                      "Loudness": null,
+                      "Downmix": null,
+                      "SegmentNameTemplate": "audio_{lang}_{codec}/audio_{lang}_{codec}",
+                      "PlaylistNameTemplate": "audio_{lang}_{codec}/audio_{lang}_{codec}",
+                      "CustomArguments": null
+                    }
+                  ],
+                  "Subtitles": [],
+                  "ThumbnailOutput": null,
+                  "LadderConfig": null,
+                  "HlsConfig": null,
+                  "HlsDerivatives": null,
+                  "DashConfig": null,
+                  "DrmConfig": null,
+                  "SegmentDurationSeconds": 6,
+                  "EncodeMode": 0,
+                  "AutoDetectCrop": false,
+                  "SchemaVersion": 2,
+                  "Description": "Hand-written HLS fMP4 copy+sprite",
+                  "IsBuiltin": false,
+                  "HardwarePreference": 3,
+                  "BitDepthPolicy": 0,
+                  "HdrPolicy": 0,
+                  "HdrOptions": null,
+                  "ClientCompatibility": 15,
+                  "SubtitleAcquisition": null,
+                  "CustomArguments": null,
+                  "Mezzanine": null
+                }
+                """,
+            "stereo",
+        ];
+
+        // Case 6 — HLS fMP4 stream-COPY video + stream-COPY Opus audio (the
+        // audio smart-copy slice under test): Container.HlsFmp4=3,
+        // StreamPolicy.Copy=1, VideoCodecType.Copy=4, AudioCodecType.Copy=9.
+        // Opus was not in HlsFmp4's ContainerCompatibility matrix before this
+        // slice — proves the fork muxes a copied Opus track into fMP4 HLS
+        // through a real ffmpeg run, with both streams mapped directly
+        // ("-c:v copy" / "-c:a copy", no filtergraph — a bracket-labeled map
+        // would force filter_complex, which Copy-policy output plans never
+        // route through, see PlanStage's MapLabel comment).
+        yield return
+        [
+            "HlsFmp4CopyVideoCopyOpusAudio",
+            """
+                {
+                  "Id": "01ARZ3NDEKTSV4RRFFQ69G5FB1",
+                  "Name": "Test HLS fMP4 copy video + copy Opus audio",
+                  "Container": 3,
+                  "Video": {
+                    "Policy": 1,
+                    "Codec": 4,
+                    "Width": null,
+                    "Height": null,
+                    "RateControl": 0,
+                    "Crf": 0,
+                    "BitrateKbps": 0,
+                    "MaxBitrateKbps": null,
+                    "BufferSizeKbps": null,
+                    "Preset": null,
+                    "CodecProfile": 0,
+                    "Level": null,
+                    "Tune": null,
+                    "BitDepth": 8,
+                    "PixelFormat": null,
+                    "KeyframeIntervalSeconds": 4,
+                    "ConvertHdrToSdr": false,
+                    "SegmentNameTemplate": "video/video",
+                    "PlaylistNameTemplate": "video/video",
+                    "CustomArguments": null
+                  },
+                  "Audio": [
+                    {
+                      "Policy": 1,
+                      "Codec": 9,
+                      "BitrateKbps": 0,
+                      "Channels": 0,
+                      "SampleRateHz": 0,
+                      "AllowedLanguages": [],
+                      "DefaultLanguage": null,
+                      "Loudness": null,
+                      "Downmix": null,
+                      "SegmentNameTemplate": "audio_{lang}_{codec}/audio_{lang}_{codec}",
+                      "PlaylistNameTemplate": "audio_{lang}_{codec}/audio_{lang}_{codec}",
+                      "CustomArguments": null
+                    }
+                  ],
+                  "Subtitles": [],
+                  "ThumbnailOutput": null,
+                  "LadderConfig": null,
+                  "HlsConfig": null,
+                  "HlsDerivatives": {
+                    "GenerateSpriteVtt": false,
+                    "GenerateThumbnailTrack": false,
+                    "GenerateFontsJson": false
+                  },
+                  "DashConfig": null,
+                  "DrmConfig": null,
+                  "SegmentDurationSeconds": 6,
+                  "EncodeMode": 0,
+                  "AutoDetectCrop": false,
+                  "SchemaVersion": 2,
+                  "Description": "Hand-written HLS fMP4 copy video + copy Opus audio",
+                  "IsBuiltin": false,
+                  "HardwarePreference": 3,
+                  "BitDepthPolicy": 0,
+                  "HdrPolicy": 0,
+                  "HdrOptions": null,
+                  "ClientCompatibility": 15,
+                  "SubtitleAcquisition": null,
+                  "CustomArguments": null,
+                  "Mezzanine": null
+                }
+                """,
+            "opus",
+        ];
     }
 
     [SkippableTheory]
@@ -671,6 +864,7 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
             "surround" => _surroundInputFile,
             "subtitle" => _subtitleInputFile,
             "audio-only" => _audioOnlyInputFile,
+            "opus" => _opusInputFile,
             _ => _inputFile,
         };
 
@@ -688,6 +882,86 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
                 $"ffmpeg must accept the command generated from hand-written JSON case '{caseName}'. "
                     + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
+
+        // The copy+sprite case has its sprite generated by a SEPARATE ffmpeg
+        // command (see BuildStage.AllVideoOutputsAreCopy) that runs as a
+        // post-processing step — ExecuteStage treats post-process command
+        // failures as non-fatal, so `result.Success` alone would stay true even
+        // if that second command silently failed to produce anything. Assert
+        // the actual sprite + VTT files landed on disk so this oracle proves
+        // the two-command remux against real ffmpeg, not just that the main
+        // copy playlist encoded.
+        if (caseName == "HlsFmp4CopyVideoWithSprite")
+        {
+            string spritePath = Path.Combine(outputDir, "thumbs_160x90.webp");
+            string vttPath = Path.Combine(outputDir, "thumbs_160x90.vtt");
+
+            File.Exists(spritePath)
+                .Should()
+                .BeTrue(
+                    $"the separate sprite command must produce {spritePath} for a copy-video HLS plan"
+                );
+            File.Exists(vttPath)
+                .Should()
+                .BeTrue($"the separate sprite command must produce {vttPath} alongside the sprite");
+            new FileInfo(spritePath)
+                .Length.Should()
+                .BeGreaterThan(0, "the sprite sheet must contain real image data");
+            new FileInfo(vttPath)
+                .Length.Should()
+                .BeGreaterThan(0, "the VTT cue file must not be empty");
+        }
+
+        // A successful exit alone doesn't prove "-c:v copy" / "-c:a copy" were
+        // actually used instead of a silent re-encode — ffprobe the produced
+        // fMP4 segments and pin the codec identity: h264 in, h264 out, opus in,
+        // opus out. A transcode to some other codec (or a filtergraph mapping
+        // failure ffmpeg tolerated) would flip these and fail loudly here.
+        if (caseName == "HlsFmp4CopyVideoCopyOpusAudio")
+        {
+            // fMP4 HLS init segments (named "init.mp4" — see HlsOutputStrategy's
+            // "-hls_fmp4_init_filename") carry the full moov/stsd box, unlike a
+            // bare numbered .m4s media fragment which ffprobe can't reliably
+            // identify standalone.
+            string[] initSegments = Directory.GetFiles(
+                outputDir,
+                "init.mp4",
+                SearchOption.AllDirectories
+            );
+
+            // Match against the immediate parent directory name only — the
+            // outputDir prefix itself contains both "Video" and "Audio"
+            // substrings (from the case name), so matching the full path
+            // would find every init.mp4 under either filter.
+            string[] videoTargets = initSegments
+                .Where(p =>
+                    Path.GetFileName(Path.GetDirectoryName(p))!
+                        .Contains("video", StringComparison.OrdinalIgnoreCase)
+                )
+                .ToArray();
+            string[] audioTargets = initSegments
+                .Where(p =>
+                    Path.GetFileName(Path.GetDirectoryName(p))!
+                        .Contains("audio", StringComparison.OrdinalIgnoreCase)
+                )
+                .ToArray();
+
+            videoTargets.Should().NotBeEmpty("the copy-video output must write segment files");
+            audioTargets.Should().NotBeEmpty("the copy-audio output must write segment files");
+
+            string[] videoCodecs = await ProbeCodecNamesAsync(videoTargets[0]);
+            string[] audioCodecs = await ProbeCodecNamesAsync(audioTargets[0]);
+
+            videoCodecs
+                .Should()
+                .Contain("h264", "-c:v copy must preserve the source codec, never re-encode it");
+            audioCodecs
+                .Should()
+                .Contain(
+                    "opus",
+                    "-c:a copy must preserve the source Opus codec, never re-encode it to aac/eac3"
+                );
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -881,5 +1155,37 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
         await stderr;
         await stdout;
         return process.ExitCode;
+    }
+
+    /// <summary>
+    /// Returns the <c>codec_name</c> of every stream in <paramref name="mediaPath"/>
+    /// via ffprobe, so a test can pin the real codec identity of a produced
+    /// artifact instead of trusting the command-builder's intent alone.
+    /// </summary>
+    private async Task<string[]> ProbeCodecNamesAsync(string mediaPath)
+    {
+        ProcessStartInfo psi = new()
+        {
+            FileName = _ffprobePath,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        psi.ArgumentList.Add("-v");
+        psi.ArgumentList.Add("error");
+        psi.ArgumentList.Add("-show_entries");
+        psi.ArgumentList.Add("stream=codec_name");
+        psi.ArgumentList.Add("-of");
+        psi.ArgumentList.Add("default=noprint_wrappers=1:nokey=1");
+        psi.ArgumentList.Add(mediaPath);
+
+        using Process process = Process.Start(psi)!;
+        string stdout = await process.StandardOutput.ReadToEndAsync();
+        await process.WaitForExitAsync();
+
+        return stdout
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToArray();
     }
 }

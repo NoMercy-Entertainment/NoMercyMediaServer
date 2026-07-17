@@ -66,7 +66,18 @@ public static class ContainerCompatibility
             AudioCodecType.Eac3,
             AudioCodecType.Mp3,
         ],
-        [Container.HlsFmp4] = [AudioCodecType.Aac, AudioCodecType.Ac3, AudioCodecType.Eac3],
+        // fMP4 HLS/CMAF carries Opus fine (the nomercy-ffmpeg fork muxes it into
+        // fragmented MP4 without error — verified against a real ffmpeg run),
+        // it just isn't part of the narrower CmafAudio set below, which tracks
+        // Apple's own HLS Authoring Spec recommendation rather than raw muxer
+        // capability.
+        [Container.HlsFmp4] =
+        [
+            AudioCodecType.Aac,
+            AudioCodecType.Ac3,
+            AudioCodecType.Eac3,
+            AudioCodecType.Opus,
+        ],
         [Container.Mp3] = [AudioCodecType.Mp3],
         [Container.Aac] = [AudioCodecType.Aac],
         [Container.Flac] = [AudioCodecType.Flac],
@@ -84,7 +95,7 @@ public static class ContainerCompatibility
             AudioCodecType.Vorbis,
         ],
         [Container.AudioHlsTs] = [AudioCodecType.Aac, AudioCodecType.Mp3],
-        [Container.AudioHlsFmp4] = [AudioCodecType.Aac, AudioCodecType.Eac3],
+        [Container.AudioHlsFmp4] = [AudioCodecType.Aac, AudioCodecType.Eac3, AudioCodecType.Opus],
         [Container.Dash] = [AudioCodecType.Aac, AudioCodecType.Eac3, AudioCodecType.Opus],
     };
 

@@ -40,9 +40,6 @@ public class Folder
     [JsonProperty("driver")]
     public Driver? Driver { get; set; }
 
-    [JsonProperty("encoder_profile_folder")]
-    public ICollection<EncoderProfileFolder> EncoderProfileFolder { get; set; } = [];
-
     [JsonProperty("encoding_preset_folders")]
     [InverseProperty(nameof(EncodingPresetFolder.Folder))]
     public ICollection<EncodingPresetFolder> EncodingPresetFolders { get; set; } = [];

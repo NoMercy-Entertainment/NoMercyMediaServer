@@ -9,15 +9,25 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.Storage;
+
 namespace NoMercy.Encoder.Bundle;
 
 public interface IBundleManifestWriter
 {
-    Task WriteAsync(string path, BundleManifest manifest, CancellationToken ct);
+    /// <summary>
+    /// Writes <paramref name="manifest"/> to <paramref name="path"/> on
+    /// <paramref name="storage"/>. Storage is a per-call parameter (not
+    /// constructor-injected) so a caller's folder-scoped
+    /// <c>EncodingContext.DestinationStorage</c> is honoured — matches
+    /// <see cref="IReconstructionWriter"/>'s established pattern.
+    /// </summary>
+    Task WriteAsync(IStorage storage, string path, BundleManifest manifest, CancellationToken ct);
 
-    Task<BundleManifest?> ReadAsync(string path, CancellationToken ct);
+    Task<BundleManifest?> ReadAsync(IStorage storage, string path, CancellationToken ct);
 
     Task<ReconcileReport> ReconcileAsync(
+        IStorage storage,
         string bundleDirectory,
         BundleManifest manifest,
         CancellationToken ct

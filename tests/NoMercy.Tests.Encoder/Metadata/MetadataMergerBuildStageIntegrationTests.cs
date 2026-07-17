@@ -195,10 +195,16 @@ public class MetadataMergerBuildStageIntegrationTests
             MediaInfo = BuildMediaInfo(),
             SourceTracks = [srcTrack],
             DbTracks = [dbTrack],
+            EnableMetadataInjection = true,
         };
 
         ExecutionPlan plan = BuildCopyMkvPlan();
-        BuildInput input = new(plan, "/movies/fight_club.mkv", "/tmp/nmtest-output/fc", "Fight Club.NoMercy");
+        BuildInput input = new(
+            plan,
+            "/movies/fight_club.mkv",
+            "/tmp/nmtest-output/fc",
+            "Fight Club.NoMercy"
+        );
 
         StageResult result = await stage.ExecuteAsync(input, context, default);
 

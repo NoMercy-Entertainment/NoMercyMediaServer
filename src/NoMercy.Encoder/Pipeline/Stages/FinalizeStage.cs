@@ -18,6 +18,7 @@ using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
+using NoMercy.Encoder.Reconciliation;
 using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Pipeline.Stages;
@@ -29,7 +30,14 @@ public record FinalizeInput(
     string MediaTitle,
     IProgressObserver? Progress = null,
     // Null means "use spec defaults" — not "skip everything".
-    HlsDerivatives? HlsDerivatives = null
+    HlsDerivatives? HlsDerivatives = null,
+    // The RESOLVED profile actually applied to this encode. Used to stamp
+    // manifest.json with a profile fingerprint so a later reconciliation
+    // pass can tell "preset edited in place, same id" apart from "genuinely
+    // unchanged". Null for callers that predate reconciliation (Preview) —
+    // the manifest is then written without a fingerprint, same as any
+    // pre-reconciliation output.
+    EncodingProfile? Profile = null
 );
 
 public record FinalizeOutput(string OutputPath, long OutputSizeBytes);
@@ -188,11 +196,20 @@ public class FinalizeStage(
             if (input.Plan.Layout is BundleLayout layout)
             {
                 if (manifestWriter is not null)
-                    await WriteManifestAsync(effectiveStorage, layout, allEntries, context, ct);
+                    await WriteManifestAsync(
+                        effectiveStorage,
+                        input.OutputDirectory,
+                        layout,
+                        allEntries,
+                        context,
+                        input.Profile,
+                        ct
+                    );
 
                 if (reconstructionWriter is not null && context.MediaInfo is not null)
                     await WriteReconstructionAsync(
                         effectiveStorage,
+                        input.OutputDirectory,
                         layout,
                         input.Plan,
                         context,
@@ -218,15 +235,28 @@ public class FinalizeStage(
 
     private async Task WriteReconstructionAsync(
         IStorage effectiveStorage,
+        string outputDirectory,
         BundleLayout layout,
         OutputPlan plan,
         EncodingContext context,
         CancellationToken ct
     )
     {
+        // BundleLayout paths are documented as relative to the media item's own
+        // folder (see BundleLayout.cs) — that folder IS input.OutputDirectory, the
+        // same directory BuildStage already writes video_*/audio_*/chapters.vtt
+        // into. Joining here (rather than writing layout.ReconstructionPath as-is
+        // against the folder-scoped storage root) keeps every media item's
+        // reconstruction.json scoped under its own folder instead of colliding
+        // with every other item in the library that shares the same preset slug.
+        string reconstructionPath = effectiveStorage.CombinePath(
+            outputDirectory,
+            layout.ReconstructionPath
+        );
+
         await reconstructionWriter!.WriteAsync(
             effectiveStorage,
-            layout.ReconstructionPath,
+            reconstructionPath,
             context.MediaInfo!,
             plan,
             layout,
@@ -236,19 +266,29 @@ public class FinalizeStage(
         logger.LogInformation(
             "[{CorrelationId}] Wrote reconstruction.json → {Path}",
             context.CorrelationId,
-            layout.ReconstructionPath
+            reconstructionPath
         );
     }
 
     private async Task WriteManifestAsync(
         IStorage effectiveStorage,
+        string outputDirectory,
         BundleLayout layout,
         IReadOnlyList<StorageEntry> allEntries,
         EncodingContext context,
+        EncodingProfile? profile,
         CancellationToken ct
     )
     {
-        string dirPrefix = layout.BundleDirectory.TrimEnd('/') + "/";
+        // allEntries comes from listing input.OutputDirectory, so entry.Path is
+        // already relative to the storage root (same domain as outputDirectory
+        // itself) — the prefix to strip is the media item's folder joined with
+        // the bundle sub-directory, not the bundle sub-directory alone.
+        string bundleDirectory = effectiveStorage.CombinePath(
+            outputDirectory,
+            layout.BundleDirectory
+        );
+        string dirPrefix = bundleDirectory.TrimEnd('/') + "/";
 
         List<string> relFiles = [];
         foreach (StorageEntry entry in allEntries)
@@ -283,20 +323,22 @@ public class FinalizeStage(
             MediaType: mediaTypeStr,
             MediaId: context.MediaItem?.Id ?? 0,
             MediaExternalId: null,
-            MediaFolder: layout.BundleDirectory,
+            MediaFolder: outputDirectory,
             Container: layout.ContainerString,
             CreatedAt: DateTime.UtcNow,
             CompletedAt: DateTime.UtcNow,
             MediaKey: layout.MediaKey,
-            Files: relFiles
+            Files: relFiles,
+            ProfileFingerprint: profile is not null ? ProfileFingerprint.Compute(profile) : null
         );
 
-        await manifestWriter!.WriteAsync(layout.ManifestPath, manifest, ct);
+        string manifestPath = effectiveStorage.CombinePath(outputDirectory, layout.ManifestPath);
+        await manifestWriter!.WriteAsync(effectiveStorage, manifestPath, manifest, ct);
 
         logger.LogInformation(
             "[{CorrelationId}] Wrote manifest.json → {Path} ({FileCount} files)",
             context.CorrelationId,
-            layout.ManifestPath,
+            manifestPath,
             relFiles.Count
         );
     }

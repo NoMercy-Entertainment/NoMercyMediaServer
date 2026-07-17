@@ -16,7 +16,7 @@ using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Bundle;
 
-public class BundleManifestWriter(IStorage storage) : IBundleManifestWriter
+public class BundleManifestWriter : IBundleManifestWriter
 {
     private static readonly JsonSerializerSettings Settings = new()
     {
@@ -24,13 +24,22 @@ public class BundleManifestWriter(IStorage storage) : IBundleManifestWriter
         ContractResolver = new CamelCasePropertyNamesContractResolver(),
     };
 
-    public async Task WriteAsync(string path, BundleManifest manifest, CancellationToken ct)
+    public async Task WriteAsync(
+        IStorage storage,
+        string path,
+        BundleManifest manifest,
+        CancellationToken ct
+    )
     {
         string json = JsonConvert.SerializeObject(manifest, Settings);
         await storage.WriteAsync(path, Encoding.UTF8.GetBytes(json), ct);
     }
 
-    public async Task<BundleManifest?> ReadAsync(string path, CancellationToken ct)
+    public async Task<BundleManifest?> ReadAsync(
+        IStorage storage,
+        string path,
+        CancellationToken ct
+    )
     {
         if (!storage.Exists(path))
             return null;
@@ -40,6 +49,7 @@ public class BundleManifestWriter(IStorage storage) : IBundleManifestWriter
     }
 
     public Task<ReconcileReport> ReconcileAsync(
+        IStorage storage,
         string bundleDirectory,
         BundleManifest manifest,
         CancellationToken ct

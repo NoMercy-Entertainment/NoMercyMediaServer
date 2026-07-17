@@ -134,6 +134,36 @@ public class LiveTranscodeHub(
     }
 
     /// <summary>
+    /// The watching client reports its download-buffer depth (seconds of media
+    /// it holds downloaded but not yet played) and its measured/estimated
+    /// downlink in kbps. This is a NETWORK signal, distinct from the
+    /// encoder-capacity <see cref="ILiveSession.BufferAhead"/> the server
+    /// already tracks — it drives the buffer-adaptive sweep's network axis
+    /// (emergency drop / bandwidth-fit drop / hysteresis-gated raise). Older
+    /// clients that never call this keep getting today's encoder-lead-only
+    /// adaptive behavior — see
+    /// <see cref="NoMercy.Encoder.LiveTranscode.BufferAdaptiveService"/>.
+    /// </summary>
+    public void ReportBufferHealth(
+        string sessionId,
+        double bufferedSeconds,
+        double observedBandwidthKbps
+    )
+    {
+        if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
+            return;
+
+        if (!CallerOwnsSession(sessionId))
+            return;
+
+        runtime.Session.ReportClientBufferHealth(
+            TimeSpan.FromSeconds(Math.Max(0, bufferedSeconds)),
+            (int)Math.Max(0, observedBandwidthKbps)
+        );
+        runtime.TouchLastAccess();
+    }
+
+    /// <summary>
     /// Client requests the encoder pause (fill buffer to max, stop producing
     /// new segments). Maps to <see cref="ILiveSession.Suspend"/>.
     /// </summary>

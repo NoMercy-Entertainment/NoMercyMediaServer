@@ -9,14 +9,11 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-namespace NoMercy.Database;
+namespace NoMercy.Encoder.BuildingBlocks;
 
-public class SubtitleProfile
-{
-    public string Codec { get; set; } = string.Empty;
-    public string SegmentName { get; set; } = string.Empty;
-    public string PlaylistName { get; set; } = string.Empty;
-    public string[] AllowedLanguages { get; set; } = [];
-    public string[] Opts { get; set; } = [];
-    public (string key, string Val)[] CustomArguments { get; set; } = [];
-}
+/// <summary>
+/// One resolved <c>-dump_attachment</c> target: the source attachment's
+/// stream index and the sanitized, collision-free relative path (e.g.
+/// "fonts/Arial.ttf") ffmpeg should write it to.
+/// </summary>
+public record AttachmentDumpTarget(int Index, string RelativePath);

@@ -124,12 +124,6 @@ public class FolderRepository(MediaContext context) : IFolderRepository
             .ExecuteDeleteAsync();
 
         await context
-            .EncoderProfileFolder.Where(encoderProfileFolder =>
-                encoderProfileFolder.FolderId == folder.Id
-            )
-            .ExecuteDeleteAsync();
-
-        await context
             .EncodingPresetFolders.Where(encodingPresetFolder =>
                 encodingPresetFolder.FolderId == folder.Id
             )

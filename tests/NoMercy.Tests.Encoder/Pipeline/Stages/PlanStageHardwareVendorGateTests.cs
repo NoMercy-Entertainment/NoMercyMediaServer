@@ -182,7 +182,12 @@ public class PlanStageHardwareVendorGateTests
                     ColorTransfer: "bt709",
                     ColorSpace: "bt709",
                     IsDefault: true,
-                    BitRateKbps: 10000
+                    // Below the ladder rung's 4000 kbps target so
+                    // PlanStage.ApplySmartCopyDowngrade never fires here — this
+                    // suite exists to pin hardware-encoder SELECTION, which
+                    // smart-copy would bypass entirely (Policy becomes Copy
+                    // before any codec/hardware resolution runs).
+                    BitRateKbps: 3000
                 ),
             ],
             AudioStreams: [],

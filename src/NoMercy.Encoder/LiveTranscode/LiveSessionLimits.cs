@@ -53,4 +53,43 @@ public sealed class BufferThresholds
 
     /// <summary>Below this many seconds, drop straight to the lowest tier.</summary>
     public int EmergencyDropBelowSeconds { get; set; } = 3;
+
+    /// <summary>
+    /// Below this many seconds of client-reported download-buffer depth
+    /// (<see cref="ILiveSession.ClientBufferedAhead"/>), drop straight to the
+    /// lowest quality tier regardless of the encoder-lead signal — the client
+    /// is draining toward a stall. Default: 2s.
+    /// </summary>
+    public int ClientEmergencyStallSeconds { get; set; } = 2;
+
+    /// <summary>
+    /// Fraction of the client's observed downlink treated as usable capacity
+    /// when fitting a quality tier to bandwidth (the rest is safety margin for
+    /// HTTP/TLS overhead and other traffic sharing the link). Applied as
+    /// <c>observedBandwidthKbps * UsableBandwidthFraction</c>. Default: 0.8.
+    /// </summary>
+    public double UsableBandwidthFraction { get; set; } = 0.8;
+
+    /// <summary>
+    /// Above this many seconds of client-reported download-buffer depth, the
+    /// client is healthy enough to be considered for a quality raise. Default: 10s.
+    /// </summary>
+    public int RaiseHealthyBufferSeconds { get; set; } = 10;
+
+    /// <summary>
+    /// Number of consecutive buffer-adaptive sweeps the downlink must
+    /// comfortably sustain a higher tier (and the client buffer stay healthy)
+    /// before a quality raise fires — hysteresis to prevent flapping. At the
+    /// service's 5s sweep interval, 3 sweeps is roughly 15s. Default: 3.
+    /// </summary>
+    public int RaiseSustainSweeps { get; set; } = 3;
+
+    /// <summary>
+    /// A client-health report (<see cref="ILiveSession.HasFreshClientHealth"/>)
+    /// older than this is treated as absent, so the network axis is skipped and
+    /// behavior falls back to the encoder-lead-only path — this is what keeps an
+    /// old client that never reports buffer health working exactly as before.
+    /// Default: 10s.
+    /// </summary>
+    public int ClientHealthStalenessSeconds { get; set; } = 10;
 }

@@ -92,7 +92,10 @@ public class FinalizeStageReconstructionTests
         TestStorage storage = new();
         BundleLayout layout = MakeHlsLayout();
         OutputPlan plan = MakeOutputPlan(layout);
-        string outputDir = layout.BundleDirectory;
+        // The real per-encode OutputDirectory is the media item's OWN folder —
+        // distinct from layout.BundleDirectory, which is a preset-scoped
+        // sub-directory nested INSIDE it (see FinalizeStage.WriteManifestAsync).
+        string outputDir = "Fight Club (1999)";
 
         // Seed a couple of HLS files so the manifest has a non-empty file list.
         storage.Seed($"{outputDir}/mfa_master.m3u8", [0x23, 0x45]);
@@ -120,7 +123,7 @@ public class FinalizeStageReconstructionTests
             .Setup(f => f.WriteFontManifestAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(0);
 
-        BundleManifestWriter manifestWriter = new(storage);
+        BundleManifestWriter manifestWriter = new();
         ReconstructionWriter reconstructionWriter = new();
 
         FinalizeStage stage = new(
@@ -147,19 +150,24 @@ public class FinalizeStageReconstructionTests
 
         result.Should().BeOfType<StageSuccess<FinalizeOutput>>();
 
-        // manifest.json must be present
-        string? manifestJson = storage.ReadString(layout.ManifestPath);
-        manifestJson.Should().NotBeNull("manifest.json must be written to ManifestPath");
+        // Nested under the media item's own OutputDirectory — see
+        // FinalizeStage.WriteManifestAsync for why this isn't layout.ManifestPath as-is.
+        string? manifestJson = storage.ReadString($"{outputDir}/{layout.ManifestPath}");
+        manifestJson
+            .Should()
+            .NotBeNull("manifest.json must be written under OutputDirectory/ManifestPath");
 
         BundleManifest? manifest = JsonConvert.DeserializeObject<BundleManifest>(manifestJson!);
         manifest.Should().NotBeNull();
         manifest!.MediaKey.Should().Be("mfa");
 
         // reconstruction.json must also be present
-        string? reconstructionJson = storage.ReadString(layout.ReconstructionPath);
+        string? reconstructionJson = storage.ReadString($"{outputDir}/{layout.ReconstructionPath}");
         reconstructionJson
             .Should()
-            .NotBeNull("reconstruction.json must be written to ReconstructionPath");
+            .NotBeNull(
+                "reconstruction.json must be written under OutputDirectory/ReconstructionPath"
+            );
 
         Reconstruction? reconstruction = JsonConvert.DeserializeObject<Reconstruction>(
             reconstructionJson!
@@ -179,7 +187,7 @@ public class FinalizeStageReconstructionTests
         TestStorage storage = new();
         BundleLayout layout = MakeHlsLayout();
         OutputPlan plan = MakeOutputPlan(layout);
-        string outputDir = layout.BundleDirectory;
+        string outputDir = "Fight Club (1999)";
 
         storage.Seed($"{outputDir}/mfa_master.m3u8", [0x23]);
 
@@ -205,7 +213,7 @@ public class FinalizeStageReconstructionTests
             .Setup(f => f.WriteFontManifestAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(0);
 
-        BundleManifestWriter manifestWriter = new(storage);
+        BundleManifestWriter manifestWriter = new();
 
         // No reconstructionWriter passed — optional parameter defaults to null
         FinalizeStage stage = new(
@@ -229,7 +237,10 @@ public class FinalizeStageReconstructionTests
         );
 
         result.Should().BeOfType<StageSuccess<FinalizeOutput>>();
-        storage.ReadString(layout.ManifestPath).Should().NotBeNull();
-        storage.ReadString(layout.ReconstructionPath).Should().BeNull("no writer registered");
+        storage.ReadString($"{outputDir}/{layout.ManifestPath}").Should().NotBeNull();
+        storage
+            .ReadString($"{outputDir}/{layout.ReconstructionPath}")
+            .Should()
+            .BeNull("no writer registered");
     }
 }

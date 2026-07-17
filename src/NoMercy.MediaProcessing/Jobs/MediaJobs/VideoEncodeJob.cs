@@ -25,9 +25,12 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
+using NoMercy.Encoder.Metadata;
+using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Orchestration;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Reconciliation;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
@@ -43,6 +46,7 @@ using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Resources;
 using Serilog.Events;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
+using MediaType = NoMercy.Encoder.Naming.MediaType;
 using QueueJobDispatcher = NoMercyQueue.JobDispatcher;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -76,6 +80,13 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
     private IEncoderProcessRegistry? _encoderProcessRegistry;
     private IMediaAnalyzer? _mediaAnalyzer;
     private ISubtitleOcrEngine? _subtitleOcrEngine;
+    private IEncodeReconciler? _encodeReconciler;
+
+    // Host shutdown signal for the post-encode scan retry backoff — falls back to
+    // CancellationToken.None when the DI scope has no IHostApplicationLifetime
+    // (e.g. a minimal test scope) so the retry loop still runs, just without an
+    // early-exit on server shutdown.
+    private CancellationToken _shutdownToken;
 
     // Host shutdown signal for the post-encode scan retry backoff — falls back to
     // CancellationToken.None when the DI scope has no IHostApplicationLifetime
@@ -92,6 +103,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         _encoderProcessRegistry = serviceProvider.GetRequiredService<IEncoderProcessRegistry>();
         _mediaAnalyzer = serviceProvider.GetRequiredService<IMediaAnalyzer>();
         _subtitleOcrEngine = serviceProvider.GetRequiredService<ISubtitleOcrEngine>();
+        _encodeReconciler = serviceProvider.GetRequiredService<IEncodeReconciler>();
         _shutdownToken =
             serviceProvider.GetService<IHostApplicationLifetime>()?.ApplicationStopping
             ?? CancellationToken.None;
@@ -113,6 +125,15 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
     /// Null preserves the default all-presets behavior.
     /// </summary>
     public Ulid? PresetId { get; set; }
+
+    /// <summary>
+    /// Operator escape hatch: when true, reconciliation is skipped entirely
+    /// and every preset is fully re-encoded, regardless of what is already
+    /// on disk or whether its profile fingerprint matches. Defaults to false
+    /// so every existing serialized job (and every dashboard "redispatch")
+    /// keeps today's reconciled behavior without needing to set anything.
+    /// </summary>
+    public bool ForceFullReencode { get; set; }
 
     private int _selfJobId;
 
@@ -201,6 +222,58 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                     continue;
                 }
 
+                IStorage destinationStorage = StorageFactory.For(
+                    folder.Id,
+                    folder.DriverId,
+                    folder.Path
+                );
+
+                IStorage sourceStorage = SourceDriverId.HasValue
+                    ? StorageFactory.For(SourceDriverId.Value, SourceDriverId.Value, string.Empty)
+                    : destinationStorage;
+
+                ReconciliationDecision reconciliation = await ReconcileAsync(
+                    encodingProfile,
+                    fileMetadata,
+                    sourceStorage,
+                    destinationStorage
+                );
+
+                if (reconciliation.Action == ReconciliationAction.Skip)
+                {
+                    Log.LogInformation(
+                        "[VideoEncodeJob] Reconciliation: skipping preset '{Name}' for {Id} — {Reason}",
+                        preset.Name,
+                        fileMetadata.Id,
+                        reconciliation.Reason
+                    );
+                    continue;
+                }
+
+                if (
+                    reconciliation.Action == ReconciliationAction.Partial
+                    && reconciliation.MissingKinds.Count == 0
+                )
+                {
+                    // Only the bitmap-subtitle OCR sidecar is missing — every
+                    // other output is valid and matches the current profile.
+                    // Top it up without touching Build/Execute at all.
+                    Log.LogInformation(
+                        "[VideoEncodeJob] Reconciliation: preset '{Name}' for {Id} is fully encoded — running OCR top-up only ({Reason})",
+                        preset.Name,
+                        fileMetadata.Id,
+                        reconciliation.Reason
+                    );
+                    await RunOcrTopUpAsync(
+                        fileMetadata,
+                        sourceStorage,
+                        destinationStorage,
+                        fileManager,
+                        folder
+                    );
+                    continue;
+                }
+
                 if (EventBusProvider.IsConfigured)
                 {
                     await EventBusProvider.Current.PublishAsync(
@@ -216,27 +289,52 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
 
                 IEncodingOrchestrator orchestrator = _encodingOrchestrator!;
 
-                IStorage destinationStorage = StorageFactory.For(
-                    folder.Id,
-                    folder.DriverId,
-                    folder.Path
-                );
-
-                IStorage sourceStorage = SourceDriverId.HasValue
-                    ? StorageFactory.For(SourceDriverId.Value, SourceDriverId.Value, string.Empty)
-                    : destinationStorage;
-
                 EncodingRequest request = new(
                     InputPath: InputFile,
                     OutputDirectory: fileMetadata.Path,
                     Profile: encodingProfile,
                     MediaTitle: fileMetadata.FileName,
                     SourceStorage: sourceStorage,
-                    DestinationStorage: destinationStorage
+                    DestinationStorage: destinationStorage,
+                    // Pure identity — safe on every request, including the Whole-task
+                    // inline path below (RunInlineAsync runs Build+Execute+Finalize
+                    // over this exact request). Drives BundleLayout resolution in
+                    // PlanStage so FinalizeStage writes manifest.json/reconstruction.json
+                    // for every encode, not only the coordinator's FinalizeOnly pass.
+                    // EncodingOptions.EnableMetadataInjection stays unset (defaults
+                    // false) here, so the emitted ffmpeg command is unaffected. Null
+                    // when the source has no resolvable movie/episode (e.g. a disc
+                    // rip) — degrades to today's behavior exactly.
+                    MediaItem: fileMetadata.MediaItem
                 );
 
                 string groupTag = Ulid.NewUlid().ToString();
                 DecomposedTask[] tasks = await orchestrator.DecomposeAsync(request, groupTag);
+
+                // Partial with a non-empty MissingKinds only ever happens for
+                // decomposable (HLS/DASH) strategies — DecideSingleFile never
+                // returns Partial with missing kinds, only Skip/Full — so
+                // filtering down to the missing kinds here never starves a
+                // Whole-task (MKV/MP4) run of its only task.
+                if (
+                    reconciliation.Action == ReconciliationAction.Partial
+                    && reconciliation.MissingKinds.Count > 0
+                )
+                {
+                    tasks = tasks
+                        .Where(task => reconciliation.MissingKinds.Contains(task.Kind))
+                        .ToArray();
+
+                    if (tasks.Length == 0)
+                    {
+                        Log.LogWarning(
+                            "[VideoEncodeJob] Reconciliation flagged {Kinds} as missing for preset '{Name}' but decomposition produced no matching task — falling back to a full re-encode",
+                            string.Join(", ", reconciliation.MissingKinds),
+                            preset.Name
+                        );
+                        tasks = await orchestrator.DecomposeAsync(request, groupTag);
+                    }
+                }
 
                 bool isWhole = tasks.Length == 1 && tasks[0].Kind == EncodeTaskKind.Whole;
 
@@ -725,7 +823,15 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             Options: new(FinalizeOnly: true),
             MediaTitle: fileMetadata.FileName,
             SourceStorage: sourceStorage,
-            DestinationStorage: destinationStorage
+            DestinationStorage: destinationStorage,
+            // Pure identity — safe here regardless of FinalizeOnly. Drives
+            // BundleLayout resolution + manifest.json/reconstruction.json in
+            // FinalizeStage. EncodingOptions.EnableMetadataInjection stays unset
+            // (defaults false), so this has no effect on the ffmpeg command even
+            // on a request where Build/Execute do run. Null when the source has
+            // no resolvable movie/episode (e.g. a disc rip) — degrades to today's
+            // behavior exactly.
+            MediaItem: fileMetadata.MediaItem
         );
 
         await PublishStageAsync(fileMetadata, "Publishing artifacts");
@@ -777,7 +883,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         }
 
         await PublishStageAsync(fileMetadata, "Checking source subtitles");
-        await RunBitmapSubtitleOcrAsync(fileMetadata, InputFile, sourceStorage);
+        await RunBitmapSubtitleOcrAsync(fileMetadata, InputFile, sourceStorage, destinationStorage);
 
         await PublishStageAsync(fileMetadata, "Refreshing library");
         Library library = folder.FolderLibraries.First().Library;
@@ -1497,7 +1603,12 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         await RecordEncodingHistoryAsync(context, preset, result, InputFile, StorageDriver);
 
         await PublishStageAsync(fileMetadata, "Checking source subtitles");
-        await RunBitmapSubtitleOcrAsync(fileMetadata, InputFile, sourceStorage);
+        await RunBitmapSubtitleOcrAsync(
+            fileMetadata,
+            InputFile,
+            sourceStorage,
+            request.DestinationStorage ?? request.SourceStorage ?? sourceStorage
+        );
 
         await PublishStageAsync(fileMetadata, "Refreshing library");
         await ScanEncodedOutputWithRetryAsync(
@@ -1604,10 +1715,149 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         }
     }
 
+    // ------------------------------------------------------------------
+    // Reconciliation — decide, before any ffmpeg command is built, what a
+    // re-dispatch of an already-encoded file actually still needs to do.
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Gathers what already exists for this (media, preset) combination and
+    /// asks <see cref="IEncodeReconciler"/> what to do about it.
+    /// <see cref="ForceFullReencode"/> short-circuits straight to Full
+    /// without inspecting the destination at all — the operator escape
+    /// hatch never pays the directory-listing / analysis cost either.
+    /// </summary>
+    private async Task<ReconciliationDecision> ReconcileAsync(
+        EncodingProfile encodingProfile,
+        FileMetadata fileMetadata,
+        IStorage sourceStorage,
+        IStorage destinationStorage
+    )
+    {
+        IEncodeReconciler reconciler = _encodeReconciler!;
+
+        if (ForceFullReencode)
+            return reconciler.Decide(
+                new(
+                    encodingProfile,
+                    IsSingleFileContainer(encodingProfile.Container),
+                    BitmapSubtitleStreamCount: 0,
+                    ExistingOutputSnapshot.Empty,
+                    Force: true
+                )
+            );
+
+        int bitmapSubtitleCount = await CountBitmapSubtitleStreamsAsync(sourceStorage);
+
+        ExistingOutputSnapshot existing = await reconciler.InspectAsync(
+            fileMetadata.Path,
+            destinationStorage,
+            CancellationToken.None
+        );
+
+        return reconciler.Decide(
+            new(
+                encodingProfile,
+                IsSingleFileContainer(encodingProfile.Container),
+                bitmapSubtitleCount,
+                existing
+            )
+        );
+    }
+
+    /// <summary>
+    /// Counts bitmap (PGS/VobSub/DVB) subtitle streams on the SOURCE file —
+    /// the streams <see cref="RunBitmapSubtitleOcrAsync"/> would OCR. Reuses
+    /// the same analyzer call that method makes; the extra ffprobe pass is
+    /// negligible next to the encode it lets reconciliation skip.
+    /// </summary>
+    private async Task<int> CountBitmapSubtitleStreamsAsync(IStorage sourceStorage)
+    {
+        IMediaAnalyzer? analyzer = _mediaAnalyzer;
+        if (analyzer is null)
+            return 0;
+
+        try
+        {
+            MediaInfo mediaInfo = await analyzer.AnalyzeAsync(
+                InputFile,
+                sourceStorage,
+                CancellationToken.None
+            );
+            return mediaInfo.SubtitleStreams.Count(subtitle => !subtitle.IsTextBased);
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(
+                "Could not analyze {InputFile} for reconciliation OCR count — assuming none: {Message}",
+                InputFile,
+                ex.Message
+            );
+            return 0;
+        }
+    }
+
+    /// <summary>
+    /// Single-file containers (MKV/MP4/audio-only) never decompose past a
+    /// single Whole task — reconciliation for those can only ever be Skip or
+    /// Full, never Partial-with-missing-kinds.
+    /// </summary>
+    private static bool IsSingleFileContainer(Container container) =>
+        container
+            is Container.Mkv
+                or Container.Mp4
+                or Container.Mp3
+                or Container.Aac
+                or Container.Flac
+                or Container.Ogg
+                or Container.Mka
+                or Container.Mks;
+
+    /// <summary>
+    /// Runs when reconciliation finds every real output already valid and
+    /// on-profile, with only the bitmap-subtitle OCR sidecar missing — the
+    /// Frieren regression this whole reconciler exists to fix. No ffmpeg
+    /// Build/Execute pass runs; only the lightweight OCR pass plus the
+    /// post-encode library rescan.
+    /// </summary>
+    private async Task RunOcrTopUpAsync(
+        FileMetadata fileMetadata,
+        IStorage sourceStorage,
+        IStorage destinationStorage,
+        FileManager fileManager,
+        Folder folder
+    )
+    {
+        await PublishStageAsync(fileMetadata, "Converting subtitles");
+        await RunBitmapSubtitleOcrAsync(fileMetadata, InputFile, sourceStorage, destinationStorage);
+
+        await PublishStageAsync(fileMetadata, "Refreshing library");
+        await ScanEncodedOutputWithRetryAsync(
+            fileManager,
+            fileMetadata.Id,
+            fileMetadata.Title,
+            folder.FolderLibraries.First().Library,
+            fileMetadata.FileName
+        );
+
+        if (EventBusProvider.IsConfigured)
+        {
+            await EventBusProvider.Current.PublishAsync(
+                new EncodingCompletedEvent
+                {
+                    JobId = fileMetadata.Id,
+                    OutputPath = fileMetadata.Path ?? string.Empty,
+                    Duration = TimeSpan.Zero,
+                }
+            );
+        }
+    }
+
     private async Task RunBitmapSubtitleOcrAsync(
         FileMetadata fileMetadata,
         string inputPath,
-        IStorage sourceStorage
+        IStorage sourceStorage,
+        IStorage destinationStorage
     )
     {
         IMediaAnalyzer? analyzer = _mediaAnalyzer;
@@ -1642,6 +1892,28 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         if (bitmap.Count == 0)
             return;
 
+        // Write the OCR sidecar into the finalized encode output directory —
+        // not next to the source — so the post-encode library scan picks it
+        // up. GetFullPath only resolves for a LocalStorage destination; a
+        // remote destination (NFS/S3) has no local directory to resolve, so
+        // OCR falls back to writing next to the source and stays diagnosable
+        // instead of throwing.
+        string? ocrOutputDirectory;
+        try
+        {
+            ocrOutputDirectory = destinationStorage.GetFullPath(fileMetadata.Path);
+        }
+        catch (NotSupportedException)
+        {
+            ocrOutputDirectory = null;
+            Log.LogInformation(
+                "OCR sidecar for job {JobId} will land next to the source — destination storage "
+                    + "{StorageType} has no resolvable local directory",
+                fileMetadata.Id,
+                destinationStorage.GetType().Name
+            );
+        }
+
         if (EventBusProvider.IsConfigured)
         {
             await EventBusProvider.Current.PublishAsync(
@@ -1665,7 +1937,8 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                     stream.Index,
                     language,
                     SubtitleCodecType.WebVtt,
-                    CancellationToken.None
+                    CancellationToken.None,
+                    ocrOutputDirectory
                 );
                 Log.LogInformation(
                     "OCR {Language} → {FilePath} ({CueCount} cues)",
@@ -1676,6 +1949,10 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             }
             catch (Exception ex)
             {
+                // Best-effort: OCR is a nice-to-have sidecar, never allowed to
+                // fail an already-completed encode. ex.Message already carries
+                // the real ffmpeg stderr tail (SubtitleOcrEngine embeds it), so
+                // this warning stays actionable instead of a bare "OCR failed".
                 Log.LogWarning(
                     "OCR failed for {InputPath} stream {Index} ({Language}): {Message}",
                     inputPath,
@@ -1711,6 +1988,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         string basePath = folderName;
         int baseId = movie?.Id ?? episode!.Id;
         string? imgPath = movie?.Backdrop ?? episode?.Still;
+        MediaItemRef mediaItem = BuildMediaItemRef(movie, episode);
 
         return new()
         {
@@ -1721,7 +1999,37 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             Path = basePath,
             Id = baseId,
             ImgPath = imgPath,
+            MediaItem = mediaItem,
         };
+    }
+
+    /// <summary>
+    /// Builds the reconstruction-metadata reference for the movie or episode
+    /// being encoded. <paramref name="movie"/> and <paramref name="episode"/>
+    /// are mutually exclusive — exactly one is non-null (callers already
+    /// verified that before reaching this point).
+    /// </summary>
+    private static MediaItemRef BuildMediaItemRef(Movie? movie, Episode? episode)
+    {
+        if (movie is not null)
+            return new MovieMediaRef(
+                Type: MediaType.Movie,
+                Id: movie.Id,
+                Title: movie.Title,
+                Year: movie.ReleaseDate?.Year,
+                Description: movie.Overview
+            );
+
+        return new EpisodeMediaRef(
+            Type: MediaType.Episode,
+            Id: episode!.Id,
+            Title: episode.Title ?? episode.CreateTitle(),
+            Year: episode.AirDate?.Year,
+            ShowTitle: episode.Tv.Title,
+            SeasonNumber: episode.SeasonNumber,
+            EpisodeNumber: episode.EpisodeNumber,
+            Description: episode.Overview
+        );
     }
 
     // ------------------------------------------------------------------
@@ -1758,6 +2066,18 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         public string Path { get; set; } = string.Empty;
         public int Id { get; set; }
         public string? ImgPath { get; set; }
+
+        /// <summary>
+        /// The resolved movie/episode reference for reconstruction-metadata
+        /// wiring. Set on every <see cref="EncodingRequest"/> this job builds —
+        /// the inline Whole-task request in <see cref="HandleInitialRunAsync"/>
+        /// and the coordinator's FinalizeOnly request in
+        /// <see cref="HandleFinalizeAsync"/> alike. Pure identity: it can never
+        /// change the ffmpeg command that produced the output, because that is
+        /// gated separately by <see cref="EncodingOptions.EnableMetadataInjection"/>,
+        /// which this job never sets.
+        /// </summary>
+        public MediaItemRef? MediaItem { get; set; }
     }
 
     private static async Task PublishStageAsync(FileMetadata fileMetadata, string message)

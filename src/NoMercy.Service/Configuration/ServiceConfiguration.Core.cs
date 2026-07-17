@@ -22,6 +22,7 @@ using NoMercy.Data.Resolvers;
 using NoMercy.Database;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Startup;
+using NoMercy.Encoder.Subtitles;
 using NoMercy.Events;
 using NoMercy.Events.Audit;
 using NoMercy.MediaProcessing.Collections;
@@ -246,7 +247,7 @@ public static partial class ServiceConfiguration
         services.AddSingleton<IConnectivityStrategy>(sp => new CloudflareTunnelStrategy(
             sp.GetRequiredService<ILogger<CloudflareTunnelStrategy>>(),
             sp.GetRequiredService<IConnectivityStatus>(),
-            () => Task.FromResult(string.Empty) // Register.GetTunnelAvailability
+            () => sp.GetRequiredService<IServerRegistrationService>().GetTunnelAvailability()
         ));
 
         // Add Auth services
@@ -376,7 +377,6 @@ public static partial class ServiceConfiguration
 
         // Add Repositories
         services.AddScoped<HomeRepository>();
-        services.AddScoped<EncoderRepository>();
         services.AddScoped<EncodingHistoryRepository>();
         services.AddScoped<ContentSegmentRepository>();
         services.AddScoped<LibraryRepository>();
@@ -386,14 +386,8 @@ public static partial class ServiceConfiguration
         services.AddScoped<DriverRepository>();
         services.AddScoped<MediaProcessingFileRepository>();
         services.AddScoped<IFileRepository, MediaProcessingFileRepository>();
-        services.AddScoped<
-            IMediaIdentificationService,
-            MediaIdentificationService
-        >();
-        services.AddScoped<
-            IFileListService,
-            FileListService
-        >();
+        services.AddScoped<IMediaIdentificationService, MediaIdentificationService>();
+        services.AddScoped<IFileListService, FileListService>();
 
         // Filename parse-adapter pipeline. Adapters are resolved as a set, so
         // plugins can contribute their own; FilenameParsingOptions can reorder or
@@ -473,7 +467,6 @@ public static partial class ServiceConfiguration
         services.AddScoped<IContentSegmentRepository, ContentSegmentRepository>();
         services.AddScoped<IDeviceRepository, DeviceRepository>();
         services.AddScoped<IDriverRepository, DriverRepository>();
-        services.AddScoped<IEncoderRepository, EncoderRepository>();
         services.AddScoped<IEncodingHistoryRepository, EncodingHistoryRepository>();
         services.AddScoped<IEncodingPresetRepository, EncodingPresetRepository>();
         services.AddScoped<IFolderRepository, FolderRepository>();
@@ -535,9 +528,7 @@ public static partial class ServiceConfiguration
 
         services.AddMediaServerQueue();
         services.AddSingleton<JobDispatcher>();
-        services.AddSingleton<IJobDispatcher>(sp =>
-            sp.GetRequiredService<JobDispatcher>()
-        );
+        services.AddSingleton<IJobDispatcher>(sp => sp.GetRequiredService<JobDispatcher>());
 
         // Storage driver resolvers — registered before AddNoMercyEncoder so
         // the TryAdd inside AddNoMercyStorage picks them up via GetService<>.
@@ -559,6 +550,14 @@ public static partial class ServiceConfiguration
             // NeedsRecalibration() can honour its 30-day grace window.
             opts.SpeedIndexCachePath = AppFiles.SpeedIndexCachePath;
         });
+
+        // Routes on-demand OCR model pulls through the signed nomercy-tesseract release
+        // (Binaries + BinaryVerification) instead of an unverified raw-branch fetch.
+        // Registered here — not inside AddNoMercyEncoder — because NoMercy.Setup owns
+        // release/manifest verification and NoMercy.Encoder cannot reference it (NoMercy.Setup
+        // already references NoMercy.Encoder). Singleton so repeated language downloads share
+        // one Binaries instance and its manifest cache instead of re-verifying per call.
+        services.AddSingleton<ITesseractModelDownloader, TesseractModelDownloader>();
 
         // Registered here, not in Providers or Encoder: it bridges both and neither
         // may reference the other.

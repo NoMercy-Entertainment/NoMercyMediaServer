@@ -15,7 +15,7 @@ namespace NoMercy.Encoder.Execution;
 /// Tracks live FFmpeg process IDs per encode job so the dashboard (or any
 /// out-of-band caller) can locate them for pause / resume / cancel operations.
 /// Keyed by the public job id that the dashboard uses — for video encodes this
-/// is the movie / episode id, matching V1 behavior.
+/// is the movie / episode id.
 /// </summary>
 public interface IEncoderProcessRegistry
 {

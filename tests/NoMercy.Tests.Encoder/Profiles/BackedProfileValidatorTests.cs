@@ -23,9 +23,9 @@ namespace NoMercy.Tests.Encoder.Profiles;
 /// render them through the catalogued envelope shape — but the deep-link
 /// drops to the bucket ID rather than the specific rule.
 /// </summary>
-public class V2BackedProfileValidatorTests
+public class BackedProfileValidatorTests
 {
-    private readonly V2BackedProfileValidator _validator = new();
+    private readonly BackedProfileValidator _validator = new();
 
     private static VideoOutput Video(
         VideoCodecType codec = VideoCodecType.H264,

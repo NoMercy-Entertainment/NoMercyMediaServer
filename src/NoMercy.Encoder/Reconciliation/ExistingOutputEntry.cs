@@ -9,10 +9,15 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-namespace NoMercy.Database;
+namespace NoMercy.Encoder.Reconciliation;
 
-public class ThumbnailProfile
+/// <summary>
+/// One file the reconciler found on disk (or in <c>manifest.json</c>),
+/// relative to the encode bundle directory. Validity is a cheap
+/// existence + non-zero-size check — never a per-segment re-probe of an
+/// HLS playlist's referenced segments.
+/// </summary>
+public sealed record ExistingOutputEntry(string RelativePath, long SizeBytes)
 {
-    public int Width { get; set; } = 320;
-    public int IntervalSeconds { get; set; } = 10;
+    public bool IsValid => SizeBytes > 0;
 }

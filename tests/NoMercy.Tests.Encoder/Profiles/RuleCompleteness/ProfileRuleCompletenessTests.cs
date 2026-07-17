@@ -323,7 +323,7 @@ public class ProfileRuleCompletenessTests
             SubtitleOutput[]? subtitles = null,
             LadderConfig? ladder = null,
             int segmentDuration = 6,
-            HdrPolicy hdrPolicy = HdrPolicy.PassthroughWhenPossible,
+            HdrPolicies hdrPolicies = HdrPolicies.PassthroughWhenPossible,
             DrmConfig? drm = null,
             Dictionary<string, string>? customArgs = null
         ) =>
@@ -338,7 +338,7 @@ public class ProfileRuleCompletenessTests
                 Ladder: ladder
             )
             {
-                HdrPolicy = hdrPolicy,
+                HdrPolicies = hdrPolicies,
                 Drm = drm,
                 CustomArguments = customArgs,
             };
@@ -478,7 +478,7 @@ public class ProfileRuleCompletenessTests
             ),
             [EncoderRuleId.HdrInverseTonemapUnsupported] = MakeProfile(
                 VideoTranscode(bitDepth: 8),
-                hdrPolicy: HdrPolicy.AlwaysPreserve
+                hdrPolicies: HdrPolicies.AlwaysPreserve
             ),
             // H.264 + explicit 8-bit-only "High" profile + 10-bit depth: the
             // pipeline promotes High -> High10, the validator warns about it.
@@ -571,7 +571,7 @@ public class ProfileRuleCompletenessTests
             SubtitleOutput[]? subtitles = null,
             LadderConfig? ladder = null,
             int segmentDuration = 6,
-            HdrPolicy hdrPolicy = HdrPolicy.PassthroughWhenPossible,
+            HdrPolicies hdrPolicies = HdrPolicies.PassthroughWhenPossible,
             DrmConfig? drm = null,
             Dictionary<string, string>? customArgs = null
         ) =>
@@ -586,7 +586,7 @@ public class ProfileRuleCompletenessTests
                 Ladder: ladder
             )
             {
-                HdrPolicy = hdrPolicy,
+                HdrPolicies = hdrPolicies,
                 Drm = drm,
                 CustomArguments = customArgs,
             };
@@ -738,7 +738,7 @@ public class ProfileRuleCompletenessTests
             ),
             [EncoderRuleId.HdrInverseTonemapUnsupported] = MakeProfile(
                 VideoTranscode(bitDepth: 10),
-                hdrPolicy: HdrPolicy.AlwaysPreserve
+                hdrPolicies: HdrPolicies.AlwaysPreserve
             ),
             // H.264 + High10 + 10-bit already agree — nothing to promote, no warning.
             [EncoderRuleId.BitDepthH26xProfilePromoted] = MakeProfile(

@@ -324,7 +324,11 @@ public static class ProfileValidator
         if (fps <= 0)
             return;
 
-        long lumaSamplesPerSec = (long)(video.Width * (video.Height ?? primaryVideo.Height) * fps);
+        // A null (or legacy 0) width means "keep source width" — resolve it
+        // against the actual source here, since the source is available.
+        int effectiveWidth = video.Width is int w and > 0 ? w : primaryVideo.Width;
+        int effectiveHeight = video.Height ?? primaryVideo.Height;
+        long lumaSamplesPerSec = (long)(effectiveWidth * effectiveHeight * fps);
 
         CodecLevelFpsCaps.LevelCap? cap = CodecLevelFpsCaps.Lookup(video.Codec, video.Level);
         if (cap is null)

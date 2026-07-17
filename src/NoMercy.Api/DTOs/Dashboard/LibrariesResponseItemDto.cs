@@ -13,7 +13,6 @@ using Newtonsoft.Json;
 using NoMercy.Data.DTOs;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
-using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.DTOs.Dashboard;
 
@@ -112,12 +111,13 @@ public record LibrariesResponseItemDto
                     DriverId = folderLibrary.Folder.DriverId,
                     DriverName = folderLibrary.Folder.Driver?.Name ?? string.Empty,
                     EncoderProfiles = folderLibrary
-                        .Folder.EncoderProfileFolder.Where(epf => epf.EncoderProfile is not null)
-                        .Select(epf => new Data.DTOs.Encoder.EncoderProfileDto
+                        .Folder.EncodingPresetFolders.Where(link => link.Preset is not null)
+                        .Select(link => new Data.DTOs.Encoder.FolderPresetDto
                         {
-                            Id = epf.EncoderProfile.Id,
-                            Name = epf.EncoderProfile.Name,
-                            Container = epf.EncoderProfile.Container.OrEmpty(),
+                            Id = link.Preset!.Id,
+                            Name = link.Preset!.Name,
+                            // See FolderDto — no Container column on the preset row.
+                            Container = string.Empty,
                         })
                         .ToArray(),
                 },

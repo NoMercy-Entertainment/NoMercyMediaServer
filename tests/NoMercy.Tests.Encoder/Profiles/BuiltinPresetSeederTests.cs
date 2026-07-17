@@ -112,6 +112,56 @@ public class BuiltinPresetSeederTests
         exists.Should().BeFalse("stale built-in rows must be pruned on every seed");
     }
 
+    /// <summary>
+    /// A built-in id is a hash of its name, so renaming one retires the old id.
+    /// EncodingPresetFolders cascades on the preset FK: deleting the retired row
+    /// would take the folder's link with it and the folder silently stops
+    /// encoding. The user picked that preset, so it becomes theirs instead.
+    /// </summary>
+    [Fact]
+    public async Task SeedAsync_StaleBuiltinWithFolderLink_IsDemotedNotDeleted()
+    {
+        await using MediaContext ctx = NewContext();
+        Ulid retiredId = Ulid.NewUlid();
+        Ulid folderId = Ulid.NewUlid();
+
+        ctx.EncodingPresets.Add(
+            new()
+            {
+                Id = retiredId,
+                Name = "Anime HEVC 1080p 10-bit",
+                Description = "Shipped before the presets were renamed",
+                ProfileJson = "{}",
+                IsBuiltIn = true,
+                Source = "builtin",
+            }
+        );
+        ctx.EncodingPresetFolders.Add(
+            new()
+            {
+                PresetId = retiredId,
+                FolderId = folderId,
+                IsDefault = true,
+            }
+        );
+        await ctx.SaveChangesAsync();
+
+        BuiltinPresetSeeder subject = new(ctx);
+        await subject.SeedAsync();
+
+        EncodingPreset? retired = await ctx.EncodingPresets.FirstOrDefaultAsync(p =>
+            p.Id == retiredId
+        );
+        retired.Should().NotBeNull("a preset a folder still points at must never be deleted");
+        retired!.IsBuiltIn.Should().BeFalse();
+        retired.Source.Should().Be("retired-builtin");
+
+        bool linkSurvived = await ctx.EncodingPresetFolders.AnyAsync(link =>
+            link.PresetId == retiredId && link.FolderId == folderId
+        );
+        linkSurvived.Should().BeTrue("the folder must keep encoding exactly as configured");
+    }
+
     [Fact]
     public async Task SeedAsync_UserCustomPreset_IsLeftAlone()
     {

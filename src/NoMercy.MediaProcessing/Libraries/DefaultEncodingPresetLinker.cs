@@ -13,13 +13,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
+using NoMercy.Encoder.Profiles;
 
 namespace NoMercy.MediaProcessing.Libraries;
 
 /// <summary>
 /// Gives a freshly-created library folder automatic multi-resolution HLS
 /// encoding with zero manual profile picking. Attaches a single default
-/// <see cref="EncodingPresetFolder"/> (V2) link — the same table
+/// <see cref="EncodingPresetFolder"/> link — the same table
 /// <c>VideoEncodeJob</c> resolves its presets from and
 /// <c>AutoEncodeSubscriber</c> gates its dispatch decision on — so a brand
 /// new folder starts encoding the moment media lands in it.
@@ -36,12 +37,12 @@ public class DefaultEncodingPresetLinker(
 ) : IDefaultEncodingPresetLinker
 {
     /// <summary>
-    /// Name of the built-in ABR ladder preset used as the default. Matches
-    /// <c>BuiltinPresets.AbrStandard480_720_1080</c>'s <c>Name</c> exactly.
-    /// Read by name (not by the builtin's computed Ulid) so a future rename
-    /// degrades gracefully to the IsDefault fallback instead of throwing.
+    /// Read by name (not by the builtin's computed Ulid) so a rename degrades
+    /// to the IsDefault fallback instead of throwing. Bound to the constant
+    /// rather than a literal: a renamed builtin would otherwise resolve to
+    /// nothing here and silently leave every new folder without auto-encode.
     /// </summary>
-    private const string DefaultBuiltinPresetName = "ABR Standard 480/720/1080";
+    private const string DefaultBuiltinPresetName = BuiltinPresets.DefaultStreamingPresetName;
 
     public async Task<bool> AttachDefaultIfMissingAsync(
         Ulid folderId,

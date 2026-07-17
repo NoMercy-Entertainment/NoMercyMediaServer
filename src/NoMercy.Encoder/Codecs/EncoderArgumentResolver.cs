@@ -315,14 +315,20 @@ public static class EncoderArgumentResolver
     {
         // A valid source width is required to reason about aspect ratio and to
         // clamp against upscaling. When the probe failed to report it, fall back
-        // to the profile's own width so downstream never derives a zero height.
-        int effectiveSourceWidth = sourceWidth > 0 ? sourceWidth : profile.Width;
+        // to the profile's own width (or 0 when the profile also asks to keep
+        // source) so downstream never derives a zero height.
+        int effectiveSourceWidth = sourceWidth > 0 ? sourceWidth : profile.Width ?? 0;
         int effectiveSourceHeight =
             sourceHeight > 0 ? sourceHeight
             : profile.Height is int h and > 0 ? h
             : effectiveSourceWidth * 9 / 16;
 
-        int outputWidth = Math.Min(profile.Width, effectiveSourceWidth);
+        // A null width — or a legacy persisted 0 from before this field went
+        // nullable — means "keep source width": never rescale the width axis.
+        // Only a positive width clamps against the source to prevent upscaling.
+        int outputWidth = profile.Width is int w and > 0
+            ? Math.Min(w, effectiveSourceWidth)
+            : effectiveSourceWidth;
 
         // Height <= 0 means "derive from source AR" just like null: ladder rungs
         // carry a non-nullable int, so an upstream null collapses to 0 — a literal

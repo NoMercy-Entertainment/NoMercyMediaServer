@@ -39,6 +39,7 @@ using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Reconciliation;
 using NoMercy.Encoder.Startup;
 using NoMercy.Encoder.Strategies;
 using NoMercy.Encoder.Strategies.Audio;
@@ -214,8 +215,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IReconstructionWriter, ReconstructionWriter>();
         services.AddSingleton<IBundleGarbageCollector, BundleGarbageCollector>();
 
+        // Encode-output reconciliation — decides, before any ffmpeg command is
+        // built, whether a re-dispatched file needs a full re-encode, only its
+        // missing pieces, or nothing at all. Stateless; safe as a singleton.
+        services.AddSingleton<IEncodeReconciler, EncodeReconciler>();
+
         // Profiles
-        services.AddTransient<IProfileValidator, V2BackedProfileValidator>();
+        services.AddTransient<IProfileValidator, BackedProfileValidator>();
         services.AddTransient<INamePresetResolver, ByNamePresetResolver>();
         services.AddSingleton<IProfileSignatureVerifier, ProfileSignatureVerifier>();
 
@@ -241,6 +247,11 @@ public static class ServiceCollectionExtensions
             client.WithNoMercyUserAgent();
             return client;
         });
+        // ITesseractModelDownloader is implemented in NoMercy.Setup (which owns
+        // release/manifest signature verification) and cannot be referenced here — the
+        // Service host registers the real one after this call, replacing this default
+        // via standard DI last-wins, same as IOpenSubtitlesProvider below.
+        services.TryAddSingleton<ITesseractModelDownloader, NoOpTesseractModelDownloader>();
         services.AddTransient<ITesseractModelManager, TesseractModelManager>();
         services.AddTransient<ISubtitleOcrEngine, SubtitleOcrEngine>();
         services.AddSingleton<ISubtitleRouter, SubtitleRouter>();

@@ -48,6 +48,10 @@ public class Encoder(
             DestinationStorage = request.DestinationStorage ?? request.SourceStorage,
             OutputDirectory = request.OutputDirectory,
             InputPath = request.InputPath,
+            // Pure identity — safe to thread through on every request. See
+            // EncodingRequest.MediaItem / EncodingOptions.EnableMetadataInjection.
+            MediaItem = request.MediaItem,
+            EnableMetadataInjection = request.Options?.EnableMetadataInjection ?? false,
         };
         Stopwatch stopwatch = Stopwatch.StartNew();
 
@@ -103,16 +107,13 @@ public class Encoder(
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)planResult).Value;
 
         // Update observer with resolved stream info from the actual output plan.
-        // Format matches V1: "{index}:{detail}" for dashboard display.
+        // Format: "{index}:{detail}" for dashboard display.
         progress?.OnPlanResolved(
             plan.OutputPlan.VideoOutputs.Select(
                     (v, i) => $"{i}:{v.Width}x{v.Height}_{v.EncoderName}"
                 )
                 .ToList(),
-            plan.OutputPlan.AudioOutputs.Select(
-                    (a, i) =>
-                        $"{i}:{a.Language}_{a.EncoderName.Replace("libfdk_", "").Replace("lib", "")}"
-                )
+            plan.OutputPlan.AudioOutputs.Select((a, i) => $"{i}:{a.Language}_{a.CodecToken}")
                 .ToList(),
             plan.OutputPlan.SubtitleOutputs.Select((s, i) => $"{i}:{s.Language}_{s.OutputCodec}")
                 .ToList(),
@@ -211,7 +212,8 @@ public class Encoder(
                 request.OutputDirectory,
                 request.ResolvedTitle,
                 Progress: progress,
-                HlsDerivatives: request.Profile.HlsDerivatives
+                HlsDerivatives: request.Profile.HlsDerivatives,
+                Profile: request.Profile
             );
             StageResult finalizeResult = await finalizeStage.ExecuteAsync(
                 finalizeInput,

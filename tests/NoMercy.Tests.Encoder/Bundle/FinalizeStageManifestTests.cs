@@ -77,7 +77,10 @@ public class FinalizeStageManifestTests
         TestStorage storage = new();
         BundleLayout layout = MakeHlsLayout();
         OutputPlan plan = MakeOutputPlan(layout);
-        string outputDir = layout.BundleDirectory;
+        // The real per-encode OutputDirectory is the media item's OWN folder —
+        // distinct from layout.BundleDirectory, which is a preset-scoped
+        // sub-directory nested INSIDE it (see FinalizeStage.WriteManifestAsync).
+        string outputDir = "Fight Club (1999)";
 
         // Seed a couple of HLS files so the manifest has a non-empty file list.
         storage.Seed($"{outputDir}/mfa_master.m3u8", [0x23, 0x45]);
@@ -105,7 +108,7 @@ public class FinalizeStageManifestTests
             .Setup(f => f.WriteFontManifestAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(0);
 
-        BundleManifestWriter manifestWriter = new(storage);
+        BundleManifestWriter manifestWriter = new();
 
         FinalizeStage stage = new(
             chapterWriterMock.Object,
@@ -129,8 +132,10 @@ public class FinalizeStageManifestTests
 
         result.Should().BeOfType<StageSuccess<FinalizeOutput>>();
 
-        string? json = storage.ReadString(layout.ManifestPath);
-        json.Should().NotBeNull("manifest.json must be written to ManifestPath");
+        // Nested under the media item's own OutputDirectory — see
+        // FinalizeStage.WriteManifestAsync for why this isn't layout.ManifestPath as-is.
+        string? json = storage.ReadString($"{outputDir}/{layout.ManifestPath}");
+        json.Should().NotBeNull("manifest.json must be written under OutputDirectory/ManifestPath");
 
         BundleManifest? manifest = JsonConvert.DeserializeObject<BundleManifest>(json!);
         manifest.Should().NotBeNull();

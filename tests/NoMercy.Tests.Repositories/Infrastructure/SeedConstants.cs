@@ -25,5 +25,5 @@ public static class SeedConstants
     public static readonly Ulid MovieVideoFile2Id = Ulid.NewUlid();
     public static readonly Ulid TvVideoFile1Id = Ulid.NewUlid();
     public static readonly Ulid TvVideoFile2Id = Ulid.NewUlid();
-    public static readonly Ulid EncoderProfileId = Ulid.NewUlid();
+    public static readonly Ulid EncodingPresetId = Ulid.NewUlid();
 }

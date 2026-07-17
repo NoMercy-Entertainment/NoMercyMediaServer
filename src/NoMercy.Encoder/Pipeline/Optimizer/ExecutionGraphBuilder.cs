@@ -83,13 +83,11 @@ public class ExecutionGraphBuilder
                 for (int i = 0; i < videoOutputs.Length; i++)
                 {
                     VideoOutput output = videoOutputs[i];
+                    // A null (or legacy 0) width means "keep source width".
+                    int width = output.Width is int ow and > 0 ? ow : media.VideoStreams[0].Width;
                     int height =
                         output.Height
-                        ?? (
-                            output.Width
-                            * media.VideoStreams[0].Height
-                            / media.VideoStreams[0].Width
-                        );
+                        ?? (width * media.VideoStreams[0].Height / media.VideoStreams[0].Width);
 
                     string scaleId = $"node_{nodeId++}";
                     nodes.Add(
@@ -99,7 +97,7 @@ public class ExecutionGraphBuilder
                             [splitId],
                             new()
                             {
-                                ["width"] = output.Width.ToString(),
+                                ["width"] = width.ToString(),
                                 ["height"] = height.ToString(),
                                 ["split_index"] = i.ToString(),
                             }
@@ -117,7 +115,7 @@ public class ExecutionGraphBuilder
                                 ["encoder"] = resolvedVideoCodecs[i].FfmpegEncoderName,
                                 ["crf"] = output.Crf.ToString(),
                                 ["preset"] = output.Preset ?? "",
-                                ["width"] = output.Width.ToString(),
+                                ["width"] = width.ToString(),
                                 ["height"] = height.ToString(),
                             }
                         )
@@ -128,13 +126,14 @@ public class ExecutionGraphBuilder
             {
                 // Single output: scale + encode
                 VideoOutput output = videoOutputs[0];
+                // A null (or legacy 0) width means "keep source width".
+                int width = output.Width is int ow and > 0 ? ow : media.VideoStreams[0].Width;
                 int height =
                     output.Height
-                    ?? (output.Width * media.VideoStreams[0].Height / media.VideoStreams[0].Width);
+                    ?? (width * media.VideoStreams[0].Height / media.VideoStreams[0].Width);
 
                 bool needsScale =
-                    output.Width != media.VideoStreams[0].Width
-                    || height != media.VideoStreams[0].Height;
+                    width != media.VideoStreams[0].Width || height != media.VideoStreams[0].Height;
 
                 if (needsScale)
                 {
@@ -144,11 +143,7 @@ public class ExecutionGraphBuilder
                             scaleId,
                             OperationType.Scale,
                             [lastVideoNode],
-                            new()
-                            {
-                                ["width"] = output.Width.ToString(),
-                                ["height"] = height.ToString(),
-                            }
+                            new() { ["width"] = width.ToString(), ["height"] = height.ToString() }
                         )
                     );
                     lastVideoNode = scaleId;
@@ -165,7 +160,7 @@ public class ExecutionGraphBuilder
                             ["encoder"] = resolvedVideoCodecs[0].FfmpegEncoderName,
                             ["crf"] = output.Crf.ToString(),
                             ["preset"] = output.Preset ?? "",
-                            ["width"] = output.Width.ToString(),
+                            ["width"] = width.ToString(),
                             ["height"] = height.ToString(),
                         }
                     )

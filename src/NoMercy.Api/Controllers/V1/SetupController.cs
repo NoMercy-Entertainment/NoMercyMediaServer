@@ -59,7 +59,7 @@ public class SetupController(
     public IActionResult ServerInfo()
     {
         bool setupComplete =
-            context.Libraries.Any() && context.Folders.Any() && context.EncoderProfiles.Any();
+            context.Libraries.Any() && context.Folders.Any() && context.EncodingPresets.Any();
 
         Configuration? device = appContext.Configuration.FirstOrDefault(device =>
             device.Key == "serverName"

@@ -15,14 +15,14 @@ using NoMercy.Encoder.Profiles;
 namespace NoMercy.Encoder.Pipeline;
 
 /// <summary>
-/// Static helpers shared by pipeline stages that iterate a V2
-/// <see cref="EncodingProfile"/>'s stream outputs.
+/// Static helpers shared by pipeline stages that iterate
+/// <see cref="EncodingProfile"/> stream outputs.
 /// </summary>
 internal static class PlanStageHelpers
 {
     /// <summary>
-    /// Returns the effective set of <see cref="VideoOutput"/> entries for a
-    /// V2 profile, expanding ladder rungs when the ladder is in Manual mode.
+    /// Returns the effective set of <see cref="VideoOutput"/> entries for an
+    /// <see cref="EncodingProfile"/>, expanding ladder rungs when the ladder is in Manual mode.
     ///
     /// <list type="bullet">
     ///   <item>No Video → empty array.</item>
@@ -99,7 +99,7 @@ internal static class PlanStageHelpers
         };
 
     /// <summary>
-    /// Maps a V2 <see cref="Container"/> to the internal <see cref="OutputFormat"/>
+    /// Maps <see cref="Container"/> to the internal <see cref="OutputFormat"/>
     /// used by output strategies and <see cref="NoMercy.Encoder.Output.OutputPlan"/>.
     /// </summary>
     internal static OutputFormat ContainerToOutputFormat(Container container) =>

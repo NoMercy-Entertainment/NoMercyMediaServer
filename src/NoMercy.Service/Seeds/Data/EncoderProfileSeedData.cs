@@ -17,8 +17,8 @@ public static class EncoderProfileSeedData
 
     public static readonly SeedExample[] Examples =
     [
-        new("Example: Web 1080p", "Web 1080p Balanced"),
-        new("Example: Anime 1080p", "Anime HEVC 1080p 10-bit"),
+        new("Example: Web 1080p", "H.264 MP4 (Universal)"),
+        new("Example: Anime 1080p", "HEVC MP4 (High Quality)"),
         new("Example: Music FLAC", "Music FLAC Lossless"),
     ];
 }

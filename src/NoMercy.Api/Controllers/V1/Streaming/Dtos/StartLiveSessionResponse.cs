@@ -77,6 +77,27 @@ public record ReportPositionResponse(
 );
 
 /// <summary>
+/// Request body for the client network-health report endpoint (REST fallback
+/// for clients that don't use the <c>LiveTranscodeHub.ReportBufferHealth</c>
+/// SignalR method). Reports the client's download-buffer depth and its
+/// measured/estimated downlink so the buffer-adaptive sweep's network axis
+/// can react to network conditions independently of encoder-lead.
+/// </summary>
+public record ReportBufferHealthRequest(
+    [property: JsonProperty("buffered_seconds")] double BufferedSeconds,
+    [property: JsonProperty("observed_bandwidth_kbps")] double ObservedBandwidthKbps
+);
+
+/// <summary>
+/// Response body returned by the buffer-health report endpoint. Echoes the
+/// clamped (non-negative) values the server actually recorded.
+/// </summary>
+public record ReportBufferHealthResponse(
+    [property: JsonProperty("buffered_seconds")] double BufferedSeconds,
+    [property: JsonProperty("observed_bandwidth_kbps")] double ObservedBandwidthKbps
+);
+
+/// <summary>
 /// Request body for the in-session quality change endpoint.
 /// </summary>
 public record ChangeQualityRequest([property: JsonProperty("quality_id")] string QualityId);

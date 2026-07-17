@@ -242,6 +242,12 @@ public class LegacyProfileCodecRegressionTests
             Chapters: []
         );
 
+    // BitDepth is 10 (not the legacy profile's requested 8) so this source
+    // never qualifies for PlanStage's smart-copy downgrade (an exact
+    // codec/resolution/bit-depth match would stream-copy instead of
+    // transcoding) — these tests exist to prove the CODEC RESOLUTION path
+    // (hardware selection, stale-benchmark fallback) never picks HEVC, which
+    // only runs when the source actually needs a re-encode.
     private static MediaInfo BuildSdr1080PSource() =>
         new(
             FilePath: "/movies/test/test.mkv",
@@ -257,8 +263,8 @@ public class LegacyProfileCodecRegressionTests
                     Width: 1920,
                     Height: 1080,
                     FrameRate: 24.0,
-                    BitDepth: 8,
-                    PixelFormat: "yuv420p",
+                    BitDepth: 10,
+                    PixelFormat: "yuv420p10le",
                     ColorPrimaries: "bt709",
                     ColorTransfer: "bt709",
                     ColorSpace: "bt709",

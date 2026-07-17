@@ -9,9 +9,11 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.Encoder.Codecs;
+
 namespace NoMercy.Encoder.Profiles;
 
-public enum HdrPolicy
+public enum HdrPolicies
 {
     PassthroughWhenPossible,
     AlwaysTonemap,
@@ -28,4 +30,39 @@ public enum HdrPolicy
     /// like AlwaysTonemap (single SDR output per resolution).
     /// </summary>
     EmitHdrAndSdr,
+}
+
+public static class HdrPolicy
+{
+    public static (bool EmitHdr, bool EmitSdrFallback) Resolve(
+        bool sourceIsHdr,
+        VideoCodecType codec,
+        EncodingProfile baseProfile)
+    {
+        bool codecSupportsHdr = codec switch
+        {
+            VideoCodecType.H265 => true,
+            VideoCodecType.Av1  => true,
+            VideoCodecType.Vp9  => true,
+            _ => false
+        };
+
+        if (!sourceIsHdr) return (false, false);
+
+        if (codecSupportsHdr)
+        {
+            return (true, true);
+        }
+
+        return (false, true);
+    }
+
+    public static bool IsHdrContainerPreferred(Container container) =>
+        container switch
+        {
+            Container.Mkv => true,
+            Container.Mp4 => true,
+            Container.HlsFmp4 => true,
+            _ => false
+        };
 }

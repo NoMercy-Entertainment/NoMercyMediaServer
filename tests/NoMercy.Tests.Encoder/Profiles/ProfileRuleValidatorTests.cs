@@ -28,7 +28,7 @@ public class ProfileRuleValidatorTests
 
     private static VideoOutput Video(
         VideoCodecType codec = VideoCodecType.H264,
-        int width = 1920,
+        int? width = 1920,
         int? height = 1080,
         RateControlMode rc = RateControlMode.Crf,
         int crf = 23,
@@ -66,7 +66,7 @@ public class ProfileRuleValidatorTests
         LadderConfig? ladder = null,
         AudioOutput[]? audio = null,
         SubtitleOutput[]? subtitles = null,
-        HdrPolicy hdrPolicy = HdrPolicy.PassthroughWhenPossible
+        HdrPolicies hdrPolicies = HdrPolicies.PassthroughWhenPossible
     ) =>
         new(
             Id: Ulid.NewUlid(),
@@ -79,7 +79,7 @@ public class ProfileRuleValidatorTests
             Ladder: ladder
         )
         {
-            HdrPolicy = hdrPolicy,
+            HdrPolicies = hdrPolicies,
         };
 
     private static AudioOutput Audio(AudioCodecType codec, int bitrate) =>
@@ -455,7 +455,7 @@ public class ProfileRuleValidatorTests
     {
         EncodingProfile profile = ProfileFor(
             Video(bitDepth: 8),
-            hdrPolicy: HdrPolicy.AlwaysPreserve
+            hdrPolicies: HdrPolicies.AlwaysPreserve
         );
 
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
@@ -468,7 +468,7 @@ public class ProfileRuleValidatorTests
     {
         EncodingProfile profile = ProfileFor(
             Video(bitDepth: 10),
-            hdrPolicy: HdrPolicy.AlwaysPreserve
+            hdrPolicies: HdrPolicies.AlwaysPreserve
         );
 
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
@@ -480,7 +480,7 @@ public class ProfileRuleValidatorTests
     {
         EncodingProfile profile = ProfileFor(
             Video(bitDepth: 8),
-            hdrPolicy: HdrPolicy.PassthroughWhenPossible
+            hdrPolicies: HdrPolicies.PassthroughWhenPossible
         );
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
         Assert.False(HasRule(env, EncoderRuleId.HdrInverseTonemapUnsupported));
@@ -556,6 +556,24 @@ public class ProfileRuleValidatorTests
         EncodingProfile profile = ProfileFor(Video(width: 0));
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
         Assert.True(HasRule(env, EncoderRuleId.VideoWidthInvalid));
+    }
+
+    [Fact]
+    public void VideoWidthInvalid_NegativeWidth_Fires()
+    {
+        EncodingProfile profile = ProfileFor(Video(width: -1));
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.VideoWidthInvalid));
+    }
+
+    [Fact]
+    public void VideoWidthInvalid_NullWidth_DoesNotFire()
+    {
+        // null is valid — it means "keep source width" (e.g. an archive preset
+        // that re-encodes the codec without rescaling).
+        EncodingProfile profile = ProfileFor(Video(width: null));
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.VideoWidthInvalid));
     }
 
     [Fact]
@@ -951,10 +969,7 @@ public class ProfileRuleValidatorTests
     {
         EncodingProfile profile = ProfileFor(Video()) with
         {
-            Drm = new(
-                "aes-128",
-                new() { ["key_uri"] = "http://server/key.bin" }
-            ),
+            Drm = new("aes-128", new() { ["key_uri"] = "http://server/key.bin" }),
         };
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
         Assert.True(HasRule(env, EncoderRuleId.DrmHttpNotHttps));
@@ -966,10 +981,7 @@ public class ProfileRuleValidatorTests
     {
         EncodingProfile profile = ProfileFor(Video()) with
         {
-            Drm = new(
-                "aes-128",
-                new() { ["key_uri"] = "https://server/key.bin" }
-            ),
+            Drm = new("aes-128", new() { ["key_uri"] = "https://server/key.bin" }),
         };
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
         Assert.False(HasRule(env, EncoderRuleId.DrmHttpNotHttps));
@@ -980,10 +992,7 @@ public class ProfileRuleValidatorTests
     {
         EncodingProfile profile = ProfileFor(Video()) with
         {
-            Drm = new(
-                "cenc",
-                new() { ["license_url"] = "http://license.example/issue" }
-            ),
+            Drm = new("cenc", new() { ["license_url"] = "http://license.example/issue" }),
         };
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
         Assert.True(HasRule(env, EncoderRuleId.DrmHttpNotHttps));
@@ -1077,10 +1086,7 @@ public class ProfileRuleValidatorTests
     [Fact]
     public void DrmKeyMissing_SchemeSetButNoParameters_Fires()
     {
-        EncodingProfile profile = ProfileFor(Video()) with
-        {
-            Drm = new("aes-128", new()),
-        };
+        EncodingProfile profile = ProfileFor(Video()) with { Drm = new("aes-128", new()) };
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
         Assert.True(HasRule(env, EncoderRuleId.DrmKeyMissing));
         Assert.False(env.Valid);
@@ -1091,10 +1097,7 @@ public class ProfileRuleValidatorTests
     {
         EncodingProfile profile = ProfileFor(Video()) with
         {
-            Drm = new(
-                "cenc",
-                new() { ["scheme_id_uri"] = "urn:something" }
-            ),
+            Drm = new("cenc", new() { ["scheme_id_uri"] = "urn:something" }),
         };
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
         Assert.True(HasRule(env, EncoderRuleId.DrmKeyMissing));
@@ -1105,10 +1108,7 @@ public class ProfileRuleValidatorTests
     {
         EncodingProfile profile = ProfileFor(Video()) with
         {
-            Drm = new(
-                "aes-128",
-                new() { ["key_uri"] = "https://server/key.bin" }
-            ),
+            Drm = new("aes-128", new() { ["key_uri"] = "https://server/key.bin" }),
         };
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
         Assert.False(HasRule(env, EncoderRuleId.DrmKeyMissing));
@@ -1119,10 +1119,7 @@ public class ProfileRuleValidatorTests
     {
         EncodingProfile profile = ProfileFor(Video()) with
         {
-            Drm = new(
-                "cenc",
-                new() { ["license_url"] = "https://license.example/issue" }
-            ),
+            Drm = new("cenc", new() { ["license_url"] = "https://license.example/issue" }),
         };
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
         Assert.False(HasRule(env, EncoderRuleId.DrmKeyMissing));
@@ -1139,10 +1136,7 @@ public class ProfileRuleValidatorTests
     [Fact]
     public void DrmKeyMissing_SchemeNone_DoesNotFire()
     {
-        EncodingProfile profile = ProfileFor(Video()) with
-        {
-            Drm = new("none", new()),
-        };
+        EncodingProfile profile = ProfileFor(Video()) with { Drm = new("none", new()) };
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
         Assert.False(HasRule(env, EncoderRuleId.DrmKeyMissing));
     }
@@ -1450,7 +1444,7 @@ public class ProfileRuleValidatorTests
                     new(1920, 1080, VideoCodecType.H264, 2000, 2400, 4000, 24),
                 ],
             },
-            hdrPolicy: HdrPolicy.AlwaysPreserve
+            hdrPolicies: HdrPolicies.AlwaysPreserve
         );
 
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);

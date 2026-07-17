@@ -664,85 +664,6 @@ namespace NoMercy.Database.Migrations
                     b.ToTable("ContentSegments");
                 });
 
-            modelBuilder.Entity("NoMercy.Database.Models.Media.EncoderProfile", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Container")
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("TEXT")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Param")
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("TEXT")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("_audioProfiles")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("AudioProfile");
-
-                    b.Property<string>("_subtitleProfiles")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("SubtitleProfile");
-
-                    b.Property<string>("_thumbnailProfile")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("ThumbnailProfile");
-
-                    b.Property<string>("_videoProfiles")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("VideoProfile");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("EncoderProfiles", t =>
-                        {
-                            t.HasTrigger("update_EncoderProfiles_updated_at");
-                        });
-                });
-
-            modelBuilder.Entity("NoMercy.Database.Models.Media.EncoderProfileFolder", b =>
-                {
-                    b.Property<string>("EncoderProfileId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("FolderId")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("EncoderProfileId", "FolderId");
-
-                    b.HasIndex("EncoderProfileId");
-
-                    b.HasIndex("FolderId");
-
-                    b.ToTable("EncoderProfileFolder");
-                });
-
             modelBuilder.Entity("NoMercy.Database.Models.Media.EncodingHistory", b =>
                 {
                     b.Property<string>("Id")
@@ -4718,25 +4639,6 @@ namespace NoMercy.Database.Migrations
                     b.Navigation("Movie");
                 });
 
-            modelBuilder.Entity("NoMercy.Database.Models.Media.EncoderProfileFolder", b =>
-                {
-                    b.HasOne("NoMercy.Database.Models.Media.EncoderProfile", "EncoderProfile")
-                        .WithMany("EncoderProfileFolder")
-                        .HasForeignKey("EncoderProfileId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("NoMercy.Database.Models.Libraries.Folder", "Folder")
-                        .WithMany("EncoderProfileFolder")
-                        .HasForeignKey("FolderId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("EncoderProfile");
-
-                    b.Navigation("Folder");
-                });
-
             modelBuilder.Entity("NoMercy.Database.Models.Media.EncodingPreset", b =>
                 {
                     b.HasOne("NoMercy.Database.Models.Media.EncodingPreset", "Parent")
@@ -6260,8 +6162,6 @@ namespace NoMercy.Database.Migrations
 
             modelBuilder.Entity("NoMercy.Database.Models.Libraries.Folder", b =>
                 {
-                    b.Navigation("EncoderProfileFolder");
-
                     b.Navigation("EncodingPresetFolders");
 
                     b.Navigation("FolderLibraries");
@@ -6293,11 +6193,6 @@ namespace NoMercy.Database.Migrations
                     b.Navigation("LibraryUsers");
 
                     b.Navigation("PlaybackPreferences");
-                });
-
-            modelBuilder.Entity("NoMercy.Database.Models.Media.EncoderProfile", b =>
-                {
-                    b.Navigation("EncoderProfileFolder");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Media.VideoFile", b =>

@@ -53,6 +53,12 @@ public class PlanStage(
 {
     public string Name => "Plan";
 
+    // Stateless — the resolver holds no configuration, so PlanStage owns one
+    // instance rather than threading it through DI like the interface-backed
+    // dependencies above (matches how PlanStageHelpers / PlanStageDisambiguation
+    // are consumed as plain collaborators, not injected services).
+    private readonly StreamActionResolver _streamActionResolver = new();
+
     public async Task<StageResult> ExecuteAsync(
         ValidateInput input,
         EncodingContext context,
@@ -107,7 +113,7 @@ public class PlanStage(
             // SDR source: this block is skipped (IsHdr gate); rungs emit
             // SDR as-is from EnumerateVideo regardless of bit depth.
             if (
-                profile.HdrPolicy == HdrPolicy.EmitHdrAndSdr
+                profile.HdrPolicies == HdrPolicies.EmitHdrAndSdr
                 && input.Media.VideoStreams.Count > 0
                 && input.Media.VideoStreams[0].IsHdr
             )
@@ -126,6 +132,19 @@ public class PlanStage(
                     )
                     .ToArray();
             }
+
+            // Smart-copy downgrade — must mirror the identical call in
+            // BuildOutputPlanAsync (see the lockstep comment there) so
+            // resolvedCodecs and VideoOutputPlan stay aligned by index. Decisions
+            // are suppressed here (NullDecisionLogSink) so the copy-vs-transcode
+            // choice is logged exactly once, from BuildOutputPlanAsync.
+            videoOutputs = ApplySmartCopyDowngrade(
+                videoOutputs,
+                input.Media,
+                profile,
+                cropFilter,
+                NullDecisionLogSink.Instance
+            );
 
             ResolvedCodec[] resolvedCodecs;
 
@@ -309,6 +328,206 @@ public class PlanStage(
     }
 
     /// <summary>
+    /// Downgrades an individual <see cref="VideoOutput"/> from Transcode to
+    /// Copy when the source stream already satisfies the profile losslessly —
+    /// re-encoding a matching lossy source can only add generation loss, never
+    /// shrink it. Must be called identically from both places
+    /// <see cref="PlanStageHelpers.EnumerateVideo"/> is expanded (see the
+    /// EmitHdrAndSdr lockstep comments at both call sites) so the resulting
+    /// array stays aligned by index with <c>resolvedCodecs</c> / <c>videoPlan</c>.
+    ///
+    /// Per-rung: a ladder copies only the rung whose resolution matches the
+    /// source and transcodes the rest — that is the intended outcome, not a
+    /// bug to guard against.
+    ///
+    /// All of the following must hold, or the output is left as Transcode:
+    /// <list type="number">
+    ///   <item><see cref="StreamActionResolver.ResolveVideo"/> resolves Copy
+    ///     (codec, resolution, bitrate, and bit-depth all match).</item>
+    ///   <item>The output container can actually carry that codec —
+    ///     <see cref="ContainerCompatibility.SupportsVideo"/>. This is the one
+    ///     check <see cref="ProfileValidator"/> skips for Copy-policy streams,
+    ///     so it must be enforced here (e.g. an HEVC source can never copy into
+    ///     <see cref="Container.HlsTs"/>, which only carries H.264).</item>
+    ///   <item>No tonemap in play (<c>ConvertHdrToSdr</c> resolved true for an
+    ///     HDR source) — copy cannot also route through a filter.</item>
+    ///   <item>No crop filter in play — stream copy cannot route through
+    ///     filter_complex either (see the MapLabel comment in
+    ///     BuildOutputPlanAsync).</item>
+    ///   <item><see cref="HdrPolicies.AlwaysTonemap"/> forces a strip even when
+    ///     the reference <see cref="VideoOutput.ConvertHdrToSdr"/> was left
+    ///     false by the profile author — checked independently of
+    ///     ConvertHdrToSdr for exactly that gap.</item>
+    /// </list>
+    ///
+    /// On downgrade, <c>Codec</c> is switched to <see cref="VideoCodecType.Copy"/>
+    /// alongside <c>Policy</c> — this is what makes
+    /// <see cref="ICodecResolver"/> / <see cref="IHardwarePreferenceResolver"/>
+    /// resolve the literal "copy" pseudo-encoder (the same path the
+    /// author-declared always-copy preset already uses), so <c>EncoderName</c>
+    /// downstream is "copy" and not a real encoder asked to re-encode a direct
+    /// stream map.
+    /// </summary>
+    private VideoOutput[] ApplySmartCopyDowngrade(
+        VideoOutput[] videoOutputs,
+        MediaInfo media,
+        EncodingProfile profile,
+        string? cropFilter,
+        IDecisionLogSink decisions
+    )
+    {
+        if (media.VideoStreams.Count == 0 || cropFilter is not null)
+            return videoOutputs;
+
+        if (profile.HdrPolicies == HdrPolicies.AlwaysTonemap)
+            return videoOutputs;
+
+        VideoStreamInfo source = media.VideoStreams[0];
+
+        return videoOutputs
+            .Select(v => TryDowngradeToSmartCopy(v, source, profile, decisions))
+            .ToArray();
+    }
+
+    private VideoOutput TryDowngradeToSmartCopy(
+        VideoOutput v,
+        VideoStreamInfo source,
+        EncodingProfile profile,
+        IDecisionLogSink decisions
+    )
+    {
+        if (v.Policy != StreamPolicy.Transcode)
+            return v;
+
+        if (v.ConvertHdrToSdr && source.IsHdr)
+            return v;
+
+        if (_streamActionResolver.ResolveVideo(source, v) != StreamAction.Copy)
+            return v;
+
+        if (!ContainerCompatibility.SupportsVideo(profile.Container, v.Codec))
+            return v;
+
+        decisions.Add(
+            new(
+                "plan",
+                "plan.video_smart_copy",
+                $"Source {source.Codec} {source.Width}x{source.Height} ({source.BitDepth}-bit) "
+                    + "already matches the profile target — stream-copying instead of re-encoding.",
+                new
+                {
+                    codec = source.Codec,
+                    width = source.Width,
+                    height = source.Height,
+                    bitDepth = source.BitDepth,
+                }
+            )
+        );
+
+        return v with
+        {
+            Policy = StreamPolicy.Copy,
+            Codec = VideoCodecType.Copy,
+        };
+    }
+
+    /// <summary>
+    /// Downgrades an individual <see cref="AudioOutput"/> from Transcode to
+    /// Copy when every source stream it would match already satisfies it
+    /// losslessly — the audio equivalent of
+    /// <see cref="ApplySmartCopyDowngrade"/>. Re-encoding a matching lossy
+    /// source can only add generation loss and CPU time, never shrink it.
+    ///
+    /// Evaluated per profile-level <see cref="AudioOutput"/> (not per source
+    /// stream), matching the granularity the profile author reasons in — a
+    /// preset asking AAC+E-AC-3 from an AAC source copies the AAC output and
+    /// still transcodes toward E-AC-3. Because one AudioOutput can match
+    /// several source streams (multiple languages), the downgrade only
+    /// applies when EVERY matched stream individually resolves to Copy —
+    /// otherwise a heterogeneous-codec source (e.g. an AAC English track next
+    /// to a DTS Japanese one, both matched by the same AllowedLanguages rule)
+    /// would end up mapping "-c:a copy" onto a stream it cannot actually
+    /// carry unmodified.
+    /// </summary>
+    private AudioOutput[] ApplySmartCopyDowngradeAudio(
+        AudioOutput[] audioOutputs,
+        MediaInfo media,
+        EncodingProfile profile,
+        IDecisionLogSink decisions
+    )
+    {
+        if (media.AudioStreams.Count == 0)
+            return audioOutputs;
+
+        OutputFormat outputFormat = PlanStageHelpers.ContainerToOutputFormat(profile.Container);
+
+        return audioOutputs
+            .Select(a =>
+                TryDowngradeAudioToSmartCopy(
+                    a,
+                    media.AudioStreams,
+                    profile,
+                    outputFormat,
+                    decisions
+                )
+            )
+            .ToArray();
+    }
+
+    private AudioOutput TryDowngradeAudioToSmartCopy(
+        AudioOutput audioOutput,
+        IReadOnlyList<AudioStreamInfo> sourceStreams,
+        EncodingProfile profile,
+        OutputFormat outputFormat,
+        IDecisionLogSink decisions
+    )
+    {
+        if (audioOutput.Policy != StreamPolicy.Transcode)
+            return audioOutput;
+
+        HashSet<string> allowed =
+            audioOutput.AllowedLanguages.Length > 0
+                ? new HashSet<string>(
+                    audioOutput.AllowedLanguages,
+                    StringComparer.OrdinalIgnoreCase
+                )
+                : [];
+
+        List<AudioStreamInfo> matched = sourceStreams
+            .Where(s => allowed.Count == 0 || allowed.Contains(s.Language ?? "und"))
+            .ToList();
+
+        if (matched.Count == 0)
+            return audioOutput;
+
+        bool allCopy = matched.All(s =>
+            _streamActionResolver.ResolveAudio(s, audioOutput, outputFormat) == StreamAction.Copy
+        );
+
+        if (!allCopy)
+            return audioOutput;
+
+        if (!ContainerCompatibility.SupportsAudio(profile.Container, audioOutput.Codec))
+            return audioOutput;
+
+        decisions.Add(
+            new(
+                "plan",
+                "plan.audio_smart_copy",
+                $"Source audio ({matched.Count} stream(s)) already matches the profile "
+                    + $"target {audioOutput.Codec} — stream-copying instead of re-encoding.",
+                new { codec = audioOutput.Codec, streams = matched.Count }
+            )
+        );
+
+        return audioOutput with
+        {
+            Policy = StreamPolicy.Copy,
+            Codec = AudioCodecType.Copy,
+        };
+    }
+
+    /// <summary>
     /// Resolves the GPU-resident decode+scale plan for this output, or null for
     /// the CPU path. Dark by default: only when <c>EncoderOptions.EnableGpuResident</c>
     /// is opted in, the host has a GPU, the plan is eligible (no tonemap / crop /
@@ -436,7 +655,7 @@ public class PlanStage(
         // Resolve tonemap strategy once — shared across all video outputs that need HDR→SDR.
         // When HdrPolicy is AlwaysPreserve, skip tonemapping entirely regardless of source.
         bool sourceIsHdr = media.VideoStreams.Count > 0 && media.VideoStreams[0].IsHdr;
-        bool tonemapSuppressed = profile.HdrPolicy == HdrPolicy.AlwaysPreserve;
+        bool tonemapSuppressed = profile.HdrPolicies == HdrPolicies.AlwaysPreserve;
 
         TonemapStrategy? tonemap =
             sourceIsHdr && !tonemapSuppressed
@@ -455,7 +674,7 @@ public class PlanStage(
         // stay in lockstep so VideoOutputPlan count matches resolvedCodecs
         // count — 10-bit rung → HDR-only, 8-bit rung → SDR-only.
         if (
-            profile.HdrPolicy == HdrPolicy.EmitHdrAndSdr
+            profile.HdrPolicies == HdrPolicies.EmitHdrAndSdr
             && media.VideoStreams.Count > 0
             && media.VideoStreams[0].IsHdr
         )
@@ -474,6 +693,25 @@ public class PlanStage(
                 )
                 .ToArray();
         }
+
+        // Snapshot before the smart-copy downgrade: DolbyVisionGate must judge
+        // DV survivability against the codec the profile actually targeted
+        // (e.g. HEVC), never the "Copy" pseudo-codec that drives encoder
+        // selection — a stream-copied HEVC+DV source still carries HEVC+DV in
+        // the output file. See the primaryVideo lookup below.
+        VideoOutput[] preSmartCopyVideoOutputs = videoOutputs;
+
+        // Smart-copy downgrade — must mirror the identical call in ExecuteAsync
+        // (see the lockstep comment there) so VideoOutputPlan and resolvedCodecs
+        // stay aligned by index. This call site is the one that actually logs
+        // the decision.
+        videoOutputs = ApplySmartCopyDowngrade(
+            videoOutputs,
+            media,
+            profile,
+            cropFilter,
+            context.DecisionsOrNoOp
+        );
 
         // Audio-only: skip video planning entirely when source has no video streams
         VideoOutputPlan[] videoPlan =
@@ -710,9 +948,27 @@ public class PlanStage(
         // distinct directories (video_1920x1080_SDR_avc/ vs _hevc/).
         videoPlan = PlanStageDisambiguation.DisambiguateVideo(videoPlan);
 
+        // Smart-copy downgrade — audio equivalent of ApplySmartCopyDowngrade
+        // above. Unlike video, there is no separate resolvedCodecs array to
+        // keep in lockstep with (audio never goes through hardware codec
+        // resolution), so this runs exactly once, right before the plan is
+        // built from it.
+        AudioOutput[] audioOutputs = ApplySmartCopyDowngradeAudio(
+            profile.Audio,
+            media,
+            profile,
+            context.DecisionsOrNoOp
+        );
+
         // Build one AudioOutputPlan per matching source stream.
         // AllowedLanguages is a FILTER — the actual language comes from the source stream.
-        AudioOutputPlan[] audioPlan = AudioPlanBuilder.Build(profile, media);
+        AudioOutputPlan[] audioPlan = AudioPlanBuilder.Build(
+            profile with
+            {
+                Audio = audioOutputs,
+            },
+            media
+        );
 
         SubtitleOutputPlan[] subtitlePlan = SubtitlePlanBuilder.Build(profile, media);
 
@@ -725,8 +981,11 @@ public class PlanStage(
 
         // Dolby Vision passthrough gate.
         // Per-output bit-depth: evaluate using the first video output because
-        // DV RPU is a stream-level property.
-        VideoOutput? primaryVideo = videoOutputs.Length > 0 ? videoOutputs[0] : null;
+        // DV RPU is a stream-level property. Reads the pre-smart-copy snapshot
+        // (see above) so a rung the smart-copy downgrade routed through "Copy"
+        // is still judged against its real target codec.
+        VideoOutput? primaryVideo =
+            preSmartCopyVideoOutputs.Length > 0 ? preSmartCopyVideoOutputs[0] : null;
         int primaryBitDepth = primaryVideo?.BitDepth ?? 8;
         VideoCodecType primaryCodec = primaryVideo?.Codec ?? VideoCodecType.H264;
 
@@ -735,7 +994,7 @@ public class PlanStage(
             primaryCodec,
             primaryBitDepth,
             outputFormat,
-            profile.HdrPolicy,
+            profile.HdrPolicies,
             context.DecisionsOrNoOp,
             hlsUsesFmp4Segments
         );
@@ -760,8 +1019,13 @@ public class PlanStage(
         // 3D stereo_mode preservation: when the source has a stereo_mode tag and
         // the profile stream-copies video, forward the tag so the muxer carries it
         // to the output. Transcode paths cannot preserve it (rejected by validator).
+        // Reads the post-downgrade videoOutputs[0] (not profile.Video) so a rung
+        // the smart-copy downgrade routed through Copy also gets the tag — the
+        // author-declared always-copy preset still resolves the same way since
+        // its single VideoOutput carries Policy: Copy from the start.
         bool videoIsCopy =
-            profile.Video is { Policy: StreamPolicy.Copy } || videoOutputs.Length == 0;
+            (videoOutputs.Length > 0 && videoOutputs[0].Policy == StreamPolicy.Copy)
+            || videoOutputs.Length == 0;
 
         if (media.StereoMode is not null && videoIsCopy && videoPlan.Length > 0)
         {

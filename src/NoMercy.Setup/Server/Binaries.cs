@@ -118,8 +118,13 @@ public class Binaries
     /// rollout has not reached this repo's CI yet — expected, low-noise) apart from "a
     /// <c>.sig</c> asset exists but does not verify against the embedded key" (a real
     /// integrity concern worth an error-level log).
+    /// <para>
+    /// Internal (not private) so <see cref="TesseractModelDownloader"/> can reuse the exact
+    /// same manifest-fetch + signature-verification path — and its per-instance cache — for
+    /// the on-demand OCR model pull instead of duplicating the fetch/verify logic.
+    /// </para>
     /// </remarks>
-    private async Task<(
+    internal async Task<(
         ReleaseManifest? Manifest,
         bool SignatureVerified,
         bool SignaturePresent

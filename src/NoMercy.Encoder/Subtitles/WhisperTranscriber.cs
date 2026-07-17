@@ -72,8 +72,8 @@ public class WhisperTranscriber(
         await using LocalPathLease modelLease = storage.AcquireLocalPath(modelPath);
         await using LocalPathLease outputLease = storage.AcquireLocalPath(outputPath);
 
-        // Filter layout matches V1: select audio, apply whisper with model/
-        // language/queue/destination/format, discard video output.
+        // Select audio stream, apply whisper filter with model, language, queue,
+        // destination, and format, then discard video output.
         int queue = 3;
         int translate = options_?.TranslateToEnglish == true ? 1 : 0;
 

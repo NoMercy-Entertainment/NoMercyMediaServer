@@ -111,7 +111,12 @@ public class PlanStageMapLabelTests
                     ColorTransfer: null,
                     ColorSpace: null,
                     IsDefault: true,
-                    BitRateKbps: 6000
+                    // Below every profile's target bitrate in this file so the
+                    // smart-copy downgrade (PlanStage.ApplySmartCopyDowngrade)
+                    // never fires here — these tests exist to pin MapLabel
+                    // bracket-vs-direct format for genuine Transcode outputs,
+                    // not to double as smart-copy fixtures.
+                    BitRateKbps: 3000
                 ),
             ],
             AudioStreams:

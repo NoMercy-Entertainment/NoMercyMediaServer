@@ -175,6 +175,8 @@ public class StreamActionResolver
     //   2. source width == profile width AND source height <= profile height
     //      (profile height may be null meaning "keep source height")
     //   3. source bitrate >= profile bitrate
+    //   4. source bit depth == profile bit depth (a 10-bit source cannot copy
+    //      into an 8-bit profile without a conversion pass, and vice versa)
     public StreamAction ResolveVideo(VideoStreamInfo source, VideoOutput profile)
     {
         string sourceCodec = source.Codec.ToLowerInvariant();
@@ -188,9 +190,11 @@ public class StreamActionResolver
             return StreamAction.Transcode;
         }
 
-        // Resolution must match.  Profile.Height is nullable; when null it
-        // means "same as source", so we skip the height check.
-        bool widthMatches = source.Width == profile.Width;
+        // Resolution must match. Profile.Width is nullable like Height: null,
+        // or a legacy persisted 0, means "keep source" and that axis always
+        // matches. Profile.Height keeps its existing null-only rule.
+        int? profileWidth = profile.Width;
+        bool widthMatches = profileWidth is null or <= 0 || source.Width == profileWidth.Value;
         bool heightMatches = profile.Height is null || source.Height == profile.Height;
 
         if (!widthMatches || !heightMatches)
@@ -200,6 +204,11 @@ public class StreamActionResolver
 
         // Source bitrate must be at least what the profile targets.
         if (source.BitRateKbps < profile.BitrateKbps)
+        {
+            return StreamAction.Transcode;
+        }
+
+        if (source.BitDepth != profile.BitDepth)
         {
             return StreamAction.Transcode;
         }

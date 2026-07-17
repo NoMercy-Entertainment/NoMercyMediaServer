@@ -11,8 +11,10 @@
 
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using Newtonsoft.Json;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
+using NoMercy.Encoder.Bundle;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Composition;
@@ -21,6 +23,8 @@ using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Jobs;
+using NoMercy.Encoder.Metadata;
+using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
@@ -75,7 +79,8 @@ public class EncoderTests : IDisposable
             new Mock<IFfmpegCapabilities>().Object,
             new AbrLadderGenerator(),
             new NoOpCropDetector(),
-            NullLogger<PlanStage>.Instance
+            NullLogger<PlanStage>.Instance,
+            outputNamingResolver: new OutputNamingResolver(new MediaKeyResolver())
         );
         OutputStrategyFactory outputFactory = new([
             new HlsOutputStrategy(TestStorageFactory.CreateLocal()),
@@ -93,7 +98,9 @@ public class EncoderTests : IDisposable
             outputFactory,
             [],
             NullLogger<BuildStage>.Instance,
-            TestStorageFactory.CreateLocal()
+            TestStorageFactory.CreateLocal(),
+            metadataInjector: new MetadataInjector(),
+            metadataMerger: new MetadataMerger()
         );
         ExecuteStage executeStage = new(
             _ffmpegExecutor.Object,
@@ -105,7 +112,9 @@ public class EncoderTests : IDisposable
             new FontExtractor(TestStorageFactory.CreateLocal()),
             outputFactory,
             NullLogger<FinalizeStage>.Instance,
-            TestStorageFactory.CreateLocal()
+            TestStorageFactory.CreateLocal(),
+            manifestWriter: new BundleManifestWriter(),
+            reconstructionWriter: new ReconstructionWriter()
         );
 
         _encoder = new(
@@ -520,5 +529,418 @@ public class EncoderTests : IDisposable
         await _encoder.EncodeAsync(request, progressMock.Object);
 
         progressMock.Verify(p => p.OnError(It.IsAny<EncodingError>()), Times.Once);
+    }
+
+    // ------------------------------------------------------------------
+    // Reconstruction metadata wiring (EncodingRequest.MediaItem)
+    //
+    // The production wiring in VideoEncodeJob only ever sets MediaItem on the
+    // coordinator's FinalizeOnly EncodingRequest (see HandleFinalizeAsync) —
+    // never on a request that reaches BuildStage. These tests prove that
+    // boundary is exactly what protects every existing user's ffmpeg command.
+    // ------------------------------------------------------------------
+
+    private static MovieMediaRef MovieRef() =>
+        new(
+            Type: MediaType.Movie,
+            Id: 550,
+            Title: "Fight Club",
+            Year: 1999,
+            Description: "A movie."
+        );
+
+    private static EpisodeMediaRef EpisodeRef() =>
+        new(
+            Type: MediaType.Episode,
+            Id: 62085,
+            Title: "Pilot",
+            Year: 2008,
+            ShowTitle: "Breaking Bad",
+            SeasonNumber: 1,
+            EpisodeNumber: 1,
+            Description: "An episode."
+        );
+
+    [Fact]
+    public async Task CriterionA_MediaItemOnFinalizeOnlyRequest_NeverReachesBuildOrExecute()
+    {
+        // Criterion A regression guard: FinalizeOnly=true skips Build+Execute
+        // entirely (see Encoder.EncodeAsync). This is the ONLY reason it is
+        // safe to populate MediaItem on this request — there is no ffmpeg
+        // command for the value to ever influence.
+        SetupSuccessPath();
+        string outputDirectory = CreateSeededOutputDirectory();
+
+        EncodingRequest request = new(
+            InputPath: "/movies/test.mkv",
+            OutputDirectory: outputDirectory,
+            Profile: BuildProfile(),
+            Options: new(FinalizeOnly: true),
+            MediaItem: MovieRef()
+        );
+
+        EncodingResult result = await _encoder.EncodeAsync(request);
+
+        result.Success.Should().BeTrue();
+        _ffmpegExecutor.Verify(
+            e =>
+                e.ExecuteAsync(
+                    It.IsAny<FfmpegCommand>(),
+                    It.IsAny<TimeSpan>(),
+                    It.IsAny<Action<EncodingProgress>?>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                ),
+            Times.Never,
+            "FinalizeOnly must skip Build+Execute — this is what makes MediaItem safe to populate"
+        );
+    }
+
+    [Fact]
+    public async Task CriterionB_MediaItemOnBuildExecutingRequest_InjectionDefaultOff_CommandIsIdentical()
+    {
+        // Criterion B: MediaItem is now attached to every production encode
+        // request (including ones where Build/Execute run — the Whole-task
+        // inline path) so it can drive manifest/reconstruction writes. This
+        // pins the guarantee that makes that safe: with
+        // EncodingOptions.EnableMetadataInjection left at its default (false —
+        // what VideoEncodeJob sets today), the emitted ffmpeg command is
+        // byte-for-byte identical whether or not MediaItem is populated.
+        SetupSuccessPath();
+
+        List<string[]> capturedArgs = [];
+        _ffmpegExecutor
+            .Setup(e =>
+                e.ExecuteAsync(
+                    It.IsAny<FfmpegCommand>(),
+                    It.IsAny<TimeSpan>(),
+                    It.IsAny<Action<EncodingProgress>?>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Callback<
+                FfmpegCommand,
+                TimeSpan,
+                Action<EncodingProgress>?,
+                string?,
+                CancellationToken
+            >((cmd, _, _, _, _) => capturedArgs.Add(cmd.Arguments))
+            .ReturnsAsync(
+                new ExecutionResult(
+                    Success: true,
+                    ExitCode: 0,
+                    StdErr: "",
+                    Duration: TimeSpan.FromMinutes(10),
+                    Error: null
+                )
+            );
+
+        string plainDirectory = CreateSeededOutputDirectory();
+        await _encoder.EncodeAsync(
+            new EncodingRequest(
+                InputPath: "/movies/test.mkv",
+                OutputDirectory: plainDirectory,
+                Profile: BuildProfile()
+            )
+        );
+        string[] plainArgs = capturedArgs[0];
+        capturedArgs.Clear();
+
+        string withItemDirectory = CreateSeededOutputDirectory();
+        await _encoder.EncodeAsync(
+            new EncodingRequest(
+                InputPath: "/movies/test.mkv",
+                OutputDirectory: withItemDirectory,
+                Profile: BuildProfile(),
+                MediaItem: MovieRef()
+            )
+        );
+        string[] withItemArgs = capturedArgs[0];
+
+        plainArgs.Should().NotContain("-metadata");
+        withItemArgs.Should().NotContain("-metadata");
+        withItemArgs
+            .Should()
+            .Equal(
+                plainArgs,
+                "MediaItem is pure identity — with EnableMetadataInjection left at its "
+                    + "default, populating it must never change a single argv token"
+            );
+    }
+
+    [Fact]
+    public async Task CriterionB_EnableMetadataInjectionExplicitlyOn_CommandContainsMetadataFlags()
+    {
+        // The opt-in still works end-to-end when a caller explicitly asks for
+        // it — keeps the original MetadataInjectorBuildStageIntegrationTests
+        // coverage meaningful under the new explicit contract.
+        SetupSuccessPath();
+
+        List<string[]> capturedArgs = [];
+        _ffmpegExecutor
+            .Setup(e =>
+                e.ExecuteAsync(
+                    It.IsAny<FfmpegCommand>(),
+                    It.IsAny<TimeSpan>(),
+                    It.IsAny<Action<EncodingProgress>?>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Callback<
+                FfmpegCommand,
+                TimeSpan,
+                Action<EncodingProgress>?,
+                string?,
+                CancellationToken
+            >((cmd, _, _, _, _) => capturedArgs.Add(cmd.Arguments))
+            .ReturnsAsync(
+                new ExecutionResult(
+                    Success: true,
+                    ExitCode: 0,
+                    StdErr: "",
+                    Duration: TimeSpan.FromMinutes(10),
+                    Error: null
+                )
+            );
+
+        string outputDirectory = CreateSeededOutputDirectory();
+        await _encoder.EncodeAsync(
+            new EncodingRequest(
+                InputPath: "/movies/test.mkv",
+                OutputDirectory: outputDirectory,
+                Profile: BuildProfile(),
+                Options: new(EnableMetadataInjection: true),
+                MediaItem: MovieRef()
+            )
+        );
+        string[] args = capturedArgs[0];
+
+        args.Should().Contain("-metadata");
+        ContainsPair(args, "-metadata", "title=Fight Club").Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task CriterionA_InlineWholeTaskShapedRequest_WritesManifestAndReconstruction()
+    {
+        // Criterion A: the exact request shape VideoEncodeJob.RunInlineAsync
+        // sends to Encoder.EncodeAsync (Options left null — Build+Execute+
+        // Finalize all run, no FinalizeOnly) must still produce both sidecar
+        // artifacts once MediaItem is attached, not only the coordinator's
+        // separate FinalizeOnly pass.
+        SetupSuccessPath();
+        string outputDirectory = CreateSeededOutputDirectory();
+
+        EncodingRequest request = new(
+            InputPath: "/movies/test.mkv",
+            OutputDirectory: outputDirectory,
+            Profile: BuildProfile(),
+            MediaTitle: "Fight Club.NoMercy",
+            MediaItem: MovieRef()
+        );
+
+        EncodingResult result = await _encoder.EncodeAsync(request);
+        result.Success.Should().BeTrue();
+
+        string bundleDir = Path.Combine(outputDirectory, "encodes", "test");
+        string manifestPath = Path.Combine(bundleDir, "manifest.json");
+        string reconstructionPath = Path.Combine(bundleDir, "reconstruction.json");
+
+        File.Exists(manifestPath)
+            .Should()
+            .BeTrue("the inline Whole-task path must write manifest.json");
+        File.Exists(reconstructionPath)
+            .Should()
+            .BeTrue("the inline Whole-task path must write reconstruction.json");
+
+        BundleManifest? manifest = JsonConvert.DeserializeObject<BundleManifest>(
+            File.ReadAllText(manifestPath)
+        );
+        manifest.Should().NotBeNull();
+        manifest!.MediaType.Should().Be("movie");
+        manifest.MediaId.Should().Be(550);
+        manifest.Files.Should().NotBeEmpty();
+
+        Reconstruction? reconstruction = JsonConvert.DeserializeObject<Reconstruction>(
+            File.ReadAllText(reconstructionPath)
+        );
+        reconstruction.Should().NotBeNull();
+        reconstruction!.Source.OriginalPath.Should().Be("/movies/test.mkv");
+        reconstruction.Tracks.Should().NotBeEmpty();
+        reconstruction.CommandTemplate.Should().NotBeNullOrWhiteSpace();
+    }
+
+    private static bool ContainsPair(string[] args, string flag, string value)
+    {
+        for (int i = 0; i < args.Length - 1; i++)
+        {
+            if (args[i] == flag && args[i + 1] == value)
+                return true;
+        }
+        return false;
+    }
+
+    [Fact]
+    public async Task CriterionB_RealOutputFileNames_AreIdentical_WithAndWithoutMediaItem()
+    {
+        // The real per-encode file set (video_*/audio_*/master m3u8) must be
+        // byte-for-byte the same set of relative paths whether or not
+        // MediaItem (and therefore BundleLayout) is resolved — the layout only
+        // adds NEW sidecar files under encodes/{slug}/, it never renames or
+        // relocates anything BuildStage already writes.
+        SetupSuccessPath();
+
+        // Explicit, identical MediaTitle on both requests — otherwise the
+        // master playlist filename would embed each run's random temp
+        // directory name and never compare equal across two separate runs.
+        string withoutItemDir = CreateSeededOutputDirectory();
+        await _encoder.EncodeAsync(
+            new EncodingRequest(
+                InputPath: "/movies/test.mkv",
+                OutputDirectory: withoutItemDir,
+                Profile: BuildProfile(),
+                MediaTitle: "Fight Club.NoMercy"
+            )
+        );
+
+        string withItemDir = CreateSeededOutputDirectory();
+        await _encoder.EncodeAsync(
+            new EncodingRequest(
+                InputPath: "/movies/test.mkv",
+                OutputDirectory: withItemDir,
+                Profile: BuildProfile(),
+                MediaTitle: "Fight Club.NoMercy",
+                Options: new(FinalizeOnly: true),
+                MediaItem: MovieRef()
+            )
+        );
+
+        static IEnumerable<string> RealFiles(string root) =>
+            Directory
+                .EnumerateFiles(root, "*", SearchOption.AllDirectories)
+                .Select(f => Path.GetRelativePath(root, f).Replace('\\', '/'))
+                .Where(rel => !rel.StartsWith("encodes/", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(rel => rel, StringComparer.Ordinal);
+
+        RealFiles(withoutItemDir).Should().BeEquivalentTo(RealFiles(withItemDir));
+
+        // The new sidecars land ONLY under encodes/{slug}/ — never at the root
+        // next to the real media files.
+        Directory
+            .EnumerateFiles(withItemDir, "*.json", SearchOption.AllDirectories)
+            .Select(f => Path.GetRelativePath(withItemDir, f).Replace('\\', '/'))
+            .Should()
+            .OnlyContain(rel => rel.StartsWith("encodes/", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task CriterionC_MovieEncode_WritesManifestAndReconstruction_WithMeaningfulContent()
+    {
+        SetupSuccessPath();
+        string outputDirectory = CreateSeededOutputDirectory();
+
+        EncodingRequest request = new(
+            InputPath: "/movies/test.mkv",
+            OutputDirectory: outputDirectory,
+            Profile: BuildProfile(),
+            Options: new(FinalizeOnly: true),
+            MediaItem: MovieRef()
+        );
+
+        EncodingResult result = await _encoder.EncodeAsync(request);
+        result.Success.Should().BeTrue();
+
+        string bundleDir = Path.Combine(outputDirectory, "encodes", "test");
+        string manifestPath = Path.Combine(bundleDir, "manifest.json");
+        string reconstructionPath = Path.Combine(bundleDir, "reconstruction.json");
+
+        File.Exists(manifestPath)
+            .Should()
+            .BeTrue("manifest.json must be written for a movie encode");
+        File.Exists(reconstructionPath)
+            .Should()
+            .BeTrue("reconstruction.json must be written for a movie encode");
+
+        BundleManifest? manifest = JsonConvert.DeserializeObject<BundleManifest>(
+            File.ReadAllText(manifestPath)
+        );
+        manifest.Should().NotBeNull();
+        manifest!.MediaType.Should().Be("movie");
+        manifest.MediaId.Should().Be(550);
+        manifest.PresetSlug.Should().Be("test");
+        manifest.Files.Should().NotBeEmpty();
+
+        Reconstruction? reconstruction = JsonConvert.DeserializeObject<Reconstruction>(
+            File.ReadAllText(reconstructionPath)
+        );
+        reconstruction.Should().NotBeNull();
+        reconstruction!.Source.OriginalPath.Should().Be("/movies/test.mkv");
+        reconstruction.Source.Container.Should().Be("matroska");
+        reconstruction.Tracks.Should().NotBeEmpty();
+        reconstruction.CommandTemplate.Should().NotBeNullOrWhiteSpace();
+        // BuildProfile()'s video rung transcodes h264 -> libx264 (CRF) — never
+        // a stream copy — so it is lossy and must surface a warning explaining
+        // what is not losslessly recoverable.
+        reconstruction.LossyWarnings.Should().NotBeEmpty();
+        reconstruction.LossyWarnings.Should().Contain(w => w.Contains("video"));
+        // Source audio is already AAC and the profile also targets AAC — the
+        // planner smart-copies instead of re-encoding, so this track is
+        // genuinely lossless. Asserting on the track itself (not just "some
+        // warning exists") proves the fidelity classification is accurate,
+        // not just present.
+        reconstruction
+            .Tracks.Should()
+            .Contain(t => t.Kind == "audio" && t.Fidelity == "lossless" && t.Policy == "copy");
+    }
+
+    [Fact]
+    public async Task CriterionC_EpisodeEncode_WritesManifestAndReconstruction()
+    {
+        SetupSuccessPath();
+        string outputDirectory = CreateSeededOutputDirectory();
+
+        EncodingRequest request = new(
+            InputPath: "/movies/test.mkv",
+            OutputDirectory: outputDirectory,
+            Profile: BuildProfile(),
+            Options: new(FinalizeOnly: true),
+            MediaItem: EpisodeRef()
+        );
+
+        EncodingResult result = await _encoder.EncodeAsync(request);
+        result.Success.Should().BeTrue();
+
+        string manifestPath = Path.Combine(outputDirectory, "encodes", "test", "manifest.json");
+        File.Exists(manifestPath)
+            .Should()
+            .BeTrue("manifest.json must be written for an episode encode");
+
+        BundleManifest? manifest = JsonConvert.DeserializeObject<BundleManifest>(
+            File.ReadAllText(manifestPath)
+        );
+        manifest.Should().NotBeNull();
+        manifest!.MediaType.Should().Be("episode");
+        manifest.MediaId.Should().Be(62085);
+    }
+
+    [Fact]
+    public async Task NoResolvableMediaItem_StillEncodesFine_WithoutManifestOrReconstruction()
+    {
+        // Disc-rip / non-library source: no movie or episode to attach.
+        // Degrades exactly like today — the encode must still succeed.
+        SetupSuccessPath();
+        string outputDirectory = CreateSeededOutputDirectory();
+
+        EncodingRequest request = new(
+            InputPath: "/movies/test.mkv",
+            OutputDirectory: outputDirectory,
+            Profile: BuildProfile()
+        );
+
+        EncodingResult result = await _encoder.EncodeAsync(request);
+
+        result.Success.Should().BeTrue();
+        Directory.Exists(Path.Combine(outputDirectory, "encodes")).Should().BeFalse();
     }
 }

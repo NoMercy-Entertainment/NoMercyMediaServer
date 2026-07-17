@@ -110,7 +110,7 @@ public class ServerController(
         int encoderProfileCount = libraries
             .SelectMany(library => library.FolderLibraries)
             .Select(folderLibrary => folderLibrary.Folder)
-            .Count(folder => folder.EncoderProfileFolder.Count > 0);
+            .Count(folder => folder.EncodingPresetFolders.Count > 0);
 
         return Ok(
             new StatusResponseDto<SetupResponseDto>

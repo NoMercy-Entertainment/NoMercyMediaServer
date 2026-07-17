@@ -42,6 +42,13 @@ public interface ILiveTranscodeService
 
     LiveResult ReportPosition(string sessionId, ReportPositionRequest request);
 
+    /// <summary>
+    /// REST fallback for reporting client network health (download-buffer
+    /// depth + observed downlink) — the SignalR equivalent is
+    /// <c>LiveTranscodeHub.ReportBufferHealth</c>.
+    /// </summary>
+    LiveResult ReportBufferHealth(string sessionId, ReportBufferHealthRequest request);
+
     Task<LiveResult> ChangeQualityAsync(
         string sessionId,
         ChangeQualityRequest request,

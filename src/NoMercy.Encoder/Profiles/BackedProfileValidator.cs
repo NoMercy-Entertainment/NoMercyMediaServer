@@ -10,25 +10,24 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Encoder.Errors;
-using V2ProfileValidator = NoMercy.Encoder.Profiles.ProfileValidator;
 
 namespace NoMercy.Encoder.Profiles;
 
 /// <summary>
-/// V2-backed implementation of the legacy <see cref="IProfileValidator"/>
-/// surface kept for the API controllers that still inject it. Delegates the
-/// actual validation to the static V2 <see cref="V2.ProfileValidator"/> and
-/// translates the plain-string error/warning lists into the richer
-/// <see cref="ValidationEnvelope"/> shape the dashboard renders. The
-/// <see cref="EncoderRuleId.ProfileNoOutputs"/> rule id is used as a generic
-/// bucket — V2's validator emits free-form strings rather than catalogued
-/// rule ids, so we cannot deep-link until V2 grows a rule registry.
+/// Adapts the static <see cref="ProfileValidator"/> to the injectable
+/// <see cref="IProfileValidator"/> surface the API controllers take, and
+/// translates its plain-string error/warning lists into the richer
+/// <see cref="ValidationEnvelope"/> shape the dashboard renders.
+///
+/// Everything buckets under <see cref="EncoderRuleId.ProfileNoOutputs"/>:
+/// the validator emits free-form strings rather than catalogued rule ids, so
+/// there is nothing to deep-link to until it grows a rule registry.
 /// </summary>
-public sealed class V2BackedProfileValidator : IProfileValidator
+public sealed class BackedProfileValidator : IProfileValidator
 {
     public ValidationResult Validate(EncodingProfile profile)
     {
-        ProfileValidationResult result = V2ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile);
         ValidationError[] errors = result
             .Errors.Select(e => new ValidationError("profile", e, ValidationSeverity.Error))
             .Concat(
@@ -50,7 +49,7 @@ public sealed class V2BackedProfileValidator : IProfileValidator
         // Legacy string-based validator runs on top so any rule not yet migrated to the
         // catalogued form still surfaces. Bucketed under a generic id until V2 strings are
         // converted to typed rules.
-        ProfileValidationResult legacy = V2ProfileValidator.Validate(profile);
+        ProfileValidationResult legacy = ProfileValidator.Validate(profile);
         List<EncoderRule> errors = [.. structured.Errors];
         List<EncoderRule> warnings = [.. structured.Warnings];
 
