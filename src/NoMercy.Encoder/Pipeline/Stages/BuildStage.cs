@@ -376,17 +376,19 @@ public class BuildStage(
             {
                 ThumbnailOutputPlan thumbs = input.Plan.OutputPlan.Thumbnails;
 
-                if (AllVideoOutputsAreCopy(input.Plan.OutputPlan))
+                if (!HasFiltergraphVideoOutput(input.Plan.OutputPlan))
                 {
-                    // A stream-copied video output carries no filtergraph, so a
-                    // [thumbs] pad on the main builder would reference a label
-                    // nothing defines — ffmpeg aborts with exit -22 ("Streamcopy
-                    // requested for output stream fed from a complex
-                    // filtergraph"). Build the sprite as a SEPARATE command that
-                    // reads the source directly through a plain -vf instead —
-                    // matching the font/bitmap-subtitle pattern below. Filenames
-                    // must stay byte-identical to the inline path so the VTT
-                    // references the player follows still resolve.
+                    // Nothing on the main builder defines a [thumbs] pad unless a
+                    // video output is running through the filtergraph. That is the
+                    // case for a stream-copied video output, and equally for a
+                    // decomposed bundle that carries no video output at all (an
+                    // audio- or subtitle-only rung): both leave the pad dangling
+                    // and ffmpeg aborts the whole command with exit -22. Build the
+                    // sprite as a SEPARATE command that reads the source directly
+                    // through a plain -vf instead — matching the font/bitmap-subtitle
+                    // pattern below. Filenames must stay byte-identical to the
+                    // inline path so the VTT references the player follows still
+                    // resolve.
                     spriteCommands.Add(
                         new FfmpegCommandBuilder()
                             .WithGlobalOptions(new(ProgressPipe: false, Overwrite: true))
@@ -624,6 +626,17 @@ public class BuildStage(
         && plan.VideoOutputs.All(v =>
             string.Equals(v.EncoderName, "copy", StringComparison.OrdinalIgnoreCase)
         );
+
+    /// <summary>
+    /// True when at least one video output is encoded through the filtergraph, and
+    /// so defines the pads (<c>[thumbs]</c>) that other outputs on the same command
+    /// map. False both when every video output is a stream copy and when the plan
+    /// carries no video output at all — a decomposed audio- or subtitle-only bundle.
+    /// Callers must not attach filtergraph-fed outputs to the main builder when this
+    /// is false; ffmpeg rejects the whole command with exit -22.
+    /// </summary>
+    internal static bool HasFiltergraphVideoOutput(OutputPlan plan) =>
+        plan.VideoOutputs.Length > 0 && !AllVideoOutputsAreCopy(plan);
 
     /// <summary>
     /// Converts a crash-checkpoint progress position into an input seek
