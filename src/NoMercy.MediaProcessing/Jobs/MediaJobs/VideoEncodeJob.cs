@@ -766,18 +766,23 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             relativeOutputPath.Replace('/', Path.DirectorySeparatorChar)
         );
 
-        // An aux-only run rebuilds a derivative (the thumbnail strip) and nothing
-        // else. It writes no variant playlist and publishes its own output, so an
-        // empty tempDir is the expected result rather than a sign the children
-        // produced nothing. Treating it as the failure below cost the run its
-        // post-encode phase — including the subtitle OCR that runs there — for
-        // work that had in fact succeeded.
-        bool isAuxOnlyRun =
+        // A dispatch-time bundle is a Whole task, and a Whole task is "the only
+        // execution": it runs FinalizeStage itself and publishes the tempDir to the
+        // destination, which is precisely why the tempDir is empty by the time we
+        // get here. Only per-stream slices defer their finalize to this pass, and a
+        // run made entirely of bundles has nothing left for it to do.
+        //
+        // The emptiness check below is meant to catch children that produced
+        // nothing. Applying it to a run whose bundles already published turned a
+        // success into a failure and skipped everything after it — the subtitle
+        // OCR, the library refresh, the completion event — for every bundled
+        // encode.
+        bool bundlesSelfFinalized =
             state.Bundles is { Length: > 0 } bundles
-            && bundles.All(bundle => bundle.IsAuxOnlyBundle);
+            && bundles.All(bundle => bundle.Kind == EncodeTaskKind.Whole);
 
         if (
-            !isAuxOnlyRun
+            !bundlesSelfFinalized
             && (
                 !Directory.Exists(tempDir)
                 || !Directory.EnumerateFiles(tempDir, "*.m3u8", SearchOption.AllDirectories).Any()
@@ -841,15 +846,14 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             MediaItem: fileMetadata.MediaItem
         );
 
-        // The aux-only bundle already finalized and published itself — it is a
-        // Whole task, and those do not defer to this pass. Running the pipeline
-        // again over the now-empty tempDir would only rediscover that there is
-        // nothing there. Fall through to post-encode, which is the part that
-        // still has work to do.
-        if (isAuxOnlyRun)
+        // The bundles already finalized and published themselves. Running the
+        // pipeline again over the tempDir they emptied would only rediscover that
+        // there is nothing there. Fall through to post-encode, which is the part
+        // that still has work to do.
+        if (bundlesSelfFinalized)
         {
             Log.LogInformation(
-                "[VideoEncodeJob] Finalize: aux-only run for GroupTag={GroupTag} published its own output; continuing to post-encode.",
+                "[VideoEncodeJob] Finalize: bundles for GroupTag={GroupTag} finalized and published themselves; continuing to post-encode.",
                 state.GroupTag
             );
         }
