@@ -17,6 +17,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Subtitles;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Output;
@@ -24,6 +25,24 @@ namespace NoMercy.Encoder.Output;
 public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
 {
     public OutputFormat Format => OutputFormat.Hls;
+
+    /// <summary>
+    /// Language + readable title for one audio rendition. Falls back to "und" and
+    /// clears the title when the plan carries no language, so a stream is never
+    /// left wearing the source's tag.
+    /// </summary>
+    private static IReadOnlyList<OutputStreamTag> BuildAudioStreamTags(string? language)
+    {
+        string code = string.IsNullOrWhiteSpace(language) ? "und" : language.Trim();
+        string title = code == "und" ? string.Empty : Culture.EnglishLanguageName(code);
+
+        return
+        [
+            new OutputStreamTag("s:a:0", "language", code),
+            new OutputStreamTag("s:a:0", "title", title),
+            new OutputStreamTag("s:a:0", "handler_name", title),
+        ];
+    }
 
     public void ConfigureOutput(
         FfmpegCommandBuilder builder,
@@ -107,7 +126,17 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
                     PixelFormat: video.TenBit ? video.PixelFormat : null,
                     KeyframeInterval: gopCeiling,
                     MapStreams: [video.MapLabel],
-                    ExtraFlags: extraFlags
+                    ExtraFlags: extraFlags,
+                    StripSourceMetadata: true,
+                    // A video stream has no language, and the source's title was the
+                    // ripper's own tag ("[Judas] x265 10b"). Clear both so nothing
+                    // from the source is presented as ours.
+                    StreamMetadata:
+                    [
+                        new("s:v:0", "language", string.Empty),
+                        new("s:v:0", "title", string.Empty),
+                        new("s:v:0", "handler_name", string.Empty),
+                    ]
                 )
             );
         }
@@ -177,7 +206,13 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
                         AudioChannels: audio.Channels.ToString(),
                         AudioSampleRate: audio.SampleRate,
                         MapStreams: [audio.MapLabel],
-                        ExtraFlags: extraFlags
+                        ExtraFlags: extraFlags,
+                        StripSourceMetadata: true,
+                        // Re-tag with our own values rather than carry the ripper's
+                        // ("[Judas] JAP Stereo (Opus 112Kbps)"): the language we
+                        // planned this rendition around, and a readable name derived
+                        // from it. An unknown language clears both.
+                        StreamMetadata: BuildAudioStreamTags(audio.Language)
                     )
                 );
             }

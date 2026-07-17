@@ -98,6 +98,77 @@ public class HlsOutputStrategyTests
         args.Should().NotContain("-tag:v hvc1");
     }
 
+    // ── Stream metadata: the source's tags must not survive ──────────────────
+    // Otherwise a re-encode ships the ripper's "[Judas] x265 10b" title and the
+    // source's jpn language on a video stream that has no language at all.
+
+    [Fact]
+    public void ConfigureOutput_StripsSourceMetadata_OnEveryOutput()
+    {
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        FfmpegCommandBuilder builder = new();
+        builder.AddInput(new("/input.mkv"));
+
+        strategy.ConfigureOutput(builder, CreateSimplePlan(), "/output");
+
+        string[] args = builder.Build("ffmpeg").Arguments;
+
+        // One -map_metadata -1 per output (video + audio).
+        CountPairs(args, "-map_metadata", "-1").Should().Be(2);
+    }
+
+    [Fact]
+    public void ConfigureOutput_ClearsVideoLanguageAndTitle()
+    {
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        FfmpegCommandBuilder builder = new();
+        builder.AddInput(new("/input.mkv"));
+
+        strategy.ConfigureOutput(builder, CreateSimplePlan(), "/output");
+
+        string[] args = builder.Build("ffmpeg").Arguments;
+
+        // A video stream carries no language, and its source title was the
+        // ripper's tag — both are cleared with an empty value.
+        HasTag(args, "-metadata:s:v:0", "language=").Should().BeTrue();
+        HasTag(args, "-metadata:s:v:0", "title=").Should().BeTrue();
+        // Never the codec-parameter carried as a language.
+        HasTag(args, "-metadata:s:v:0", "language=jpn").Should().BeFalse();
+    }
+
+    [Fact]
+    public void ConfigureOutput_TagsAudioWithItsLanguageAndReadableName()
+    {
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        FfmpegCommandBuilder builder = new();
+        builder.AddInput(new("/input.mkv"));
+
+        // CreateSimplePlan's audio is eng.
+        strategy.ConfigureOutput(builder, CreateSimplePlan(), "/output");
+
+        string[] args = builder.Build("ffmpeg").Arguments;
+
+        HasTag(args, "-metadata:s:a:0", "language=eng").Should().BeTrue();
+        HasTag(args, "-metadata:s:a:0", "title=English").Should().BeTrue();
+    }
+
+    private static int CountPairs(string[] args, string flag, string value)
+    {
+        int count = 0;
+        for (int i = 0; i < args.Length - 1; i++)
+            if (args[i] == flag && args[i + 1] == value)
+                count++;
+        return count;
+    }
+
+    private static bool HasTag(string[] args, string flag, string keyValue)
+    {
+        for (int i = 0; i < args.Length - 1; i++)
+            if (args[i] == flag && args[i + 1] == keyValue)
+                return true;
+        return false;
+    }
+
     [Fact]
     public void ConfigureOutput_DolbyVisionPreserveOnHevc_UsesDvh1Tag()
     {
@@ -128,10 +199,7 @@ public class HlsOutputStrategyTests
         HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
         builder.AddInput(new("/input.mkv"));
-        OutputPlan plan = CreateSimplePlan() with
-        {
-            HlsOptions = new() { SegmentType = "fmp4" },
-        };
+        OutputPlan plan = CreateSimplePlan() with { HlsOptions = new() { SegmentType = "fmp4" } };
 
         strategy.ConfigureOutput(builder, plan, "/output");
 

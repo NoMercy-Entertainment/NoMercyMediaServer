@@ -208,15 +208,32 @@ public class FileNameSanitizerTests
     }
 
     [Fact]
-    public void Shorten_LongTitlesSharingPrefix_DoNotCollide()
+    public void Shorten_LongTitle_IsStillReadable_AndCarriesNoDigest()
     {
-        // Two different long titles that share a 60-char prefix must never resolve
-        // to the same folder — the digest is taken over the FULL original value.
-        string prefix = new('x', 60);
-        string first = (prefix + ".Season.One").Shorten();
-        string second = (prefix + ".Season.Two").Shorten();
+        // The name a viewer reads is the start of the real title and nothing else.
+        // Two titles sharing a 50-char prefix do now produce the same component;
+        // what separates them lives in the name this is embedded in — an episode's
+        // SxxEyy marker, a movie's release year — which is where it belonged.
+        string cleaned =
+            "OO Magic Episode 3: The Magic of Waking Up at a Certain Time in the Morning".CleanFileName();
 
-        first.Should().NotBe(second);
+        string result = cleaned.Shorten();
+
+        result.Should().Be("OO.Magic.Episode.3.The.Magic.of.Waking.Up.at.a");
+        result.Should().NotMatchRegex("[0-9a-f]{8}$", "a digest is not part of a title");
+    }
+
+    [Fact]
+    public void Shorten_UsesTheWholeBudgetForTheTitle()
+    {
+        // The digest used to eat nine of the fifty characters, so a title was cut
+        // far shorter than the limit actually required.
+        string cleaned = new string('a', 60);
+
+        cleaned
+            .Shorten()
+            .Length.Should()
+            .Be(FileNameSanitizer.MaxTitleComponentLength, "every character of the cap is title");
     }
 
     [Fact]
