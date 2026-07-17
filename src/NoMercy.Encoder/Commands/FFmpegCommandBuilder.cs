@@ -227,6 +227,24 @@ public class FfmpegCommandBuilder
                         args.Add(flag.Value);
                 }
             }
+
+            // Metadata must sit with the output it applies to, after its codec and
+            // filter flags and before its filepath — ffmpeg binds an output option
+            // to the URL that follows it.
+            if (output.StripSourceMetadata)
+            {
+                args.Add("-map_metadata");
+                args.Add("-1");
+            }
+
+            foreach (OutputStreamTag tag in output.StreamMetadata ?? [])
+            {
+                args.Add($"-metadata:{tag.StreamSpecifier}");
+                // Unlike ExtraFlags, an empty value is meaningful here: "key=" tells
+                // ffmpeg to drop the tag the source stream carried.
+                args.Add($"{tag.Key}={tag.Value}");
+            }
+
             args.Add(output.FilePath);
         }
 
