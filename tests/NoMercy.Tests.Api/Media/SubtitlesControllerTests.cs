@@ -94,7 +94,8 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
                 p.SearchByFilenameAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
-                    It.IsAny<CancellationToken>()
+                    It.IsAny<CancellationToken>(),
+                    It.IsAny<bool>()
                 )
             )
             .ReturnsAsync([
@@ -154,7 +155,8 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
                     It.IsAny<string>(),
                     It.IsAny<long>(),
                     It.IsAny<string[]>(),
-                    It.IsAny<CancellationToken>()
+                    It.IsAny<CancellationToken>(),
+                    It.IsAny<bool>()
                 ),
             Times.Never
         );
@@ -173,7 +175,8 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
                 p.SearchByFilenameAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
-                    It.IsAny<CancellationToken>()
+                    It.IsAny<CancellationToken>(),
+                    It.IsAny<bool>()
                 )
             )
             .ReturnsAsync([]);
@@ -186,7 +189,8 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
                     It.IsAny<int?>(),
                     It.IsAny<int?>(),
                     It.IsAny<string[]>(),
-                    It.IsAny<CancellationToken>()
+                    It.IsAny<CancellationToken>(),
+                    It.IsAny<bool>()
                 )
             )
             .ReturnsAsync([
@@ -231,7 +235,8 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
                     1,
                     It.IsAny<int?>(),
                     It.IsAny<string[]>(),
-                    It.IsAny<CancellationToken>()
+                    It.IsAny<CancellationToken>(),
+                    It.IsAny<bool>()
                 ),
             Times.Once
         );
@@ -253,7 +258,8 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
                 p.SearchByFilenameAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
-                    It.IsAny<CancellationToken>()
+                    It.IsAny<CancellationToken>(),
+                    It.IsAny<bool>()
                 )
             )
             .Callback(() => rateLimited = true)
@@ -267,7 +273,8 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
                     It.IsAny<int?>(),
                     It.IsAny<int?>(),
                     It.IsAny<string[]>(),
-                    It.IsAny<CancellationToken>()
+                    It.IsAny<CancellationToken>(),
+                    It.IsAny<bool>()
                 )
             )
             .ReturnsAsync([]);

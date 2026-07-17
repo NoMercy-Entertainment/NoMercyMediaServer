@@ -158,6 +158,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
     public static readonly Ulid TvLibraryId = Ulid.NewUlid();
     public static readonly Ulid MusicLibraryId = Ulid.NewUlid();
     public static readonly Ulid MovieFolderId = Ulid.NewUlid();
+    public static readonly Ulid TvFolderId = Ulid.NewUlid();
     public static readonly Ulid MusicFolderId = Ulid.NewUlid();
 
     public static readonly Guid ArtistId1 = Guid.Parse("11111111-1111-1111-1111-111111111111");
@@ -299,7 +300,13 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Path = "/media/movies",
             DriverId = Driver.SystemLocalDriverId,
         };
-        context.Folders.Add(movieFolder);
+        Folder tvFolder = new()
+        {
+            Id = TvFolderId,
+            Path = "/media/tv",
+            DriverId = Driver.SystemLocalDriverId,
+        };
+        context.Folders.AddRange(movieFolder, tvFolder);
 
         Genre actionGenre = new() { Id = 28, Name = "Action" };
         Genre dramaGenre = new() { Id = 18, Name = "Drama" };
@@ -313,7 +320,10 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             new LibraryUser(TvLibraryId, TestAuthHandler.DefaultUserId)
         );
 
-        context.FolderLibrary.Add(new(MovieFolderId, MovieLibraryId));
+        context.FolderLibrary.AddRange(
+            new(MovieFolderId, MovieLibraryId),
+            new(TvFolderId, TvLibraryId)
+        );
 
         Movie movie1 = new()
         {
@@ -421,7 +431,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             HostFolder = "/media/movies/Spirited Away (2001)",
             Languages = "[\"en\"]",
             Quality = "1080p",
-            Share = "movies",
+            Share = MovieFolderId.ToString(),
             MovieId = 129,
         };
         VideoFile movieVideoFile2 = new()
@@ -432,7 +442,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             HostFolder = "/media/movies/Pulp Fiction (1994)",
             Languages = "[\"en\"]",
             Quality = "1080p",
-            Share = "movies",
+            Share = MovieFolderId.ToString(),
             MovieId = 680,
         };
         context.VideoFiles.AddRange(movieVideoFile1, movieVideoFile2);
@@ -448,7 +458,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             HostFolder = "/media/tv/Breaking Bad/Season 01",
             Languages = "[\"en\"]",
             Quality = "1080p",
-            Share = "tv",
+            Share = TvFolderId.ToString(),
             EpisodeId = 62085,
         };
         VideoFile tvVideoFile2 = new()
@@ -459,7 +469,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             HostFolder = "/media/tv/Breaking Bad/Season 01",
             Languages = "[\"en\"]",
             Quality = "1080p",
-            Share = "tv",
+            Share = TvFolderId.ToString(),
             EpisodeId = 62086,
         };
         context.VideoFiles.AddRange(tvVideoFile1, tvVideoFile2);
