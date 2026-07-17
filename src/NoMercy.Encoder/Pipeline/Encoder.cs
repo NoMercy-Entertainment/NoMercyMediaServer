@@ -206,13 +206,34 @@ public class Encoder(
         else
         {
             progress?.OnStageStarted("Finalize");
+
+            // An aux-only bundle (no video and no audio — e.g. a thumbnails top-up)
+            // produces no variant playlists, so there is nothing for a master to
+            // list. FinalizeStage would otherwise measure the FULL plan's variants
+            // against this run's staging directory, find none of them, and fail the
+            // task on "Master playlist would list zero variants" — which cost the
+            // job its post-encode phase, and with it the subtitle OCR. The master
+            // already on disk describes the variants that really exist; leave it be.
+            HlsDerivatives? derivatives = request.Profile.HlsDerivatives;
+            if (IsAuxOnlyBundle(request.Options?.TaskFilter))
+            {
+                derivatives = (derivatives ?? new HlsDerivatives()) with
+                {
+                    GenerateMasterPlaylist = false,
+                };
+                logger.LogInformation(
+                    "[{CorrelationId}] Aux-only bundle — leaving the existing master playlist untouched.",
+                    context.CorrelationId
+                );
+            }
+
             FinalizeInput finalizeInput = new(
                 executionResults,
                 plan.OutputPlan,
                 request.OutputDirectory,
                 request.ResolvedTitle,
                 Progress: progress,
-                HlsDerivatives: request.Profile.HlsDerivatives,
+                HlsDerivatives: derivatives,
                 Profile: request.Profile
             );
             StageResult finalizeResult = await finalizeStage.ExecuteAsync(
@@ -420,6 +441,17 @@ public class Encoder(
 
         return ((StageSuccess<ExecutionPlan>)planResult).Value.OutputPlan;
     }
+
+    /// <summary>
+    /// A bundled Whole task that carries neither a video nor an audio output —
+    /// what the coordinator dispatches when only a derivative (the thumbnail
+    /// strip) needs rebuilding. It writes no variant playlists, so anything that
+    /// describes variants must be left to the runs that produce them. Null slice
+    /// indexes mean "all outputs", which is the ordinary full bundle.
+    /// </summary>
+    internal static bool IsAuxOnlyBundle(DecomposedTask? task) =>
+        task is { Kind: EncodeTaskKind.Whole, VideoSliceIndexes.Length: 0 }
+        && task.AudioSliceIndexes is { Length: 0 };
 
     private static PreviewResult PreviewFail(EncodingError error, TimeSpan elapsed)
     {
