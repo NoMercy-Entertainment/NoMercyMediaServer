@@ -9,6 +9,8 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Newtonsoft.Json.Linq;
+
 namespace NoMercy.Encoder.Analysis;
 
 public record DolbyVisionInfo(
@@ -46,7 +48,12 @@ public record MediaInfo(
     CropArea? DetectedCrop = null,
     double CropAspectRatio = 0,
     string? StereoMode = null,
-    string? SphericalProjection = null
+    string? SphericalProjection = null,
+    // Raw ffprobe JSON, retained verbatim for the reconstruction blueprint
+    // (see .claude/specs/reconstruction-blueprint/SPEC.md). Null when the
+    // caller constructs MediaInfo without going through the analyzer (unit
+    // tests using minimal stubs).
+    JObject? Ffprobe = null
 )
 {
     public IReadOnlyList<AttachmentInfo> Attachments { get; init; } = Attachments ?? [];

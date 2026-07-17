@@ -176,7 +176,11 @@ public class MediaAnalyzer(IProcessRunner processRunner, IStorage storage, Encod
             Attachments: attachments,
             DolbyVision: dolbyVision,
             StereoMode: stereoMode,
-            SphericalProjection: sphericalProjection
+            SphericalProjection: sphericalProjection,
+            // Already parsed above — retained verbatim, never re-parsed, so
+            // the reconstruction blueprint's source.ffprobe is byte-identical
+            // to what ffprobe emitted.
+            Ffprobe: root
         );
     }
 

@@ -215,6 +215,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IReconstructionWriter, ReconstructionWriter>();
         services.AddSingleton<IBundleGarbageCollector, BundleGarbageCollector>();
 
+        // Reconstruction-blueprint foundation (source-derived only this
+        // slice — not yet wired into FinalizeStage). See
+        // .claude/specs/reconstruction-blueprint/SPEC.md.
+        services.AddSingleton<IMediaBlueprintBuilder, MediaBlueprintBuilder>();
+
         // Encode-output reconciliation — decides, before any ffmpeg command is
         // built, whether a re-dispatched file needs a full re-encode, only its
         // missing pieces, or nothing at all. Stateless; safe as a singleton.
