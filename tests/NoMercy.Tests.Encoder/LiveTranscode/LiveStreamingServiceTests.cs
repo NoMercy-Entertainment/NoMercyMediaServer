@@ -34,8 +34,15 @@ public class LiveStreamingServiceTests
 
     private static LiveSession MakeSession(string id = "sess-001") => new(id, MakeQuality());
 
-    private static LiveStreamingService NewService() =>
-        new(NullLogger<LiveStreamingService>.Instance, TestStorageFactory.CreateLocal());
+    private static LiveStreamingService NewService()
+    {
+        NoMercy.Storage.IStorage storage = TestStorageFactory.CreateLocal();
+        return new(
+            NullLogger<LiveStreamingService>.Instance,
+            storage,
+            TestStorageFactory.CreateSegmentInventory(storage)
+        );
+    }
 
     [Fact]
     public void Register_StoresRuntimeReachableViaTryGet()

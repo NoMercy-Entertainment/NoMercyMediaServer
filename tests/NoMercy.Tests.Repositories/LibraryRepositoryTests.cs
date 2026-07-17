@@ -17,6 +17,7 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Storage;
 using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
@@ -376,6 +377,81 @@ public class LibraryRepositoryTests : IDisposable
         );
 
         Assert.NotNull(original);
+    }
+
+    [Fact]
+    public async Task UpdateLibraryAsync_Succeeds_WhenTwoFoldersShareOneDriver()
+    {
+        Folder secondFolder = new()
+        {
+            Id = Ulid.NewUlid(),
+            Path = "/media/movies-extra",
+            DriverId = Driver.SystemLocalDriverId,
+        };
+        _context.Folders.Add(secondFolder);
+        _context.FolderLibrary.Add(new(secondFolder.Id, SeedConstants.MovieLibraryId));
+        await _context.SaveChangesAsync();
+
+        Library? library = await _repository.GetLibraryByIdAsync(SeedConstants.MovieLibraryId);
+        Assert.NotNull(library);
+        library.Title = "Renamed Movies";
+
+        await _repository.UpdateLibraryAsync(library);
+
+        Library? reloaded = await _repository.GetLibraryByIdLiteAsync(SeedConstants.MovieLibraryId);
+        Assert.NotNull(reloaded);
+        Assert.Equal("Renamed Movies", reloaded.Title);
+    }
+
+    [Fact]
+    public async Task UpdateLibraryAsync_DoesNotRewriteFoldersOrDrivers()
+    {
+        Library? library = await _repository.GetLibraryByIdAsync(SeedConstants.MovieLibraryId);
+        Assert.NotNull(library);
+
+        library.Title = "Retitled";
+        library.FolderLibraries.First().Folder.Path = "/tampered/path";
+        library.FolderLibraries.First().Folder.Driver!.Name = "Tampered Driver";
+
+        await _repository.UpdateLibraryAsync(library);
+
+        _context.ChangeTracker.Clear();
+
+        Folder folder = await _context.Folders.FirstAsync(f => f.Id == SeedConstants.MovieFolderId);
+        Driver driver = await _context.Drivers.FirstAsync(d => d.Id == Driver.SystemLocalDriverId);
+
+        Assert.Equal("/media/movies", folder.Path);
+        Assert.Equal("Local Filesystem", driver.Name);
+    }
+
+    [Fact]
+    public async Task SetLibraryLanguagesAsync_RemovesLanguagesNotInTheRequestedSet()
+    {
+        await _repository.SetLibraryLanguagesAsync(SeedConstants.MovieLibraryId, []);
+
+        _context.ChangeTracker.Clear();
+
+        List<LanguageLibrary> remaining = await _context
+            .LanguageLibrary.Where(ll => ll.LibraryId == SeedConstants.MovieLibraryId)
+            .ToListAsync();
+
+        Assert.Empty(remaining);
+    }
+
+    [Fact]
+    public async Task SetLibraryLanguagesAsync_AddsRequestedLanguage_AndIsIdempotent()
+    {
+        await _repository.SetLibraryLanguagesAsync(SeedConstants.MovieLibraryId, [1]);
+        await _repository.SetLibraryLanguagesAsync(SeedConstants.MovieLibraryId, [1]);
+
+        _context.ChangeTracker.Clear();
+
+        List<LanguageLibrary> remaining = await _context
+            .LanguageLibrary.Where(ll => ll.LibraryId == SeedConstants.MovieLibraryId)
+            .ToListAsync();
+
+        Assert.Single(remaining);
+        Assert.Equal(1, remaining[0].LanguageId);
     }
 
     public void Dispose()

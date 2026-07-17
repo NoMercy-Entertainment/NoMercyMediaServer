@@ -32,7 +32,8 @@ public class OpenSubtitlesAdapter(
         string[] languages,
         TimeSpan timeout,
         CancellationToken ct,
-        bool trustedOnly = false
+        bool trustedOnly = false,
+        bool priority = false
     )
     {
         try
@@ -41,7 +42,7 @@ public class OpenSubtitlesAdapter(
             cts.CancelAfter(timeout);
 
             IReadOnlyList<OpenSubtitlesSearchResult> results = await provider
-                .SearchByHashAsync(movieHash, fileSize, languages, cts.Token)
+                .SearchByHashAsync(movieHash, fileSize, languages, cts.Token, priority)
                 .ConfigureAwait(false);
 
             return Translate(results, trustedOnly);
@@ -63,7 +64,8 @@ public class OpenSubtitlesAdapter(
         string[] languages,
         TimeSpan timeout,
         CancellationToken ct,
-        bool trustedOnly = false
+        bool trustedOnly = false,
+        bool priority = false
     )
     {
         try
@@ -72,7 +74,7 @@ public class OpenSubtitlesAdapter(
             cts.CancelAfter(timeout);
 
             IReadOnlyList<OpenSubtitlesSearchResult> results = await provider
-                .SearchByFilenameAsync(filename, languages, cts.Token)
+                .SearchByFilenameAsync(filename, languages, cts.Token, priority)
                 .ConfigureAwait(false);
 
             return Translate(results, trustedOnly);
@@ -97,7 +99,8 @@ public class OpenSubtitlesAdapter(
         string[] languages,
         TimeSpan timeout,
         CancellationToken ct,
-        bool trustedOnly = false
+        bool trustedOnly = false,
+        bool priority = false
     )
     {
         try
@@ -106,7 +109,7 @@ public class OpenSubtitlesAdapter(
             cts.CancelAfter(timeout);
 
             IReadOnlyList<OpenSubtitlesSearchResult> results = await provider
-                .SearchByTitleAsync(title, season, episode, year, languages, cts.Token)
+                .SearchByTitleAsync(title, season, episode, year, languages, cts.Token, priority)
                 .ConfigureAwait(false);
 
             return Translate(results, trustedOnly);
@@ -123,10 +126,14 @@ public class OpenSubtitlesAdapter(
         }
     }
 
-    public async Task<byte[]> DownloadAsync(SubtitleCandidate candidate, CancellationToken ct)
+    public async Task<byte[]> DownloadAsync(
+        SubtitleCandidate candidate,
+        CancellationToken ct,
+        bool priority = false
+    )
     {
         return await provider
-            .DownloadSubtitleAsync(candidate.DownloadUrl, ct)
+            .DownloadSubtitleAsync(candidate.DownloadUrl, ct, priority)
             .ConfigureAwait(false);
     }
 

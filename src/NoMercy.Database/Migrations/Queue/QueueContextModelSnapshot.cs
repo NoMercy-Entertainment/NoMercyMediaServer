@@ -158,6 +158,9 @@ namespace NoMercy.Database.Migrations.Queue
                     b.HasIndex("Priority", "CreatedAt")
                         .IsDescending(true, false);
 
+                    b.HasIndex("Queue", "ReservedAt", "Priority", "CreatedAt", "Id")
+                        .IsDescending(false, false, true, false, false);
+
                     b.ToTable("QueueJobs");
                 });
 #pragma warning restore 612, 618

@@ -42,9 +42,18 @@ public partial class SubtitleOcrEngine(
         string language,
         SubtitleCodecType outputFormat,
         CancellationToken ct,
-        string? outputDirectory = null
+        IStorage? sourceStorage = null,
+        OcrSidecarTarget? sidecar = null
     )
     {
+        // Input and sidecar each live wherever their caller says, which is rarely
+        // this engine's injected storage: that one is local, so a key relative to
+        // an NFS/S3 driver resolves under the wrong root — the input is looked for
+        // on the local disk, and the sidecar is written under the server's working
+        // directory. The temp metadata file is the only genuinely local artefact.
+        IStorage inputStorage = sourceStorage ?? storage;
+        IStorage sidecarStorage = sidecar?.Storage ?? storage;
+
         // Pull the language model before invoking FFmpeg so the OCR filter
         // actually has training data when it runs.
         string modelPath = await modelManager.EnsureLanguageModelAsync(language, ct);
@@ -64,24 +73,18 @@ public partial class SubtitleOcrEngine(
         observer.Report(jobId, "ocr", 0, $"starting ocr ({language})");
 
         string extension = outputFormat == SubtitleCodecType.Srt ? ".srt" : ".vtt";
-        string outputPath = ResolveOutputPath(
-            inputPath,
-            outputDirectory,
-            streamIndex,
-            language,
-            extension
-        );
+        string outputPath = ResolveOutputPath(inputPath, sidecar, language, extension);
 
         try
         {
             // Lease every path handed to ffmpeg so future remote drivers can
             // stage them locally and clean up on dispose.
-            await using LocalPathLease inputLease = storage.AcquireLocalPath(inputPath);
+            await using LocalPathLease inputLease = inputStorage.AcquireLocalPath(inputPath);
             await using LocalPathLease ocrLease = storage.AcquireLocalPath(ocrOutput);
 
             string? outputParentDirectory = Path.GetDirectoryName(outputPath);
             if (!string.IsNullOrEmpty(outputParentDirectory))
-                storage.CreateDirectory(outputParentDirectory);
+                sidecarStorage.CreateDirectory(outputParentDirectory);
 
             string[] args =
             [
@@ -127,9 +130,9 @@ public partial class SubtitleOcrEngine(
             List<SubtitleCue> cues = ParseOcrOutput(Encoding.UTF8.GetString(ocrBytes));
 
             if (outputFormat == SubtitleCodecType.Srt)
-                await WriteSrtAsync(outputPath, cues, ct);
+                await WriteSrtAsync(sidecarStorage, outputPath, cues, ct);
             else
-                await WriteWebVttAsync(outputPath, cues, ct);
+                await WriteWebVttAsync(sidecarStorage, outputPath, cues, ct);
 
             logger.LogInformation(
                 "OCR produced {CueCount} cues for {Language} → {Path}",
@@ -251,13 +254,12 @@ public partial class SubtitleOcrEngine(
     /// </summary>
     private static string ResolveOutputPath(
         string inputPath,
-        string? outputDirectory,
-        int streamIndex,
+        OcrSidecarTarget? sidecar,
         string language,
         string extension
     )
     {
-        if (outputDirectory is null)
+        if (sidecar is null)
         {
             return Path.ChangeExtension(
                 Path.Combine(Path.GetDirectoryName(inputPath)!, $"{language}_ocr"),
@@ -265,11 +267,16 @@ public partial class SubtitleOcrEngine(
             );
         }
 
-        string subtitleDirectory = Path.Combine(outputDirectory, "subtitles");
-        return Path.Combine(subtitleDirectory, $"{language}.ocr{streamIndex}{extension}");
+        // subtitles/{filename}.{lang}.{type} — the extraction pass's template
+        // (BuiltinPresets), which is what makes this the .mks/.sup's sibling and
+        // therefore a track the library scan pairs and the player lists.
+        // Forward slashes: this is a storage key, not a local path.
+        return $"{sidecar.OutputDirectory.TrimEnd('/')}/subtitles/"
+            + $"{sidecar.MediaTitle}.{language}.{sidecar.Variant}{extension}";
     }
 
-    private async Task WriteWebVttAsync(
+    private static async Task WriteWebVttAsync(
+        IStorage sidecarStorage,
         string path,
         IEnumerable<SubtitleCue> cues,
         CancellationToken ct
@@ -289,10 +296,11 @@ public partial class SubtitleOcrEngine(
             index++;
         }
 
-        await storage.WriteAsync(path, Encoding.UTF8.GetBytes(sb.ToString()), ct);
+        await sidecarStorage.WriteAsync(path, Encoding.UTF8.GetBytes(sb.ToString()), ct);
     }
 
-    private async Task WriteSrtAsync(
+    private static async Task WriteSrtAsync(
+        IStorage sidecarStorage,
         string path,
         IEnumerable<SubtitleCue> cues,
         CancellationToken ct
@@ -309,7 +317,7 @@ public partial class SubtitleOcrEngine(
             index++;
         }
 
-        await storage.WriteAsync(path, Encoding.UTF8.GetBytes(sb.ToString()), ct);
+        await sidecarStorage.WriteAsync(path, Encoding.UTF8.GetBytes(sb.ToString()), ct);
     }
 
     private static string FormatVttTime(double seconds)

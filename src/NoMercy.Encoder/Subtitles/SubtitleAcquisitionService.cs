@@ -121,20 +121,30 @@ public class SubtitleAcquisitionService(
             using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             cts.CancelAfter(timeout);
 
-            string hash = ComputeHash(request.SourcePath, request.SourceFileSize);
-            IReadOnlyList<SubtitleCandidate> hashResults = await adapter
-                .SearchByHashAsync(
-                    hash,
-                    request.SourceFileSize,
-                    languages,
-                    timeout,
-                    cts.Token,
-                    trustedOnly
-                )
-                .ConfigureAwait(false);
+            string? hash = ComputeHash(request.SourcePath, request.SourceFileSize);
+            if (hash is null)
+                logger.LogWarning(
+                    "Could not read {SourcePath} to compute a moviehash — skipping the hash "
+                        + "strategy for this source",
+                    request.SourcePath
+                );
 
-            if (hashResults.Count > 0)
-                return (hashResults, WasHashStrategy: true);
+            if (hash is not null)
+            {
+                IReadOnlyList<SubtitleCandidate> hashResults = await adapter
+                    .SearchByHashAsync(
+                        hash,
+                        request.SourceFileSize,
+                        languages,
+                        timeout,
+                        cts.Token,
+                        trustedOnly
+                    )
+                    .ConfigureAwait(false);
+
+                if (hashResults.Count > 0)
+                    return (hashResults, WasHashStrategy: true);
+            }
         }
 
         if (
@@ -281,7 +291,13 @@ public class SubtitleAcquisitionService(
         return true;
     }
 
-    private static string ComputeHash(string sourcePath, long fileSize)
+    /// <summary>
+    /// Returns null when the source cannot be read, so the caller skips the hash strategy instead
+    /// of querying with a value that cannot match. Formatting the file size as a hash looks like a
+    /// result but is not one: every such search is a guaranteed miss that still costs a request,
+    /// and a chance match would be reported as an exact one.
+    /// </summary>
+    private static string? ComputeHash(string sourcePath, long fileSize)
     {
         try
         {
@@ -291,7 +307,7 @@ public class SubtitleAcquisitionService(
         }
         catch (Exception)
         {
-            return MovieHashHelper.FormatHash((ulong)fileSize);
+            return null;
         }
     }
 }

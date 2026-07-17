@@ -207,6 +207,17 @@ public class LiveSessionSuspendResumeTests
             );
     }
 
+    // The hook these two use to prove "Seek is holding _seekLock" changed, not
+    // the contract under test. SeekAsync still cancels the CURRENT runner token
+    // (oldCts.CancelAsync()) WHILE holding _seekLock, before releasing it in its
+    // finally — that cancellation dispatches every callback registered on that
+    // token, so a callback that blocks keeps SeekAsync from reaching its
+    // finally/release. Registering a blocking callback on the token via the
+    // PUBLIC RunnerCancellation property (instead of the old buffer-reset-
+    // callback hook, which Seek no longer invokes) proves the same real
+    // contract through the public API — a concurrent Suspend/Resume genuinely
+    // cannot replace _runnerCts out from under an in-progress Seek.
+
     [Fact]
     public async Task Suspend_ConcurrentWithSeek_WaitsForSeekToReleaseTheLock()
     {
@@ -215,17 +226,12 @@ public class LiveSessionSuspendResumeTests
 
         using ManualResetEventSlim seekIsHoldingLock = new(false);
         using ManualResetEventSlim releaseSeek = new(false);
-        session.AttachBufferResetCallback(() =>
+        session.RunnerCancellation.Register(() =>
         {
             seekIsHoldingLock.Set();
             releaseSeek.Wait(TimeSpan.FromSeconds(5));
         });
 
-        // SeekAsync's WaitAsync completes synchronously on an uncontended
-        // semaphore, so the callback (and its blocking wait) would otherwise
-        // run inline on THIS thread instead of freeing it to observe the
-        // lock being held — dispatch it via Task.Run so it genuinely runs
-        // in the background.
         Task seekTask = Task.Run(() =>
             session.SeekAsync(TimeSpan.FromSeconds(5), CancellationToken.None)
         );
@@ -252,7 +258,7 @@ public class LiveSessionSuspendResumeTests
 
         using ManualResetEventSlim seekIsHoldingLock = new(false);
         using ManualResetEventSlim releaseSeek = new(false);
-        session.AttachBufferResetCallback(() =>
+        session.RunnerCancellation.Register(() =>
         {
             seekIsHoldingLock.Set();
             releaseSeek.Wait(TimeSpan.FromSeconds(5));

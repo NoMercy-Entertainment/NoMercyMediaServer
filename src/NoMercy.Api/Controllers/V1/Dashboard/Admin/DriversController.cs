@@ -365,10 +365,10 @@ public class DriversController(
         if (driver is null)
             return NotFoundResponse("Driver not found");
 
-        int folderCount = await driverRepository.FolderCountAsync(id);
-        if (folderCount > 0)
+        int libraryFolderCount = await driverRepository.LibraryFolderCountAsync(id);
+        if (libraryFolderCount > 0)
             return ConflictResponse(
-                $"Cannot delete driver '{driver.Name}': {folderCount} folder(s) still reference it. Reassign or remove them first."
+                $"Cannot delete driver '{driver.Name}': {libraryFolderCount} folder(s) are still in use by a library. Remove them from their libraries first."
             );
 
         // Remove stored credentials if present.

@@ -1245,8 +1245,39 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory) :
     public async Task UpdateLibraryAsync(Library library)
     {
         await using MediaContext context = await contextFactory.CreateDbContextAsync();
-        context.Libraries.Update(library);
+
+        Library? tracked = await context.Libraries.FirstOrDefaultAsync(l => l.Id == library.Id);
+        if (tracked is null)
+            return;
+
+        context.Entry(tracked).CurrentValues.SetValues(library);
         await context.SaveChangesAsync();
+    }
+
+    public async Task SetLibraryLanguagesAsync(Ulid libraryId, IEnumerable<int> languageIds)
+    {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync();
+
+        List<int> wanted = languageIds.Distinct().ToList();
+
+        await context
+            .LanguageLibrary.Where(ll =>
+                ll.LibraryId == libraryId && !wanted.Contains(ll.LanguageId)
+            )
+            .ExecuteDeleteAsync();
+
+        if (wanted.Count == 0)
+            return;
+
+        await context
+            .LanguageLibrary.UpsertRange(
+                wanted.Select(languageId => new LanguageLibrary(languageId, libraryId))
+            )
+            .On(ll => new { ll.LanguageId, ll.LibraryId })
+            .WhenMatched(
+                (lls, lli) => new() { LanguageId = lli.LanguageId, LibraryId = lli.LibraryId }
+            )
+            .RunAsync();
     }
 
     public async Task DeleteLibraryAsync(Library library)

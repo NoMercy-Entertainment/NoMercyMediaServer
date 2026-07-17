@@ -9,8 +9,10 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Music;
+using NoMercy.MediaProcessing.Images.Palettes;
 using NoMercy.MediaProcessing.Jobs.Dto;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
@@ -39,7 +41,7 @@ public class JobDispatcher : IJobDispatcher
         Dispatcher.Dispatch(job);
     }
 
-    public void Dispatch(IShouldQueue job, string onQueue, int priority)
+    public virtual void Dispatch(IShouldQueue job, string onQueue, int priority)
     {
         Dispatcher.Dispatch(job, onQueue, priority);
     }
@@ -235,7 +237,45 @@ public class JobDispatcher : IJobDispatcher
         int? priority = null
     )
     {
+        if (!NeedsPalette(entityType, entityId))
+            return;
+
         ColorPaletteJob job = new(entityType, entityId);
-        Dispatcher.Dispatch(job, "palette", priority ?? job.Priority);
+        Dispatch(job, "palette", priority ?? job.Priority);
+    }
+
+    /// <summary>
+    /// True when the entity has no usable palette yet. Every caller dispatches one
+    /// of these per cast member per stored title, and people are shared across
+    /// titles, so the overwhelming majority target an entity that was painted long
+    /// ago. <see cref="ColorPaletteJob"/> already early-returns in that case, which
+    /// makes the queued job a guaranteed no-op that still costs a dedup query, an
+    /// insert, a reserve, a deserialize and a delete. Measured on a real library:
+    /// ~3.6k palette jobs inserted per minute against 128,612 of 130,865 people
+    /// already painted — the queue grew ~1000x faster than it drained. Answering
+    /// the same question here, before the row exists, keeps the queue for real work.
+    /// <para>Failing open (returning true) is deliberate: a broken check must queue
+    /// the job and let it decide, never silently drop a palette.</para>
+    /// </summary>
+    protected virtual bool NeedsPalette(string entityType, string entityId)
+    {
+        IPaletteSource? source = DefaultPaletteSourceRegistry.Instance.Resolve(entityType);
+        if (source is null)
+            return true;
+
+        try
+        {
+            using MediaContext db = new();
+            string? current = source
+                .CurrentPaletteAsync(db, entityId, CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+
+            return string.IsNullOrEmpty(current);
+        }
+        catch
+        {
+            return true;
+        }
     }
 }

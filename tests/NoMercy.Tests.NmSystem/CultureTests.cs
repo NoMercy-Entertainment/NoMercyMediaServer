@@ -74,4 +74,51 @@ public class CultureTests
     {
         new CultureInfo("en").EnglishLanguageTag().Should().Be("eng");
     }
+
+    [Theory]
+    [InlineData("nl", "dut")]
+    [InlineData("nld", "dut")]
+    [InlineData("nl-NL", "dut")]
+    [InlineData("de", "ger")]
+    [InlineData("fr", "fre")]
+    [InlineData("cs", "cze")]
+    public void BibliographicLanguageCode_MapsToTheCodeOpenSubtitlesAccepts(
+        string code,
+        string expected
+    )
+    {
+        Culture.BibliographicLanguageCode(code).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("dut")]
+    [InlineData("ger")]
+    [InlineData("eng")]
+    [InlineData("jpn")]
+    public void BibliographicLanguageCode_IsIdempotent(string code)
+    {
+        Culture.BibliographicLanguageCode(code).Should().Be(code);
+        Culture
+            .BibliographicLanguageCode(Culture.BibliographicLanguageCode(code))
+            .Should()
+            .Be(code);
+    }
+
+    [Theory]
+    [InlineData("en", "eng")]
+    [InlineData("ja", "jpn")]
+    [InlineData("hu", "hun")]
+    public void BibliographicLanguageCode_LeavesNonLegacyCodesOnTheirIso3Form(
+        string code,
+        string expected
+    )
+    {
+        Culture.BibliographicLanguageCode(code).Should().Be(expected);
+    }
+
+    [Fact]
+    public void BibliographicLanguageCode_PassesThroughAnUnknownCode()
+    {
+        Culture.BibliographicLanguageCode("zzz").Should().Be("zzz");
+    }
 }

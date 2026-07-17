@@ -33,10 +33,15 @@ namespace NoMercy.Tests.Encoder.Subtitles;
 ///   regression.
 /// • Bug 2 — the OCR .vtt was written next to the SOURCE file instead of the
 ///   encode output directory, so the post-encode library scan never
-///   registered it. The output-directory assertions confirm the sidecar
-///   lands under <c>{outputDirectory}/subtitles/</c> with a per-stream
-///   unique filename, matching the naming the scan already discovers real
-///   text-subtitle sidecars by.
+///   registered it. The sidecar assertions confirm it lands under
+///   <c>{outputDirectory}/subtitles/</c>.
+/// • Bug 3 — the sidecar was named <c>{lang}.ocr{streamIndex}.{ext}</c>, which
+///   these tests used to assert. The library scan keys subtitles by
+///   <c>{lang}.{type}</c> and pairs a bitmap track with the text sidecar
+///   sharing its key, so "ocr0" parsed as a variant of its own: the .mks stayed
+///   orphaned and no player ever listed the result. The name has to be the
+///   bitmap track's sibling — <c>{title}.{lang}.{variant}.{ext}</c>, the same
+///   template the extraction pass writes.
 /// </summary>
 public class SubtitleOcrEngineOcrAsyncTests
 {
@@ -128,9 +133,11 @@ public class SubtitleOcrEngineOcrAsyncTests
     }
 
     [Fact]
-    public async Task Output_directory_lands_under_subtitles_subfolder()
+    public async Task Sidecar_is_named_as_the_bitmap_tracks_sibling()
     {
-        const string outputDirectory = "/encoded/Show.S01E01";
+        // {title}.{lang}.{variant}.vtt — what FileManager.SubtitleFileRegex reads
+        // as eng|full, so it pairs with Show.S01E01.NoMercy.eng.full.mks and the
+        // player lists it. Anything else leaves the .mks orphaned.
         Mock<IProcessRunner> processRunner = SuccessProcess();
         Mock<IStorage> storage = StorageMock();
         Mock<ITesseractModelManager> modelManager = ModelManagerMock();
@@ -149,16 +156,20 @@ public class SubtitleOcrEngineOcrAsyncTests
             "eng",
             SubtitleCodecType.WebVtt,
             default,
-            outputDirectory
+            sidecar: Sidecar(storage.Object, "full")
         );
 
-        track.FilePath.Should().Be(Path.Combine(outputDirectory, "subtitles", "eng.ocr2.vtt"));
+        track
+            .FilePath.Should()
+            .Be("/encoded/Show.S01E01/subtitles/Show.S01E01.NoMercy.eng.full.vtt");
     }
 
     [Fact]
-    public async Task Two_streams_sharing_a_language_produce_distinct_filenames()
+    public async Task Two_streams_sharing_a_language_are_separated_by_variant()
     {
-        const string outputDirectory = "/encoded/Show.S01E01";
+        // Same language, different variant: the discriminator is the variant the
+        // extraction pass gave the .mks, never the stream index — an index-based
+        // name pairs with nothing.
         Mock<IProcessRunner> processRunner = SuccessProcess();
         Mock<IStorage> storage = StorageMock();
         Mock<ITesseractModelManager> modelManager = ModelManagerMock();
@@ -171,32 +182,31 @@ public class SubtitleOcrEngineOcrAsyncTests
             NullLogger<SubtitleOcrEngine>.Instance
         );
 
-        SubtitleTrack first = await engine.OcrAsync(
+        SubtitleTrack full = await engine.OcrAsync(
             InputPath,
             2,
             "eng",
             SubtitleCodecType.WebVtt,
             default,
-            outputDirectory
+            sidecar: Sidecar(storage.Object, "full")
         );
-        SubtitleTrack second = await engine.OcrAsync(
+        SubtitleTrack sign = await engine.OcrAsync(
             InputPath,
             5,
             "eng",
             SubtitleCodecType.WebVtt,
             default,
-            outputDirectory
+            sidecar: Sidecar(storage.Object, "sign")
         );
 
-        first.FilePath.Should().NotBe(second.FilePath);
-        first.FilePath.Should().Be(Path.Combine(outputDirectory, "subtitles", "eng.ocr2.vtt"));
-        second.FilePath.Should().Be(Path.Combine(outputDirectory, "subtitles", "eng.ocr5.vtt"));
+        full.FilePath.Should().NotBe(sign.FilePath);
+        full.FilePath.Should().EndWith("Show.S01E01.NoMercy.eng.full.vtt");
+        sign.FilePath.Should().EndWith("Show.S01E01.NoMercy.eng.sign.vtt");
     }
 
     [Fact]
-    public async Task Srt_format_keeps_the_same_output_directory_placement()
+    public async Task Srt_format_keeps_the_same_sibling_naming()
     {
-        const string outputDirectory = "/encoded/Show.S01E01";
         Mock<IProcessRunner> processRunner = SuccessProcess();
         Mock<IStorage> storage = StorageMock();
         Mock<ITesseractModelManager> modelManager = ModelManagerMock();
@@ -215,11 +225,60 @@ public class SubtitleOcrEngineOcrAsyncTests
             "spa",
             SubtitleCodecType.Srt,
             default,
-            outputDirectory
+            sidecar: Sidecar(storage.Object, "forced")
         );
 
-        track.FilePath.Should().Be(Path.Combine(outputDirectory, "subtitles", "spa.ocr1.srt"));
+        track
+            .FilePath.Should()
+            .Be("/encoded/Show.S01E01/subtitles/Show.S01E01.NoMercy.spa.forced.srt");
     }
+
+    [Fact]
+    public async Task Sidecar_is_written_through_its_own_storage_not_the_injected_one()
+    {
+        // The bundle usually lives on a driver the engine's injected storage
+        // cannot address; writing through the injected one put the sidecar under
+        // the server's working directory instead of the library.
+        Mock<IProcessRunner> processRunner = SuccessProcess();
+        Mock<IStorage> injected = StorageMock();
+        Mock<IStorage> destination = StorageMock();
+        Mock<ITesseractModelManager> modelManager = ModelManagerMock();
+
+        SubtitleOcrEngine engine = new(
+            Options(),
+            processRunner.Object,
+            modelManager.Object,
+            injected.Object,
+            NullLogger<SubtitleOcrEngine>.Instance
+        );
+
+        await engine.OcrAsync(
+            InputPath,
+            0,
+            "eng",
+            SubtitleCodecType.WebVtt,
+            default,
+            sidecar: Sidecar(destination.Object, "full")
+        );
+
+        destination.Verify(
+            s =>
+                s.WriteAsync(
+                    It.Is<string>(p => p.EndsWith("eng.full.vtt")),
+                    It.IsAny<byte[]>(),
+                    It.IsAny<CancellationToken>()
+                ),
+            Times.Once
+        );
+    }
+
+    private static OcrSidecarTarget Sidecar(IStorage storage, string variant) =>
+        new(
+            Storage: storage,
+            OutputDirectory: "/encoded/Show.S01E01",
+            MediaTitle: "Show.S01E01.NoMercy",
+            Variant: variant
+        );
 
     // ── Failure surfacing ─────────────────────────────────────────────────────
 

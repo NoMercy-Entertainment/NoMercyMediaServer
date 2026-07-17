@@ -88,12 +88,6 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
     // early-exit on server shutdown.
     private CancellationToken _shutdownToken;
 
-    // Host shutdown signal for the post-encode scan retry backoff — falls back to
-    // CancellationToken.None when the DI scope has no IHostApplicationLifetime
-    // (e.g. a minimal test scope) so the retry loop still runs, just without an
-    // early-exit on server shutdown.
-    private CancellationToken _shutdownToken;
-
     public new void InjectStorageServices(IServiceProvider serviceProvider)
     {
         base.InjectStorageServices(serviceProvider);
@@ -1885,34 +1879,27 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             return;
         }
 
-        List<SubtitleStreamInfo> bitmap = mediaInfo
-            .SubtitleStreams.Where(subtitle => !subtitle.IsTextBased)
-            .ToList();
+        IReadOnlyList<BitmapSubtitleRef> bitmap = BitmapSubtitleSelector.Select(
+            mediaInfo.SubtitleStreams
+        );
 
         if (bitmap.Count == 0)
             return;
 
-        // Write the OCR sidecar into the finalized encode output directory —
-        // not next to the source — so the post-encode library scan picks it
-        // up. GetFullPath only resolves for a LocalStorage destination; a
-        // remote destination (NFS/S3) has no local directory to resolve, so
-        // OCR falls back to writing next to the source and stays diagnosable
-        // instead of throwing.
-        string? ocrOutputDirectory;
-        try
-        {
-            ocrOutputDirectory = destinationStorage.GetFullPath(fileMetadata.Path);
-        }
-        catch (NotSupportedException)
-        {
-            ocrOutputDirectory = null;
-            Log.LogInformation(
-                "OCR sidecar for job {JobId} will land next to the source — destination storage "
-                    + "{StorageType} has no resolvable local directory",
-                fileMetadata.Id,
-                destinationStorage.GetType().Name
-            );
-        }
+        // The encode's own output directory, addressed against the destination
+        // storage rather than resolved to a local path: a remote destination
+        // (NFS/S3) has none, and falling back to "next to the source" wrote the
+        // sidecar to a driver-relative path that landed under the server's
+        // working directory instead of the library.
+        string ocrOutputDirectory = fileMetadata.Path;
+
+        // Classified across every subtitle stream at once, never per stream: the
+        // variant depends on a track's peers in the same language, and the
+        // sidecar has to carry the same one as the .mks the extraction pass wrote
+        // or the two never pair up.
+        IReadOnlyList<string> variants = SubtitleClassifier.ResolveVariants(
+            mediaInfo.SubtitleStreams
+        );
 
         if (EventBusProvider.IsConfigured)
         {
@@ -1927,18 +1914,25 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             );
         }
 
-        foreach (SubtitleStreamInfo stream in bitmap)
+        foreach ((int subtitleIndex, SubtitleStreamInfo stream) in bitmap)
         {
             string language = stream.Language ?? "eng";
+
             try
             {
                 SubtitleTrack track = await ocrEngine.OcrAsync(
                     inputPath,
-                    stream.Index,
+                    subtitleIndex,
                     language,
                     SubtitleCodecType.WebVtt,
                     CancellationToken.None,
-                    ocrOutputDirectory
+                    sourceStorage,
+                    new OcrSidecarTarget(
+                        Storage: destinationStorage,
+                        OutputDirectory: ocrOutputDirectory,
+                        MediaTitle: fileMetadata.FileName,
+                        Variant: variants[subtitleIndex]
+                    )
                 );
                 Log.LogInformation(
                     "OCR {Language} → {FilePath} ({CueCount} cues)",
@@ -1954,8 +1948,9 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                 // the real ffmpeg stderr tail (SubtitleOcrEngine embeds it), so
                 // this warning stays actionable instead of a bare "OCR failed".
                 Log.LogWarning(
-                    "OCR failed for {InputPath} stream {Index} ({Language}): {Message}",
+                    "OCR failed for {InputPath} subtitle {SubtitleIndex} / abs stream {Index} ({Language}): {Message}",
                     inputPath,
+                    subtitleIndex,
                     stream.Index,
                     language,
                     ex.Message

@@ -26,6 +26,7 @@ namespace NoMercy.Encoder.LiveTranscode;
 public class LiveStreamingService(
     ILogger<LiveStreamingService> logger,
     IStorage storage,
+    ILiveSegmentInventory segmentInventory,
     ILiveSessionTransport? transport = null,
     ISessionManager? sessionManager = null
 ) : ILiveStreamingService
@@ -57,7 +58,18 @@ public class LiveStreamingService(
             );
         }
 
-        session.AttachBufferResetCallback(() => runtime.ResetBuffer());
+        // Fires on a quality change only (see ILiveSession.AttachBufferResetCallback) —
+        // the new encode's segments differ from the old quality's, so the stale
+        // ones must be purged from disk too. Without this the coverage-aware
+        // planner in LiveEncoder.SpawnRunner would see the old-quality files still
+        // sitting on disk, treat that range as "already covered", and skip
+        // re-encoding it — silently serving the previous quality forever.
+        session.AttachBufferResetCallback(() =>
+        {
+            runtime.ResetBuffer();
+            if (runtime.ScratchDirectory is { Length: > 0 } scratch)
+                segmentInventory.Purge(scratch);
+        });
         runtime.DrainerTask = Task.Run(() => DrainAsync(runtime));
         logger.LogDebug("Registered live session {SessionId}", session.SessionId);
     }

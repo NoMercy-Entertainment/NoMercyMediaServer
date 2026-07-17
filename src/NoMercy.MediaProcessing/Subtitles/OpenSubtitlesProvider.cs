@@ -9,8 +9,11 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.IO.Compression;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Subtitles;
+using NoMercy.NmSystem.Extensions;
+using NoMercy.Providers.Helpers;
 using NoMercy.Providers.OpenSubtitles.Client;
 using NoMercy.Providers.OpenSubtitles.Models;
 
@@ -29,6 +32,19 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
     private DateTimeOffset _rateLimitedUntil = DateTimeOffset.MinValue;
     private static readonly TimeSpan RateLimitBackoff = TimeSpan.FromMinutes(5);
 
+    // Searches queue inside OpenSubtitlesBaseClient, keyed on its named client. Downloads hit a
+    // different host and so never passed through it: a sweep issued them as fast as its loop ran.
+    // One at a time, one second apart, is far above what a paced backlog needs and keeps the
+    // interactive lane responsive — priority work drains before any of it.
+    private static readonly Providers.Helpers.Queue DownloadQueue = new(
+        new()
+        {
+            Concurrent = 1,
+            Interval = 1000,
+            Start = true,
+        }
+    );
+
     public bool IsRateLimited => DateTimeOffset.UtcNow < _rateLimitedUntil;
 
     public OpenSubtitlesProvider(
@@ -44,7 +60,8 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
         string movieHash,
         long fileSize,
         string[] languages,
-        CancellationToken ct
+        CancellationToken ct,
+        bool priority = false
     )
     {
         if (IsRateLimited)
@@ -63,14 +80,14 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
 
             List<OpenSubtitlesSearchResult> results = [];
 
-            foreach (string language in languages)
+            foreach (string language in ToBibliographicCodes(languages))
             {
                 ct.ThrowIfCancellationRequested();
                 SubtitleSearchResponse? response = await client
-                    .SearchSubtitlesByHash(movieHash, fileSize, language)
+                    .SearchSubtitlesByHash(movieHash, fileSize, language, priority)
                     .ConfigureAwait(false);
 
-                results.AddRange(ParseResponse(response, "moviehash"));
+                results.AddRange(OpenSubtitlesResponseParser.Parse(response, "moviehash"));
             }
 
             return results;
@@ -85,7 +102,8 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
     public async Task<IReadOnlyList<OpenSubtitlesSearchResult>> SearchByFilenameAsync(
         string filename,
         string[] languages,
-        CancellationToken ct
+        CancellationToken ct,
+        bool priority = false
     )
     {
         if (IsRateLimited)
@@ -104,14 +122,14 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
 
             List<OpenSubtitlesSearchResult> results = [];
 
-            foreach (string language in languages)
+            foreach (string language in ToBibliographicCodes(languages))
             {
                 ct.ThrowIfCancellationRequested();
                 SubtitleSearchResponse? response = await client
-                    .SearchSubtitles(filename, language)
+                    .SearchSubtitles(filename, language, priority)
                     .ConfigureAwait(false);
 
-                results.AddRange(ParseResponse(response, "filename"));
+                results.AddRange(OpenSubtitlesResponseParser.Parse(response, "filename"));
             }
 
             return results;
@@ -129,7 +147,8 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
         int? episode,
         int? year,
         string[] languages,
-        CancellationToken ct
+        CancellationToken ct,
+        bool priority = false
     )
     {
         if (IsRateLimited)
@@ -149,14 +168,14 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
             string query = BuildTitleQuery(title, season, episode, year);
             List<OpenSubtitlesSearchResult> results = [];
 
-            foreach (string language in languages)
+            foreach (string language in ToBibliographicCodes(languages))
             {
                 ct.ThrowIfCancellationRequested();
                 SubtitleSearchResponse? response = await client
-                    .SearchSubtitles(query, language)
+                    .SearchSubtitles(query, language, priority)
                     .ConfigureAwait(false);
 
-                results.AddRange(ParseResponse(response, "title"));
+                results.AddRange(OpenSubtitlesResponseParser.Parse(response, "title"));
             }
 
             return results;
@@ -168,11 +187,18 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
         }
     }
 
-    public async Task<byte[]> DownloadSubtitleAsync(string downloadUrl, CancellationToken ct)
+    public Task<byte[]> DownloadSubtitleAsync(
+        string downloadUrl,
+        CancellationToken ct,
+        bool priority = false
+    )
     {
-        HttpClient client = _httpClientFactory.CreateClient(
-            Providers.Helpers.HttpClientNames.OpenSubtitlesDownload
-        );
+        return DownloadQueue.Enqueue(() => FetchAsync(downloadUrl, ct), downloadUrl, priority);
+    }
+
+    private async Task<byte[]> FetchAsync(string downloadUrl, CancellationToken ct)
+    {
+        HttpClient client = _httpClientFactory.CreateClient(HttpClientNames.OpenSubtitlesDownload);
         using HttpResponseMessage response = await client
             .GetAsync(downloadUrl, ct)
             .ConfigureAwait(false);
@@ -184,13 +210,47 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
         }
 
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
+        byte[] payload = await response.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
+
+        return Decompress(payload);
+    }
+
+    /// <summary>
+    /// SubDownloadLink serves the cue file gzipped in the response body rather than as a
+    /// Content-Encoding, so HttpClient never unwraps it. Sniffed by magic number instead of the
+    /// URL suffix because the link is a VRF-signed redirect that carries no extension, and
+    /// OpenSubtitles serves some candidates uncompressed.
+    /// </summary>
+    private static byte[] Decompress(byte[] payload)
+    {
+        if (payload.Length < 2 || payload[0] != 0x1F || payload[1] != 0x8B)
+            return payload;
+
+        using MemoryStream source = new(payload);
+        using GZipStream gzip = new(source, CompressionMode.Decompress);
+        using MemoryStream destination = new();
+        gzip.CopyTo(destination);
+        return destination.ToArray();
     }
 
     private void MarkRateLimited()
     {
         _rateLimitedUntil = DateTimeOffset.UtcNow.Add(RateLimitBackoff);
         _logger.LogWarning("OpenSubtitles rate-limited. Backoff until {Until}", _rateLimitedUntil);
+    }
+
+    /// <summary>
+    /// sublanguageid only accepts ISO 639-2/B codes. Handed anything else — the 2-letter code the
+    /// watch request carries, for one — OpenSubtitles drops the filter rather than erroring and
+    /// answers with a fulltext match across every language, which reads downstream as "no results
+    /// in the language asked for".
+    /// </summary>
+    private static IEnumerable<string> ToBibliographicCodes(string[] languages)
+    {
+        return languages
+            .Select(Culture.BibliographicLanguageCode)
+            .Where(language => !string.IsNullOrWhiteSpace(language))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
     }
 
     private static string BuildTitleQuery(string title, int? season, int? episode, int? year)
@@ -203,57 +263,5 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
         if (year is not null)
             query += $" {year}";
         return query;
-    }
-
-    /// <summary>
-    /// Parses the XML-RPC SubtitleSearchResponse into normalized results.
-    /// </summary>
-    private static IEnumerable<OpenSubtitlesSearchResult> ParseResponse(
-        SubtitleSearchResponse? response,
-        string matchedBy
-    )
-    {
-        if (response?.Params is null)
-            yield break;
-
-        foreach (SubtitleSearchResponseParam param in response.Params)
-        {
-            if (param.Value.ArrayData.Values is null)
-                continue;
-
-            foreach (SubtitleSearchResponseMemberValue item in param.Value.ArrayData.Values)
-            {
-                if (item.InnerStruct.Members is null)
-                    continue;
-
-                Dictionary<string, string> members = item
-                    .InnerStruct.Members.Where(m => m.Name is not null)
-                    .ToDictionary(
-                        m => m.Name!,
-                        m => m.MemberValue.StringValue ?? string.Empty,
-                        StringComparer.OrdinalIgnoreCase
-                    );
-
-                string language =
-                    members.GetValueOrDefault("SubLanguageID")
-                    ?? members.GetValueOrDefault("ISO639")
-                    ?? "und";
-
-                yield return new(
-                    Language: language,
-                    SubRating: members.GetValueOrDefault("SubRating"),
-                    SubDownloadsCnt: members.GetValueOrDefault("SubDownloadsCnt"),
-                    SubFromTrusted: members.GetValueOrDefault("SubFromTrusted"),
-                    MovieFPS: members.GetValueOrDefault("MovieFPS"),
-                    SubDownloadLink: members.GetValueOrDefault("SubDownloadLink"),
-                    SubFormat: members.GetValueOrDefault("SubFormat"),
-                    MatchedBy: members.GetValueOrDefault("MatchedBy") ?? matchedBy,
-                    SubFileName: members.GetValueOrDefault("SubFileName"),
-                    MovieReleaseName: members.GetValueOrDefault("MovieReleaseName"),
-                    SubHearingImpaired: members.GetValueOrDefault("SubHearingImpaired"),
-                    UserNickName: members.GetValueOrDefault("UserNickName")
-                );
-            }
-        }
     }
 }

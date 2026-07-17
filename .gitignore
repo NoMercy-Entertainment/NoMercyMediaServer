@@ -654,3 +654,5 @@ src/NoMercy.Service/driver_fingerprint.json
 src/NoMercy.Service/speed_index.json
 .worktrees/
 .claude/
+# Coverage artifacts (scripts/run-coverage.sh)
+coverage/

@@ -78,9 +78,14 @@ public interface ILiveSession : IAsyncDisposable
     void AttachRunnerFactory(Func<TimeSpan, CancellationToken, Task> factory);
 
     /// <summary>
-    /// Registers a callback invoked at the start of every seek and quality
-    /// change so the runtime buffer can be purged before the new runner fires.
-    /// Called once by <see cref="LiveStreamingService"/> after registration.
+    /// Registers a callback invoked at the start of every quality change — NOT a
+    /// seek — so the runtime buffer (and, via <c>LiveStreamingService</c>, the
+    /// on-disk segments) can be purged before the new runner fires. A quality
+    /// change genuinely invalidates the existing segments (different bitrate/
+    /// resolution/encoder); a seek does not — same quality, same absolute segment
+    /// indices, deterministic content — so <c>SeekAsync</c> deliberately does not
+    /// invoke this callback. Called once by <see cref="LiveStreamingService"/>
+    /// after registration.
     /// </summary>
     void AttachBufferResetCallback(Action callback);
 

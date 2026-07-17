@@ -261,74 +261,6 @@ public class DriverRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task FolderCountAsync_ReturnsCorrectCount()
-    {
-        await using MediaContext context = _context;
-        Ulid driverId = Ulid.NewUlid();
-        Driver driver = new()
-        {
-            Id = driverId,
-            Name = "Count Test Driver",
-            Type = "local",
-            Config = "{}",
-            CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow,
-        };
-        context.Drivers.Add(driver);
-        context.Folders.Add(
-            new()
-            {
-                Id = Ulid.NewUlid(),
-                Path = "/path1",
-                DriverId = driverId,
-            }
-        );
-        context.Folders.Add(
-            new()
-            {
-                Id = Ulid.NewUlid(),
-                Path = "/path2",
-                DriverId = driverId,
-            }
-        );
-        context.Folders.Add(
-            new()
-            {
-                Id = Ulid.NewUlid(),
-                Path = "/path3",
-                DriverId = driverId,
-            }
-        );
-        await context.SaveChangesAsync();
-
-        int count = await _repository.FolderCountAsync(driverId);
-
-        count.Should().Be(3);
-    }
-
-    [Fact]
-    public async Task FolderCountAsync_ReturnsZero_WhenNoFoldersExist()
-    {
-        await using MediaContext context = _context;
-        Ulid driverId = Ulid.NewUlid();
-        Driver driver = new()
-        {
-            Id = driverId,
-            Name = "Empty Driver",
-            Type = "local",
-            Config = "{}",
-            CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow,
-        };
-        context.Drivers.Add(driver);
-        await context.SaveChangesAsync();
-
-        int count = await _repository.FolderCountAsync(driverId);
-
-        count.Should().Be(0);
-    }
-
-    [Fact]
     public async Task CreateDriverAsync_PersistsDriver()
     {
         Driver newDriver = new()
@@ -398,6 +330,96 @@ public class DriverRepositoryTests : IDisposable
         await using MediaContext verify = _context;
         Driver? deleted = await verify.Drivers.FirstOrDefaultAsync(d => d.Id == driverId);
         deleted.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task LibraryFolderCountAsync_IgnoresFoldersNotAttachedToALibrary()
+    {
+        Ulid driverId = Ulid.NewUlid();
+        _context.Drivers.Add(
+            new()
+            {
+                Id = driverId,
+                Name = "Detached Driver",
+                Type = "s3",
+                Config = "{}",
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow,
+            }
+        );
+        _context.Folders.Add(
+            new()
+            {
+                Id = Ulid.NewUlid(),
+                Path = "/remote/films",
+                DriverId = driverId,
+            }
+        );
+        await _context.SaveChangesAsync();
+
+        int count = await _repository.LibraryFolderCountAsync(driverId);
+
+        count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task LibraryFolderCountAsync_CountsFoldersInUseByALibrary()
+    {
+        int count = await _repository.LibraryFolderCountAsync(Driver.SystemLocalDriverId);
+
+        count.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task DeleteDriverAsync_CascadesFoldersThatNoLibraryUses()
+    {
+        Ulid driverId = Ulid.NewUlid();
+        Ulid folderId = Ulid.NewUlid();
+        _context.Drivers.Add(
+            new()
+            {
+                Id = driverId,
+                Name = "Orphan Driver",
+                Type = "s3",
+                Config = "{}",
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow,
+            }
+        );
+        _context.Folders.Add(
+            new()
+            {
+                Id = folderId,
+                Path = "/remote/films",
+                DriverId = driverId,
+            }
+        );
+        await _context.SaveChangesAsync();
+
+        Driver? driver = await _repository.GetDriverByIdAsync(driverId);
+        Assert.NotNull(driver);
+
+        await _repository.DeleteDriverAsync(driver);
+
+        _context.ChangeTracker.Clear();
+
+        (await _context.Drivers.AnyAsync(d => d.Id == driverId)).Should().BeFalse();
+        (await _context.Folders.AnyAsync(f => f.Id == folderId)).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DeleteDriverAsync_LeavesFoldersAlone_WhenALibraryStillUsesThem()
+    {
+        Driver? driver = await _repository.GetDriverByIdAsync(Driver.SystemLocalDriverId);
+        Assert.NotNull(driver);
+
+        await Assert.ThrowsAnyAsync<Exception>(() => _repository.DeleteDriverAsync(driver));
+
+        _context.ChangeTracker.Clear();
+
+        (await _context.Folders.AnyAsync(f => f.Id == SeedConstants.MovieFolderId))
+            .Should()
+            .BeTrue();
     }
 
     public void Dispose()

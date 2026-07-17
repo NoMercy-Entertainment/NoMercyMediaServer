@@ -14,6 +14,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
 using NoMercy.Api.Controllers.V1.Media.Subtitles.Dtos;
@@ -22,6 +23,7 @@ using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.Services.Video;
 using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
+using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.MediaProcessing.Files;
@@ -46,8 +48,10 @@ public class SubtitlesController(
     VideoPlaylistManager videoPlaylistManager,
     IVideoFileRepository videoFileRepository,
     IFileRepository fileRepository,
+    IFolderRepository folderRepository,
     IOpenSubtitlesAdapter openSubtitlesAdapter,
-    IStorageDriver storageDriver
+    IStorageFactory storageFactory,
+    ILogger<SubtitlesController> logger
 ) : BaseController
 {
     private static readonly TimeSpan SearchTimeout = TimeSpan.FromSeconds(5);
@@ -123,7 +127,18 @@ public class SubtitlesController(
 
         string[] languages = ResolveLanguages(Request.Query, language);
 
-        (string? movieHash, long fileSize) = TryComputeHash(file);
+        IStorage? storage = await ResolveStorageAsync(file);
+        (string? movieHash, long fileSize) = storage is null
+            ? (null, 0)
+            : TryComputeHash(storage, file);
+
+        if (storage is null)
+            logger.LogWarning(
+                "No storage backend for video file {VideoFileId} (share {Share}) — "
+                    + "falling back to filename/title search",
+                file.Id,
+                file.Share
+            );
 
         if (openSubtitlesAdapter.IsRateLimited)
             return TooManyRequestsResponse(
@@ -138,7 +153,8 @@ public class SubtitlesController(
                 fileSize,
                 languages,
                 SearchTimeout,
-                ct
+                ct,
+                priority: true
             );
 
         if (candidates.Count == 0)
@@ -146,7 +162,8 @@ public class SubtitlesController(
                 file.Filename,
                 languages,
                 SearchTimeout,
-                ct
+                ct,
+                priority: true
             );
 
         if (candidates.Count == 0)
@@ -164,7 +181,8 @@ public class SubtitlesController(
                 year,
                 languages,
                 SearchTimeout,
-                ct
+                ct,
+                priority: true
             );
         }
 
@@ -269,7 +287,9 @@ public class SubtitlesController(
         byte[] rawBytes;
         try
         {
-            rawBytes = await openSubtitlesAdapter.DownloadAsync(candidate, ct);
+            // Someone is sat in front of the player waiting on this, so it jumps the queue ahead
+            // of whatever the backlog sweep has already stacked up.
+            rawBytes = await openSubtitlesAdapter.DownloadAsync(candidate, ct, priority: true);
         }
         catch (OpenSubtitlesRateLimitException)
         {
@@ -279,6 +299,11 @@ public class SubtitlesController(
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
+            logger.LogError(
+                ex,
+                "Failed to download subtitle from {DownloadUrl}",
+                request.DownloadUrl
+            );
             return InternalServerErrorResponse($"Failed to download subtitle: {ex.Message}");
         }
 
@@ -289,6 +314,10 @@ public class SubtitlesController(
         }
         catch (NotSupportedException)
         {
+            logger.LogWarning(
+                "Subtitle format {Format} is not convertible to WebVTT",
+                candidate.Format
+            );
             return UnprocessableEntityResponse(
                 $"Subtitle format '{candidate.Format}' is not supported — only SRT and VTT can be "
                     + "converted to the WebVTT sidecar the player expects."
@@ -303,16 +332,31 @@ public class SubtitlesController(
         string filenameNoExt = file.Filename.OrEmpty().Replace(".mp4", "").Replace(".m3u8", "");
         string sidecarFileName =
             $"subtitles{filenameNoExt}.{request.Language}.{DownloadedSubtitleType}.{SidecarExtension}";
-        string sidecarPath = storageDriver.CombinePath(file.HostFolder, sidecarFileName);
+        IStorage? storage = await ResolveStorageAsync(file);
+        if (storage is null)
+        {
+            logger.LogError(
+                "Cannot write subtitle sidecar: no storage backend for video file {VideoFileId} "
+                    + "(share {Share})",
+                file.Id,
+                file.Share
+            );
+            return InternalServerErrorResponse(
+                "Could not resolve the storage this video lives on."
+            );
+        }
+
+        string sidecarPath = storage.CombinePath(file.HostFolder, sidecarFileName);
 
         try
         {
             byte[] vttBytes = Encoding.UTF8.GetBytes(vttContent);
-            await using Stream writeStream = storageDriver.OpenWrite(sidecarPath, overwrite: true);
+            await using Stream writeStream = storage.OpenWrite(sidecarPath, overwrite: true);
             await writeStream.WriteAsync(vttBytes, ct);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to write subtitle sidecar to {SidecarPath}", sidecarPath);
             return InternalServerErrorResponse(
                 $"Failed to write subtitle sidecar to storage: {ex.Message}"
             );
@@ -397,16 +441,35 @@ public class SubtitlesController(
         );
     }
 
-    private (string? Hash, long FileSize) TryComputeHash(VideoFile file)
+    /// <summary>
+    /// Resolves the storage the file actually lives on. VideoFile.Share is the folder id and the
+    /// folder carries the driver, so a media file on any non-default backend is only reachable
+    /// through the factory. The injected IStorageDriver is always LocalStorageDriver, which cannot
+    /// see NFS/S3/WebDav-backed media at all: it silently failed the moviehash lookup and threw on
+    /// the sidecar write.
+    /// </summary>
+    private async Task<IStorage?> ResolveStorageAsync(VideoFile file)
+    {
+        if (!Ulid.TryParse(file.Share, out Ulid folderId))
+            return null;
+
+        Folder? folder = await folderRepository.GetFolderByIdAsync(folderId);
+        if (folder is null)
+            return null;
+
+        return storageFactory.For(folder.Id, folder.DriverId, string.Empty);
+    }
+
+    private static (string? Hash, long FileSize) TryComputeHash(IStorage storage, VideoFile file)
     {
         try
         {
-            string path = storageDriver.CombinePath(file.HostFolder, file.Filename);
-            if (!storageDriver.FileExists(path))
+            string path = storage.CombinePath(file.HostFolder, file.Filename);
+            if (!storage.Exists(path))
                 return (null, 0);
 
-            long fileSize = storageDriver.GetFileSize(path);
-            using Stream stream = storageDriver.OpenRead(path);
+            long fileSize = storage.Size(path);
+            using Stream stream = storage.OpenRead(path);
             ulong hash = MovieHashHelper.ComputeMovieHash(stream, fileSize);
             return (MovieHashHelper.FormatHash(hash), fileSize);
         }

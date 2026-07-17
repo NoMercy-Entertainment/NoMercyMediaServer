@@ -157,6 +157,37 @@ public class LiveSession : ILiveSession
     }
 
     /// <summary>
+    /// Transitions <see cref="LiveSessionState.Transcoding"/> to
+    /// <see cref="LiveSessionState.Buffered"/> when <paramref name="runnerToken"/>
+    /// still belongs to the CURRENT runner generation — same superseded-generation
+    /// guard as <see cref="CompleteIfCurrentRunner"/>. Called by
+    /// <see cref="LiveFfmpegRunner.RunAsync"/>'s finally block instead of
+    /// <see cref="CompleteIfCurrentRunner"/> when the run was bounded
+    /// (<c>LiveRunInput.StopPosition</c> set): it finished the gap it was spawned
+    /// to fill, not the file, so the segment channel must stay open for a later
+    /// seek/resume to reuse — completing it here would end the whole session.
+    /// </summary>
+    internal void MarkRunnerIdle(CancellationToken runnerToken)
+    {
+        try
+        {
+            if (_runnerCts.Token != runnerToken)
+                return;
+        }
+        catch (ObjectDisposedException)
+        {
+            // Session is already tearing down — DisposeAsync owns the final state.
+            return;
+        }
+
+        Interlocked.CompareExchange(
+            ref _state,
+            (int)LiveSessionState.Buffered,
+            (int)LiveSessionState.Transcoding
+        );
+    }
+
+    /// <summary>
     /// Cancels the current FFmpeg runner, resets position state, then spawns
     /// a new runner from <paramref name="position"/> via the attached factory.
     /// </summary>
@@ -193,7 +224,14 @@ public class LiveSession : ILiveSession
             // Create a new CTS for the replacement runner, linked to session lifetime
             _runnerCts = CancellationTokenSource.CreateLinkedTokenSource(_sessionCts.Token);
 
-            _bufferResetCallback?.Invoke();
+            // Deliberately NOT invoking _bufferResetCallback here. A seek changes
+            // only the playhead — same quality, same absolute segment indices,
+            // deterministic content — so nothing on disk or in the runtime buffer
+            // is invalidated. Wiping it here is what used to erase the encoder's
+            // coverage knowledge and made every seek re-encode ground a previous
+            // runner generation had already produced. See ChangeQualityAsync,
+            // which still resets: a quality change genuinely invalidates the
+            // existing segments.
 
             // Spawn new runner if a factory is wired up
             if (_runnerFactory is not null)

@@ -554,7 +554,12 @@ public class LiveTranscodeService(
         await runtime.Session.SeekAsync(TimeSpan.FromSeconds(clampedSeconds), ct);
         runtime.TouchLastAccess();
 
-        int firstSegmentIndex = runtime.HighestSegmentIndex + 1;
+        // targetIndex, not HighestSegmentIndex + 1: the runtime buffer is no
+        // longer wiped on seek (see LiveSession.SeekAsync), so HighestSegmentIndex
+        // can be an unrelated older maximum from before the seek. targetIndex is
+        // the index the coverage-aware respawn (LiveEncoder.SpawnRunner via
+        // LiveGapPlanner) actually targets and the client should fetch next.
+        int firstSegmentIndex = targetIndex;
         await PushIfTransportAsync(
                 sessionId,
                 new SeekCompletedMessage(

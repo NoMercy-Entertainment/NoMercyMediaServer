@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.Extensions.Logging;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Hardware;
 
@@ -20,6 +21,7 @@ public class LiveEncoder(
     ISessionManager sessionManager,
     ILiveStreamingService streamingService,
     ILiveFfmpegRunner runner,
+    ILiveSegmentInventory segmentInventory,
     EncoderOptions options,
     SpeedIndex speedIndex,
     IResourceBudget budget,
@@ -77,12 +79,42 @@ public class LiveEncoder(
         // restart the runner without coupling LiveSession to LiveFfmpegRunner.
         // Quality is read from session.CurrentQuality at spawn time so that a
         // quality change performed before the factory fires uses the new value.
-        async Task SpawnRunner(TimeSpan startPosition, CancellationToken runnerCt)
+        async Task SpawnRunner(TimeSpan desiredPosition, CancellationToken runnerCt)
         {
+            (LiveGapPlan? plan, int desiredIndex, int? lastIndex) = PlanGap(
+                desiredPosition,
+                outputDirectory,
+                request.CachedInfo
+            );
+
+            if (plan is null)
+            {
+                // Every segment from here through the end of the file is already
+                // on disk — spawning ffmpeg would re-encode content the client can
+                // already fetch. Park the session so a later demand past the
+                // covered region (a seek, a resume) resumes it.
+                logger.LogDebug(
+                    "Live session {SessionId}: desiredIndex {DesiredIndex} already covered through {LastIndex} — parking instead of re-encoding",
+                    sessionId,
+                    desiredIndex,
+                    lastIndex
+                );
+                session.MarkRunnerIdle(runnerCt);
+                return;
+            }
+
+            logger.LogDebug(
+                "Live session {SessionId}: spawning gap-bounded run — desiredIndex={DesiredIndex} start={Start} stopAt={StopAt}",
+                sessionId,
+                desiredIndex,
+                plan.Start,
+                plan.StopAt
+            );
+
             LiveRunInput runInput = new(
                 InputPath: request.InputPath,
                 OutputDirectory: outputDirectory,
-                StartPosition: startPosition,
+                StartPosition: plan.Start,
                 Quality: session.CurrentQuality,
                 SegmentDurationSeconds: options.DefaultSegmentDurationSeconds,
                 Client: request.Client,
@@ -92,7 +124,8 @@ public class LiveEncoder(
                 // Read back at spawn time so an audio switch performed before the
                 // factory fires (like a quality change) uses the new track.
                 AudioStreamIndex: session.CurrentAudioStreamIndex,
-                VideoOnly: request.VideoOnly
+                VideoOnly: request.VideoOnly,
+                StopPosition: plan.StopAt
             );
 
             try
@@ -168,12 +201,38 @@ public class LiveEncoder(
             isAudioRenditionChild: true
         );
 
-        async Task SpawnRunner(TimeSpan startPosition, CancellationToken runnerCt)
+        async Task SpawnRunner(TimeSpan desiredPosition, CancellationToken runnerCt)
         {
+            (LiveGapPlan? plan, int desiredIndex, int? lastIndex) = PlanGap(
+                desiredPosition,
+                outputDirectory,
+                request.CachedInfo
+            );
+
+            if (plan is null)
+            {
+                logger.LogDebug(
+                    "Live audio rendition {SessionId}: desiredIndex {DesiredIndex} already covered through {LastIndex} — parking instead of re-encoding",
+                    sessionId,
+                    desiredIndex,
+                    lastIndex
+                );
+                session.MarkRunnerIdle(runnerCt);
+                return;
+            }
+
+            logger.LogDebug(
+                "Live audio rendition {SessionId}: spawning gap-bounded run — desiredIndex={DesiredIndex} start={Start} stopAt={StopAt}",
+                sessionId,
+                desiredIndex,
+                plan.Start,
+                plan.StopAt
+            );
+
             LiveRunInput runInput = new(
                 InputPath: request.InputPath,
                 OutputDirectory: outputDirectory,
-                StartPosition: startPosition,
+                StartPosition: plan.Start,
                 Quality: session.CurrentQuality,
                 SegmentDurationSeconds: options.DefaultSegmentDurationSeconds,
                 Client: request.Client,
@@ -181,7 +240,8 @@ public class LiveEncoder(
                 CustomArguments: request.CustomArguments,
                 ExtraInputArgs: request.ExtraInputArgs,
                 AudioStreamIndex: session.CurrentAudioStreamIndex,
-                AudioRenditionOnly: true
+                AudioRenditionOnly: true,
+                StopPosition: plan.StopAt
             );
 
             try
@@ -213,6 +273,34 @@ public class LiveEncoder(
         );
 
         return Task.FromResult<ILiveSession>(session);
+    }
+
+    // Shared by both StartAsync's and StartAudioRenditionAsync's SpawnRunner: the
+    // on-disk segment inventory is read fresh at every (re)spawn (never cached)
+    // because a previous runner generation may have kept writing after this one
+    // was superseded — a stale snapshot would re-open a gap that already closed.
+    private (LiveGapPlan? Plan, int DesiredIndex, int? LastIndex) PlanGap(
+        TimeSpan desiredPosition,
+        string outputDirectory,
+        MediaInfo sourceInfo
+    )
+    {
+        int segmentDuration = options.DefaultSegmentDurationSeconds;
+        int? lastIndex =
+            sourceInfo.Duration > TimeSpan.Zero
+                ? (int)Math.Ceiling(sourceInfo.Duration.TotalSeconds / segmentDuration) - 1
+                : null;
+        int desiredIndex =
+            segmentDuration > 0 ? (int)(desiredPosition.TotalSeconds / segmentDuration) : 0;
+
+        LiveGapPlan? plan = LiveGapPlanner.Plan(
+            segmentInventory.Snapshot(outputDirectory),
+            desiredIndex,
+            segmentDuration,
+            lastIndex
+        );
+
+        return (plan, desiredIndex, lastIndex);
     }
 
     private LiveQuality ResolveQuality(LiveEncodeRequest request)

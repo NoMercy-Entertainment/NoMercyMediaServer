@@ -30,9 +30,9 @@ namespace NoMercy.Tests.Api.Media;
 /// <summary>
 /// Exercises <c>POST subtitles/download</c> against the real <see cref="OpenSubtitlesAdapter"/> +
 /// <see cref="NoMercy.MediaProcessing.Files.FileRepository"/> — only the raw XML-RPC
-/// <see cref="IOpenSubtitlesProvider"/> and the <see cref="IStorageDriver"/> filesystem boundary
+/// <see cref="IOpenSubtitlesProvider"/> and the <see cref="IStorageFactory"/> filesystem boundary
 /// are mocked, so these tests prove the controller's write path end to end (convert → write
-/// sidecar through the driver → persist VideoFile.Subtitles), not a stand-in for it.
+/// sidecar through the resolved storage → persist VideoFile.Subtitles), not a stand-in for it.
 /// </summary>
 [Trait("Category", "MediaSubtitles")]
 public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
@@ -41,7 +41,7 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
 
     // Seeded in NoMercyApiFactory: Movie 129 (Spirited Away) has one VideoFile —
     // Filename "Spirited.Away.2001.1080p.mkv", HostFolder/Folder "/media/movies/Spirited
-    // Away (2001)", Share "movies".
+    // Away (2001)", Share = the movie folder's Ulid (matching production).
     private const int SeededMovieId = 129;
 
     public SubtitlesDownloadControllerTests(NoMercyApiFactory factory)
@@ -58,14 +58,21 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
         protected override void Dispose(bool disposing) { }
     }
 
-    private static Mock<IStorageDriver> MakeStorageDriverMock(
+    /// <summary>
+    /// The controller resolves the video's storage through <see cref="IStorageFactory"/>
+    /// (VideoFile.Share is the folder's Ulid), so that is the seam the sidecar write
+    /// crosses. Mocking <see cref="IStorageDriver"/> instead leaves the factory building
+    /// a real local storage rooted at the seeded "/media/..." path, which does not exist
+    /// on a test machine.
+    /// </summary>
+    private static Mock<IStorageFactory> MakeStorageFactoryMock(
         out NonDisposingMemoryStream sidecarStream,
         out Func<string?> capturedPath
     )
     {
-        Mock<IStorageDriver> storageDriverMock = new();
-        storageDriverMock
-            .Setup(d => d.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
+        Mock<IStorage> storageMock = new();
+        storageMock
+            .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
             .Returns(
                 (string parent, string child) =>
                     $"{parent.TrimEnd('/', '\\')}/{child.TrimStart('/', '\\')}"
@@ -73,19 +80,24 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
 
         NonDisposingMemoryStream stream = new();
         string? path = null;
-        storageDriverMock
-            .Setup(d => d.OpenWrite(It.IsAny<string>(), true))
+        storageMock
+            .Setup(s => s.OpenWrite(It.IsAny<string>(), true))
             .Callback<string, bool>((p, _) => path = p)
             .Returns(stream);
 
+        Mock<IStorageFactory> storageFactoryMock = new();
+        storageFactoryMock
+            .Setup(f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
+            .Returns(storageMock.Object);
+
         sidecarStream = stream;
         capturedPath = () => path;
-        return storageDriverMock;
+        return storageFactoryMock;
     }
 
     private HttpClient BuildClient(
         Mock<IOpenSubtitlesProvider> providerMock,
-        Mock<IStorageDriver> storageDriverMock
+        Mock<IStorageFactory> storageFactoryMock
     )
     {
         return _factory
@@ -96,8 +108,8 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
                     services.RemoveAll<IOpenSubtitlesProvider>();
                     services.AddSingleton(providerMock.Object);
 
-                    services.RemoveAll<IStorageDriver>();
-                    services.AddSingleton(storageDriverMock.Object);
+                    services.RemoveAll<IStorageFactory>();
+                    services.AddSingleton(storageFactoryMock.Object);
                 });
             })
             .CreateClient()
@@ -109,7 +121,13 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
         Mock<IOpenSubtitlesProvider> provider = new();
         provider.Setup(p => p.IsRateLimited).Returns(false);
         provider
-            .Setup(p => p.DownloadSubtitleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(p =>
+                p.DownloadSubtitleAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<CancellationToken>(),
+                    priority: true
+                )
+            )
             .ReturnsAsync(downloadPayload);
         return provider;
     }
@@ -152,12 +170,12 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
         Mock<IOpenSubtitlesProvider> providerMock = MakeProviderMock(
             Encoding.UTF8.GetBytes(SampleSrt)
         );
-        Mock<IStorageDriver> storageDriverMock = MakeStorageDriverMock(
+        Mock<IStorageFactory> storageFactoryMock = MakeStorageFactoryMock(
             out NonDisposingMemoryStream sidecarStream,
             out Func<string?> capturedPath
         );
 
-        HttpClient client = BuildClient(providerMock, storageDriverMock);
+        HttpClient client = BuildClient(providerMock, storageFactoryMock);
 
         HttpResponseMessage response = await client.PostAsJsonAsync(
             "/api/v1/subtitles/download",
@@ -217,12 +235,12 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
         Mock<IOpenSubtitlesProvider> providerMock = MakeProviderMock(
             Encoding.UTF8.GetBytes(SampleSrt)
         );
-        Mock<IStorageDriver> storageDriverMock = MakeStorageDriverMock(
+        Mock<IStorageFactory> storageFactoryMock = MakeStorageFactoryMock(
             out NonDisposingMemoryStream _,
             out Func<string?> _
         );
 
-        HttpClient client = BuildClient(providerMock, storageDriverMock);
+        HttpClient client = BuildClient(providerMock, storageFactoryMock);
 
         object payload = new
         {
@@ -265,14 +283,20 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
         Mock<IOpenSubtitlesProvider> providerMock = new();
         providerMock.Setup(p => p.IsRateLimited).Returns(false);
         providerMock
-            .Setup(p => p.DownloadSubtitleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(p =>
+                p.DownloadSubtitleAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<CancellationToken>(),
+                    priority: true
+                )
+            )
             .ThrowsAsync(new OpenSubtitlesRateLimitException());
-        Mock<IStorageDriver> storageDriverMock = MakeStorageDriverMock(
+        Mock<IStorageFactory> storageFactoryMock = MakeStorageFactoryMock(
             out NonDisposingMemoryStream _,
             out Func<string?> _
         );
 
-        HttpClient client = BuildClient(providerMock, storageDriverMock);
+        HttpClient client = BuildClient(providerMock, storageFactoryMock);
 
         HttpResponseMessage response = await client.PostAsJsonAsync(
             "/api/v1/subtitles/download",
@@ -301,12 +325,12 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
         Mock<IOpenSubtitlesProvider> providerMock = MakeProviderMock(
             Encoding.UTF8.GetBytes("[Script Info]\n; ASS content")
         );
-        Mock<IStorageDriver> storageDriverMock = MakeStorageDriverMock(
+        Mock<IStorageFactory> storageFactoryMock = MakeStorageFactoryMock(
             out NonDisposingMemoryStream _,
-            out Func<string?> _
+            out Func<string?> capturedPath
         );
 
-        HttpClient client = BuildClient(providerMock, storageDriverMock);
+        HttpClient client = BuildClient(providerMock, storageFactoryMock);
 
         HttpResponseMessage response = await client.PostAsJsonAsync(
             "/api/v1/subtitles/download",
@@ -321,10 +345,9 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
         );
 
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
-        storageDriverMock.Verify(
-            d => d.OpenWrite(It.IsAny<string>(), It.IsAny<bool>()),
-            Times.Never
-        );
+        capturedPath()
+            .Should()
+            .BeNull("an unsupported format must be rejected before anything reaches storage");
     }
 
     // =========================================================================
@@ -335,11 +358,11 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task Download_InvalidType_ReturnsBadRequest()
     {
         Mock<IOpenSubtitlesProvider> providerMock = MakeProviderMock([]);
-        Mock<IStorageDriver> storageDriverMock = MakeStorageDriverMock(
+        Mock<IStorageFactory> storageFactoryMock = MakeStorageFactoryMock(
             out NonDisposingMemoryStream _,
             out Func<string?> _
         );
-        HttpClient client = BuildClient(providerMock, storageDriverMock);
+        HttpClient client = BuildClient(providerMock, storageFactoryMock);
 
         HttpResponseMessage response = await client.PostAsJsonAsync(
             "/api/v1/subtitles/download",
@@ -359,11 +382,11 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task Download_MissingDownloadUrl_ReturnsBadRequest()
     {
         Mock<IOpenSubtitlesProvider> providerMock = MakeProviderMock([]);
-        Mock<IStorageDriver> storageDriverMock = MakeStorageDriverMock(
+        Mock<IStorageFactory> storageFactoryMock = MakeStorageFactoryMock(
             out NonDisposingMemoryStream _,
             out Func<string?> _
         );
-        HttpClient client = BuildClient(providerMock, storageDriverMock);
+        HttpClient client = BuildClient(providerMock, storageFactoryMock);
 
         HttpResponseMessage response = await client.PostAsJsonAsync(
             "/api/v1/subtitles/download",

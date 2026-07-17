@@ -94,7 +94,8 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
                 p.SearchByFilenameAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
-                    It.IsAny<CancellationToken>()
+                    It.IsAny<CancellationToken>(),
+                    priority: true
                 )
             )
             .ReturnsAsync([
@@ -148,13 +149,17 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
         first.GetProperty("uploader").GetString().Should().Be("SubUploader");
 
         // Hash search must have been skipped — the seeded VideoFile path is not on disk.
+        // Matched on any priority, not just the priority lane: the assertion is that
+        // no hash search happened at all, so a call on the background lane must fail
+        // this too.
         providerMock.Verify(
             p =>
                 p.SearchByHashAsync(
                     It.IsAny<string>(),
                     It.IsAny<long>(),
                     It.IsAny<string[]>(),
-                    It.IsAny<CancellationToken>()
+                    It.IsAny<CancellationToken>(),
+                    It.IsAny<bool>()
                 ),
             Times.Never
         );
@@ -173,7 +178,8 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
                 p.SearchByFilenameAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
-                    It.IsAny<CancellationToken>()
+                    It.IsAny<CancellationToken>(),
+                    priority: true
                 )
             )
             .ReturnsAsync([]);
@@ -186,7 +192,8 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
                     It.IsAny<int?>(),
                     It.IsAny<int?>(),
                     It.IsAny<string[]>(),
-                    It.IsAny<CancellationToken>()
+                    It.IsAny<CancellationToken>(),
+                    priority: true
                 )
             )
             .ReturnsAsync([
@@ -231,7 +238,8 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
                     1,
                     It.IsAny<int?>(),
                     It.IsAny<string[]>(),
-                    It.IsAny<CancellationToken>()
+                    It.IsAny<CancellationToken>(),
+                    priority: true
                 ),
             Times.Once
         );
@@ -253,7 +261,8 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
                 p.SearchByFilenameAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
-                    It.IsAny<CancellationToken>()
+                    It.IsAny<CancellationToken>(),
+                    priority: true
                 )
             )
             .Callback(() => rateLimited = true)
@@ -267,7 +276,8 @@ public class SubtitlesControllerTests : IClassFixture<NoMercyApiFactory>
                     It.IsAny<int?>(),
                     It.IsAny<int?>(),
                     It.IsAny<string[]>(),
-                    It.IsAny<CancellationToken>()
+                    It.IsAny<CancellationToken>(),
+                    priority: true
                 )
             )
             .ReturnsAsync([]);

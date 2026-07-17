@@ -19,6 +19,7 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
+using NoMercy.Encoder.Subtitles;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -179,10 +180,12 @@ public partial class FileLogic(
                     continue;
 
                 // Reject binary subtitle formats we can't stream as HLS sidecars;
-                // accept every text format (vtt, ass, srt, ssa, sub, idx, webvtt)
-                // and every variant (sign, full, sdh, alt, ...).
+                // accept every text format (vtt, ass, srt, ssa, sub, webvtt) and
+                // every variant (sign, full, sdh, alt, ...). The bitmap track's
+                // own OCR sidecar carries the same {lang}.{type}, so dropping it
+                // here loses nothing: the readable .vtt is listed in its place.
                 string ext = match.Groups["ext"].Value;
-                if (ext == "sup" || ext == "vob")
+                if (SubtitleClassifier.IsBitmapSidecarExtension(ext))
                     continue;
 
                 subtitles.Add(

@@ -27,13 +27,15 @@ public class NoOpOpenSubtitlesProvider : IOpenSubtitlesProvider
         string movieHash,
         long fileSize,
         string[] languages,
-        CancellationToken ct
+        CancellationToken ct,
+        bool priority = false
     ) => Task.FromResult<IReadOnlyList<OpenSubtitlesSearchResult>>([]);
 
     public Task<IReadOnlyList<OpenSubtitlesSearchResult>> SearchByFilenameAsync(
         string filename,
         string[] languages,
-        CancellationToken ct
+        CancellationToken ct,
+        bool priority = false
     ) => Task.FromResult<IReadOnlyList<OpenSubtitlesSearchResult>>([]);
 
     public Task<IReadOnlyList<OpenSubtitlesSearchResult>> SearchByTitleAsync(
@@ -42,9 +44,13 @@ public class NoOpOpenSubtitlesProvider : IOpenSubtitlesProvider
         int? episode,
         int? year,
         string[] languages,
-        CancellationToken ct
+        CancellationToken ct,
+        bool priority = false
     ) => Task.FromResult<IReadOnlyList<OpenSubtitlesSearchResult>>([]);
 
-    public Task<byte[]> DownloadSubtitleAsync(string downloadUrl, CancellationToken ct) =>
-        Task.FromResult(Array.Empty<byte>());
+    public Task<byte[]> DownloadSubtitleAsync(
+        string downloadUrl,
+        CancellationToken ct,
+        bool priority = false
+    ) => Task.FromResult(Array.Empty<byte>());
 }

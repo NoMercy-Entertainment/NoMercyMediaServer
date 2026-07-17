@@ -400,27 +400,6 @@ public class AutoEncodeSubscriberLifecycleTests
         context.SaveChanges();
     }
 
-    private static void SeedGateOnlyLibrary(
-        IDbContextFactory<MediaContext> factory,
-        Ulid libraryId,
-        bool autoEncodeOnScan,
-        bool assignEncodePreset
-    )
-    {
-        using MediaContext context = factory.CreateDbContext();
-
-        Library library = new()
-        {
-            Id = libraryId,
-            Title = "Movies",
-            AutoEncodeOnScan = autoEncodeOnScan,
-            EncodePresetId = assignEncodePreset ? Ulid.NewUlid() : null,
-        };
-        context.Libraries.Add(library);
-
-        context.SaveChanges();
-    }
-
     /// <summary>
     /// Wraps <see cref="InMemoryEventBus"/> to expose a count of live
     /// subscriptions so tests can verify disposal without poking at the bus

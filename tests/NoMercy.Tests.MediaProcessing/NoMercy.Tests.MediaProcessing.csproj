@@ -33,6 +33,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="Subtitles\Fixtures\**\*.xml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\NoMercy.Data\NoMercy.Data.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Encoder\NoMercy.Encoder.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Events\NoMercy.Events.csproj" />

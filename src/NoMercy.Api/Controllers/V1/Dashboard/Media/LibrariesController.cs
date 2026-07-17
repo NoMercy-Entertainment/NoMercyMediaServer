@@ -190,23 +190,22 @@ public class LibrariesController(
             if (request.Type != null)
                 library.Type = request.Type;
 
+            await libraryRepository.UpdateLibraryAsync(library);
+
             // Only update subtitles if provided
             if (request.Subtitles != null)
             {
-                library.LanguageLibraries.Clear();
                 List<Language> languages = await languageRepository.GetLanguagesAsync();
-                foreach (string subtitle in request.Subtitles)
-                {
-                    Language? language = languages.FirstOrDefault(l => l.Iso6391 == subtitle);
-                    if (language is null)
-                        continue;
-                    library.LanguageLibraries.Add(
-                        new() { LibraryId = library.Id, LanguageId = language.Id }
-                    );
-                }
-            }
+                List<int> languageIds = request
+                    .Subtitles.Select(subtitle =>
+                        languages.FirstOrDefault(l => l.Iso6391 == subtitle)
+                    )
+                    .OfType<Language>()
+                    .Select(language => language.Id)
+                    .ToList();
 
-            await libraryRepository.UpdateLibraryAsync(library);
+                await libraryRepository.SetLibraryLanguagesAsync(library.Id, languageIds);
+            }
         }
         catch (Exception e)
         {

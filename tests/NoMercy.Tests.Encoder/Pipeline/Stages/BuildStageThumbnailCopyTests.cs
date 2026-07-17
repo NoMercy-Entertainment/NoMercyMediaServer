@@ -284,4 +284,67 @@ public class BuildStageThumbnailCopyTests
 
         commands.Should().NotContain(c => c.Arguments.Contains("spritevtt") && c != mainCommand);
     }
+
+    // ── Decomposed bundle with no video output ───────────────────────────────
+    // A decomposed encode can produce a bundle that carries only an audio or
+    // subtitle rung. It has no video output at all, so — exactly as with a
+    // stream copy — nothing defines the [thumbs] pad. Mapping it anyway makes
+    // ffmpeg reject the whole command ("Output with label 'thumbs' does not
+    // exist in any defined filter graph" → exit -22), which fails the task and
+    // makes VideoEncodeJob skip post-encode, taking subtitle OCR down with it.
+
+    [Fact]
+    public async Task NoVideoOutputs_MainCommandHasNoInlineThumbsMap()
+    {
+        OutputPlan outputPlan = new(
+            Format: OutputFormat.Hls,
+            VideoOutputs: [],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: new(160, 90, 10)
+        );
+
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
+        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildMediaInfo());
+
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
+
+        result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
+        FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
+
+        commands[0]
+            .Arguments.Should()
+            .NotContain(
+                "[thumbs]",
+                "a bundle with no video output defines no filtergraph pad to map"
+            );
+    }
+
+    [Fact]
+    public async Task NoVideoOutputs_EmitsSeparateSpriteCommandReadingSource()
+    {
+        OutputPlan outputPlan = new(
+            Format: OutputFormat.Hls,
+            VideoOutputs: [],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: new(160, 90, 10)
+        );
+
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
+        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildMediaInfo());
+
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
+
+        result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
+        FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
+
+        FfmpegCommand sprite = commands.Single(c => c.Arguments.Contains("spritevtt"));
+
+        // Reads the source's own video rather than a pad from the main command.
+        sprite.Arguments.Should().Contain("0:v:0");
+        sprite.Arguments.Should().NotContain("[thumbs]");
+    }
 }

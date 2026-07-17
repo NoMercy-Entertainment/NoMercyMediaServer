@@ -166,17 +166,22 @@ public class TasksController(
             .ThenBy(j => j.Id)
             .ToImmutableList();
 
-        List<VideoEncodeJob> encoderJobs = jobs.Select(job =>
-                job.Payload.FromJson<VideoEncodeJob>()
-            )
-            .Where(job => job is not null)
-            .ToList()!;
+        // Each parsed payload stays paired with the row it came from: a payload
+        // that fails to deserialize is dropped here, so indexing the unfiltered
+        // row list by the parsed list's position would hand every later job the
+        // preceding row's id, priority and reservation.
+        List<QueueJobEntry> encoderJobs = jobs.Select(row => new QueueJobEntry(
+                row,
+                row.Payload.FromJson<VideoEncodeJob>()
+            ))
+            .Where(entry => entry.Job is not null)
+            .ToList();
 
         // Parse each job id once — Id is either an int (movie/episode) or a Guid (track).
         List<int> movieOrEpisodeIds = [];
         List<Guid> trackIds = [];
 
-        foreach (VideoEncodeJob encoderJob in encoderJobs)
+        foreach (VideoEncodeJob encoderJob in encoderJobs.Select(entry => entry.Job!))
         {
             int intId = encoderJob.Id.ToInt();
             if (intId != 0)
@@ -191,7 +196,7 @@ public class TasksController(
             }
         }
 
-        List<Ulid> folderIds = encoderJobs.Select(j => j.FolderId).Distinct().ToList();
+        List<Ulid> folderIds = encoderJobs.Select(entry => entry.Job!.FolderId).Distinct().ToList();
 
         // Folders — only the profile include needed for the Profile field; no library graph.
         List<Folder> folders = await mediaContext
@@ -244,24 +249,31 @@ public class TasksController(
         }
 
         QueueJobDto[] queueJobs = encoderJobs
-            .Select(
-                (j, index) =>
-                    new QueueJobDto
-                    {
-                        Id = jobs[index].Id,
-                        Priority = jobs[index].Priority,
-                        PayloadId = j.Id,
-                        Title = ResolveTitle(j, movieById, episodeById, trackById),
-                        Type = j.GetType().Name,
-                        Status = j.Status.ToString(),
-                        InputFile = j.InputFile,
-                        Profile = folderById
-                            .GetValueOrDefault(j.FolderId)
-                            ?.EncodingPresetFolders.OrderByDescending(link => link.IsDefault)
-                            .FirstOrDefault()
-                            ?.Preset?.Name,
-                    }
-            )
+            .Select(entry =>
+            {
+                VideoEncodeJob j = entry.Job!;
+                return new QueueJobDto
+                {
+                    Id = entry.Row.Id,
+                    Priority = entry.Row.Priority,
+                    PayloadId = j.Id,
+                    Title = ResolveTitle(j, movieById, episodeById, trackById),
+                    Type = j.GetType().Name,
+                    // Liveness comes from the row, never from the payload: the
+                    // payload is the snapshot serialized at enqueue time and is
+                    // never rewritten, so its Status is "pending" for a job's
+                    // whole life. Reading it left running encodes displayed as
+                    // pending and, because the catch-up broadcast below only
+                    // fires for "running", suppressed their progress entirely.
+                    Status = entry.Row.ReservedAt is not null ? "running" : "pending",
+                    InputFile = j.InputFile,
+                    Profile = folderById
+                        .GetValueOrDefault(j.FolderId)
+                        ?.EncodingPresetFolders.OrderByDescending(link => link.IsDefault)
+                        .FirstOrDefault()
+                        ?.Preset?.Name,
+                };
+            })
             .ToArray();
 
         // Broadcast current progress for running jobs — reuse already-resolved titles.
@@ -667,6 +679,13 @@ public class TasksController(
         return Ok(new StatusResponseDto<string> { Message = "Re-queued", Status = "success" });
     }
 }
+
+/// <summary>
+/// A queue row paired with the job deserialized from its payload. The row is the
+/// authority on scheduling state (id, priority, reservation); the payload only
+/// describes the work that was requested.
+/// </summary>
+internal sealed record QueueJobEntry(QueueJob Row, VideoEncodeJob? Job);
 
 public class QueueJobDto
 {

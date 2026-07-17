@@ -66,10 +66,12 @@ public class TransportTests
     public async Task DrainLoop_PushesSegmentReadyMessage_WhenSegmentBuffered()
     {
         CapturingTransport transport = new();
+        NoMercy.Storage.IStorage storage = TestStorageFactory.CreateLocal();
         LiveStreamingService service = new(
             NullLogger<LiveStreamingService>.Instance,
-            TestStorageFactory.CreateLocal(),
-            transport
+            storage,
+            TestStorageFactory.CreateSegmentInventory(storage),
+            transport: transport
         );
 
         LiveSession session = MakeSession("drain-test");
@@ -97,9 +99,11 @@ public class TransportTests
     [Fact]
     public async Task DrainLoop_WithNoOpTransport_SessionStillFunctional()
     {
+        NoMercy.Storage.IStorage storage = TestStorageFactory.CreateLocal();
         LiveStreamingService service = new(
             NullLogger<LiveStreamingService>.Instance,
-            TestStorageFactory.CreateLocal()
+            storage,
+            TestStorageFactory.CreateSegmentInventory(storage)
         );
 
         LiveSession session = MakeSession("noop-test");
@@ -127,10 +131,12 @@ public class TransportTests
     public async Task IdleReaper_PushesSessionEndedMessage_OnEviction()
     {
         CapturingTransport transport = new();
+        NoMercy.Storage.IStorage storage = TestStorageFactory.CreateLocal();
         LiveStreamingService service = new(
             NullLogger<LiveStreamingService>.Instance,
-            TestStorageFactory.CreateLocal(),
-            transport
+            storage,
+            TestStorageFactory.CreateSegmentInventory(storage),
+            transport: transport
         );
 
         LiveSession session = MakeSession("reaper-test");
@@ -157,9 +163,11 @@ public class TransportTests
     [Fact]
     public async Task IdleReaper_WithNullTransport_EvictionStillWorks()
     {
+        NoMercy.Storage.IStorage storage = TestStorageFactory.CreateLocal();
         LiveStreamingService service = new(
             NullLogger<LiveStreamingService>.Instance,
-            TestStorageFactory.CreateLocal()
+            storage,
+            TestStorageFactory.CreateSegmentInventory(storage)
         );
 
         LiveSession session = MakeSession("reaper-null");

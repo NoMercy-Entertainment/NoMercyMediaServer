@@ -13,6 +13,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
+using NoMercy.Encoder.Subtitles;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Storage;
 using SixLabors.ImageSharp;
@@ -151,9 +152,11 @@ public partial class FileManager
             string path = subtitleEntry.Path;
 
             // Reject binary subtitle formats we can't stream as HLS sidecars; accept
-            // every text format (vtt, ass, srt, ssa, sub, idx, webvtt).
+            // every text format (vtt, ass, srt, ssa, sub, webvtt). The bitmap
+            // track's OCR sidecar carries the same {lang}.{type} and is hashed in
+            // its place, so the track is still represented here.
             string ext = match.Groups["ext"].Value;
-            if (ext == "sup" || ext == "vob")
+            if (SubtitleClassifier.IsBitmapSidecarExtension(ext))
                 continue;
 
             subtitles.Add(
@@ -665,7 +668,7 @@ public partial class FileManager
 
             // Reject binary subtitle formats; accept every text format.
             string ext = match.Groups["ext"].Value;
-            if (ext == "sup" || ext == "vob")
+            if (SubtitleClassifier.IsBitmapSidecarExtension(ext))
             {
                 string siblingKey = $"{match.Groups["lang"].Value}|{match.Groups["type"].Value}";
                 if (!vttKeys.Contains(siblingKey))

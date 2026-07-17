@@ -59,6 +59,42 @@ public static class Culture
         return tag;
     }
 
+    private static readonly Dictionary<string, string> Iso3ByIso2 = BuildIso3Map();
+
+    private static Dictionary<string, string> BuildIso3Map()
+    {
+        Dictionary<string, string> map = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (CultureInfo c in CultureInfo.GetCultures(CultureTypes.NeutralCultures))
+        {
+            string iso2 = c.TwoLetterISOLanguageName;
+            string iso3 = c.ThreeLetterISOLanguageName;
+
+            if (iso2.Length == 2 && iso3.Length == 3)
+                map.TryAdd(iso2, iso3);
+        }
+
+        return map;
+    }
+
+    /// <summary>
+    /// Returns the ISO 639-2/B (bibliographic) code for a 2- or 3-letter language code — "nl",
+    /// "nl-NL" and "nld" all become "dut". Idempotent, so a code that is already bibliographic
+    /// passes through unchanged, as does any code with no known mapping.
+    /// </summary>
+    public static string BibliographicLanguageCode(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+            return code;
+
+        string bare = code.Trim().Split('-', '_')[0].ToLowerInvariant();
+
+        string iso3 =
+            bare.Length == 2 && Iso3ByIso2.TryGetValue(bare, out string? mapped) ? mapped : bare;
+
+        return LegacyIsoMap.TryGetValue(iso3, out string? bibliographic) ? bibliographic : iso3;
+    }
+
     private static readonly Dictionary<string, string> EnglishNameByCode = BuildEnglishNameMap();
 
     private static Dictionary<string, string> BuildEnglishNameMap()

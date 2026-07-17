@@ -102,6 +102,16 @@ public class BufferAdaptiveServiceTests
             MaxBitrateKbps: 0
         );
 
+    private static LiveStreamingService NewStreamingService()
+    {
+        NoMercy.Storage.IStorage storage = TestStorageFactory.CreateLocal();
+        return new(
+            NullLogger<LiveStreamingService>.Instance,
+            storage,
+            TestStorageFactory.CreateSegmentInventory(storage)
+        );
+    }
+
     private static BufferAdaptiveService BuildService(
         ILiveStreamingService streamingService,
         ILiveQualitySelector? qualitySelector = null,
@@ -133,10 +143,7 @@ public class BufferAdaptiveServiceTests
     [Fact]
     public async Task EvaluateAll_OverBufferedSession_GetsSuspended()
     {
-        LiveStreamingService streamingService = new(
-            NullLogger<LiveStreamingService>.Instance,
-            TestStorageFactory.CreateLocal()
-        );
+        LiveStreamingService streamingService = NewStreamingService();
 
         LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
         session.SetState(LiveSessionState.Transcoding);
@@ -159,10 +166,7 @@ public class BufferAdaptiveServiceTests
     [Fact]
     public async Task EvaluateAll_SuspendedSessionWithLowBuffer_GetsResumed()
     {
-        LiveStreamingService streamingService = new(
-            NullLogger<LiveStreamingService>.Instance,
-            TestStorageFactory.CreateLocal()
-        );
+        LiveStreamingService streamingService = NewStreamingService();
 
         LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
         session.SetState(LiveSessionState.Buffered);
@@ -198,10 +202,7 @@ public class BufferAdaptiveServiceTests
     [Fact]
     public async Task EvaluateAll_LowBuffer_DropsToLowerQuality()
     {
-        LiveStreamingService streamingService = new(
-            NullLogger<LiveStreamingService>.Instance,
-            TestStorageFactory.CreateLocal()
-        );
+        LiveStreamingService streamingService = NewStreamingService();
 
         LiveQuality highQuality = MakeQuality("1080p");
         LiveQuality lowQuality = MakeLowQuality();
@@ -248,10 +249,7 @@ public class BufferAdaptiveServiceTests
     [Fact]
     public async Task EvaluateAll_HealthyBuffer_NoAction()
     {
-        LiveStreamingService streamingService = new(
-            NullLogger<LiveStreamingService>.Instance,
-            TestStorageFactory.CreateLocal()
-        );
+        LiveStreamingService streamingService = NewStreamingService();
 
         LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
         session.SetState(LiveSessionState.Transcoding);
@@ -274,10 +272,7 @@ public class BufferAdaptiveServiceTests
     [Fact]
     public async Task EvaluateAll_CompleteSession_IsSkipped()
     {
-        LiveStreamingService streamingService = new(
-            NullLogger<LiveStreamingService>.Instance,
-            TestStorageFactory.CreateLocal()
-        );
+        LiveStreamingService streamingService = NewStreamingService();
 
         LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
         session.SetState(LiveSessionState.Transcoding);
@@ -341,10 +336,7 @@ public class BufferAdaptiveServiceTests
     [Fact]
     public async Task EvaluateAll_NetworkLimitedClient_DropsToBandwidthFittingTier_NotSuspend()
     {
-        LiveStreamingService streamingService = new(
-            NullLogger<LiveStreamingService>.Instance,
-            TestStorageFactory.CreateLocal()
-        );
+        LiveStreamingService streamingService = NewStreamingService();
 
         LiveQuality quality1080 = MakeQuality("1080p", 8000);
         LiveQuality quality720 = MakeQuality("720p", 4000);
@@ -392,10 +384,7 @@ public class BufferAdaptiveServiceTests
     [Fact]
     public async Task EvaluateAll_ClientBufferNearStall_EmergencyDropsToLowestTier()
     {
-        LiveStreamingService streamingService = new(
-            NullLogger<LiveStreamingService>.Instance,
-            TestStorageFactory.CreateLocal()
-        );
+        LiveStreamingService streamingService = NewStreamingService();
 
         LiveQuality quality1080 = MakeQuality("1080p", 8000);
         LiveQuality quality720 = MakeQuality("720p", 4000);
@@ -442,10 +431,7 @@ public class BufferAdaptiveServiceTests
     [Fact]
     public async Task EvaluateAll_RecoveredNetworkSustainedNSweeps_RaisesOneTier_NotBeforeHysteresis()
     {
-        LiveStreamingService streamingService = new(
-            NullLogger<LiveStreamingService>.Instance,
-            TestStorageFactory.CreateLocal()
-        );
+        LiveStreamingService streamingService = NewStreamingService();
 
         LiveQuality quality1080 = MakeQuality("1080p", 8000);
         LiveQuality quality720 = MakeQuality("720p", 4000);
@@ -501,10 +487,7 @@ public class BufferAdaptiveServiceTests
     [Fact]
     public async Task EvaluateAll_NoFreshClientHealth_FallsBackToEncoderLeadSuspend()
     {
-        LiveStreamingService streamingService = new(
-            NullLogger<LiveStreamingService>.Instance,
-            TestStorageFactory.CreateLocal()
-        );
+        LiveStreamingService streamingService = NewStreamingService();
 
         LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
         session.SetState(LiveSessionState.Transcoding);
@@ -525,10 +508,7 @@ public class BufferAdaptiveServiceTests
     [Fact]
     public async Task EvaluateAll_StaleClientHealthReport_FallsBackToEncoderLeadSuspend()
     {
-        LiveStreamingService streamingService = new(
-            NullLogger<LiveStreamingService>.Instance,
-            TestStorageFactory.CreateLocal()
-        );
+        LiveStreamingService streamingService = NewStreamingService();
 
         LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
         session.SetState(LiveSessionState.Transcoding);

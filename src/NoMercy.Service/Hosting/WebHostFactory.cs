@@ -78,10 +78,7 @@ public static class WebHostFactory
                     // lines still wrap and hang under the gutter instead of the
                     // consumer terminal hard-wrapping them flush-left.
                     return
-                        int.TryParse(
-                            Environment.GetEnvironmentVariable("COLUMNS"),
-                            out int cols
-                        )
+                        int.TryParse(Environment.GetEnvironmentVariable("COLUMNS"), out int cols)
                         && cols > 0
                         ? cols
                         : 120;
@@ -107,6 +104,24 @@ public static class WebHostFactory
         }
 
         builder.Logging.ClearProviders();
+
+        // ClearProviders leaves the logger factory with nothing to write to, which
+        // only worked because ILogger<T> is swapped for CustomLogger<T> above and
+        // reaches the provider directly, never touching the factory. Everything
+        // that asks the factory for a logger instead — every job base class does,
+        // via LoggerFactory.CreateLogger(GetType()) — was handed a logger with no
+        // providers and had its entries dropped without a trace. That silence hid
+        // real encode failures: a job's Log.LogWarning in a catch went nowhere.
+        // Register the provider so both paths land in the same sink.
+        builder.Logging.Services.AddSingleton<ILoggerProvider>(serviceProvider =>
+            serviceProvider.GetRequiredService<NmSystem.Logging.NoMercyLoggerProvider>()
+        );
+
+        // The framework's own categories were silenced wholesale by ClearProviders.
+        // Now that the factory can write again, keep their routine chatter out while
+        // letting genuine problems (Kestrel, hosting) through.
+        builder.Logging.AddFilter("Microsoft", LogLevel.Warning);
+        builder.Logging.AddFilter("System", LogLevel.Warning);
 
         builder.WebHost.ConfigureKestrel(kestrelOptions =>
         {

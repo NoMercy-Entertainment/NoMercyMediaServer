@@ -23,7 +23,8 @@ public interface IOpenSubtitlesAdapter
         string[] languages,
         TimeSpan timeout,
         CancellationToken ct,
-        bool trustedOnly = false
+        bool trustedOnly = false,
+        bool priority = false
     );
 
     Task<IReadOnlyList<SubtitleCandidate>> SearchByFilenameAsync(
@@ -31,7 +32,8 @@ public interface IOpenSubtitlesAdapter
         string[] languages,
         TimeSpan timeout,
         CancellationToken ct,
-        bool trustedOnly = false
+        bool trustedOnly = false,
+        bool priority = false
     );
 
     Task<IReadOnlyList<SubtitleCandidate>> SearchByTitleAsync(
@@ -42,10 +44,19 @@ public interface IOpenSubtitlesAdapter
         string[] languages,
         TimeSpan timeout,
         CancellationToken ct,
-        bool trustedOnly = false
+        bool trustedOnly = false,
+        bool priority = false
     );
 
-    Task<byte[]> DownloadAsync(SubtitleCandidate candidate, CancellationToken ct);
+    /// <param name="priority">
+    /// True for a request someone is waiting on, which jumps the rate-limit queue ahead of any
+    /// backlog work. Background sweeps must pass false or they starve playback.
+    /// </param>
+    Task<byte[]> DownloadAsync(
+        SubtitleCandidate candidate,
+        CancellationToken ct,
+        bool priority = false
+    );
 
     bool IsRateLimited { get; }
 }

@@ -46,12 +46,16 @@ public class EncodeReconcilerInspectAsyncTests
     [Fact]
     public async Task InspectAsync_ListsFilesRelativeToTheMediaRoot_AndCountsOnlyValidOcrSidecars()
     {
+        // An OCR sidecar is its bitmap track's sibling — same {lang}.{type} — so
+        // it is counted by pairing, not by any marker in the name.
         TestStorage storage = new();
         const string root = "Show/Show S01E01";
+        const string stem = "Show.S01E01.NoMercy";
         storage.Seed($"{root}/web-1080p_master.m3u8", [0x01, 0x02]);
-        storage.Seed($"{root}/subtitles/eng.ocr0.vtt", [0x01, 0x02, 0x03]);
-        storage.Seed($"{root}/subtitles/eng.ocr1.vtt", []); // truncated — must not count
-        storage.Seed($"{root}/subtitles/eng.vtt", [0x01]); // declared subtitle, not OCR
+        storage.Seed($"{root}/subtitles/{stem}.eng.full.mks", [0x01, 0x02]);
+        storage.Seed($"{root}/subtitles/{stem}.eng.full.vtt", [0x01, 0x02, 0x03]);
+        storage.Seed($"{root}/subtitles/{stem}.eng.sign.mks", [0x01, 0x02]);
+        storage.Seed($"{root}/subtitles/{stem}.eng.sign.vtt", []); // truncated — must not count
 
         ExistingOutputSnapshot snapshot = await _reconciler.InspectAsync(
             root,
@@ -64,13 +68,17 @@ public class EncodeReconcilerInspectAsyncTests
             .Should()
             .BeEquivalentTo(
                 "web-1080p_master.m3u8",
-                "subtitles/eng.ocr0.vtt",
-                "subtitles/eng.ocr1.vtt",
-                "subtitles/eng.vtt"
+                $"subtitles/{stem}.eng.full.mks",
+                $"subtitles/{stem}.eng.full.vtt",
+                $"subtitles/{stem}.eng.sign.mks",
+                $"subtitles/{stem}.eng.sign.vtt"
             );
         snapshot
             .ValidOcrSidecarCount.Should()
-            .Be(1, "one OCR sidecar is truncated (zero bytes) and must not count as valid");
+            .Be(
+                1,
+                "the sign track's sidecar is truncated (zero bytes) and must not count as valid"
+            );
     }
 
     [Fact]

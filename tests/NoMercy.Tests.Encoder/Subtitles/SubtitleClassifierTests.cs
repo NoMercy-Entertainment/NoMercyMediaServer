@@ -411,4 +411,49 @@ public class SubtitleClassifierTests
         SubtitleClassifier.ResolveVariant(Stream(title: "Sign")).Should().Be("sign");
         SubtitleClassifier.ResolveVariant(Stream(title: "SIGNS")).Should().Be("sign");
     }
+
+    // ── Bitmap sidecar extensions ────────────────────────────────────────────
+    // The library scan and the playback track list both decide from a filename
+    // alone whether a sidecar is a bitmap subtitle. Publishing one as a track
+    // gives the player an entry it can list but never render.
+
+    [Theory]
+    [InlineData("mks")]
+    [InlineData("sup")]
+    [InlineData("idx")]
+    [InlineData("vob")]
+    public void IsBitmapSidecarExtension_IsTrueForEveryFormatTheExtractionPassWrites(string ext)
+    {
+        SubtitleClassifier.IsBitmapSidecarExtension(ext).Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsBitmapSidecarExtension_IsTrueForMks_TheFormatTheExtractionPassActuallyWrites()
+    {
+        // Guarded on its own: a list of just sup/vob let every extracted bitmap
+        // track through, so each one was published alongside its OCR sidecar and
+        // every subtitle appeared twice in the player.
+        SubtitleClassifier.IsBitmapSidecarExtension("mks").Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("vtt")]
+    [InlineData("srt")]
+    [InlineData("ass")]
+    [InlineData("ssa")]
+    public void IsBitmapSidecarExtension_IsFalseForTextFormats(string ext)
+    {
+        SubtitleClassifier.IsBitmapSidecarExtension(ext).Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsBitmapSidecarExtension_AcceptsALeadingDotAndAnyCasing()
+    {
+        // Callers reach it from Path.GetExtension (".MKS") and from a regex
+        // capture group ("mks") alike.
+        SubtitleClassifier.IsBitmapSidecarExtension(".mks").Should().BeTrue();
+        SubtitleClassifier.IsBitmapSidecarExtension(".MKS").Should().BeTrue();
+        SubtitleClassifier.IsBitmapSidecarExtension("MKS").Should().BeTrue();
+        SubtitleClassifier.IsBitmapSidecarExtension(".VTT").Should().BeFalse();
+    }
 }

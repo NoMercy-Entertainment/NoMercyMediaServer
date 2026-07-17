@@ -36,8 +36,16 @@ public class ExternalServicesConfig
 
     public string ApiServerBaseUrl { get; set; }
 
-    public string UserAgent =>
-        $"NoMercy MediaServer/{Software.Version} ( admin@nomercy.tv )";
+    public string UserAgent => $"NoMercy MediaServer/{Software.Version} ( admin@nomercy.tv )";
+
+    /// <summary>
+    /// OpenSubtitles answers an unregistered user agent with a 102-byte "Become VIP member"
+    /// placeholder in place of the cue file — a 200 OK, correctly gzipped, and useless. Only a
+    /// user agent registered with them returns real subtitles, so the general
+    /// <see cref="UserAgent"/> cannot be used here. Replace this with a NoMercy-registered agent
+    /// once opensubtitles.org grants one; nothing else about the client needs to change.
+    /// </summary>
+    public string OpenSubtitlesUserAgent { get; set; } = "VLSub 0.11.1";
 
     public string TokenClientId { get; set; } = "nomercy-server";
 

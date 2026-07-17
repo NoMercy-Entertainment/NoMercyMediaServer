@@ -26,7 +26,13 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
                 new() { Value = new() { String = "" } },
                 new() { Value = new() { String = "" } },
                 new() { Value = new() { String = "dut" } },
-                new() { Value = new() { String = ExternalServicesConfig.Current.UserAgent } },
+                new()
+                {
+                    Value = new()
+                    {
+                        String = ExternalServicesConfig.Current.OpenSubtitlesUserAgent,
+                    },
+                },
             ],
         };
 
@@ -44,7 +50,8 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
     public async Task<SubtitleSearchResponse?> SearchSubtitlesByHash(
         string movieHash,
         long fileSize,
-        string language
+        string language,
+        bool priority = false
     )
     {
         SubtitleSearch searchRequest = new()
@@ -102,11 +109,15 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
             },
         };
 
-        return await Post<SubtitleSearch, SubtitleSearchResponse>("", searchRequest);
+        return await Post<SubtitleSearch, SubtitleSearchResponse>("", searchRequest, priority);
     }
 
     // TODO(subtitle-acquisition): TrustedUploadersOnly — client-side filter on SubFromTrusted field
-    public async Task<SubtitleSearchResponse?> SearchSubtitles(string query, string language)
+    public async Task<SubtitleSearchResponse?> SearchSubtitles(
+        string query,
+        string language,
+        bool priority = false
+    )
     {
         SubtitleSearch searchResponse = new()
         {
@@ -159,6 +170,6 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
             },
         };
 
-        return await Post<SubtitleSearch, SubtitleSearchResponse>("", searchResponse);
+        return await Post<SubtitleSearch, SubtitleSearchResponse>("", searchResponse, priority);
     }
 }

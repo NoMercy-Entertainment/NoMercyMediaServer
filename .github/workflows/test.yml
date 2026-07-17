@@ -64,10 +64,43 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="$(gh release list --repo NoMercy-Entertainment/nomercy-ffmpeg --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName')"
           dest="$HOME/.local/share/NoMercy_dev/binaries/ffmpeg"
           mkdir -p "$dest"
-          gh release download "$tag" --repo NoMercy-Entertainment/nomercy-ffmpeg --pattern 'ffmpeg-*-linux-x86_64-*.tar.gz' --dir /tmp/nmff --clobber
+
+          # A degraded GitHub API yields an empty tag rather than an error, and
+          # `gh release download ""` then fails with a bare "release not found"
+          # that reads like the release was deleted. Retry, and never carry an
+          # empty tag forward.
+          tag=""
+          for attempt in 1 2 3 4 5; do
+            if tag="$(gh release list --repo NoMercy-Entertainment/nomercy-ffmpeg --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName')" && [ -n "$tag" ]; then
+              break
+            fi
+            tag=""
+            echo "Attempt $attempt: could not resolve the latest nomercy-ffmpeg tag; retrying in $((attempt * 10))s"
+            sleep $((attempt * 10))
+          done
+
+          if [ -z "$tag" ]; then
+            echo "::error::Could not resolve the latest nomercy-ffmpeg release tag after 5 attempts (GitHub API degraded?)."
+            exit 1
+          fi
+
+          downloaded=""
+          for attempt in 1 2 3 4 5; do
+            if gh release download "$tag" --repo NoMercy-Entertainment/nomercy-ffmpeg --pattern 'ffmpeg-*-linux-x86_64-*.tar.gz' --dir /tmp/nmff --clobber; then
+              downloaded=1
+              break
+            fi
+            echo "Attempt $attempt: downloading nomercy-ffmpeg $tag failed; retrying in $((attempt * 10))s"
+            sleep $((attempt * 10))
+          done
+
+          if [ -z "$downloaded" ]; then
+            echo "::error::Could not download nomercy-ffmpeg $tag after 5 attempts."
+            exit 1
+          fi
+
           tar -xzf /tmp/nmff/ffmpeg-*-linux-x86_64-*.tar.gz -C "$dest"
           chmod +x "$dest/ffmpeg" "$dest/ffprobe"
           echo "NOMERCY_FFMPEG_PATH=$dest/ffmpeg" >> "$GITHUB_ENV"
@@ -104,10 +137,43 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="$(gh release list --repo NoMercy-Entertainment/nomercy-ffmpeg --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName')"
           dest="$HOME/.local/share/NoMercy_dev/binaries/ffmpeg"
           mkdir -p "$dest"
-          gh release download "$tag" --repo NoMercy-Entertainment/nomercy-ffmpeg --pattern 'ffmpeg-*-linux-x86_64-*.tar.gz' --dir /tmp/nmff --clobber
+
+          # A degraded GitHub API yields an empty tag rather than an error, and
+          # `gh release download ""` then fails with a bare "release not found"
+          # that reads like the release was deleted. Retry, and never carry an
+          # empty tag forward.
+          tag=""
+          for attempt in 1 2 3 4 5; do
+            if tag="$(gh release list --repo NoMercy-Entertainment/nomercy-ffmpeg --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName')" && [ -n "$tag" ]; then
+              break
+            fi
+            tag=""
+            echo "Attempt $attempt: could not resolve the latest nomercy-ffmpeg tag; retrying in $((attempt * 10))s"
+            sleep $((attempt * 10))
+          done
+
+          if [ -z "$tag" ]; then
+            echo "::error::Could not resolve the latest nomercy-ffmpeg release tag after 5 attempts (GitHub API degraded?)."
+            exit 1
+          fi
+
+          downloaded=""
+          for attempt in 1 2 3 4 5; do
+            if gh release download "$tag" --repo NoMercy-Entertainment/nomercy-ffmpeg --pattern 'ffmpeg-*-linux-x86_64-*.tar.gz' --dir /tmp/nmff --clobber; then
+              downloaded=1
+              break
+            fi
+            echo "Attempt $attempt: downloading nomercy-ffmpeg $tag failed; retrying in $((attempt * 10))s"
+            sleep $((attempt * 10))
+          done
+
+          if [ -z "$downloaded" ]; then
+            echo "::error::Could not download nomercy-ffmpeg $tag after 5 attempts."
+            exit 1
+          fi
+
           tar -xzf /tmp/nmff/ffmpeg-*-linux-x86_64-*.tar.gz -C "$dest"
           chmod +x "$dest/ffmpeg" "$dest/ffprobe"
           echo "NOMERCY_FFMPEG_PATH=$dest/ffmpeg" >> "$GITHUB_ENV"
@@ -123,9 +189,25 @@ jobs:
           --blame-hang-timeout 10m
           --filter "Category=Integration"
 
+      # A full build of this solution is ~9.5GB of output — ~7GB of it is tests/,
+      # because each of the 20 test projects copies the whole native dependency
+      # closure (SkiaSharp, Magick.NET) for EVERY runtime identifier: ~360MB of
+      # runtimes/ per project, of which the runner executes exactly one platform.
+      # Keeping the Debug tree while Release builds needs ~19GB on a ~14GB runner,
+      # which is what exhausted the disk: every step passed and then the runner
+      # died writing its own _diag log, surfacing as a failure with no failing
+      # step and no test output. The two configurations are never needed at once.
+      - name: Drop the Debug output before building Release
+        run: |
+          echo "before:"
+          df -h / | tail -1
+          find . -type d \( -path '*/bin/Debug' -o -path '*/obj/Debug' \) -prune -exec rm -rf {} + || true
+          echo "after:"
+          df -h / | tail -1
+
       - name: Run performance tests
         run: >
-          dotnet test NoMercy.Server.sln 
+          dotnet test NoMercy.Server.sln
           --configuration Release
           --no-restore
           --verbosity minimal
