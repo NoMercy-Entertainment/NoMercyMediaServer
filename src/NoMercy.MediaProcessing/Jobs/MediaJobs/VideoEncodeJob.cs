@@ -1270,7 +1270,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             fileMetadata.Id,
             fileMetadata.Title,
             library,
-            fileMetadata.FileName
+            DeriveScanFilter(fileMetadata.Path, fileMetadata.FileName)
         );
 
         await new IncompleteEncodeRecorder().ClearAsync(
@@ -1368,6 +1368,32 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
     /// Builds the quarantine descriptor list and first error from a set of
     /// failed <see cref="EncodeTaskOutcome"/> rows. Pure — no I/O.
     /// </summary>
+    /// <summary>
+    /// Chooses the filter the post-encode registration scan runs with. Anchors on
+    /// the leaf of the output directory the encoder just wrote to
+    /// (<paramref name="outputPath"/>) rather than the reconstructed file name.
+    /// <paramref name="fallbackFileName"/> is <c>CreateFileName()</c>
+    /// (<c>show.SxxExx.episodeTitle.NoMercy</c>); its episode-title segment is
+    /// re-cleaned at scan time and drifts from the name written at encode time
+    /// (apostrophes, unicode, a changed cleaning rule), so a
+    /// <c>file.Contains(filter)</c> match against it silently registered nothing
+    /// and left users forcing an unfiltered rescan. The directory leaf carries the
+    /// stable <c>show.SxxExx</c> (or <c>movie.(year)</c>) token every output file
+    /// lives under, and is exactly the folder this run wrote into. Falls back to
+    /// the file name only when the output path is empty.
+    /// </summary>
+    internal static string DeriveScanFilter(string? outputPath, string fallbackFileName)
+    {
+        string leaf =
+            outputPath
+                ?.Trim('/', '\\')
+                .Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries)
+                .LastOrDefault()
+            ?? string.Empty;
+
+        return string.IsNullOrWhiteSpace(leaf) ? fallbackFileName : leaf;
+    }
+
     internal static (IReadOnlyList<string> descriptors, string? lastError) SummarizeFailures(
         IReadOnlyList<EncodeTaskOutcome> failedOutcomes
     )
