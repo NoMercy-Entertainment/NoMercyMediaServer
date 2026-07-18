@@ -59,6 +59,7 @@ public class DolbyVisionGateTests
             outputBitDepth: 10,
             container: OutputFormat.Mp4,
             policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: true,
             decisions: log
         );
 
@@ -83,6 +84,7 @@ public class DolbyVisionGateTests
             outputBitDepth: 10,
             container: OutputFormat.Mp4,
             policies: HdrPolicies.AlwaysTonemap,
+            videoIsStreamCopy: true,
             decisions: log
         );
 
@@ -106,6 +108,7 @@ public class DolbyVisionGateTests
             outputBitDepth: 10,
             container: OutputFormat.Mp4,
             policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: true,
             decisions: log
         );
 
@@ -125,6 +128,7 @@ public class DolbyVisionGateTests
             outputBitDepth: 10,
             container: OutputFormat.Mp4,
             policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: true,
             decisions: log
         );
 
@@ -148,6 +152,7 @@ public class DolbyVisionGateTests
             outputBitDepth: 8,
             container: OutputFormat.Mp4,
             policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: true,
             decisions: log
         );
 
@@ -171,6 +176,7 @@ public class DolbyVisionGateTests
             outputBitDepth: 10,
             container: OutputFormat.Dash,
             policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: true,
             decisions: log
         );
 
@@ -194,6 +200,7 @@ public class DolbyVisionGateTests
             outputBitDepth: 10,
             container: OutputFormat.Mp4,
             policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: true,
             decisions: log
         );
 
@@ -212,6 +219,7 @@ public class DolbyVisionGateTests
             outputBitDepth: 10,
             container: OutputFormat.Mp4,
             policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: true,
             decisions: NewLog()
         );
 
@@ -234,6 +242,7 @@ public class DolbyVisionGateTests
             outputBitDepth: 10,
             container: OutputFormat.Mkv,
             policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: true,
             decisions: log
         );
 
@@ -259,6 +268,7 @@ public class DolbyVisionGateTests
             outputBitDepth: 10,
             container: OutputFormat.Hls,
             policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: true,
             decisions: log,
             hlsUsesFmp4Segments: true
         );
@@ -279,12 +289,44 @@ public class DolbyVisionGateTests
             outputBitDepth: 10,
             container: OutputFormat.Hls,
             policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: true,
             decisions: log,
             hlsUsesFmp4Segments: false
         );
 
         result.Preserved.Should().BeFalse();
         result.Reason.Should().Contain("mpegts");
+        log.Snapshot().Should().ContainSingle(d => d.Key == "plan.dv_stripped");
+    }
+
+    // ---------------------------------------------------------------------------
+    // Re-encode strips the RPU — the reported corrupt-playback regression
+    // ---------------------------------------------------------------------------
+
+    [Fact]
+    public void Resolve_strips_when_video_is_re_encoded_even_if_all_else_passes()
+    {
+        // The exact shape of the Punisher bug: a DV profile-8.6 source encoded
+        // to HEVC 10-bit HLS fmp4 — every codec/depth/container condition passes
+        // — but the rung crops + re-encodes with nvenc, which drops the RPU. The
+        // gate must NOT tag it dvh1; doing so produced a file claiming Dolby
+        // Vision with no RPU / DV config box, which players decode as corrupt.
+        ScopedDecisionLog log = NewLog();
+
+        DolbyVisionDecision result = DolbyVisionGate.Resolve(
+            source: DvSource(profile: 8, level: 6),
+            outputCodec: VideoCodecType.H265,
+            outputBitDepth: 10,
+            container: OutputFormat.Hls,
+            policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: false,
+            decisions: log,
+            hlsUsesFmp4Segments: true
+        );
+
+        result.Preserved.Should().BeFalse();
+        result.Reason.Should().Contain("re-encoded");
+        result.ExtraFlags.Should().NotContainKey("-tag:v");
         log.Snapshot().Should().ContainSingle(d => d.Key == "plan.dv_stripped");
     }
 
@@ -303,6 +345,7 @@ public class DolbyVisionGateTests
             outputBitDepth: 10,
             container: OutputFormat.Mp4,
             policies: HdrPolicies.AlwaysPreserve,
+            videoIsStreamCopy: true,
             decisions: log
         );
 
@@ -325,6 +368,7 @@ public class DolbyVisionGateTests
             10,
             OutputFormat.Mp4,
             HdrPolicies.AlwaysTonemap,
+            true,
             log1
         );
         log1.Snapshot()[0].Message.Should().NotBeNullOrWhiteSpace();
@@ -337,6 +381,7 @@ public class DolbyVisionGateTests
             10,
             OutputFormat.Mp4,
             HdrPolicies.PassthroughWhenPossible,
+            true,
             log2
         );
         log2.Snapshot()[0].Message.Should().Contain("H264");
@@ -349,6 +394,7 @@ public class DolbyVisionGateTests
             8,
             OutputFormat.Mp4,
             HdrPolicies.PassthroughWhenPossible,
+            true,
             log3
         );
         log3.Snapshot()[0].Message.Should().Contain("8");
@@ -361,6 +407,7 @@ public class DolbyVisionGateTests
             10,
             OutputFormat.Dash,
             HdrPolicies.PassthroughWhenPossible,
+            true,
             log4
         );
         log4.Snapshot()[0].Message.Should().Contain("Dash");

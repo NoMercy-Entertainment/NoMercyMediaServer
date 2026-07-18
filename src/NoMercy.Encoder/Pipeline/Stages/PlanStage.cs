@@ -1038,12 +1038,20 @@ public class PlanStage(
         int primaryBitDepth = primaryVideo?.BitDepth ?? 8;
         VideoCodecType primaryCodec = primaryVideo?.Codec ?? VideoCodecType.H264;
 
+        // Dolby Vision RPU survives only a bitstream copy — a re-encode (any
+        // crop / scale / tonemap, or nvenc at all) strips it, so DV may only be
+        // preserved when the primary video is stream-copied.
+        bool videoIsCopy =
+            (videoOutputs.Length > 0 && videoOutputs[0].Policy == StreamPolicy.Copy)
+            || videoOutputs.Length == 0;
+
         DolbyVisionDecision dvDecision = DolbyVisionGate.Resolve(
             media.DolbyVision,
             primaryCodec,
             primaryBitDepth,
             outputFormat,
             profile.HdrPolicies,
+            videoIsCopy,
             context.DecisionsOrNoOp,
             hlsUsesFmp4Segments
         );
@@ -1072,10 +1080,7 @@ public class PlanStage(
         // the smart-copy downgrade routed through Copy also gets the tag — the
         // author-declared always-copy preset still resolves the same way since
         // its single VideoOutput carries Policy: Copy from the start.
-        bool videoIsCopy =
-            (videoOutputs.Length > 0 && videoOutputs[0].Policy == StreamPolicy.Copy)
-            || videoOutputs.Length == 0;
-
+        // (videoIsCopy is computed above, before the Dolby Vision gate.)
         if (media.StereoMode is not null && videoIsCopy && videoPlan.Length > 0)
         {
             // MKV: -metadata:s:v stereo_mode=<value> tags the video track — the
