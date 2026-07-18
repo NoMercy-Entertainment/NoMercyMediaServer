@@ -32,6 +32,12 @@ public sealed class BenchmarkJobTracker(
     IHostApplicationLifetime lifetime
 ) : IBenchmarkJobTracker
 {
+    // Bounds the in-memory job history. Start() is triggered repeatedly over a
+    // long uptime (boot driver-change detection, the HTTP endpoint, user retries,
+    // 30-day recalibration); without a cap this dictionary grows forever. The
+    // durable result lives in ISpeedIndexStore, so this map is observability only.
+    private const int MaxRetainedJobs = 100;
+
     private readonly ConcurrentDictionary<string, BenchmarkJobStatus> _jobs = new();
 
     // Start() can be triggered from several independent places (driver-change
@@ -62,6 +68,7 @@ public sealed class BenchmarkJobTracker(
         );
 
         _jobs[jobId] = initial;
+        TrimHistory();
 
         // Fire-and-forget — do NOT await; caller gets the job id immediately.
         _ = Task.Run(async () => await RunAsync(jobId, codecNames, resolutions));
@@ -76,6 +83,32 @@ public sealed class BenchmarkJobTracker(
     }
 
     public IReadOnlyList<BenchmarkJobStatus> List() => _jobs.Values.ToList();
+
+    private void TrimHistory()
+    {
+        foreach (string jobId in EvictionCandidates(_jobs.Values, MaxRetainedJobs))
+            _jobs.TryRemove(jobId, out _);
+    }
+
+    /// <summary>
+    /// The oldest completed/failed/cancelled job ids to drop when the retained
+    /// count exceeds <paramref name="maxRetained"/>. Running jobs are never
+    /// evicted (they still need their status observed).
+    /// </summary>
+    public static IEnumerable<string> EvictionCandidates(
+        ICollection<BenchmarkJobStatus> jobs,
+        int maxRetained
+    )
+    {
+        if (jobs.Count <= maxRetained)
+            return [];
+
+        return jobs.Where(job => job.CompletedAt is not null)
+            .OrderBy(job => job.CompletedAt)
+            .Take(jobs.Count - maxRetained)
+            .Select(job => job.JobId)
+            .ToList();
+    }
 
     private async Task RunAsync(
         string jobId,
