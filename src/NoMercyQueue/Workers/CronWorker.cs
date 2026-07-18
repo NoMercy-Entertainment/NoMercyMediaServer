@@ -344,7 +344,24 @@ public class CronWorker : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         foreach (CronJobRegistration registration in _registrations)
-            RegisterDescriptor(registration);
+        {
+            try
+            {
+                RegisterDescriptor(registration);
+            }
+            catch (Exception ex)
+            {
+                // A single unresolvable/misconfigured cron executor (e.g. a plugin
+                // whose DI registration is missing) must NOT fault this
+                // BackgroundService — that would trip the StopHost default and
+                // refuse to boot the entire server. Skip it, keep the rest.
+                _logger.LogError(
+                    ex,
+                    "Failed to register cron job {JobType}; skipping it so remaining jobs and the server still start",
+                    registration.JobType
+                );
+            }
+        }
 
         _logger.LogDebug(
             "Cron Worker started with {JobCount} registered jobs",
