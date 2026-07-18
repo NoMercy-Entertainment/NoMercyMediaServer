@@ -62,7 +62,14 @@ public class RemoteWorkerDispatcher(
                 return new WorkerCapacity(
                     WorkerId: w.WorkerId,
                     SpeedMultiplier: Math.Max(1, slots),
-                    AvailableSlots: slots
+                    AvailableSlots: slots,
+                    // Carry the GPU capability through to the assigner. Without
+                    // this the flag defaults false, the assigner's GPU-routing
+                    // (RequiresGpu -> workers.Where(HasGpu)) finds no eligible
+                    // worker, and a GPU task falls through to the unconstrained
+                    // pick — landing on a CPU-only box. A free GPU slot is the
+                    // signal that this worker can take GPU work right now.
+                    HasGpu: budget.AvailableGpuSlots > 0
                 );
             })
             .ToList();
