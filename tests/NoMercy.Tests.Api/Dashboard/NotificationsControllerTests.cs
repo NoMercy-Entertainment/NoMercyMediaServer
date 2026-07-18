@@ -13,6 +13,8 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using FluentAssertions;
+using NoMercy.Networking.Http;
+using NoMercy.Networking.Messaging;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 
@@ -22,13 +24,16 @@ namespace NoMercy.Tests.Api.Dashboard;
 public class NotificationsControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private const string BroadcastUrl = "/api/v1/dashboard/notifications/broadcast";
+    private const string SendUrl = "/api/v1/dashboard/notifications/send";
 
+    private readonly NoMercyApiFactory _factory;
     private readonly HttpClient _authed;
     private readonly HttpClient _unauthed;
     private readonly HttpClient _secondaryUser;
 
     public NotificationsControllerTests(NoMercyApiFactory factory)
     {
+        _factory = factory;
         _authed = factory.CreateClient().AsAuthenticated();
         _unauthed = factory.CreateClient().AsUnauthenticated();
         _secondaryUser = factory.CreateClient().AsSecondaryUser();
@@ -39,6 +44,9 @@ public class NotificationsControllerTests : IClassFixture<NoMercyApiFactory>
 
     private static Task<HttpResponseMessage> PostAsync(HttpClient client, object body) =>
         client.PostAsync(BroadcastUrl, JsonBody(body));
+
+    private static Task<HttpResponseMessage> PostSendAsync(HttpClient client, object body) =>
+        client.PostAsync(SendUrl, JsonBody(body));
 
     [Fact]
     public async Task Broadcast_ReturnsUnauthorized_WhenAnonymous()
@@ -147,5 +155,209 @@ public class NotificationsControllerTests : IClassFixture<NoMercyApiFactory>
         );
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    // =========================================================================
+    // POST /notifications/send — single-user targeting
+    // =========================================================================
+
+    [Fact]
+    public async Task Send_ReturnsUnauthorized_WhenAnonymous()
+    {
+        HttpResponseMessage response = await PostSendAsync(
+            _unauthed,
+            new
+            {
+                user_id = TestAuthHandler.SecondaryUserId,
+                title = "Heads up",
+                body = "Your download finished",
+            }
+        );
+
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Send_ReturnsForbidden_WhenAuthenticatedButNotModerator()
+    {
+        // TestAuthHandler.SecondaryUserId is seeded Allowed=true, Owner=false,
+        // Manage=false — a real, allowed-but-non-moderator identity.
+        HttpResponseMessage response = await PostSendAsync(
+            _secondaryUser,
+            new
+            {
+                user_id = TestAuthHandler.DefaultUserId,
+                title = "Heads up",
+                body = "Your download finished",
+            }
+        );
+
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Send_ReturnsBadRequest_WhenUserIdMissing()
+    {
+        HttpResponseMessage response = await PostSendAsync(
+            _authed,
+            new { title = "Heads up", body = "Your download finished" }
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Send_ReturnsBadRequest_WhenTitleMissing()
+    {
+        HttpResponseMessage response = await PostSendAsync(
+            _authed,
+            new
+            {
+                user_id = TestAuthHandler.SecondaryUserId,
+                title = "",
+                body = "Your download finished",
+            }
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Send_ReturnsBadRequest_WhenBodyMissing()
+    {
+        HttpResponseMessage response = await PostSendAsync(
+            _authed,
+            new
+            {
+                user_id = TestAuthHandler.SecondaryUserId,
+                title = "Heads up",
+                body = "",
+            }
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Send_ReturnsNotFound_WhenUserDoesNotExist()
+    {
+        HttpResponseMessage response = await PostSendAsync(
+            _authed,
+            new
+            {
+                user_id = Guid.NewGuid(),
+                title = "Heads up",
+                body = "Your download finished",
+            }
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Send_ReturnsEnvelopeWithTargetUserAndEchoedFields()
+    {
+        HttpResponseMessage response = await PostSendAsync(
+            _authed,
+            new
+            {
+                user_id = TestAuthHandler.SecondaryUserId,
+                title = "Heads up",
+                body = "Your download finished",
+                type = "success",
+            }
+        );
+
+        string body = await response.Content.ReadAsStringAsync();
+        using JsonDocument doc = JsonDocument.Parse(body);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+
+        doc.RootElement.TryGetProperty("data", out JsonElement data)
+            .Should()
+            .BeTrue("send response must have a 'data' property");
+
+        data.GetProperty("user_id").GetGuid().Should().Be(TestAuthHandler.SecondaryUserId);
+        data.GetProperty("title").GetString().Should().Be("Heads up");
+        data.GetProperty("body").GetString().Should().Be("Your download finished");
+        data.GetProperty("type").GetString().Should().Be("success");
+    }
+
+    [Fact]
+    public async Task Send_DefaultsTypeToInfo_WhenTypeOmitted()
+    {
+        HttpResponseMessage response = await PostSendAsync(
+            _authed,
+            new
+            {
+                user_id = TestAuthHandler.SecondaryUserId,
+                title = "Heads up",
+                body = "Your download finished",
+            }
+        );
+
+        string body = await response.Content.ReadAsStringAsync();
+        using JsonDocument doc = JsonDocument.Parse(body);
+
+        JsonElement data = doc.RootElement.GetProperty("data");
+        data.GetProperty("type").GetString().Should().Be("info");
+    }
+
+    [Fact]
+    public async Task Send_ReportsConnectedFalse_WhenTargetHasNoLiveConnection()
+    {
+        HttpResponseMessage response = await PostSendAsync(
+            _authed,
+            new
+            {
+                user_id = TestAuthHandler.SecondaryUserId,
+                title = "Heads up",
+                body = "Your download finished",
+            }
+        );
+
+        string body = await response.Content.ReadAsStringAsync();
+        using JsonDocument doc = JsonDocument.Parse(body);
+
+        JsonElement data = doc.RootElement.GetProperty("data");
+        data.GetProperty("connected").GetBoolean().Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Send_ReportsConnectedTrue_WhenTargetHasLiveConnectionOnVideoHub()
+    {
+        // Seeds the same ConnectedClients registry ClientMessenger.SendTo reads
+        // from — this is the live-connection mechanism the controller's
+        // "connected" flag reports on, not a fake stand-in for it.
+        ConnectedClients connectedClients = _factory.GetConnectedClients();
+        string connectionKey = $"test-live-{Guid.NewGuid()}";
+        connectedClients.Clients[connectionKey] = new()
+        {
+            Sub = TestAuthHandler.SecondaryUserId,
+            Endpoint = "/videoHub",
+        };
+
+        try
+        {
+            HttpResponseMessage response = await PostSendAsync(
+                _authed,
+                new
+                {
+                    user_id = TestAuthHandler.SecondaryUserId,
+                    title = "Heads up",
+                    body = "Your download finished",
+                }
+            );
+
+            string body = await response.Content.ReadAsStringAsync();
+            using JsonDocument doc = JsonDocument.Parse(body);
+
+            JsonElement data = doc.RootElement.GetProperty("data");
+            data.GetProperty("connected").GetBoolean().Should().BeTrue(body);
+        }
+        finally
+        {
+            connectedClients.Clients.TryRemove(connectionKey, out Client? _);
+        }
     }
 }

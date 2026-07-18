@@ -17,8 +17,10 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Database;
+using NoMercy.Database.Models.Users;
 using NoMercy.Events;
 using NoMercy.Events.Media;
+using NoMercy.Networking.Messaging;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
@@ -30,6 +32,15 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 // notice (e.g. RefreshLibrary) already relies on — no new table, no new hub
 // method. Reach is therefore real-time only: users without a live connection
 // at broadcast time do not receive it retroactively.
+//
+// POST /api/v1/dashboard/notifications/send
+// Same pipeline, scoped to a single user via UserNotifiedEvent.UserId ->
+// IClientMessenger.SendTo (already the mechanism DeviceHub/ConnectionHub use
+// for per-user pushes — NoMercyUserIdProvider maps a SignalR connection to
+// Guid.ToString(), and ConnectedClients is the live-connection registry both
+// SendTo and this "connected" check read from). Also real-time only: a user
+// with no live connection on the target hub simply doesn't receive it, same
+// as broadcast.
 // -----------------------------------------------------------------------------
 
 [ApiController]
@@ -37,9 +48,14 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 [ApiVersion(1.0)]
 [Authorize(Policy = "Moderator")]
 [Route("api/v{version:apiVersion}/dashboard/notifications", Order = 10)]
-public class NotificationsController(MediaContext mediaContext, IEventBus eventBus) : BaseController
+public class NotificationsController(
+    MediaContext mediaContext,
+    IEventBus eventBus,
+    ConnectedClients connectedClients
+) : BaseController
 {
     private const string DefaultNotificationType = "info";
+    private const string DefaultNotificationHub = "videoHub";
 
     [HttpPost]
     [Route("broadcast")]
@@ -77,6 +93,58 @@ public class NotificationsController(MediaContext mediaContext, IEventBus eventB
                     Title = request.Title,
                     Body = request.Body,
                     Type = type,
+                },
+            }
+        );
+    }
+
+    [HttpPost]
+    [Route("send")]
+    public async Task<IActionResult> Send([FromBody] SendNotificationRequestDto request)
+    {
+        if (request.UserId == Guid.Empty)
+            return BadRequestResponse("user_id is required.");
+
+        if (string.IsNullOrWhiteSpace(request.Title))
+            return BadRequestResponse("title is required.");
+
+        if (string.IsNullOrWhiteSpace(request.Body))
+            return BadRequestResponse("body is required.");
+
+        User? user = await mediaContext
+            .Users.AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == request.UserId);
+        if (user is null)
+            return NotFoundResponse("User not found.");
+
+        string type = string.IsNullOrWhiteSpace(request.Type)
+            ? DefaultNotificationType
+            : request.Type;
+
+        bool connected = connectedClients.Clients.Values.Any(client =>
+            client.Sub == request.UserId && client.Endpoint == "/" + DefaultNotificationHub
+        );
+
+        await eventBus.PublishAsync(
+            new UserNotifiedEvent
+            {
+                Title = request.Title,
+                Message = request.Body,
+                Type = type,
+                UserId = request.UserId,
+            }
+        );
+
+        return Ok(
+            new DataResponseDto<SendNotificationResponseDto>
+            {
+                Data = new()
+                {
+                    UserId = request.UserId,
+                    Title = request.Title,
+                    Body = request.Body,
+                    Type = type,
+                    Connected = connected,
                 },
             }
         );

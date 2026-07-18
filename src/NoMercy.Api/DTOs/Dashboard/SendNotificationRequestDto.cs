@@ -9,19 +9,21 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-namespace NoMercy.Events.Media;
+using Newtonsoft.Json;
 
-public sealed class UserNotifiedEvent : EventBase
+namespace NoMercy.Api.DTOs.Dashboard;
+
+public record SendNotificationRequestDto
 {
-    public override string Source => "Media";
+    [JsonProperty("user_id")]
+    public Guid UserId { get; set; }
 
-    public required string Title { get; init; }
-    public required string Message { get; init; }
-    public required string Type { get; init; }
-    public string Hub { get; init; } = "videoHub";
+    [JsonProperty("title")]
+    public string Title { get; set; } = string.Empty;
 
-    // Null (default) keeps the existing broadcast-to-everyone behavior. When set,
-    // SignalRNotificationEventHandler routes the "Notify" push to only this user's
-    // live connection(s) instead of every connected client.
-    public Guid? UserId { get; init; }
+    [JsonProperty("body")]
+    public string Body { get; set; } = string.Empty;
+
+    [JsonProperty("type")]
+    public string? Type { get; set; }
 }
