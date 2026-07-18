@@ -197,6 +197,25 @@ public class QueueWorker(
                         _currentJobId = null;
                     }
                 }
+                catch (OperationCanceledException) when (stopToken.IsCancellationRequested)
+                {
+                    // Shutdown interrupted the job (e.g. an encode whose ffmpeg
+                    // child was torn down via the host-stopping token). This is
+                    // NOT a failure: return the reservation to the pool, which
+                    // also undoes the attempt increment from GetNextJob, so the
+                    // job resumes cleanly on next boot instead of burning a retry
+                    // or dead-lettering after a few restarts. Then exit the loop.
+                    queue.ReleaseReservation(job, TimeSpan.Zero);
+                    _currentJobId = null;
+
+                    logger?.LogInformation(
+                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} interrupted by shutdown — released for retry",
+                        name,
+                        CurrentIndex,
+                        job.Id
+                    );
+                    break;
+                }
                 catch (Exception ex)
                 {
                     queue.FailJob(job, ex);

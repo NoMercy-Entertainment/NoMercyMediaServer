@@ -1214,7 +1214,10 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             await PublishStageAsync(fileMetadata, "Publishing artifacts");
             try
             {
-                EncodingResult publishResult = await orchestrator.EncodeAsync(finalizeRequest);
+                EncodingResult publishResult = await orchestrator.EncodeAsync(
+                    finalizeRequest,
+                    ct: _shutdownToken
+                );
                 if (!publishResult.Success)
                 {
                     string err =
@@ -1817,7 +1820,11 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             registry: processRegistry
         );
 
-        EncodingResult result = await orchestrator.EncodeAsync(request, progressObserver);
+        EncodingResult result = await orchestrator.EncodeAsync(
+            request,
+            progressObserver,
+            _shutdownToken
+        );
 
         if (!result.Success)
         {
