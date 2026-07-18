@@ -9,7 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.Text;
 using System.Text.RegularExpressions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
@@ -355,43 +354,28 @@ public partial class HomeController : BaseController
             {
                 try
                 {
-                    StringBuilder sb = new();
-
-                    sb.Append(AppFiles.YtdlpPath);
-                    sb.Append(
-                        " -f bestvideo+bestaudio  --extractor-args \"youtube:player_client=default\" "
-                    );
-
-                    if (!string.IsNullOrEmpty(language))
-                        sb.Append(
-                            $" -o \"subtitle:{language}.%(ext)s\" --sub-langs all --write-subs "
-                        );
-
-                    sb.Append(trailerId);
-
-                    sb.Append(" -o - ");
-                    sb.Append(
-                        $" | {AppFiles.FfmpegPath} -i pipe: -map 0:0 -map 0:1 -c:v libx264 -c:a aac -ac 2 -preset ultrafast "
-                    );
-                    sb.Append(
-                        "-segment_list_type m3u8 -hls_playlist_type event -hls_init_time 4 -hls_time 4 -hls_segment_filename video_%05d.ts video.m3u8 "
+                    string command = TrailerCommandBuilder.Build(
+                        AppFiles.YtdlpPath,
+                        AppFiles.FfmpegPath,
+                        trailerId,
+                        language
                     );
 
                     if (Software.IsWindows)
                     {
-                        _logger.LogDebug("cmd -c \"{Sb}\"", sb);
+                        _logger.LogDebug("cmd -c \"{Command}\"", command);
                         Shell.ExecSync(
                             "cmd",
-                            $"/c \"{sb}\"",
+                            $"/c \"{command}\"",
                             new() { WorkingDirectory = trailerWorkDir }
                         );
                     }
                     else
                     {
-                        _logger.LogDebug("/bin/bash -c \"{Sb}\"", sb);
+                        _logger.LogDebug("/bin/bash -c \"{Command}\"", command);
                         Shell.ExecSync(
                             "/bin/bash",
-                            $"-c \"{sb}\"",
+                            $"-c \"{command}\"",
                             new() { WorkingDirectory = trailerWorkDir }
                         );
                     }
