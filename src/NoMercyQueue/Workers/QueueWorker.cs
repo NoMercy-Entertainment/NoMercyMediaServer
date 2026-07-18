@@ -44,6 +44,11 @@ public class QueueWorker(
     private bool _isRunning = true;
     private CancellationTokenSource _stopCts = new();
 
+    // The currently-running poll loop task. Restart() must let the previous loop
+    // fully exit before the next one starts polling, or the two overlap and share
+    // _currentJobId — reserving/running the same job twice.
+    private Task? _runTask;
+
     /// <summary>
     /// Set when the resource budget gate rejected the most recent acquire
     /// attempt and cleared on the next successful acquire. Used to log the
@@ -531,11 +536,29 @@ public class QueueWorker(
     /// </summary>
     public void Start()
     {
+        Task? previous = _runTask;
         if (_stopCts.IsCancellationRequested)
             _stopCts = new();
         _isRunning = true;
-        _ = Task.Run(async () =>
+        _runTask = Task.Run(async () =>
         {
+            // If a prior loop is still winding down (Restart cancelled it while it
+            // was mid-job), wait for it to exit before polling so two loops never
+            // run concurrently on this instance. Bounded so a stuck job can't
+            // deadlock the restart.
+            if (previous is not null)
+            {
+                try
+                {
+                    await previous.WaitAsync(TimeSpan.FromSeconds(30));
+                }
+                catch (Exception)
+                {
+                    // Timed out or faulted — proceed; the old loop's token is
+                    // already cancelled so it will not reserve new work.
+                }
+            }
+
             try
             {
                 await StartAsync(_stopCts.Token);
