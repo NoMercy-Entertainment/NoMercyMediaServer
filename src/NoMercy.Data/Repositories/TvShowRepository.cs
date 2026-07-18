@@ -55,6 +55,7 @@ public class TvShowRepository(IDbContextFactory<MediaContext> contextFactory) : 
                         )
                     )
                     .OrderByDescending(image => image.VoteAverage)
+                    .ThenBy(image => image.Id)
             )
             .Include(tv =>
                 tv.CertificationTvs.Where(certification =>
@@ -191,16 +192,24 @@ public class TvShowRepository(IDbContextFactory<MediaContext> contextFactory) : 
             .Tvs.AsNoTracking()
             .ForUser(userId)
             .Where(tv => tv.Id == id)
-            .AnyAsync(tv => tv.Episodes.Any(e => (
-                e.VideoFiles.Any(v => v.Folder != null)
-                || e.Tv.Episodes.Any(o =>
-                    o.SeasonNumber == e.SeasonNumber
-                    && o.VideoFiles.Any(w =>
-                        w.Folder != null
-                        && w.LastEpisodeNumber != null
-                        && o.EpisodeNumber <= e.EpisodeNumber
-                        && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))
-            )), ct);
+            .AnyAsync(
+                tv =>
+                    tv.Episodes.Any(e =>
+                        (
+                            e.VideoFiles.Any(v => v.Folder != null)
+                            || e.Tv.Episodes.Any(o =>
+                                o.SeasonNumber == e.SeasonNumber
+                                && o.VideoFiles.Any(w =>
+                                    w.Folder != null
+                                    && w.LastEpisodeNumber != null
+                                    && o.EpisodeNumber <= e.EpisodeNumber
+                                    && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)
+                                )
+                            )
+                        )
+                    ),
+                ct
+            );
     }
 
     public async Task<Tv?> GetPlaylistAsync(
@@ -216,8 +225,14 @@ public class TvShowRepository(IDbContextFactory<MediaContext> contextFactory) : 
             .Tvs.AsNoTracking()
             .Where(tv => tv.Id == id)
             .ForUser(userId)
-            .Include(tv => tv.Seasons.OrderBy(season => season.SeasonNumber))
-                .ThenInclude(season => season.Episodes.OrderBy(episode => episode.EpisodeNumber))
+            .Include(tv =>
+                tv.Seasons.OrderBy(season => season.SeasonNumber).ThenBy(season => season.Id)
+            )
+                .ThenInclude(season =>
+                    season
+                        .Episodes.OrderBy(episode => episode.EpisodeNumber)
+                        .ThenBy(episode => episode.Id)
+                )
             .Include(tv => tv.Translations.Where(translation => translation.Iso6391 == language))
             .Include(tv => tv.Seasons)
                 .ThenInclude(season => season.Episodes)
