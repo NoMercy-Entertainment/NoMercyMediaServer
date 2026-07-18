@@ -678,6 +678,42 @@ public class TasksController(
 
         return Ok(new StatusResponseDto<string> { Message = "Re-queued", Status = "success" });
     }
+
+    [HttpDelete]
+    [Route("queue/incomplete/{id:int}")]
+    public async Task<IActionResult> DeleteIncompleteEncode(int id)
+    {
+        IncompleteEncode? row = await mediaContext.IncompleteEncodes.FindAsync(id);
+        if (row is null)
+            return NotFoundResponse("Incomplete encode record not found");
+
+        mediaContext.IncompleteEncodes.Remove(row);
+        await mediaContext.SaveChangesAsync();
+
+        return Ok(
+            new StatusResponseDto<string>
+            {
+                Message = "Incomplete encode record removed",
+                Status = "success",
+            }
+        );
+    }
+
+    [HttpDelete]
+    [Route("queue/incomplete")]
+    public async Task<IActionResult> DeleteAllIncompleteEncodes()
+    {
+        int removedCount = await mediaContext.IncompleteEncodes.ExecuteDeleteAsync();
+
+        return Ok(
+            new StatusResponseDto<int>
+            {
+                Data = removedCount,
+                Message = "Incomplete encode records removed",
+                Status = "success",
+            }
+        );
+    }
 }
 
 /// <summary>

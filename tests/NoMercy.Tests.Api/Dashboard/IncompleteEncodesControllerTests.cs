@@ -146,4 +146,64 @@ public class IncompleteEncodesControllerTests : IClassFixture<NoMercyApiFactory>
             .Should()
             .BeTrue("quarantine row must be removed after retry regardless of queue state");
     }
+
+    // ── DELETE /api/v1/dashboard/tasks/queue/incomplete/{id} ──────────────
+
+    [Fact]
+    public async Task Delete_MissingId_Returns404()
+    {
+        HttpResponseMessage response = await _authed.DeleteAsync(
+            "/api/v1/dashboard/tasks/queue/incomplete/99999"
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Delete_ExistingRow_RemovesOnlyThatRow()
+    {
+        HttpResponseMessage response = await _authed.DeleteAsync(
+            $"/api/v1/dashboard/tasks/queue/incomplete/{_rowId1}"
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        string json = await response.Content.ReadAsStringAsync();
+        using JsonDocument doc = JsonDocument.Parse(json);
+        doc.RootElement.GetProperty("status").GetString().Should().Be("success");
+
+        await using MediaContext ctx = new();
+        (await ctx.IncompleteEncodes.AnyAsync(r => r.Id == _rowId1))
+            .Should()
+            .BeFalse("the deleted row must no longer exist");
+        (await ctx.IncompleteEncodes.AnyAsync(r => r.Id == _rowId2))
+            .Should()
+            .BeTrue("a single-row delete must not touch other quarantine rows");
+    }
+
+    // ── DELETE /api/v1/dashboard/tasks/queue/incomplete ────────────────────
+
+    [Fact]
+    public async Task DeleteAll_RemovesSeededRows_AndReportsRemovedCount()
+    {
+        HttpResponseMessage response = await _authed.DeleteAsync(
+            "/api/v1/dashboard/tasks/queue/incomplete"
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        string json = await response.Content.ReadAsStringAsync();
+        using JsonDocument doc = JsonDocument.Parse(json);
+        doc.RootElement.GetProperty("status").GetString().Should().Be("success");
+
+        // Other tests/processes may hold unrelated quarantine rows in the shared
+        // test database, so the count is only asserted as a lower bound — the
+        // two rows this test seeded must be included in it.
+        doc.RootElement.GetProperty("data").GetInt32().Should().BeGreaterThanOrEqualTo(2);
+
+        await using MediaContext ctx = new();
+        (await ctx.IncompleteEncodes.AnyAsync(r => r.Id == _rowId1 || r.Id == _rowId2))
+            .Should()
+            .BeFalse("both seeded rows must be gone after deleting all incomplete encodes");
+    }
 }
