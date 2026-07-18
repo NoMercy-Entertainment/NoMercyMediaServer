@@ -275,7 +275,6 @@ public class RouteContractSnapshotTests : IClassFixture<NoMercyApiFactory>
         "PATCH api/v{version:apiVersion}/music/playlists/{id:guid} [Playlists.Edit]",
         "PATCH api/v{version:apiVersion}/music/tracks/{id:guid}/lyrics-offset [Tracks.LyricsOffset]",
         "PATCH api/v{version:apiVersion}/playlists/{id:guid} [UserPlaylists.Edit]",
-        "POST api/devices/{deviceId}/forget [ForgetDevice.Forget]",
         "POST api/v{version:apiVersion}/collection/{id:int}/add [Collections.Add]",
         "POST api/v{version:apiVersion}/collection/{id:int}/like [Collections.Like]",
         "POST api/v{version:apiVersion}/collection/{id:int}/refresh [Collections.Refresh]",
@@ -360,6 +359,7 @@ public class RouteContractSnapshotTests : IClassFixture<NoMercyApiFactory>
         "POST api/v{version:apiVersion}/dashboard/workers/register [Workers.Register]",
         "POST api/v{version:apiVersion}/dashboard/workers/{workerId}/heartbeat [Workers.Heartbeat]",
         "POST api/v{version:apiVersion}/dashboard/workers/{workerId}/tasks/{taskId}/progress [Workers.ReceiveProgress]",
+        "POST api/v{version:apiVersion}/devices/{deviceId}/forget [ForgetDevice.Forget]",
         "POST api/v{version:apiVersion}/distribution/workers/dispatch [CoordinatorDispatch.Dispatch]",
         "POST api/v{version:apiVersion}/distribution/workers/register [Workers.Register]",
         "POST api/v{version:apiVersion}/distribution/workers/{workerId}/heartbeat [Workers.Heartbeat]",
@@ -490,10 +490,9 @@ public class RouteContractSnapshotTests : IClassFixture<NoMercyApiFactory>
         );
     }
 
-    private static readonly string[] KnownUnversionedApiRoutes =
-    [
-        "POST api/devices/{deviceId}/forget [ForgetDevice.Forget]",
-    ];
+    // Every api/ route now carries an explicit apiVersion — no legacy
+    // exceptions remain. A new unversioned api/ route must fail the guard.
+    private static readonly string[] KnownUnversionedApiRoutes = [];
 
     [Fact]
     public void ApiRoutes_AllDeclareAnExplicitApiVersion_ExceptTheKnownLegacyExceptions()
