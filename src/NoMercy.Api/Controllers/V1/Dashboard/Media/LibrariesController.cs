@@ -389,7 +389,7 @@ public class LibrariesController(
     [HttpPatch]
     [Route("sort")]
     [Authorize(Policy = "Moderator")]
-    public async Task<IActionResult> Sort(Ulid id, [FromBody] LibrarySortRequest request)
+    public async Task<IActionResult> Sort([FromBody] LibrarySortRequest request)
     {
         List<Library> libraries = await libraryRepository.GetAllLibrariesAsync();
 

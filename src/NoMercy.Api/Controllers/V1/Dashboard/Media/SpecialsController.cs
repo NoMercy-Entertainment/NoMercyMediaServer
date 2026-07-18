@@ -163,7 +163,7 @@ public class SpecialsController(
 
     [HttpPatch]
     [Route("sort")]
-    public async Task<IActionResult> Sort(Ulid id, [FromBody] LibrarySortRequest request)
+    public async Task<IActionResult> Sort([FromBody] LibrarySortRequest request)
     {
         List<Special> specials = await specialRepository.GetAllSpecialsSortableAsync();
 
