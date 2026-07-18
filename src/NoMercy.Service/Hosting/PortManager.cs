@@ -144,9 +144,7 @@ public class PortManager : IPortManager
             startPort,
             MaxPort
         );
-        throw new StartupAbortException(
-            $"No available port found in range {startPort}-{MaxPort}."
-        );
+        throw new StartupAbortException($"No available port found in range {startPort}-{MaxPort}.");
     }
 
     public bool IsPortAvailable(int port)
@@ -288,33 +286,46 @@ public class PortManager : IPortManager
         if (string.IsNullOrWhiteSpace(processInfo))
             return -1;
 
-        int pid;
+        return RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? ParsePidFromNetstat(processInfo)
+            : ParsePidFromLsof(processInfo);
+    }
 
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+    // netstat -ano output: the last whitespace-delimited column of a LISTENING
+    // row is the owning PID.
+    // Example: TCP    0.0.0.0:7625    0.0.0.0:0    LISTENING    1234
+    internal static int ParsePidFromNetstat(string processInfo)
+    {
+        if (string.IsNullOrWhiteSpace(processInfo))
+            return -1;
+
+        string[] lines = processInfo.Split(
+            new[] { '\r', '\n' },
+            StringSplitOptions.RemoveEmptyEntries
+        );
+        if (lines.Length > 0)
         {
-            // netstat output: last column is PID
-            // Example: TCP    0.0.0.0:7625           0.0.0.0:0              LISTENING       1234
-            string[] lines = processInfo.Split(
-                new[] { '\r', '\n' },
-                StringSplitOptions.RemoveEmptyEntries
-            );
-            if (lines.Length > 0)
-            {
-                string[] parts = lines[0].Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length > 0 && int.TryParse(parts[^1], out pid))
-                    return pid;
-            }
+            string[] parts = lines[0].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length > 0 && int.TryParse(parts[^1], out int pid))
+                return pid;
         }
-        else
+
+        return -1;
+    }
+
+    // lsof -i output: the second column of the first data row (after the
+    // header line) is the owning PID.
+    internal static int ParsePidFromLsof(string processInfo)
+    {
+        if (string.IsNullOrWhiteSpace(processInfo))
+            return -1;
+
+        string[] lines = processInfo.Split('\n');
+        if (lines.Length > 1)
         {
-            // lsof output: second column is PID (skip header)
-            string[] lines = processInfo.Split('\n');
-            if (lines.Length > 1)
-            {
-                string[] parts = lines[1].Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length > 1 && int.TryParse(parts[1], out pid))
-                    return pid;
-            }
+            string[] parts = lines[1].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length > 1 && int.TryParse(parts[1], out int pid))
+                return pid;
         }
 
         return -1;
