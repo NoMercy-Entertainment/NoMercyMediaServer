@@ -83,6 +83,41 @@ public class DeterministicOrderingTests : IDisposable
         Assert.Contains("ORDER BY", genreQuery, StringComparison.OrdinalIgnoreCase);
     }
 
+    private void AssertOrderedByColumnExists(string orderColumn)
+    {
+        // The main query must ORDER BY the real ordering column. The split-query
+        // Include correlations order by the parent KEY, so keying the assertion
+        // on the domain column (not just "ORDER BY") means a regression that
+        // drops the primary ordering still fails here.
+        bool ordered = _interceptor.CapturedSql.Any(sql =>
+            sql.Contains("ORDER BY", StringComparison.OrdinalIgnoreCase)
+            && sql.Contains(orderColumn, StringComparison.OrdinalIgnoreCase)
+        );
+        Assert.True(ordered, $"expected a query ordered by {orderColumn}");
+    }
+
+    [Fact]
+    public async Task MusicRepository_GetLatestAlbums_OrdersByCreatedAt()
+    {
+        MusicRepository repository = new(new TestDbContextFactory(_options));
+        _interceptor.Clear();
+
+        await repository.GetLatestAlbums();
+
+        AssertOrderedByColumnExists("CreatedAt");
+    }
+
+    [Fact]
+    public async Task MusicRepository_GetLatestArtists_OrdersByCreatedAt()
+    {
+        MusicRepository repository = new(new TestDbContextFactory(_options));
+        _interceptor.Clear();
+
+        await repository.GetLatestArtists();
+
+        AssertOrderedByColumnExists("CreatedAt");
+    }
+
     public void Dispose()
     {
         _keepAlive.Close();
