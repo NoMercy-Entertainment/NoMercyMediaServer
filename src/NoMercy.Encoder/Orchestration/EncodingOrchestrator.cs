@@ -811,16 +811,63 @@ public class EncodingOrchestrator(
                 if (!string.IsNullOrEmpty(remoteParent))
                     destinationStorage.CreateDirectory(remoteParent);
 
-                // Read through the local IStorage so the guard layer still
-                // applies — File.OpenRead would bypass the path allowlist that
-                // every other read path honours.
-                await using Stream src = await storage.OpenReadAsync(localFile, ct);
-                await using Stream dst = await destinationStorage.OpenWriteAsync(
-                    remoteDest,
-                    overwrite: true,
-                    ct
-                );
-                await src.CopyToAsync(dst, ct);
+                // Publish through a sibling temp file, then swap into place. A
+                // process kill mid-copy would otherwise leave a truncated file
+                // at the real library path that looks complete to a player;
+                // writing to <dest>.<token>.nmpart and renaming means an
+                // interrupted publish leaves only the temp (safe to re-encode),
+                // never a corrupt final. The rename is same-directory, so it is
+                // an atomic metadata swap on local/SMB and an object-level swap
+                // on S3.
+                string publishTemp = $"{remoteDest}.{Guid.NewGuid():N}.nmpart";
+                try
+                {
+                    // Read through the local IStorage so the guard layer still
+                    // applies — File.OpenRead would bypass the path allowlist
+                    // that every other read path honours.
+                    await using (Stream src = await storage.OpenReadAsync(localFile, ct))
+                    await using (
+                        Stream dst = await destinationStorage.OpenWriteAsync(
+                            publishTemp,
+                            overwrite: true,
+                            ct
+                        )
+                    )
+                    {
+                        await src.CopyToAsync(dst, ct);
+                    }
+
+                    // MoveFile does not overwrite on local/SMB backends, so clear
+                    // any prior artifact before the swap.
+                    if (await destinationStorage.ExistsAsync(remoteDest, ct))
+                        await destinationStorage.DeleteAsync(remoteDest, ct);
+
+                    await destinationStorage.MoveAsync(publishTemp, remoteDest, ct);
+                }
+                catch
+                {
+                    // Best-effort cleanup of the partial temp; never mask the
+                    // original failure (including cancellation).
+                    try
+                    {
+                        if (
+                            await destinationStorage.ExistsAsync(
+                                publishTemp,
+                                CancellationToken.None
+                            )
+                        )
+                            await destinationStorage.DeleteAsync(
+                                publishTemp,
+                                CancellationToken.None
+                            );
+                    }
+                    catch
+                    {
+                        // ignore — a stale temp is harmless and swept later
+                    }
+
+                    throw;
+                }
             }
             stageWatch.Stop();
             progress?.OnStageCompleted(stageName, stageWatch.Elapsed);
