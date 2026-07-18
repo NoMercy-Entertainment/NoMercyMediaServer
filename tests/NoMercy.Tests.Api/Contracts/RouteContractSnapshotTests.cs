@@ -1,0 +1,517 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using NoMercy.Tests.Api.Infrastructure;
+using Xunit;
+
+namespace NoMercy.Tests.Api.Contracts;
+
+[Trait("Category", "Contract")]
+public class RouteContractSnapshotTests : IClassFixture<NoMercyApiFactory>
+{
+    private readonly NoMercyApiFactory _factory;
+
+    public RouteContractSnapshotTests(NoMercyApiFactory factory)
+    {
+        _factory = factory;
+    }
+
+    private static readonly string[] ExpectedRoutes =
+    [
+        "(any) /castHub [(hub/other)]",
+        "(any) /castHub/negotiate [(hub/other)]",
+        "(any) /dashboardHub [(hub/other)]",
+        "(any) /dashboardHub/negotiate [(hub/other)]",
+        "(any) /deviceHub [(hub/other)]",
+        "(any) /deviceHub/negotiate [(hub/other)]",
+        "(any) /drivesHub [(hub/other)]",
+        "(any) /drivesHub/negotiate [(hub/other)]",
+        "(any) /liveTranscodeHub [(hub/other)]",
+        "(any) /liveTranscodeHub/negotiate [(hub/other)]",
+        "(any) /musicHub [(hub/other)]",
+        "(any) /musicHub/negotiate [(hub/other)]",
+        "(any) /ripperHub [(hub/other)]",
+        "(any) /ripperHub/negotiate [(hub/other)]",
+        "(any) /videoHub [(hub/other)]",
+        "(any) /videoHub/negotiate [(hub/other)]",
+        "DELETE api/v{version:apiVersion}/collection/{id:int} [Collections.DeleteMovie]",
+        "DELETE api/v{version:apiVersion}/content-segments/{id} [ContentSegments.Delete]",
+        "DELETE api/v{version:apiVersion}/dashboard/activity [ServerActivity.Destroy]",
+        "DELETE api/v{version:apiVersion}/dashboard/devices [Devices.Destroy]",
+        "DELETE api/v{version:apiVersion}/dashboard/devices/offline [Devices.DestroyOffline]",
+        "DELETE api/v{version:apiVersion}/dashboard/devices/{id} [Devices.DestroyOne]",
+        "DELETE api/v{version:apiVersion}/dashboard/drivers/{id:ulid} [Drivers.Delete]",
+        "DELETE api/v{version:apiVersion}/dashboard/encoderprofiles/{id:ulid} [Encoder.Destroy]",
+        "DELETE api/v{version:apiVersion}/dashboard/encoding/history/{id} [EncodingHistory.Delete]",
+        "DELETE api/v{version:apiVersion}/dashboard/encoding/presets/{id} [EncodingPresets.Delete]",
+        "DELETE api/v{version:apiVersion}/dashboard/inbox/{id:ulid} [Inbox.Delete]",
+        "DELETE api/v{version:apiVersion}/dashboard/libraries/{id:ulid} [Libraries.Delete]",
+        "DELETE api/v{version:apiVersion}/dashboard/libraries/{id:ulid}/folders/{folderId:ulid} [Libraries.DeleteFolder]",
+        "DELETE api/v{version:apiVersion}/dashboard/libraries/{id:ulid}/folders/{folderId:ulid}/encoder_profiles/{encoderProfileId:ulid} [Libraries.DeleteEncoderProfile]",
+        "DELETE api/v{version:apiVersion}/dashboard/plugins/{id:guid} [Plugin.Uninstall]",
+        "DELETE api/v{version:apiVersion}/dashboard/reclaim/items/{id} [Reclaim.DeleteItem]",
+        "DELETE api/v{version:apiVersion}/dashboard/specials/{id:ulid} [Specials.Delete]",
+        "DELETE api/v{version:apiVersion}/dashboard/tasks [Tasks.Destroy]",
+        "DELETE api/v{version:apiVersion}/dashboard/tasks/queue/incomplete [Tasks.DeleteAllIncompleteEncodes]",
+        "DELETE api/v{version:apiVersion}/dashboard/tasks/queue/incomplete/{id:int} [Tasks.DeleteIncompleteEncode]",
+        "DELETE api/v{version:apiVersion}/dashboard/tasks/queue/{id:int} [Tasks.DeleteTask]",
+        "DELETE api/v{version:apiVersion}/dashboard/users/{id:guid} [Users.Destroy]",
+        "DELETE api/v{version:apiVersion}/dashboard/workers/{workerId} [Workers.Unregister]",
+        "DELETE api/v{version:apiVersion}/distribution/workers/{workerId} [Workers.Unregister]",
+        "DELETE api/v{version:apiVersion}/encoder/profiles/{id:ulid} [EncoderProfiles.Delete]",
+        "DELETE api/v{version:apiVersion}/encoder/trusted-publishers/{fingerprint} [EncoderTrustedPublishers.Delete]",
+        "DELETE api/v{version:apiVersion}/movie/{id:int} [Movies.DeleteMovie]",
+        "DELETE api/v{version:apiVersion}/music/artists/{id:guid} [Artists.Destroy]",
+        "DELETE api/v{version:apiVersion}/music/playlists/{id:guid} [Playlists.Destroy]",
+        "DELETE api/v{version:apiVersion}/music/playlists/{id:guid}/tracks/{trackId:guid} [Playlists.AddTrack]",
+        "DELETE api/v{version:apiVersion}/playlists/{id:guid} [UserPlaylists.Destroy]",
+        "DELETE api/v{version:apiVersion}/playlists/{id:guid}/items/{itemId:ulid} [UserPlaylists.RemoveItem]",
+        "DELETE api/v{version:apiVersion}/streaming/live/sessions/{sessionId} [LiveTranscode.EndSession]",
+        "DELETE api/v{version:apiVersion}/trailer/{trailerId} [Home.RemoveTrailer]",
+        "DELETE api/v{version:apiVersion}/tv/{id:int} [TvShows.DeleteTv]",
+        "DELETE api/v{version:apiVersion}/userData/continue [UserData.RemoveContinue]",
+        "DELETE images/{type}/{path} [Image.DeleteCache]",
+        "GET Health [Health.GetLiveness]",
+        "GET Health/detailed [Health.GetDetailed]",
+        "GET Health/ready [Health.GetReadiness]",
+        "GET api/v{version:apiVersion} [Home.Index]",
+        "GET api/v{version:apiVersion}/collection [Collections.Collections]",
+        "GET api/v{version:apiVersion}/collection/{id:int} [Collections.Collection]",
+        "GET api/v{version:apiVersion}/collection/{id:int}/available [Collections.Available]",
+        "GET api/v{version:apiVersion}/collection/{id:int}/watch [Collections.Watch]",
+        "GET api/v{version:apiVersion}/content-segments [ContentSegments.List]",
+        "GET api/v{version:apiVersion}/content-segments/episode/{episodeId:int} [ContentSegments.GetByEpisode]",
+        "GET api/v{version:apiVersion}/content-segments/movie/{movieId:int} [ContentSegments.GetByMovie]",
+        "GET api/v{version:apiVersion}/dashboard/activity [ServerActivity.Index]",
+        "GET api/v{version:apiVersion}/dashboard/configuration [Configuration.Index]",
+        "GET api/v{version:apiVersion}/dashboard/configuration/countries [Configuration.Countries]",
+        "GET api/v{version:apiVersion}/dashboard/configuration/languages [Configuration.Languages]",
+        "GET api/v{version:apiVersion}/dashboard/content-analysis/crop/{videoFileId} [ContentAnalysis.DetectCrop]",
+        "GET api/v{version:apiVersion}/dashboard/devices [Devices.Index]",
+        "GET api/v{version:apiVersion}/dashboard/drivers [Drivers.Index]",
+        "GET api/v{version:apiVersion}/dashboard/drivers/system-local [Drivers.GetSystemLocalId]",
+        "GET api/v{version:apiVersion}/dashboard/drivers/types [Drivers.GetTypes]",
+        "GET api/v{version:apiVersion}/dashboard/drivers/{id:ulid} [Drivers.Show]",
+        "GET api/v{version:apiVersion}/dashboard/encoder/bundle-orphans [EncoderBundle.BundleOrphans]",
+        "GET api/v{version:apiVersion}/dashboard/encoderprofiles [Encoder.Index]",
+        "GET api/v{version:apiVersion}/dashboard/encoderprofiles/containers [Encoder.Containers]",
+        "GET api/v{version:apiVersion}/dashboard/encoderprofiles/framesizes [Encoder.FrameSizes]",
+        "GET api/v{version:apiVersion}/dashboard/encoding/history [EncodingHistory.Index]",
+        "GET api/v{version:apiVersion}/dashboard/encoding/history/stats [EncodingHistory.Stats]",
+        "GET api/v{version:apiVersion}/dashboard/encoding/presets [EncodingPresets.List]",
+        "GET api/v{version:apiVersion}/dashboard/encoding/presets/tags [EncodingPresets.ListAllTags]",
+        "GET api/v{version:apiVersion}/dashboard/encoding/presets/{id} [EncodingPresets.Get]",
+        "GET api/v{version:apiVersion}/dashboard/encoding/presets/{id}/export [EncodingPresets.Export]",
+        "GET api/v{version:apiVersion}/dashboard/encoding/presets/{id}/resolve [EncodingPresets.Resolve]",
+        "GET api/v{version:apiVersion}/dashboard/folders/drivers [FolderDriver.GetDriverTypes]",
+        "GET api/v{version:apiVersion}/dashboard/folders/{id:ulid}/driver [FolderDriver.GetDriver]",
+        "GET api/v{version:apiVersion}/dashboard/hardware/benchmark [HardwareBenchmark.GetCachedIndex]",
+        "GET api/v{version:apiVersion}/dashboard/inbox [Inbox.Index]",
+        "GET api/v{version:apiVersion}/dashboard/inbox/{id:ulid} [Inbox.Show]",
+        "GET api/v{version:apiVersion}/dashboard/inbox/{id:ulid}/matches [Inbox.Matches]",
+        "GET api/v{version:apiVersion}/dashboard/intake [Intake.Index]",
+        "GET api/v{version:apiVersion}/dashboard/libraries [Libraries.Index]",
+        "GET api/v{version:apiVersion}/dashboard/logs [Log.GetLogs]",
+        "GET api/v{version:apiVersion}/dashboard/logs/levels [Log.GetLogLevels]",
+        "GET api/v{version:apiVersion}/dashboard/logs/types [Log.GetLogTypes]",
+        "GET api/v{version:apiVersion}/dashboard/media/files/search [MediaFiles.Search]",
+        "GET api/v{version:apiVersion}/dashboard/optical/drives [OpticalMedia.GetOpticalDrives]",
+        "GET api/v{version:apiVersion}/dashboard/optical/{drivePath} [OpticalMedia.GetDriveContents]",
+        "GET api/v{version:apiVersion}/dashboard/optical/{drivePath}/probe [OpticalMedia.ProbeDisc]",
+        "GET api/v{version:apiVersion}/dashboard/plugins [Plugin.Index]",
+        "GET api/v{version:apiVersion}/dashboard/plugins/credentials [Plugin.Credentials]",
+        "GET api/v{version:apiVersion}/dashboard/plugins/{id:guid} [Plugin.Show]",
+        "GET api/v{version:apiVersion}/dashboard/reclaim [Reclaim.Index]",
+        "GET api/v{version:apiVersion}/dashboard/recommendations/anime [Recommendations.GetAnimeRecommendations]",
+        "GET api/v{version:apiVersion}/dashboard/recommendations/diagnostics [Recommendations.GetDiagnostics]",
+        "GET api/v{version:apiVersion}/dashboard/recommendations/movies [Recommendations.GetMovieRecommendations]",
+        "GET api/v{version:apiVersion}/dashboard/recommendations/tv [Recommendations.GetTvRecommendations]",
+        "GET api/v{version:apiVersion}/dashboard/recommendations/{type}/{id:int} [Recommendations.GetRecommendationDetail]",
+        "GET api/v{version:apiVersion}/dashboard/server [Server.Index]",
+        "GET api/v{version:apiVersion}/dashboard/server/info [Server.ServerInfo]",
+        "GET api/v{version:apiVersion}/dashboard/server/paths [Server.ServerPaths]",
+        "GET api/v{version:apiVersion}/dashboard/server/resources [Server.Resources]",
+        "GET api/v{version:apiVersion}/dashboard/server/setup [Server.Setup]",
+        "GET api/v{version:apiVersion}/dashboard/server/storage [Server.Storage]",
+        "GET api/v{version:apiVersion}/dashboard/server/update/check [Server.CheckForUpdate]",
+        "GET api/v{version:apiVersion}/dashboard/specials [Specials.Index]",
+        "GET api/v{version:apiVersion}/dashboard/specials/search [Specials.Search]",
+        "GET api/v{version:apiVersion}/dashboard/specials/{id:ulid} [Specials.Show]",
+        "GET api/v{version:apiVersion}/dashboard/specials/{id:ulid}/items [Specials.GetItems]",
+        "GET api/v{version:apiVersion}/dashboard/tasks [Tasks.Index]",
+        "GET api/v{version:apiVersion}/dashboard/tasks/failed [Tasks.GetFailedJobs]",
+        "GET api/v{version:apiVersion}/dashboard/tasks/queue [Tasks.EncoderQueue]",
+        "GET api/v{version:apiVersion}/dashboard/tasks/queue/eta [Tasks.EncoderQueueEta]",
+        "GET api/v{version:apiVersion}/dashboard/tasks/queue/incomplete [Tasks.IncompleteEncodes]",
+        "GET api/v{version:apiVersion}/dashboard/tasks/queue/status [Tasks.EncoderQueueStatus]",
+        "GET api/v{version:apiVersion}/dashboard/tasks/runners [Tasks.RunningTaskWorkers]",
+        "GET api/v{version:apiVersion}/dashboard/users [Users.Index]",
+        "GET api/v{version:apiVersion}/dashboard/users/permissions [Users.PermissionS]",
+        "GET api/v{version:apiVersion}/dashboard/users/{id:guid} [Users.Show]",
+        "GET api/v{version:apiVersion}/dashboard/users/{id:guid}/permissions [Users.UserPermissions]",
+        "GET api/v{version:apiVersion}/dashboard/workers [Workers.List]",
+        "GET api/v{version:apiVersion}/dashboard/workers/tasks/progress [Workers.ListActiveTaskProgress]",
+        "GET api/v{version:apiVersion}/distribution/workers [Workers.List]",
+        "GET api/v{version:apiVersion}/distribution/workers/dispatch/{taskId}/status [CoordinatorDispatch.GetTaskStatus]",
+        "GET api/v{version:apiVersion}/distribution/workers/tasks/progress [Workers.ListActiveTaskProgress]",
+        "GET api/v{version:apiVersion}/encoder/capabilities [EncoderHardware.GetCapabilities]",
+        "GET api/v{version:apiVersion}/encoder/hardware/benchmark [EncoderHardware.ListBenchmarks]",
+        "GET api/v{version:apiVersion}/encoder/hardware/benchmark/{jobId} [EncoderHardware.GetBenchmark]",
+        "GET api/v{version:apiVersion}/encoder/hardware/utilization [EncoderHardware.GetUtilization]",
+        "GET api/v{version:apiVersion}/encoder/ocr/languages [EncoderOcrLanguages.GetLanguages]",
+        "GET api/v{version:apiVersion}/encoder/profiles [EncoderProfiles.Index]",
+        "GET api/v{version:apiVersion}/encoder/profiles/tags [EncoderProfiles.Tags]",
+        "GET api/v{version:apiVersion}/encoder/profiles/{id:ulid} [EncoderProfiles.Get]",
+        "GET api/v{version:apiVersion}/encoder/profiles/{id:ulid}/resolved [EncoderProfiles.GetResolved]",
+        "GET api/v{version:apiVersion}/encoder/profiles/{id}/export [EncoderProfiles.Export]",
+        "GET api/v{version:apiVersion}/encoder/profiles/{id}/resolve [EncoderProfiles.Resolve]",
+        "GET api/v{version:apiVersion}/encoder/trusted-publishers [EncoderTrustedPublishers.Index]",
+        "GET api/v{version:apiVersion}/genres [Genres.Genres]",
+        "GET api/v{version:apiVersion}/genres/{genreId} [Genres.Genre]",
+        "GET api/v{version:apiVersion}/home [Home.Home]",
+        "GET api/v{version:apiVersion}/home/tv [Home.HomeTv]",
+        "GET api/v{version:apiVersion}/libraries [Libraries.Libraries]",
+        "GET api/v{version:apiVersion}/libraries/mobile [Libraries.Mobile]",
+        "GET api/v{version:apiVersion}/libraries/tv [Libraries.Tv]",
+        "GET api/v{version:apiVersion}/libraries/{libraryId:ulid} [Libraries.Library]",
+        "GET api/v{version:apiVersion}/libraries/{libraryId:ulid}/letter/{letter} [Libraries.LibraryByLetter]",
+        "GET api/v{version:apiVersion}/libraries/{libraryId}/import-failures [Libraries.ImportFailures]",
+        "GET api/v{version:apiVersion}/movie/{id:int} [Movies.Movie]",
+        "GET api/v{version:apiVersion}/movie/{id:int}/available [Movies.Available]",
+        "GET api/v{version:apiVersion}/movie/{id:int}/watch [Movies.Watch]",
+        "GET api/v{version:apiVersion}/music [Music.Index]",
+        "GET api/v{version:apiVersion}/music/albums/letter/{letter} [Albums.Index]",
+        "GET api/v{version:apiVersion}/music/albums/{id:guid} [Albums.Show]",
+        "GET api/v{version:apiVersion}/music/artists/letter/{letter} [Artists.Index]",
+        "GET api/v{version:apiVersion}/music/artists/{id:guid} [Artists.Show]",
+        "GET api/v{version:apiVersion}/music/genres [Genres.Index]",
+        "GET api/v{version:apiVersion}/music/genres/letter/{letter} [Genres.LibraryByLetter]",
+        "GET api/v{version:apiVersion}/music/genres/{id:guid} [Genres.Show]",
+        "GET api/v{version:apiVersion}/music/playlists [Playlists.Index]",
+        "GET api/v{version:apiVersion}/music/playlists/{id:guid} [Playlists.Show]",
+        "GET api/v{version:apiVersion}/music/search [Music.Search]",
+        "GET api/v{version:apiVersion}/music/start [Music.Index]",
+        "GET api/v{version:apiVersion}/music/tracks [Tracks.Index]",
+        "GET api/v{version:apiVersion}/music/tracks/{id:guid}/lyrics [Tracks.Lyrics]",
+        "GET api/v{version:apiVersion}/person [People.Index]",
+        "GET api/v{version:apiVersion}/person/{id:int} [People.Show]",
+        "GET api/v{version:apiVersion}/playlists [UserPlaylists.Index]",
+        "GET api/v{version:apiVersion}/playlists/{id:guid} [UserPlaylists.Show]",
+        "GET api/v{version:apiVersion}/search/music [Search.SearchMusic]",
+        "GET api/v{version:apiVersion}/search/music/tv [Search.SearchTvMusic]",
+        "GET api/v{version:apiVersion}/search/video [Search.SearchVideo]",
+        "GET api/v{version:apiVersion}/search/video/tv [Search.SearchTvVideo]",
+        "GET api/v{version:apiVersion}/setup/libraries [Setup.Libraries]",
+        "GET api/v{version:apiVersion}/setup/music-playlists [Setup.Index]",
+        "GET api/v{version:apiVersion}/setup/permissions [Setup.Permissions]",
+        "GET api/v{version:apiVersion}/setup/screensaver [Setup.Screensaver]",
+        "GET api/v{version:apiVersion}/setup/server-info [Setup.ServerInfo]",
+        "GET api/v{version:apiVersion}/specials [Special.Index]",
+        "GET api/v{version:apiVersion}/specials/{id:ulid} [Special.Show]",
+        "GET api/v{version:apiVersion}/specials/{id:ulid}/available [Special.Available]",
+        "GET api/v{version:apiVersion}/specials/{id:ulid}/watch [Special.Watch]",
+        "GET api/v{version:apiVersion}/streaming/live/sessions [LiveTranscode.ListSessions]",
+        "GET api/v{version:apiVersion}/streaming/live/sessions/{sessionId}/master.m3u8 [LiveTranscode.GetMasterPlaylist]",
+        "GET api/v{version:apiVersion}/streaming/live/sessions/{sessionId}/playlist.m3u8 [LiveTranscode.GetPlaylist]",
+        "GET api/v{version:apiVersion}/streaming/live/sessions/{sessionId}/segment/{epoch}/{index:int}.ts [LiveTranscode.GetSegment]",
+        "GET api/v{version:apiVersion}/subtitles/search [Subtitles.Search]",
+        "GET api/v{version:apiVersion}/trailer/{trailerId} [Home.Trailer]",
+        "GET api/v{version:apiVersion}/tv/{id:int} [TvShows.Tv]",
+        "GET api/v{version:apiVersion}/tv/{id:int}/available [TvShows.Available]",
+        "GET api/v{version:apiVersion}/tv/{id:int}/missing [TvShows.Missing]",
+        "GET api/v{version:apiVersion}/tv/{id:int}/watch [TvShows.Watch]",
+        "GET api/v{version:apiVersion}/userData [UserData.Index]",
+        "GET api/v{version:apiVersion}/userData/continue [UserData.ContinueWatching]",
+        "GET api/v{version:apiVersion}/userData/favorites [UserData.Favorites]",
+        "GET api/v{version:apiVersion}/userData/watched [UserData.Watched]",
+        "GET api/v{version:apiVersion}/worker-source [WorkerSource.Stream]",
+        "GET api/v{version:apiVersion}/worker/source [WorkerSource.Stream]",
+        "GET files/${depth:int}/${path:required} [Server.Files]",
+        "GET images/{type}/{path} [Image.Image]",
+        "GET manage/activity [Management.GetActivity]",
+        "GET manage/app/status [Management.GetAppStatus]",
+        "GET manage/autostart [Management.GetAutoStart]",
+        "GET manage/config [Management.GetConfig]",
+        "GET manage/logs [Management.GetLogs]",
+        "GET manage/logs/stream [Management.StreamLogs]",
+        "GET manage/plugins [Management.GetPlugins]",
+        "GET manage/queue [Management.GetQueueStatus]",
+        "GET manage/resources [Management.GetResources]",
+        "GET manage/status [Management.GetStatus]",
+        "GET status [Setup.Status]",
+        "GET ws/device-bus [DeviceBusEndpoint.Connect]",
+        "GET|POST|PUT|PATCH|DELETE api/v{version:apiVersion}/cast/{deviceId}/{**path} [CastProxy.Proxy]",
+        "HEAD api/v{version:apiVersion}/trailer/{trailerId} [Home.HasTrailer]",
+        "PATCH api/v{version:apiVersion}/dashboard/configuration [Configuration.Update]",
+        "PATCH api/v{version:apiVersion}/dashboard/libraries/sort [Libraries.Sort]",
+        "PATCH api/v{version:apiVersion}/dashboard/libraries/{id:ulid} [Libraries.Update]",
+        "PATCH api/v{version:apiVersion}/dashboard/libraries/{id:ulid}/folders/{folderId:ulid} [Libraries.UpdateFolder]",
+        "PATCH api/v{version:apiVersion}/dashboard/server/info [Server.UpdateServerInfo]",
+        "PATCH api/v{version:apiVersion}/dashboard/server/workers/{worker}/{count:int:min(0)} [Server.UpdateWorkers]",
+        "PATCH api/v{version:apiVersion}/dashboard/specials/sort [Specials.Sort]",
+        "PATCH api/v{version:apiVersion}/dashboard/specials/{id:ulid} [Specials.Update]",
+        "PATCH api/v{version:apiVersion}/dashboard/specials/{id:ulid}/items [Specials.UpdateItems]",
+        "PATCH api/v{version:apiVersion}/dashboard/tasks [Tasks.Update]",
+        "PATCH api/v{version:apiVersion}/dashboard/tasks/queue/{id:int} [Tasks.UpdateTask]",
+        "PATCH api/v{version:apiVersion}/dashboard/users/notifications [Users.NotificationS]",
+        "PATCH api/v{version:apiVersion}/dashboard/users/{id:guid}/notifications [Users.UserNotification]",
+        "PATCH api/v{version:apiVersion}/dashboard/users/{id:guid}/permissions [Users.UserPermissionUpdate]",
+        "PATCH api/v{version:apiVersion}/music/albums/{id:guid} [Albums.Edit]",
+        "PATCH api/v{version:apiVersion}/music/artists/{id:guid} [Artists.Edit]",
+        "PATCH api/v{version:apiVersion}/music/playlists/{id:guid} [Playlists.Edit]",
+        "PATCH api/v{version:apiVersion}/music/tracks/{id:guid}/lyrics-offset [Tracks.LyricsOffset]",
+        "PATCH api/v{version:apiVersion}/playlists/{id:guid} [UserPlaylists.Edit]",
+        "POST api/devices/{deviceId}/forget [ForgetDevice.Forget]",
+        "POST api/v{version:apiVersion}/collection/{id:int}/add [Collections.Add]",
+        "POST api/v{version:apiVersion}/collection/{id:int}/like [Collections.Like]",
+        "POST api/v{version:apiVersion}/collection/{id:int}/refresh [Collections.Refresh]",
+        "POST api/v{version:apiVersion}/collection/{id:int}/rescan [Collections.Rescan]",
+        "POST api/v{version:apiVersion}/collection/{id:int}/watch-list [Collections.AddToWatchList]",
+        "POST api/v{version:apiVersion}/content-segments [ContentSegments.Create]",
+        "POST api/v{version:apiVersion}/dashboard/activity [ServerActivity.Create]",
+        "POST api/v{version:apiVersion}/dashboard/configuration [Configuration.Store]",
+        "POST api/v{version:apiVersion}/dashboard/content-analysis/intro/{seasonId:int} [ContentAnalysis.DetectIntroForSeason]",
+        "POST api/v{version:apiVersion}/dashboard/content-analysis/ocr/{videoFileId} [ContentAnalysis.OcrBitmapSubtitle]",
+        "POST api/v{version:apiVersion}/dashboard/content-analysis/transcribe/{videoFileId} [ContentAnalysis.Transcribe]",
+        "POST api/v{version:apiVersion}/dashboard/devices [Devices.Create]",
+        "POST api/v{version:apiVersion}/dashboard/drivers [Drivers.Create]",
+        "POST api/v{version:apiVersion}/dashboard/encoderprofiles [Encoder.Create]",
+        "POST api/v{version:apiVersion}/dashboard/encoding/history/purge [EncodingHistory.Purge]",
+        "POST api/v{version:apiVersion}/dashboard/encoding/presets [EncodingPresets.Create]",
+        "POST api/v{version:apiVersion}/dashboard/encoding/presets/import [EncodingPresets.Import]",
+        "POST api/v{version:apiVersion}/dashboard/encoding/presets/import-url [EncodingPresets.ImportFromUrl]",
+        "POST api/v{version:apiVersion}/dashboard/encoding/presets/preview [EncodingPresets.Preview]",
+        "POST api/v{version:apiVersion}/dashboard/encoding/presets/validate [EncodingPresets.Validate]",
+        "POST api/v{version:apiVersion}/dashboard/encoding/presets/{id}/clone [EncodingPresets.Clone]",
+        "POST api/v{version:apiVersion}/dashboard/filesystem/home [Filesystem.Home]",
+        "POST api/v{version:apiVersion}/dashboard/filesystem/ls [Filesystem.List]",
+        "POST api/v{version:apiVersion}/dashboard/filesystem/mkdir [Filesystem.Mkdir]",
+        "POST api/v{version:apiVersion}/dashboard/filesystem/roots [Filesystem.Roots]",
+        "POST api/v{version:apiVersion}/dashboard/hardware/benchmark/run [HardwareBenchmark.RunBenchmark]",
+        "POST api/v{version:apiVersion}/dashboard/inbox/{id:ulid}/assign [Inbox.Assign]",
+        "POST api/v{version:apiVersion}/dashboard/inbox/{id:ulid}/dismiss [Inbox.Dismiss]",
+        "POST api/v{version:apiVersion}/dashboard/intake/token [Intake.IssueToken]",
+        "POST api/v{version:apiVersion}/dashboard/libraries [Libraries.Store]",
+        "POST api/v{version:apiVersion}/dashboard/libraries/move [Libraries.Move]",
+        "POST api/v{version:apiVersion}/dashboard/libraries/refresh [Libraries.RefreshAll]",
+        "POST api/v{version:apiVersion}/dashboard/libraries/rescan [Libraries.Rescan]",
+        "POST api/v{version:apiVersion}/dashboard/libraries/scan-new [Libraries.ScanNewAll]",
+        "POST api/v{version:apiVersion}/dashboard/libraries/{id:ulid}/folders [Libraries.AddFolder]",
+        "POST api/v{version:apiVersion}/dashboard/libraries/{id:ulid}/folders/{folderId:ulid}/encoder_profiles [Libraries.AddEncoderProfile]",
+        "POST api/v{version:apiVersion}/dashboard/libraries/{id:ulid}/refresh [Libraries.Refresh]",
+        "POST api/v{version:apiVersion}/dashboard/libraries/{id:ulid}/rescan [Libraries.Rescan]",
+        "POST api/v{version:apiVersion}/dashboard/libraries/{id:ulid}/scan-new [Libraries.ScanNew]",
+        "POST api/v{version:apiVersion}/dashboard/notifications/broadcast [Notifications.Broadcast]",
+        "POST api/v{version:apiVersion}/dashboard/notifications/send [Notifications.Send]",
+        "POST api/v{version:apiVersion}/dashboard/optical/{drivePath}/close [OpticalMedia.CloseDrive]",
+        "POST api/v{version:apiVersion}/dashboard/optical/{drivePath}/confirm [OpticalMedia.ConfirmDisc]",
+        "POST api/v{version:apiVersion}/dashboard/optical/{drivePath}/open [OpticalMedia.OpenDrive]",
+        "POST api/v{version:apiVersion}/dashboard/optical/{drivePath}/play/{playlistId} [OpticalMedia.PlayMedia]",
+        "POST api/v{version:apiVersion}/dashboard/optical/{drivePath}/process [OpticalMedia.ProcessMedia]",
+        "POST api/v{version:apiVersion}/dashboard/optical/{drivePath}/resolve [OpticalMedia.ResolveDisc]",
+        "POST api/v{version:apiVersion}/dashboard/optical/{drivePath}/rip [OpticalMedia.RipDisc]",
+        "POST api/v{version:apiVersion}/dashboard/optical/{drivePath}/stop [OpticalMedia.StopMedia]",
+        "POST api/v{version:apiVersion}/dashboard/plugins/credentials [Plugin.Credentials]",
+        "POST api/v{version:apiVersion}/dashboard/plugins/{id:guid}/disable [Plugin.Disable]",
+        "POST api/v{version:apiVersion}/dashboard/plugins/{id:guid}/enable [Plugin.Enable]",
+        "POST api/v{version:apiVersion}/dashboard/reclaim/scan [Reclaim.Scan]",
+        "POST api/v{version:apiVersion}/dashboard/reclaim/sweep-partials [Reclaim.SweepPartials]",
+        "POST api/v{version:apiVersion}/dashboard/server/addfiles [Server.AddFiles]",
+        "POST api/v{version:apiVersion}/dashboard/server/changeIp [Server.ChangeIp]",
+        "POST api/v{version:apiVersion}/dashboard/server/directorytree [Server.DirectoryTree]",
+        "POST api/v{version:apiVersion}/dashboard/server/filelist [Server.FileList]",
+        "POST api/v{version:apiVersion}/dashboard/server/invalidate [Server.Invalidate]",
+        "POST api/v{version:apiVersion}/dashboard/server/loglevel [Server.LogLevel]",
+        "POST api/v{version:apiVersion}/dashboard/server/restart [Server.RestartServer]",
+        "POST api/v{version:apiVersion}/dashboard/server/shutdown [Server.Shutdown]",
+        "POST api/v{version:apiVersion}/dashboard/server/start [Server.StartServer]",
+        "POST api/v{version:apiVersion}/dashboard/server/stop [Server.StopServer]",
+        "POST api/v{version:apiVersion}/dashboard/server/wallpaper [Server.SetWallpaper]",
+        "POST api/v{version:apiVersion}/dashboard/specials [Specials.Store]",
+        "POST api/v{version:apiVersion}/dashboard/specials/rescan [Specials.RescanAll]",
+        "POST api/v{version:apiVersion}/dashboard/specials/{id:ulid}/rescan [Specials.Rescan]",
+        "POST api/v{version:apiVersion}/dashboard/storage/list [StorageBrowser.List]",
+        "POST api/v{version:apiVersion}/dashboard/storage/mkdir [StorageBrowser.Mkdir]",
+        "POST api/v{version:apiVersion}/dashboard/storage/probe [StorageBrowser.Probe]",
+        "POST api/v{version:apiVersion}/dashboard/tasks [Tasks.Store]",
+        "POST api/v{version:apiVersion}/dashboard/tasks/failed/retry [Tasks.RetryFailedJobs]",
+        "POST api/v{version:apiVersion}/dashboard/tasks/failed/retry/{id:long?} [Tasks.RetryFailedJobs]",
+        "POST api/v{version:apiVersion}/dashboard/tasks/pause-queue [Tasks.PauseEncoderQueue]",
+        "POST api/v{version:apiVersion}/dashboard/tasks/pause/{id:int} [Tasks.PauseTask]",
+        "POST api/v{version:apiVersion}/dashboard/tasks/queue/incomplete/{id:int}/retry [Tasks.RetryIncompleteEncode]",
+        "POST api/v{version:apiVersion}/dashboard/tasks/reorder [Tasks.ReorderQueue]",
+        "POST api/v{version:apiVersion}/dashboard/tasks/resume-queue [Tasks.ResumeEncoderQueue]",
+        "POST api/v{version:apiVersion}/dashboard/tasks/resume/{id:int} [Tasks.ResumeTask]",
+        "POST api/v{version:apiVersion}/dashboard/users [Users.Store]",
+        "POST api/v{version:apiVersion}/dashboard/workers/register [Workers.Register]",
+        "POST api/v{version:apiVersion}/dashboard/workers/{workerId}/heartbeat [Workers.Heartbeat]",
+        "POST api/v{version:apiVersion}/dashboard/workers/{workerId}/tasks/{taskId}/progress [Workers.ReceiveProgress]",
+        "POST api/v{version:apiVersion}/distribution/workers/dispatch [CoordinatorDispatch.Dispatch]",
+        "POST api/v{version:apiVersion}/distribution/workers/register [Workers.Register]",
+        "POST api/v{version:apiVersion}/distribution/workers/{workerId}/heartbeat [Workers.Heartbeat]",
+        "POST api/v{version:apiVersion}/distribution/workers/{workerId}/tasks/{taskId}/progress [Workers.ReceiveProgress]",
+        "POST api/v{version:apiVersion}/encoder/content-analysis/crop/{videoFileId} [EncoderContentAnalysis.DetectCrop]",
+        "POST api/v{version:apiVersion}/encoder/content-analysis/intro/{seasonId:int} [EncoderContentAnalysis.DetectIntroForSeason]",
+        "POST api/v{version:apiVersion}/encoder/content-analysis/ocr/{videoFileId} [EncoderContentAnalysis.OcrBitmapSubtitle]",
+        "POST api/v{version:apiVersion}/encoder/content-analysis/whisper/{videoFileId} [EncoderContentAnalysis.Whisper]",
+        "POST api/v{version:apiVersion}/encoder/hardware/benchmark [EncoderHardware.StartBenchmark]",
+        "POST api/v{version:apiVersion}/encoder/ocr/languages/{code}/download [EncoderOcrLanguages.DownloadLanguage]",
+        "POST api/v{version:apiVersion}/encoder/profiles [EncoderProfiles.Create]",
+        "POST api/v{version:apiVersion}/encoder/profiles/import [EncoderProfiles.Import]",
+        "POST api/v{version:apiVersion}/encoder/profiles/validate [EncoderProfiles.Validate]",
+        "POST api/v{version:apiVersion}/encoder/profiles/{id}/preview [EncoderProfiles.Preview]",
+        "POST api/v{version:apiVersion}/encoder/profiles/{parentId:ulid}/clone [EncoderProfiles.Clone]",
+        "POST api/v{version:apiVersion}/encoder/trusted-publishers [EncoderTrustedPublishers.Create]",
+        "POST api/v{version:apiVersion}/home/card [Home.HomeCard]",
+        "POST api/v{version:apiVersion}/home/continue [Home.HomeContinue]",
+        "POST api/v{version:apiVersion}/intake/webhook [IntakeWebhook.Webhook]",
+        "POST api/v{version:apiVersion}/movie/{id:int}/add [Movies.Add]",
+        "POST api/v{version:apiVersion}/movie/{id:int}/like [Movies.Like]",
+        "POST api/v{version:apiVersion}/movie/{id:int}/refresh [Movies.Refresh]",
+        "POST api/v{version:apiVersion}/movie/{id:int}/rescan [Movies.Rescan]",
+        "POST api/v{version:apiVersion}/movie/{id:int}/watch-list [Movies.AddToWatchList]",
+        "POST api/v{version:apiVersion}/music/albums/{id:guid}/cover [Albums.Cover]",
+        "POST api/v{version:apiVersion}/music/albums/{id:guid}/like [Albums.Like]",
+        "POST api/v{version:apiVersion}/music/albums/{id:guid}/rescan [Albums.Rescan]",
+        "POST api/v{version:apiVersion}/music/artists/{id:guid}/cover [Artists.Cover]",
+        "POST api/v{version:apiVersion}/music/artists/{id:guid}/like [Artists.Like]",
+        "POST api/v{version:apiVersion}/music/artists/{id:guid}/rescan [Artists.Like]",
+        "POST api/v{version:apiVersion}/music/playlists [Playlists.Create]",
+        "POST api/v{version:apiVersion}/music/playlists/{id:guid}/cover [Playlists.Cover]",
+        "POST api/v{version:apiVersion}/music/playlists/{id:guid}/tracks [Playlists.AddTrack]",
+        "POST api/v{version:apiVersion}/music/search/{query}/{Type} [Music.TypeSearch]",
+        "POST api/v{version:apiVersion}/music/start/favorite-albums [Music.FavoriteAlbums]",
+        "POST api/v{version:apiVersion}/music/start/favorite-artists [Music.FavoriteArtists]",
+        "POST api/v{version:apiVersion}/music/start/favorites [Music.Favorites]",
+        "POST api/v{version:apiVersion}/music/start/playlists [Music.Playlists]",
+        "POST api/v{version:apiVersion}/music/tracks/{id:guid}/like [Tracks.Value]",
+        "POST api/v{version:apiVersion}/music/tracks/{id:guid}/playback [Tracks.Playback]",
+        "POST api/v{version:apiVersion}/playlists [UserPlaylists.Create]",
+        "POST api/v{version:apiVersion}/playlists/{id:guid}/items [UserPlaylists.AddItem]",
+        "POST api/v{version:apiVersion}/specials/{id:ulid}/like [Special.Like]",
+        "POST api/v{version:apiVersion}/specials/{id:ulid}/watch-list [Special.AddToWatchList]",
+        "POST api/v{version:apiVersion}/streaming/live/sessions [LiveTranscode.StartSession]",
+        "POST api/v{version:apiVersion}/streaming/live/sessions/{sessionId}/buffer-health [LiveTranscode.ReportBufferHealth]",
+        "POST api/v{version:apiVersion}/streaming/live/sessions/{sessionId}/position [LiveTranscode.ReportPosition]",
+        "POST api/v{version:apiVersion}/streaming/live/sessions/{sessionId}/quality [LiveTranscode.ChangeQuality]",
+        "POST api/v{version:apiVersion}/streaming/live/sessions/{sessionId}/seek [LiveTranscode.Seek]",
+        "POST api/v{version:apiVersion}/subtitles/download [Subtitles.Download]",
+        "POST api/v{version:apiVersion}/tv/{id:int}/add [TvShows.Add]",
+        "POST api/v{version:apiVersion}/tv/{id:int}/like [TvShows.Like]",
+        "POST api/v{version:apiVersion}/tv/{id:int}/refresh [TvShows.Refresh]",
+        "POST api/v{version:apiVersion}/tv/{id:int}/rescan [TvShows.Rescan]",
+        "POST api/v{version:apiVersion}/tv/{id:int}/watch-list [TvShows.AddToWatchList]",
+        "POST api/v{version:apiVersion}/worker/execute-task [WorkerExecution.ExecuteTask]",
+        "POST api/v{version:apiVersion}/worker/tasks [WorkerExecution.ExecuteTask]",
+        "POST manage/app/start [Management.StartApp]",
+        "POST manage/app/stop [Management.StopApp]",
+        "POST manage/autostart [Management.SetAutoStart]",
+        "POST manage/restart [Management.Restart]",
+        "POST manage/stop [Management.Stop]",
+        "POST manage/update [Management.DownloadUpdate]",
+        "PUT api/v{version:apiVersion}/content-segments/{id} [ContentSegments.Update]",
+        "PUT api/v{version:apiVersion}/dashboard/drivers/{id:ulid} [Drivers.Update]",
+        "PUT api/v{version:apiVersion}/dashboard/drivers/{id:ulid}/credentials [Drivers.UpdateCredentials]",
+        "PUT api/v{version:apiVersion}/dashboard/encoding/presets/{id} [EncodingPresets.Update]",
+        "PUT api/v{version:apiVersion}/dashboard/folders/{id:ulid}/driver [FolderDriver.AssignDriver]",
+        "PUT api/v{version:apiVersion}/dashboard/intake/drop-folder [Intake.SetDropFolder]",
+        "PUT api/v{version:apiVersion}/encoder/content-analysis/segments/{segmentId} [EncoderContentAnalysis.EditSegment]",
+        "PUT api/v{version:apiVersion}/encoder/profiles/{id:ulid} [EncoderProfiles.Update]",
+        "PUT api/v{version:apiVersion}/playlists/{id:guid}/items/order [UserPlaylists.Reorder]",
+        "PUT manage/config [Management.UpdateConfig]",
+    ];
+
+    private static List<string> DescribeLiveRoutes(EndpointDataSource dataSource)
+    {
+        List<string> lines = [];
+
+        foreach (Endpoint endpoint in dataSource.Endpoints)
+        {
+            if (endpoint is not RouteEndpoint routeEndpoint)
+                continue;
+
+            ControllerActionDescriptor? actionDescriptor =
+                endpoint.Metadata.GetMetadata<ControllerActionDescriptor>();
+            string owner = actionDescriptor is null
+                ? "(hub/other)"
+                : $"{actionDescriptor.ControllerName}.{actionDescriptor.ActionName}";
+
+            HttpMethodMetadata? methodMetadata =
+                endpoint.Metadata.GetMetadata<HttpMethodMetadata>();
+            string methods = methodMetadata is null
+                ? "(any)"
+                : string.Join("|", methodMetadata.HttpMethods);
+
+            lines.Add($"{methods} {routeEndpoint.RoutePattern.RawText} [{owner}]");
+        }
+
+        lines.Sort(StringComparer.Ordinal);
+        return lines;
+    }
+
+    [Fact]
+    public void RegisteredRoutes_MatchTheLockedContractSnapshot()
+    {
+        using IServiceScope scope = _factory.Services.CreateScope();
+        EndpointDataSource dataSource =
+            scope.ServiceProvider.GetRequiredService<EndpointDataSource>();
+
+        List<string> actualRoutes = DescribeLiveRoutes(dataSource);
+        List<string> expectedRoutes = ExpectedRoutes
+            .OrderBy(r => r, StringComparer.Ordinal)
+            .ToList();
+
+        List<string> missing = expectedRoutes.Except(actualRoutes, StringComparer.Ordinal).ToList();
+        List<string> unexpected = actualRoutes
+            .Except(expectedRoutes, StringComparer.Ordinal)
+            .ToList();
+
+        Assert.True(
+            missing.Count == 0,
+            $"Route(s) removed or changed from the locked contract (breaks older self-hosted clients): {string.Join(", ", missing)}"
+        );
+        Assert.True(
+            unexpected.Count == 0,
+            $"New route(s) not yet locked into the contract snapshot — add them to ExpectedRoutes once intentional: {string.Join(", ", unexpected)}"
+        );
+    }
+
+    private static readonly string[] KnownUnversionedApiRoutes =
+    [
+        "POST api/devices/{deviceId}/forget [ForgetDevice.Forget]",
+    ];
+
+    [Fact]
+    public void ApiRoutes_AllDeclareAnExplicitApiVersion_ExceptTheKnownLegacyExceptions()
+    {
+        using IServiceScope scope = _factory.Services.CreateScope();
+        EndpointDataSource dataSource =
+            scope.ServiceProvider.GetRequiredService<EndpointDataSource>();
+
+        List<string> unversioned = DescribeLiveRoutes(dataSource)
+            .Where(route => route.Contains(" api/", StringComparison.Ordinal))
+            .Where(route => !route.Contains("v{version:apiVersion}", StringComparison.Ordinal))
+            .ToList();
+
+        List<string> unexpectedlyUnversioned = unversioned
+            .Except(KnownUnversionedApiRoutes, StringComparer.Ordinal)
+            .ToList();
+
+        Assert.True(
+            unexpectedlyUnversioned.Count == 0,
+            $"api/ route(s) missing the v{{version:apiVersion}} segment — an unversioned API route cannot be evolved without breaking every existing client: {string.Join(", ", unexpectedlyUnversioned)}"
+        );
+    }
+}
