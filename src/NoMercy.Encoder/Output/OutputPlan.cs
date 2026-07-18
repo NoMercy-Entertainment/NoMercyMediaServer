@@ -72,7 +72,12 @@ public record OutputPlan(
     // these as ffmpeg global options (before the -i input) so a profile or plugin
     // can pass whole-command flags the schema doesn't model. Per-stream overrides
     // live on each VideoOutputPlan/AudioOutputPlan/SubtitleOutputPlan.ExtraFlags.
-    Dictionary<string, string>? GlobalExtraFlags = null
+    Dictionary<string, string>? GlobalExtraFlags = null,
+    // Set by PlanStage when the source is variable-frame-rate. Segmented output
+    // strategies (HLS/DASH) then force constant-frame-rate muxing (-fps_mode cfr)
+    // so segment durations stay aligned to the target — VFR PTS gaps otherwise
+    // drift the segment boundaries and desync playback across an ABR switch.
+    bool NormalizeToConstantFrameRate = false
 );
 
 public record VideoOutputPlan(

@@ -102,6 +102,13 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
                 ["-forced-idr"] = "1",
             };
 
+            // A variable-frame-rate source must be muxed at a constant frame rate
+            // for HLS: VFR PTS gaps drift the segment boundaries away from the
+            // -hls_time target and desync across an ABR switch. CFR sources are
+            // unaffected (already constant), so this only reshapes VFR input.
+            if (plan.NormalizeToConstantFrameRate)
+                extraFlags["-fps_mode"] = "cfr";
+
             // fMP4 requires an init segment with a deterministic name alongside the playlist.
             if (isFmp4)
                 extraFlags["-hls_fmp4_init_filename"] = "init.mp4";

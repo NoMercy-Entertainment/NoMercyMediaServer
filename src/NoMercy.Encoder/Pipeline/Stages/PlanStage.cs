@@ -1140,7 +1140,9 @@ public class PlanStage(
             Layout: layout,
             GenerateChapterThumbs: generateChapterThumbs,
             EmitSubtitleWebVttChunks: emitSubtitleChunks,
-            GlobalExtraFlags: BuildGlobalExtraFlags(profile.CustomArguments)
+            GlobalExtraFlags: BuildGlobalExtraFlags(profile.CustomArguments),
+            NormalizeToConstantFrameRate: media.VideoStreams.Count > 0
+                && media.VideoStreams[0].IsVariableFrameRate
         );
     }
 
