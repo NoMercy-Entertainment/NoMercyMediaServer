@@ -66,6 +66,7 @@ public class TasksController(
         List<QueueJob> jobs = await queueContext
             .QueueJobs.OrderByDescending(j => j.Priority)
             .ThenBy(j => j.CreatedAt)
+            .ThenBy(j => j.Id)
             .Take(UiLimits.MaximumTasksInList)
             .ToListAsync();
 

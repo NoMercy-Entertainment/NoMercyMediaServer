@@ -50,6 +50,7 @@ public class EncodingPresetRepository(MediaContext context) : IEncodingPresetRep
         return query
             .OrderBy(p => p.IsBuiltIn ? 0 : 1)
             .ThenBy(p => p.Name)
+            .ThenBy(p => p.Id)
             .Skip(pageIndex * pageSize)
             .Take(pageSize)
             .ToListAsync();
