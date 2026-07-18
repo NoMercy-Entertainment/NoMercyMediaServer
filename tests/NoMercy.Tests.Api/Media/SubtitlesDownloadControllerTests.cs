@@ -150,7 +150,7 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
             {
                 type = "movie",
                 id = SeededMovieId,
-                download_url = "https://dl.example.com/spirited-away.srt",
+                download_url = "https://93.184.216.34/spirited-away.srt",
                 language = "eng",
                 format = "srt",
             }
@@ -183,7 +183,7 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
             {
                 type = "movie",
                 id = SeededMovieId,
-                download_url = "https://dl.example.com/spirited-away.srt",
+                download_url = "https://93.184.216.34/spirited-away.srt",
                 language = "eng",
                 format = "srt",
             }
@@ -246,7 +246,7 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
         {
             type = "movie",
             id = SeededMovieId,
-            download_url = "https://dl.example.com/spirited-away.srt",
+            download_url = "https://93.184.216.34/spirited-away.srt",
             language = "eng",
             format = "srt",
         };
@@ -304,7 +304,7 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
             {
                 type = "movie",
                 id = SeededMovieId,
-                download_url = "https://dl.example.com/spirited-away.srt",
+                download_url = "https://93.184.216.34/spirited-away.srt",
                 language = "eng",
                 format = "srt",
             }
@@ -338,7 +338,7 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
             {
                 type = "movie",
                 id = SeededMovieId,
-                download_url = "https://dl.example.com/spirited-away.ass",
+                download_url = "https://93.184.216.34/spirited-away.ass",
                 language = "eng",
                 format = "ass",
             }
@@ -370,7 +370,7 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
             {
                 type = "album",
                 id = SeededMovieId,
-                download_url = "https://dl.example.com/spirited-away.srt",
+                download_url = "https://93.184.216.34/spirited-away.srt",
                 language = "eng",
             }
         );
