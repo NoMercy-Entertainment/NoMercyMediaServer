@@ -8,9 +8,10 @@
 //
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
+using Microsoft.Extensions.Logging;
 using NoMercy.Monitoring;
 using NoMercy.Networking.Messaging;
-using Microsoft.Extensions.Logging;
+
 namespace NoMercy.Api.WebSockets;
 
 public class ResourceMonitorService(
@@ -19,6 +20,8 @@ public class ResourceMonitorService(
     IClientMessenger clientMessenger
 ) : IResourceMonitorService
 {
+    private const int BroadcastIntervalMs = 1000;
+
     private readonly Lock _sync = new();
     private bool _broadcasting;
     private CancellationTokenSource? _cancellationTokenSource;
@@ -76,13 +79,11 @@ public class ResourceMonitorService(
         while (_broadcasting && !cancellationToken.IsCancellationRequested)
         {
             DateTime time = DateTime.Now;
+            bool failed = false;
             try
             {
                 Resource resourceData = resourceMonitor.Monitor();
                 await clientMessenger.SendToAll("ResourceUpdate", "dashboardHub", resourceData);
-                int delay = 1000 - (int)(DateTime.Now - time).TotalMilliseconds;
-                if (delay > 0)
-                    await Task.Delay(delay, cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -91,7 +92,38 @@ public class ResourceMonitorService(
             catch (Exception e)
             {
                 logger.LogError("Error broadcasting resource data: {Message}", e.Message);
+                failed = true;
+            }
+
+            // The delay must run on the error path too. It previously lived inside
+            // the try, so a persistent Monitor()/send failure skipped it and the
+            // loop respun at CPU speed, pegging a core while a socket stayed wedged.
+            int delay = NextDelayMs(
+                failed,
+                (int)(DateTime.Now - time).TotalMilliseconds,
+                BroadcastIntervalMs
+            );
+            if (delay > 0)
+            {
+                try
+                {
+                    await Task.Delay(delay, cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
             }
         }
     }
+
+    /// <summary>
+    /// Milliseconds to wait before the next broadcast iteration. On failure the
+    /// full interval is always used (a backoff, so a persistent error can't
+    /// hot-spin the loop); on success the interval is paced down by how long the
+    /// iteration already took (a non-positive result means the work outran the
+    /// interval, so the loop should continue immediately).
+    /// </summary>
+    public static int NextDelayMs(bool failed, int elapsedMs, int intervalMs) =>
+        failed ? intervalMs : intervalMs - elapsedMs;
 }
