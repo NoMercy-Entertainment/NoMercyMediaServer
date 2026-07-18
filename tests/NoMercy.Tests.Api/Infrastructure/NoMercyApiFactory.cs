@@ -41,6 +41,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Security;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Providers.AcoustId;
+using NoMercy.Providers.TMDB.Client;
 using NoMercy.Service;
 using NoMercy.Setup.Auth;
 using NoMercy.Setup.Boot;
@@ -97,6 +98,16 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             // the controller to construct, not to fingerprint audio.
             services.RemoveAll<IAudioFingerprinter>();
             services.AddTransient<IAudioFingerprinter>(_ => Mock.Of<IAudioFingerprinter>());
+
+            // RecommendationsController's /{type}/{id} detail route calls straight through
+            // to the real TMDB HTTP client for movie/tv metadata. Tests must never reach
+            // the network, so replace both providers with loose mocks — Moq returns a
+            // completed Task<null> for unconfigured Task<T?> members, which exercises the
+            // controller's real "detail not found" 404 path deterministically.
+            services.RemoveAll<IMovieMetadataProvider>();
+            services.AddScoped<IMovieMetadataProvider>(_ => Mock.Of<IMovieMetadataProvider>());
+            services.RemoveAll<ITvShowMetadataProvider>();
+            services.AddScoped<ITvShowMetadataProvider>(_ => Mock.Of<ITvShowMetadataProvider>());
         });
     }
 
