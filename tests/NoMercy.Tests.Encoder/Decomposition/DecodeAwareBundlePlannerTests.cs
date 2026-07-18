@@ -99,7 +99,8 @@ public class DecodeAwareBundlePlannerTests
     private static VideoOutputPlan TranscodeVideo(
         int width = 1920,
         int height = 1080,
-        string encoder = "libx264"
+        string encoder = "libx264",
+        string? cropFilter = null
     ) =>
         new(
             Width: width,
@@ -113,7 +114,8 @@ public class DecodeAwareBundlePlannerTests
             TenBit: false,
             PixelFormat: "yuv420p",
             MapLabel: "[v]",
-            ExtraFlags: []
+            ExtraFlags: [],
+            CropFilter: cropFilter
         );
 
     private static VideoOutputPlan TonemapVideo(
@@ -121,7 +123,8 @@ public class DecodeAwareBundlePlannerTests
         int height = 1080,
         string encoder = "libx264",
         string chain =
-            "zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable"
+            "zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable",
+        string? cropFilter = null
     ) =>
         new(
             Width: width,
@@ -137,7 +140,8 @@ public class DecodeAwareBundlePlannerTests
             MapLabel: "[v]",
             ExtraFlags: [],
             ConvertHdrToSdr: true,
-            TonemapFilterChain: chain
+            TonemapFilterChain: chain,
+            CropFilter: cropFilter
         );
 
     private static AudioOutputPlan AudioOutput(StreamAction action = StreamAction.Copy) =>
@@ -216,12 +220,16 @@ public class DecodeAwareBundlePlannerTests
     }
 
     [Fact]
-    public void GroupByDecodeClass_HdrPreserveAndSdrTonemap_AreTwoSeparateGroups()
+    public void GroupByDecodeClass_HdrPreserveAndSdrTonemap_AreTwoClassificationGroups()
     {
         // An HDR-preserve rung (real encoder, ConvertHdrToSdr=false) is a
-        // plain Transcode, not Tonemap — kept distinct even though
-        // FilterGraphAssembler's dedupe path could technically combine it
-        // with an SDR-tonemap rung into one ffmpeg via a pre-tonemap split.
+        // plain Transcode, not Tonemap — Layer 1 classifies them into two
+        // DecodeGroups because the tonemap CHAIN is meaningfully different
+        // metadata. This does NOT mean they end up as two ffmpeg decodes:
+        // Plan() (Layer 2) unions Transcode + Tonemap before capacity-
+        // chunking because FilterGraphAssembler shares the crop + tonemap
+        // dedupe across both in one ffmpeg — see the Plan_* co-bundling
+        // tests below.
         DecomposedTask[] tasks = [VideoTask(0, "libx265", Cpu()), VideoTask(1, "libx264", Cpu())];
         OutputPlan plan = PlanWith([
             TranscodeVideo(encoder: "libx265"),
@@ -249,17 +257,22 @@ public class DecodeAwareBundlePlannerTests
     // ------------------------------------------------------------------ (a) HDR→SDR plan
 
     [Fact]
-    public void Plan_HdrPreserveAndSdrTonemap_TonemapBundleCarriesSprite_HdrRungIsSeparateDecode()
+    public void Plan_HdrPreserveAndSdrTonemap_CoBundleIntoOneSharedDecode_SpriteRidesIt()
     {
+        // A 4K HDR master rung (HDR-preserve, no tonemap) plus a 1080p SDR
+        // rung derived from it (HDR->SDR tonemap) must land in ONE bundle —
+        // FilterGraphAssembler hoists the source decode/crop once and dedupes
+        // the tonemap into a single [sdr] intermediate that feeds the SDR
+        // rung AND the sprite, so this is one ffmpeg, not two.
         DecomposedTask[] tasks =
         [
-            VideoTask(0, "libx265", Cpu()), // HDR-preserve
-            VideoTask(1, "libx264", Cpu()), // SDR tonemap
+            VideoTask(0, "libx265", Cpu()), // 4K HDR-preserve master
+            VideoTask(1, "libx264", Cpu()), // 1080p SDR tonemap, derived from the master
             AudioTask(0), // copy audio
             ThumbnailsTask(),
         ];
         OutputPlan plan = PlanWith(
-            [TranscodeVideo(encoder: "libx265"), TonemapVideo(encoder: "libx264")],
+            [TranscodeVideo(3840, 2160, "libx265"), TonemapVideo(1920, 1080, "libx264")],
             audios: [AudioOutput(StreamAction.Copy)],
             hasThumbs: true
         );
@@ -275,25 +288,63 @@ public class DecodeAwareBundlePlannerTests
 
         bundles
             .Should()
-            .HaveCount(
-                2,
-                "the HDR-preserve rung and the SDR-tonemap rung are two separate decodes — "
-                    + "total decodes = 2, not 3"
+            .ContainSingle(
+                "the HDR master and the SDR rung derived from it share one decode+crop — "
+                    + "total decodes = 1, not 2"
             );
 
-        DecomposedTask tonemapBundle = bundles.Single(b => b.VideoSliceIndexes!.Contains(1));
-        tonemapBundle.VideoSliceIndexes.Should().NotContain(0);
-        tonemapBundle
+        bundles[0]
+            .VideoSliceIndexes.Should()
+            .BeEquivalentTo(
+                [0, 1],
+                "both the HDR-preserve rung and the SDR-tonemap rung ride the single shared decode"
+            );
+        bundles[0]
             .IncludeThumbnails.Should()
-            .NotBe(false, "the sprite must ride the SDR-tonemap decode for correct Rec.709 color");
-        tonemapBundle.AudioSliceIndexes.Should().BeEquivalentTo([0]);
+            .NotBe(false, "the sprite must ride the shared decode for correct Rec.709 color");
+        bundles[0].AudioSliceIndexes.Should().BeEquivalentTo([0]);
+    }
 
-        DecomposedTask hdrBundle = bundles.Single(b => b != tonemapBundle);
-        hdrBundle.VideoSliceIndexes.Should().BeEquivalentTo([0]);
-        hdrBundle.IncludeThumbnails.Should().BeFalse("only the tonemap decode carries the sprite");
-        hdrBundle
-            .AudioSliceIndexes.Should()
-            .BeEmpty("copy audio rides the primary bundle only once");
+    [Fact]
+    public void Plan_CroppedHdrMasterPlusDerivedSdrRung_ShareOneBundle_NotReCroppedSeparately()
+    {
+        // Reproduces the reported regression: a letterboxed 2160p HDR source
+        // (crop=3840:1608:0:276) with a "4K HDR" + "1080p SDR" preset ladder.
+        // Both rungs resolve the SAME crop rectangle — the planner must put
+        // them in one bundle so FilterGraphAssembler's single hoisted crop
+        // feeds both, instead of the SDR rung re-cropping the original
+        // source in its own standalone ffmpeg.
+        const string crop = "3840:1608:0:276";
+        DecomposedTask[] tasks =
+        [
+            VideoTask(0, "hevc_nvenc", Gpu()), // 4K HDR HEVC 10-bit master
+            VideoTask(1, "hevc_nvenc", Gpu()), // 1080p SDR HEVC 10-bit, derived
+        ];
+        OutputPlan plan = PlanWith([
+            TranscodeVideo(3840, 1608, "hevc_nvenc", cropFilter: crop),
+            TonemapVideo(1920, 800, "hevc_nvenc", cropFilter: crop),
+        ]);
+
+        DecomposedTask[] bundles = DecodeAwareBundlePlanner.Plan(
+            tasks,
+            plan,
+            parentJobId: 1,
+            groupTag: GroupTag,
+            gpuCap: 8,
+            cpuCap: 8
+        );
+
+        bundles
+            .Should()
+            .ContainSingle(
+                "the cropped HDR master and its derived SDR rung share one decode/crop bundle"
+            );
+        bundles[0]
+            .VideoSliceIndexes.Should()
+            .BeEquivalentTo(
+                [0, 1],
+                "the SDR rung is derived FROM the cropped HDR master, not re-cropped standalone"
+            );
     }
 
     // ------------------------------------------------------------------ (b) All-copy plan
