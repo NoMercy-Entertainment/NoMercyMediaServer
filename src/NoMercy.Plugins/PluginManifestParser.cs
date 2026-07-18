@@ -61,7 +61,9 @@ public static class PluginManifestParser
         PluginManifest manifest,
         string assemblyPath,
         PluginStatus status,
-        string? manifestPath = null
+        string? manifestPath = null,
+        bool verified = false,
+        bool trusted = false
     )
     {
         ArgumentNullException.ThrowIfNull(manifest);
@@ -80,6 +82,8 @@ public static class PluginManifestParser
             AssemblyPath = assemblyPath,
             TargetAbi = manifest.TargetAbi,
             ManifestPath = manifestPath,
+            Verified = verified,
+            Trusted = trusted,
         };
     }
 

@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Events;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Plugins.Verification;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Validation;
@@ -31,16 +32,16 @@ public static class PluginServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(pluginsPath);
 
+        services.AddSingleton<IPluginVerifier, PluginVerifier>();
+
         services.AddSingleton<IPluginManager>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             ILogger<PluginManager> logger = sp.GetRequiredService<ILogger<PluginManager>>();
             IStorageDriver driver = sp.GetRequiredService<IStorageDriver>();
-            IStorage storage = new LocalStorage(
-                driver,
-                new([pluginsPath], driver)
-            );
-            return new PluginManager(eventBus, sp, logger, pluginsPath, storage, driver);
+            IPluginVerifier verifier = sp.GetRequiredService<IPluginVerifier>();
+            IStorage storage = new LocalStorage(driver, new([pluginsPath], driver));
+            return new PluginManager(eventBus, sp, logger, pluginsPath, storage, driver, verifier);
         });
 
         // Wire encoder plugins' GetProfile into the encoder's profile-override seam.

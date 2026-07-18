@@ -12,6 +12,7 @@
 using Microsoft.Extensions.Logging;
 using NoMercy.Events;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Plugins.Verification;
 using NoMercy.Storage;
 
 namespace NoMercy.Plugins;
@@ -24,6 +25,7 @@ public class PluginManager : IPluginManager, IDisposable
     private readonly string _pluginsPath;
     private readonly IStorage _storage;
     private readonly IStorageDriver _driver;
+    private readonly IPluginVerifier _verifier;
     private readonly IPluginRegistry _registry;
     private readonly PluginLoader _loader;
     private readonly PluginLifecycleManager _lifecycle;
@@ -34,7 +36,8 @@ public class PluginManager : IPluginManager, IDisposable
         ILogger<PluginManager> logger,
         string pluginsPath,
         IStorage storage,
-        IStorageDriver driver
+        IStorageDriver driver,
+        IPluginVerifier? verifier = null
     )
     {
         _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
@@ -44,6 +47,7 @@ public class PluginManager : IPluginManager, IDisposable
         _pluginsPath = pluginsPath ?? throw new ArgumentNullException(nameof(pluginsPath));
         _driver = driver ?? throw new ArgumentNullException(nameof(driver));
         _storage = storage ?? throw new ArgumentNullException(nameof(storage));
+        _verifier = verifier ?? new PluginVerifier();
         _registry = new PluginRegistry();
         _loader = new(
             _eventBus,
@@ -51,7 +55,8 @@ public class PluginManager : IPluginManager, IDisposable
             _logger,
             _pluginsPath,
             _storage,
-            _registry
+            _registry,
+            _verifier
         );
         _lifecycle = new(
             _eventBus,
@@ -69,7 +74,16 @@ public class PluginManager : IPluginManager, IDisposable
         return _registry.Values.Select(lp => lp.Info).ToList().AsReadOnly();
     }
 
-    public async Task InstallPluginAsync(string packagePath, CancellationToken ct = default)
+    public Task InstallPluginAsync(string packagePath, CancellationToken ct = default)
+    {
+        return InstallPluginAsync(packagePath, expectedChecksum: null, ct);
+    }
+
+    public async Task InstallPluginAsync(
+        string packagePath,
+        string? expectedChecksum,
+        CancellationToken ct = default
+    )
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(packagePath);
 
@@ -81,6 +95,35 @@ public class PluginManager : IPluginManager, IDisposable
         if (!_driver.FileExists(fullPath))
         {
             throw new FileNotFoundException($"Plugin assembly not found: {fullPath}", fullPath);
+        }
+
+        if (!string.IsNullOrWhiteSpace(expectedChecksum))
+        {
+            // This install path receives a bare assembly with no plugin.json
+            // alongside it, so ABI cannot be judged here (TargetAbi stays null
+            // and that stage passes by design); only the checksum a repository
+            // caller supplies is enforced, before anything is copied to disk.
+            PluginManifest checksumManifest = new()
+            {
+                Id = Guid.Empty,
+                Name = Path.GetFileNameWithoutExtension(fullPath),
+                Description = string.Empty,
+                Version = "0.0.0",
+                Assembly = Path.GetFileName(fullPath),
+            };
+
+            PluginVerificationResult verification = _verifier.Verify(
+                checksumManifest,
+                fullPath,
+                expectedChecksum
+            );
+
+            if (!verification.Verified)
+            {
+                throw new PluginVerificationException(
+                    $"Plugin '{checksumManifest.Name}' failed verification: {string.Join("; ", verification.Failures)}"
+                );
+            }
         }
 
         string pluginName = Path.GetFileNameWithoutExtension(fullPath);

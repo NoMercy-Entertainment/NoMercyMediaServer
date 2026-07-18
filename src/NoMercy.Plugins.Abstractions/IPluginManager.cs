@@ -15,6 +15,16 @@ public interface IPluginManager
 {
     IReadOnlyList<PluginInfo> GetInstalledPlugins();
     Task InstallPluginAsync(string packageUrl, CancellationToken ct = default);
+
+    // Repository-backed install: verifies the supplied checksum before anything
+    // is copied to disk. Default forwards to the checksum-less overload so
+    // existing implementers (test doubles) keep compiling unchanged.
+    Task InstallPluginAsync(
+        string packageUrl,
+        string? expectedChecksum,
+        CancellationToken ct = default
+    ) => InstallPluginAsync(packageUrl, ct);
+
     Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default);
     Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default);
     Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default);

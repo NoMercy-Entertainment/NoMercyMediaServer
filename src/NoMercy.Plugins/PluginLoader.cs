@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Events;
 using NoMercy.Events.Plugins;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Plugins.Verification;
 using NoMercy.Storage;
 
 namespace NoMercy.Plugins;
@@ -29,7 +30,8 @@ internal sealed class PluginLoader(
     ILogger logger,
     string pluginsPath,
     IStorage storage,
-    IPluginRegistry registry
+    IPluginRegistry registry,
+    IPluginVerifier verifier
 )
 {
     private readonly IEventBus _eventBus = eventBus;
@@ -38,6 +40,7 @@ internal sealed class PluginLoader(
     private readonly string _pluginsPath = pluginsPath;
     private readonly IStorage _storage = storage;
     private readonly IPluginRegistry _registry = registry;
+    private readonly IPluginVerifier _verifier = verifier;
 
     internal async Task LoadPluginFromManifestAsync(
         string manifestPath,
@@ -79,6 +82,49 @@ internal sealed class PluginLoader(
             }
 
             string absoluteAssemblyPath = ToLocalAssemblyPath(assemblyPath);
+
+            // Manual drops carry no repository checksum; only ABI is enforced here.
+            PluginVerificationResult verification = _verifier.Verify(
+                manifest,
+                absoluteAssemblyPath,
+                null
+            );
+
+            if (!verification.Verified)
+            {
+                string failureMessage = string.Join("; ", verification.Failures);
+
+                _logger.LogWarning(
+                    "Plugin {PluginName} failed verification and was marked malfunctioned: {Failures}",
+                    manifest.Name,
+                    failureMessage
+                );
+
+                PluginInfo malfunctionedInfo = PluginManifestParser.ToPluginInfo(
+                    manifest,
+                    assemblyPath,
+                    PluginStatus.Malfunctioned,
+                    manifestPath,
+                    verification.Verified,
+                    verification.Trusted
+                );
+
+                _registry[manifest.Id] = new(malfunctionedInfo, null, null);
+
+                await _eventBus.PublishAsync(
+                    new PluginErrorOccurredEvent
+                    {
+                        PluginId = manifest.Id.ToString(),
+                        PluginName = manifest.Name,
+                        ErrorMessage = failureMessage,
+                        ExceptionType = nameof(PluginVerificationException),
+                    },
+                    ct
+                );
+
+                return;
+            }
+
             PluginLoadContext loadContext = new(absoluteAssemblyPath);
 
             try
@@ -139,7 +185,9 @@ internal sealed class PluginLoader(
                                 manifest,
                                 assemblyPath,
                                 initialStatus,
-                                manifestPath
+                                manifestPath,
+                                verification.Verified,
+                                verification.Trusted
                             );
 
                             LoadedPlugin errorLoaded = new(errorInfo, null, loadContext);
@@ -165,7 +213,9 @@ internal sealed class PluginLoader(
                         manifest,
                         assemblyPath,
                         initialStatus,
-                        manifestPath
+                        manifestPath,
+                        verification.Verified,
+                        verification.Trusted
                     );
 
                     IPlugin? storedInstance =
