@@ -153,21 +153,21 @@ public partial class VideoHub
         if (user is null)
             return;
 
-        await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
-        UserData[] userdata = await mediaContext
-            .UserData.Where(x => x.UserId == user.Id)
-            .Where(x => x.Type == request.PlaylistType)
-            .Where(x =>
-                x.MovieId == request.TmdbId
-                || x.TvId == request.TmdbId
-                || x.SpecialId == request.SpecialId
-                || x.CollectionId == request.TmdbId
-            )
-            .ToArrayAsync();
+        // Scope the delete to the single requested item by its typed id. The old
+        // predicate OR-ed MovieId/TvId/SpecialId/CollectionId == the request ids;
+        // because a movie row has null Tv/Special/Collection ids (and vice versa),
+        // a null request id matched EVERY row of that type — so finishing/removing
+        // one item wiped the user's whole continue-watching list.
+        int? intId = request.PlaylistType switch
+        {
+            MediaTypes.MovieMediaType or MediaTypes.TvMediaType or MediaTypes.CollectionMediaType =>
+                request.TmdbId,
+            _ => null,
+        };
+        Ulid? ulidId =
+            request.PlaylistType == MediaTypes.SpecialMediaType ? request.SpecialId : null;
 
-        mediaContext.UserData.RemoveRange(userdata);
-
-        await mediaContext.SaveChangesAsync();
+        await _userDataRepository.RemoveForItemAsync(user.Id, request.PlaylistType, intId, ulidId);
     }
 
     public async Task StartPlaybackCommand(string? type, dynamic? listId, int? itemId)

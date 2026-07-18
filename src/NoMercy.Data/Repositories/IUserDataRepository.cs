@@ -37,4 +37,12 @@ public interface IUserDataRepository
         IEnumerable<UserData> userData,
         CancellationToken ct = default
     );
+
+    Task<int> RemoveForItemAsync(
+        Guid userId,
+        string type,
+        int? intId,
+        Ulid? ulidId,
+        CancellationToken ct = default
+    );
 }

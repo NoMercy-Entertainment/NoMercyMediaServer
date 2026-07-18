@@ -55,6 +55,32 @@ public class UserDataRepository(IDbContextFactory<MediaContext> contextFactory)
         return await context.SaveChangesAsync(ct);
     }
 
+    public async Task<int> RemoveForItemAsync(
+        Guid userId,
+        string type,
+        int? intId,
+        Ulid? ulidId,
+        CancellationToken ct = default
+    )
+    {
+        // Guard: a null id must not fall through to `Column == null`, which would
+        // match every row whose other id columns are null — a mass-delete. Require
+        // the id for the requested type to be present before deleting anything.
+        bool hasId = type switch
+        {
+            MediaTypes.MovieMediaType or MediaTypes.TvMediaType or MediaTypes.CollectionMediaType =>
+                intId is not null,
+            MediaTypes.SpecialMediaType => ulidId is not null,
+            _ => false,
+        };
+        if (!hasId)
+            return 0;
+
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        IQueryable<UserData>? query = BuildQuery(context, userId, type, intId, ulidId);
+        return query is null ? 0 : await query.ExecuteDeleteAsync(ct);
+    }
+
     public async Task<int> HideFromContinueWatchingAsync(
         IEnumerable<UserData> userData,
         CancellationToken ct = default
