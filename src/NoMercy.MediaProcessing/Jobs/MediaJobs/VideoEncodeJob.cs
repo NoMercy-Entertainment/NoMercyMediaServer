@@ -28,6 +28,7 @@ using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Metadata;
 using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Orchestration;
+using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Reconciliation;
@@ -43,7 +44,6 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
-using NoMercyQueue.Core.Resources;
 using Serilog.Events;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 using MediaType = NoMercy.Encoder.Naming.MediaType;
@@ -184,9 +184,23 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
 
         Stopwatch stopwatch = Stopwatch.StartNew();
 
-        foreach (EncodingPreset preset in presets)
+        IStorage destinationStorage = StorageFactory.For(folder.Id, folder.DriverId, folder.Path);
+
+        IStorage sourceStorage = SourceDriverId.HasValue
+            ? StorageFactory.For(SourceDriverId.Value, SourceDriverId.Value, string.Empty)
+            : destinationStorage;
+
+        // Resolve every selected preset and reconcile it against what's
+        // already on disk BEFORE dispatching anything. This is what lets a
+        // folder with several presets (e.g. "4K HDR HEVC" + "1080p SDR HEVC")
+        // become ONE coordinated encode below instead of one independent
+        // VideoEncodeJob-style run per preset — the bug this state machine
+        // used to have when the per-preset foreach dispatched immediately.
+        List<PlannedPreset> planned = [];
+
+        try
         {
-            try
+            foreach (EncodingPreset preset in presets)
             {
                 EncodingProfile encodingProfile;
                 try
@@ -216,16 +230,6 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                     continue;
                 }
 
-                IStorage destinationStorage = StorageFactory.For(
-                    folder.Id,
-                    folder.DriverId,
-                    folder.Path
-                );
-
-                IStorage sourceStorage = SourceDriverId.HasValue
-                    ? StorageFactory.For(SourceDriverId.Value, SourceDriverId.Value, string.Empty)
-                    : destinationStorage;
-
                 ReconciliationDecision reconciliation = await ReconcileAsync(
                     encodingProfile,
                     fileMetadata,
@@ -244,142 +248,408 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                     continue;
                 }
 
-                if (
-                    reconciliation.Action == ReconciliationAction.Partial
-                    && reconciliation.MissingKinds.Count == 0
-                )
-                {
-                    // Only the bitmap-subtitle OCR sidecar is missing — every
-                    // other output is valid and matches the current profile.
-                    // Top it up without touching Build/Execute at all.
-                    Log.LogInformation(
-                        "[VideoEncodeJob] Reconciliation: preset '{Name}' for {Id} is fully encoded — running OCR top-up only ({Reason})",
-                        preset.Name,
-                        fileMetadata.Id,
-                        reconciliation.Reason
-                    );
-                    await RunOcrTopUpAsync(
-                        fileMetadata,
-                        sourceStorage,
-                        destinationStorage,
-                        fileManager,
-                        folder
-                    );
-                    continue;
-                }
+                planned.Add(new(preset, encodingProfile, reconciliation));
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "Video encode task failed");
 
-                if (EventBusProvider.IsConfigured)
-                {
-                    await EventBusProvider.Current.PublishAsync(
-                        new EncodingStartedEvent
-                        {
-                            JobId = fileMetadata.Id,
-                            InputPath = InputFile,
-                            OutputPath = fileMetadata.Path,
-                            ProfileName = preset.Name,
-                        }
-                    );
-                }
+            await EncoderCardTerminator.PublishFailedAsync(
+                fileMetadata.Id,
+                fileMetadata.Title,
+                InputFile,
+                ex.Message,
+                ex.GetType().Name
+            );
 
-                IEncodingOrchestrator orchestrator = _encodingOrchestrator!;
+            throw;
+        }
 
-                EncodingRequest request = new(
-                    InputPath: InputFile,
-                    OutputDirectory: fileMetadata.Path,
-                    Profile: encodingProfile,
-                    MediaTitle: fileMetadata.FileName,
-                    SourceStorage: sourceStorage,
-                    DestinationStorage: destinationStorage,
-                    // Pure identity — safe on every request, including the Whole-task
-                    // inline path below (RunInlineAsync runs Build+Execute+Finalize
-                    // over this exact request). Drives BundleLayout resolution in
-                    // PlanStage so FinalizeStage writes manifest.json/reconstruction.json
-                    // for every encode, not only the coordinator's FinalizeOnly pass.
-                    // EncodingOptions.EnableMetadataInjection stays unset (defaults
-                    // false) here, so the emitted ffmpeg command is unaffected. Null
-                    // when the source has no resolvable movie/episode (e.g. a disc
-                    // rip) — degrades to today's behavior exactly.
-                    MediaItem: fileMetadata.MediaItem
+        if (planned.Count == 0)
+            return;
+
+        // OCR-only top-ups (every real output already valid, only the
+        // bitmap-subtitle sidecar missing) run ONCE for the whole batch —
+        // the sidecar is source-derived, identical no matter which preset
+        // asked for it. Running it once per preset was the double-OCR half
+        // of the bug this coordinated-encode work fixes.
+        List<PlannedPreset> ocrOnly = planned
+            .Where(entry =>
+                entry.Decision.Action == ReconciliationAction.Partial
+                && entry.Decision.MissingKinds.Count == 0
+            )
+            .ToList();
+
+        if (ocrOnly.Count > 0)
+        {
+            foreach (PlannedPreset entry in ocrOnly)
+                Log.LogInformation(
+                    "[VideoEncodeJob] Reconciliation: preset '{Name}' for {Id} is fully encoded — running OCR top-up only ({Reason})",
+                    entry.Preset.Name,
+                    fileMetadata.Id,
+                    entry.Decision.Reason
                 );
 
-                string groupTag = Ulid.NewUlid().ToString();
-                DecomposedTask[] tasks = await orchestrator.DecomposeAsync(request, groupTag);
+            await RunOcrTopUpAsync(
+                fileMetadata,
+                sourceStorage,
+                destinationStorage,
+                fileManager,
+                folder
+            );
+        }
 
-                // A partial top-up rebuilds only the missing renditions; a bundle
-                // built from it must not rewrite the master, which already lists
-                // the whole set. Cleared if the filter empties and we fall back to
-                // a full re-encode below.
-                bool isPartialTopUp = false;
+        List<PlannedPreset> needsWork = planned.Except(ocrOnly).ToList();
+        if (needsWork.Count == 0)
+            return;
 
-                // Partial with a non-empty MissingKinds only ever happens for
-                // decomposable (HLS/DASH) strategies — DecideSingleFile never
-                // returns Partial with missing kinds, only Skip/Full — so
-                // filtering down to the missing kinds here never starves a
-                // Whole-task (MKV/MP4) run of its only task.
-                if (
-                    reconciliation.Action == ReconciliationAction.Partial
-                    && reconciliation.MissingKinds.Count > 0
-                )
+        // A merged run needs one consistent reconciliation verdict across
+        // every preset it covers: a Partial top-up must not rewrite the
+        // master (it only fills gaps), so mixing it with a Full re-encode
+        // — which must rewrite the master to list every rendition — has no
+        // single correct answer. A single preset trivially qualifies (its
+        // own verdict is the only one that matters); several presets only
+        // qualify when they all agree the whole thing needs a fresh encode.
+        bool canMerge =
+            needsWork.Count == 1
+            || needsWork.All(entry => entry.Decision.Action == ReconciliationAction.Full);
+
+        try
+        {
+            if (canMerge)
+            {
+                try
                 {
-                    tasks = tasks
-                        .Where(task => reconciliation.MissingKinds.Contains(task.Kind))
-                        .ToArray();
-                    isPartialTopUp = true;
-
-                    if (tasks.Length == 0)
-                    {
-                        Log.LogWarning(
-                            "[VideoEncodeJob] Reconciliation flagged {Kinds} as missing for preset '{Name}' but decomposition produced no matching task — falling back to a full re-encode",
-                            string.Join(", ", reconciliation.MissingKinds),
-                            preset.Name
-                        );
-                        tasks = await orchestrator.DecomposeAsync(request, groupTag);
-                        isPartialTopUp = false;
-                    }
-                }
-
-                bool isWhole = tasks.Length == 1 && tasks[0].Kind == EncodeTaskKind.Whole;
-
-                if (isWhole)
-                {
-                    await RunInlineAsync(
-                        orchestrator,
-                        request,
-                        encodingProfile,
-                        preset,
+                    await RunMergedEncodeAsync(
+                        needsWork,
                         fileMetadata,
                         stopwatch,
                         sourceStorage,
+                        destinationStorage,
                         context,
                         fileManager,
                         folder
                     );
-                    continue;
+                    return;
                 }
+                catch (MergedEncodingIncompatibleException ex)
+                {
+                    Log.LogWarning(
+                        "[VideoEncodeJob] Merged decompose unavailable for folder {FolderId} ({Reason}) — falling back to independent per-preset dispatch for {Count} preset(s).",
+                        FolderId,
+                        ex.Message,
+                        needsWork.Count
+                    );
+                }
+            }
 
-                await DispatchDecomposedAsync(
-                    tasks,
-                    preset.Id,
+            foreach (PlannedPreset entry in needsWork)
+            {
+                await RunSinglePresetEncodeAsync(
+                    entry.Preset,
+                    entry.Profile,
+                    entry.Decision,
                     fileMetadata,
                     stopwatch,
-                    isPartialTopUp
+                    sourceStorage,
+                    destinationStorage,
+                    context,
+                    fileManager,
+                    folder
                 );
-            }
-            catch (Exception ex)
-            {
-                Log.LogError(ex, "Video encode task failed");
-
-                await EncoderCardTerminator.PublishFailedAsync(
-                    fileMetadata.Id,
-                    fileMetadata.Title,
-                    InputFile,
-                    ex.Message,
-                    ex.GetType().Name
-                );
-
-                throw;
             }
         }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "Video encode task failed");
+
+            await EncoderCardTerminator.PublishFailedAsync(
+                fileMetadata.Id,
+                fileMetadata.Title,
+                InputFile,
+                ex.Message,
+                ex.GetType().Name
+            );
+
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// One preset resolved to a profile and reconciled against what's already
+    /// on disk, still waiting to be dispatched. Bridges the resolve/reconcile
+    /// pass in <see cref="HandleInitialRunAsync"/> to the merged and
+    /// per-preset dispatch paths below it.
+    /// </summary>
+    private sealed record PlannedPreset(
+        EncodingPreset Preset,
+        EncodingProfile Profile,
+        ReconciliationDecision Decision
+    );
+
+    /// <summary>
+    /// The smart-orchestrator path: builds one <see cref="EncodingRequest"/>
+    /// per preset in <paramref name="needsWork"/> and asks the orchestrator to
+    /// decompose them as ONE coordinated encode — a single output folder, a
+    /// single master playlist listing every preset's video rendition, with
+    /// audio / subtitles / thumbnails / chapters produced once and shared.
+    /// Throws <see cref="MergedEncodingIncompatibleException"/> (propagated
+    /// from <see cref="IEncodingOrchestrator.DecomposeMergedAsync"/>, or
+    /// raised here when a merged decompose resolves to a single Whole task
+    /// for more than one preset — a single-file container can only ever hold
+    /// one preset's output) so the caller can fall back to dispatching each
+    /// preset independently.
+    /// </summary>
+    private async Task RunMergedEncodeAsync(
+        List<PlannedPreset> needsWork,
+        FileMetadata fileMetadata,
+        Stopwatch stopwatch,
+        IStorage sourceStorage,
+        IStorage destinationStorage,
+        MediaContext context,
+        FileManager fileManager,
+        Folder folder
+    )
+    {
+        if (EventBusProvider.IsConfigured)
+        {
+            await EventBusProvider.Current.PublishAsync(
+                new EncodingStartedEvent
+                {
+                    JobId = fileMetadata.Id,
+                    InputPath = InputFile,
+                    OutputPath = fileMetadata.Path,
+                    ProfileName = string.Join(" + ", needsWork.Select(entry => entry.Preset.Name)),
+                }
+            );
+        }
+
+        IEncodingOrchestrator orchestrator = _encodingOrchestrator!;
+
+        List<EncodingRequest> requests = needsWork
+            .Select(entry => new EncodingRequest(
+                InputPath: InputFile,
+                OutputDirectory: fileMetadata.Path,
+                Profile: entry.Profile,
+                MediaTitle: fileMetadata.FileName,
+                SourceStorage: sourceStorage,
+                DestinationStorage: destinationStorage,
+                // Same identity every request in the run carries — see the
+                // matching comment in RunSinglePresetEncodeAsync.
+                MediaItem: fileMetadata.MediaItem
+            ))
+            .ToList();
+
+        string groupTag = Ulid.NewUlid().ToString();
+        (OutputPlan? plan, DecomposedTask[] tasks) =
+            await orchestrator.DecomposeMergedWithPlanAsync(requests, groupTag);
+
+        // A partial top-up only ever applies when the merge covers exactly
+        // one preset — canMerge in HandleInitialRunAsync requires every
+        // OTHER member of a multi-preset merge to be a clean Full re-encode,
+        // since a top-up must not rewrite the master and a Full run must.
+        bool isPartialTopUp = false;
+        if (
+            needsWork.Count == 1
+            && needsWork[0].Decision.Action == ReconciliationAction.Partial
+            && needsWork[0].Decision.MissingKinds.Count > 0
+        )
+        {
+            ReconciliationDecision decision = needsWork[0].Decision;
+            tasks = tasks.Where(task => decision.MissingKinds.Contains(task.Kind)).ToArray();
+            isPartialTopUp = true;
+
+            if (tasks.Length == 0)
+            {
+                Log.LogWarning(
+                    "[VideoEncodeJob] Reconciliation flagged {Kinds} as missing for preset '{Name}' but decomposition produced no matching task — falling back to a full re-encode",
+                    string.Join(", ", decision.MissingKinds),
+                    needsWork[0].Preset.Name
+                );
+                (plan, tasks) = await orchestrator.DecomposeMergedWithPlanAsync(requests, groupTag);
+                isPartialTopUp = false;
+            }
+        }
+
+        bool isWhole = tasks.Length == 1 && tasks[0].Kind == EncodeTaskKind.Whole;
+
+        if (isWhole)
+        {
+            if (needsWork.Count > 1)
+                throw new MergedEncodingIncompatibleException(
+                    "Merged decompose produced a single Whole (single-file container) task "
+                        + $"for {needsWork.Count} presets — a single-file output can only ever "
+                        + "hold one preset's encode."
+                );
+
+            await RunInlineAsync(
+                orchestrator,
+                requests[0],
+                needsWork[0].Profile,
+                needsWork[0].Preset,
+                fileMetadata,
+                stopwatch,
+                sourceStorage,
+                context,
+                fileManager,
+                folder
+            );
+            return;
+        }
+
+        // Non-Whole tasks only ever come back from a plan that decomposed
+        // successfully — DecomposeMergedWithPlanAsync's null Plan cases both
+        // collapse to the single Whole fallback handled above, so this can
+        // never actually fire; it documents the invariant instead of casting
+        // it away with a null-forgiving operator.
+        OutputPlan resolvedPlan =
+            plan
+            ?? throw new InvalidOperationException(
+                "DecomposeMergedWithPlanAsync returned decomposed tasks without a Plan — "
+                    + "the decode-aware bundler cannot classify outputs without it."
+            );
+
+        Ulid[] presetIds = needsWork.Select(entry => entry.Preset.Id).ToArray();
+        await DispatchDecomposedAsync(
+            tasks,
+            resolvedPlan,
+            presetIds,
+            fileMetadata,
+            stopwatch,
+            isPartialTopUp
+        );
+    }
+
+    /// <summary>
+    /// The legacy path, preserved verbatim for callers that can't merge: a
+    /// single selected preset (the common case — most folders carry exactly
+    /// one), and the rare fallback when <see cref="RunMergedEncodeAsync"/>
+    /// throws <see cref="MergedEncodingIncompatibleException"/> or when
+    /// several presets disagree on what reconciliation needs to do. Each
+    /// preset gets its own independent encode, exactly as every
+    /// <see cref="VideoEncodeJob"/> run did before the smart orchestrator.
+    /// </summary>
+    private async Task RunSinglePresetEncodeAsync(
+        EncodingPreset preset,
+        EncodingProfile encodingProfile,
+        ReconciliationDecision reconciliation,
+        FileMetadata fileMetadata,
+        Stopwatch stopwatch,
+        IStorage sourceStorage,
+        IStorage destinationStorage,
+        MediaContext context,
+        FileManager fileManager,
+        Folder folder
+    )
+    {
+        if (EventBusProvider.IsConfigured)
+        {
+            await EventBusProvider.Current.PublishAsync(
+                new EncodingStartedEvent
+                {
+                    JobId = fileMetadata.Id,
+                    InputPath = InputFile,
+                    OutputPath = fileMetadata.Path,
+                    ProfileName = preset.Name,
+                }
+            );
+        }
+
+        IEncodingOrchestrator orchestrator = _encodingOrchestrator!;
+
+        EncodingRequest request = new(
+            InputPath: InputFile,
+            OutputDirectory: fileMetadata.Path,
+            Profile: encodingProfile,
+            MediaTitle: fileMetadata.FileName,
+            SourceStorage: sourceStorage,
+            DestinationStorage: destinationStorage,
+            // Pure identity — safe on every request, including the Whole-task
+            // inline path below (RunInlineAsync runs Build+Execute+Finalize
+            // over this exact request). Drives BundleLayout resolution in
+            // PlanStage so FinalizeStage writes manifest.json/reconstruction.json
+            // for every encode, not only the coordinator's FinalizeOnly pass.
+            // EncodingOptions.EnableMetadataInjection stays unset (defaults
+            // false) here, so the emitted ffmpeg command is unaffected. Null
+            // when the source has no resolvable movie/episode (e.g. a disc
+            // rip) — degrades to today's behavior exactly.
+            MediaItem: fileMetadata.MediaItem
+        );
+
+        string groupTag = Ulid.NewUlid().ToString();
+        (OutputPlan? plan, DecomposedTask[] tasks) = await orchestrator.DecomposeWithPlanAsync(
+            request,
+            groupTag
+        );
+
+        // A partial top-up rebuilds only the missing renditions; a bundle
+        // built from it must not rewrite the master, which already lists
+        // the whole set. Cleared if the filter empties and we fall back to
+        // a full re-encode below.
+        bool isPartialTopUp = false;
+
+        // Partial with a non-empty MissingKinds only ever happens for
+        // decomposable (HLS/DASH) strategies — DecideSingleFile never
+        // returns Partial with missing kinds, only Skip/Full — so
+        // filtering down to the missing kinds here never starves a
+        // Whole-task (MKV/MP4) run of its only task.
+        if (
+            reconciliation.Action == ReconciliationAction.Partial
+            && reconciliation.MissingKinds.Count > 0
+        )
+        {
+            tasks = tasks.Where(task => reconciliation.MissingKinds.Contains(task.Kind)).ToArray();
+            isPartialTopUp = true;
+
+            if (tasks.Length == 0)
+            {
+                Log.LogWarning(
+                    "[VideoEncodeJob] Reconciliation flagged {Kinds} as missing for preset '{Name}' but decomposition produced no matching task — falling back to a full re-encode",
+                    string.Join(", ", reconciliation.MissingKinds),
+                    preset.Name
+                );
+                (plan, tasks) = await orchestrator.DecomposeWithPlanAsync(request, groupTag);
+                isPartialTopUp = false;
+            }
+        }
+
+        bool isWhole = tasks.Length == 1 && tasks[0].Kind == EncodeTaskKind.Whole;
+
+        if (isWhole)
+        {
+            await RunInlineAsync(
+                orchestrator,
+                request,
+                encodingProfile,
+                preset,
+                fileMetadata,
+                stopwatch,
+                sourceStorage,
+                context,
+                fileManager,
+                folder
+            );
+            return;
+        }
+
+        // See the matching guard in RunMergedEncodeAsync: non-Whole tasks
+        // only ever come back from a plan that decomposed successfully.
+        OutputPlan resolvedPlan =
+            plan
+            ?? throw new InvalidOperationException(
+                "DecomposeWithPlanAsync returned decomposed tasks without a Plan — "
+                    + "the decode-aware bundler cannot classify outputs without it."
+            );
+
+        await DispatchDecomposedAsync(
+            tasks,
+            resolvedPlan,
+            [preset.Id],
+            fileMetadata,
+            stopwatch,
+            isPartialTopUp
+        );
     }
 
     // ------------------------------------------------------------------
@@ -498,6 +768,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             EncodeTaskJob childJob = BuildChildJob(
                 pass2Task,
                 state.PresetId,
+                state.PresetIds,
                 state.OutputDirectory
             );
             dispatcher.DispatchChild(
@@ -531,6 +802,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             EncodeTaskJob childJob = BuildChildJob(
                 otherTask,
                 state.PresetId,
+                state.PresetIds,
                 state.OutputDirectory
             );
             dispatcher.DispatchChild(
@@ -623,6 +895,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                 DispatchSingleBundle(
                     bundles[nextIndex],
                     state.PresetId,
+                    state.PresetIds,
                     state.GroupTag,
                     state.OutputDirectory
                 );
@@ -684,12 +957,13 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
     private void DispatchSingleBundle(
         DecomposedTask bundle,
         Ulid presetId,
+        Ulid[]? presetIds,
         string groupTag,
         string? outputDirectory = null
     )
     {
         DecomposedTask stamped = bundle with { ParentJobId = _selfJobId };
-        EncodeTaskJob bundleJob = BuildChildJob(stamped, presetId, outputDirectory);
+        EncodeTaskJob bundleJob = BuildChildJob(stamped, presetId, presetIds, outputDirectory);
         GetDispatcher()
             .DispatchChild(
                 bundleJob,
@@ -821,44 +1095,108 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         // single coordinator-driven pass.
         IEncodingOrchestrator orchestrator = _encodingOrchestrator!;
 
-        EncodingProfile finalizeProfile;
+        EncodingRequest finalizeRequest;
         await using (MediaContext profileLookup = new())
         {
-            try
+            if (state.PresetIds is { Length: > 1 } presetIds)
             {
-                finalizeProfile = PresetResolver.Resolve(
-                    state.PresetId,
-                    new DbPresetLookup(profileLookup)
-                );
+                // Merged run: re-resolve every preset's profile and re-plan +
+                // re-merge them (PlanAsync is deterministic given the same
+                // profile + source) so FinalizeStage writes a master playlist
+                // listing every preset's video rendition instead of
+                // re-deriving a plan from just one preset's profile.
+                List<EncodingRequest> mergeRequests = new(presetIds.Length);
+                bool resolveFailed = false;
+
+                foreach (Ulid presetId in presetIds)
+                {
+                    try
+                    {
+                        EncodingProfile presetProfile = PresetResolver.Resolve(
+                            presetId,
+                            new DbPresetLookup(profileLookup)
+                        );
+                        mergeRequests.Add(
+                            new(
+                                InputPath: InputFile,
+                                OutputDirectory: fileMetadata.Path ?? string.Empty,
+                                Profile: presetProfile,
+                                MediaTitle: fileMetadata.FileName,
+                                SourceStorage: sourceStorage,
+                                DestinationStorage: destinationStorage,
+                                MediaItem: fileMetadata.MediaItem
+                            )
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.LogWarning(
+                            "[VideoEncodeJob] Finalize: cannot resolve preset {PresetId} — {Message}",
+                            presetId,
+                            ex.Message
+                        );
+                        resolveFailed = true;
+                        break;
+                    }
+                }
+
+                if (resolveFailed)
+                    return;
+
+                OutputPlan? mergedPlan = await orchestrator.PlanMergedAsync(mergeRequests);
+                if (mergedPlan is null)
+                {
+                    Log.LogError(
+                        "[VideoEncodeJob] Finalize: could not rebuild the merged plan for preset set [{PresetIds}] — aborting post-encode",
+                        string.Join(", ", presetIds)
+                    );
+                    return;
+                }
+
+                finalizeRequest = mergeRequests[0] with
+                {
+                    Options = new(FinalizeOnly: true, PrecomputedPlan: mergedPlan),
+                };
             }
-            catch (Exception ex)
+            else
             {
-                Log.LogWarning(
-                    "[VideoEncodeJob] Finalize: cannot resolve preset {PresetId} — {Message}",
-                    state.PresetId,
-                    ex.Message
+                EncodingProfile finalizeProfile;
+                try
+                {
+                    finalizeProfile = PresetResolver.Resolve(
+                        state.PresetId,
+                        new DbPresetLookup(profileLookup)
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Log.LogWarning(
+                        "[VideoEncodeJob] Finalize: cannot resolve preset {PresetId} — {Message}",
+                        state.PresetId,
+                        ex.Message
+                    );
+                    return;
+                }
+
+                finalizeRequest = new(
+                    InputPath: InputFile,
+                    OutputDirectory: fileMetadata.Path ?? string.Empty,
+                    Profile: finalizeProfile,
+                    Options: new(FinalizeOnly: true),
+                    MediaTitle: fileMetadata.FileName,
+                    SourceStorage: sourceStorage,
+                    DestinationStorage: destinationStorage,
+                    // Pure identity — safe here regardless of FinalizeOnly. Drives
+                    // BundleLayout resolution + manifest.json/reconstruction.json in
+                    // FinalizeStage. EncodingOptions.EnableMetadataInjection stays unset
+                    // (defaults false), so this has no effect on the ffmpeg command even
+                    // on a request where Build/Execute do run. Null when the source has
+                    // no resolvable movie/episode (e.g. a disc rip) — degrades to today's
+                    // behavior exactly.
+                    MediaItem: fileMetadata.MediaItem
                 );
-                return;
             }
         }
-
-        EncodingRequest finalizeRequest = new(
-            InputPath: InputFile,
-            OutputDirectory: fileMetadata.Path ?? string.Empty,
-            Profile: finalizeProfile,
-            Options: new(FinalizeOnly: true),
-            MediaTitle: fileMetadata.FileName,
-            SourceStorage: sourceStorage,
-            DestinationStorage: destinationStorage,
-            // Pure identity — safe here regardless of FinalizeOnly. Drives
-            // BundleLayout resolution + manifest.json/reconstruction.json in
-            // FinalizeStage. EncodingOptions.EnableMetadataInjection stays unset
-            // (defaults false), so this has no effect on the ffmpeg command even
-            // on a request where Build/Execute do run. Null when the source has
-            // no resolvable movie/episode (e.g. a disc rip) — degrades to today's
-            // behavior exactly.
-            MediaItem: fileMetadata.MediaItem
-        );
 
         // The bundles already finalized and published themselves. Running the
         // pipeline again over the tempDir they emptied would only rediscover that
@@ -932,7 +1270,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             fileMetadata.Id,
             fileMetadata.Title,
             library,
-            fileMetadata.FileName
+            DeriveScanFilter(fileMetadata.Path, fileMetadata.FileName)
         );
 
         await new IncompleteEncodeRecorder().ClearAsync(
@@ -1030,6 +1368,32 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
     /// Builds the quarantine descriptor list and first error from a set of
     /// failed <see cref="EncodeTaskOutcome"/> rows. Pure — no I/O.
     /// </summary>
+    /// <summary>
+    /// Chooses the filter the post-encode registration scan runs with. Anchors on
+    /// the leaf of the output directory the encoder just wrote to
+    /// (<paramref name="outputPath"/>) rather than the reconstructed file name.
+    /// <paramref name="fallbackFileName"/> is <c>CreateFileName()</c>
+    /// (<c>show.SxxExx.episodeTitle.NoMercy</c>); its episode-title segment is
+    /// re-cleaned at scan time and drifts from the name written at encode time
+    /// (apostrophes, unicode, a changed cleaning rule), so a
+    /// <c>file.Contains(filter)</c> match against it silently registered nothing
+    /// and left users forcing an unfiltered rescan. The directory leaf carries the
+    /// stable <c>show.SxxExx</c> (or <c>movie.(year)</c>) token every output file
+    /// lives under, and is exactly the folder this run wrote into. Falls back to
+    /// the file name only when the output path is empty.
+    /// </summary>
+    internal static string DeriveScanFilter(string? outputPath, string fallbackFileName)
+    {
+        string leaf =
+            outputPath
+                ?.Trim('/', '\\')
+                .Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries)
+                .LastOrDefault()
+            ?? string.Empty;
+
+        return string.IsNullOrWhiteSpace(leaf) ? fallbackFileName : leaf;
+    }
+
     internal static (IReadOnlyList<string> descriptors, string? lastError) SummarizeFailures(
         IReadOnlyList<EncodeTaskOutcome> failedOutcomes
     )
@@ -1061,9 +1425,21 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
     /// Dispatches all decomposed children and re-enqueues the coordinator with
     /// phase state so it can poll for completion after a restart.
     /// </summary>
+    /// <summary>
+    /// Dispatches all decomposed children for the run. <paramref name="presetIds"/>
+    /// is every preset id the decomposed <paramref name="tasks"/> cover — a
+    /// single-element array for the legacy per-preset path, or every preset
+    /// unioned into a smart-orchestrator merged run. Index 0 is always the
+    /// primary preset (<see cref="CoordinatorState.PresetId"/>); the full
+    /// array is only carried on <see cref="CoordinatorState.PresetIds"/> when
+    /// there is more than one, so every existing single-preset serialized job
+    /// keeps deserializing to exactly the shape it did before this array
+    /// existed.
+    /// </summary>
     private async Task DispatchDecomposedAsync(
         DecomposedTask[] tasks,
-        Ulid presetId,
+        OutputPlan plan,
+        Ulid[] presetIds,
         FileMetadata fileMetadata,
         Stopwatch stopwatch,
         bool isPartialTopUp = false
@@ -1071,6 +1447,8 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
     {
         int parentJobId = _selfJobId;
         string groupTag = tasks[0].GroupTag;
+        Ulid primaryPresetId = presetIds[0];
+        Ulid[]? mergedPresetIds = presetIds.Length > 1 ? presetIds : null;
 
         Log.LogTrace(
             "[VideoEncodeJob] Decomposed into {Length} child tasks (groupTag={GroupTag})",
@@ -1097,7 +1475,12 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             foreach (DecomposedTask task in pass1Tasks)
             {
                 DecomposedTask stamped = task with { ParentJobId = parentJobId };
-                EncodeTaskJob childJob = BuildChildJob(stamped, presetId, fileMetadata.Path);
+                EncodeTaskJob childJob = BuildChildJob(
+                    stamped,
+                    primaryPresetId,
+                    mergedPresetIds,
+                    fileMetadata.Path
+                );
                 dispatcher.DispatchChild(
                     childJob,
                     onQueue: childJob.QueueName,
@@ -1120,9 +1503,10 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                     Pass1DispatchedAt: DateTime.UtcNow,
                     Pass2DispatchedAt: null,
                     Pass1StatsPath: null,
-                    PresetId: presetId,
+                    PresetId: primaryPresetId,
                     ExpectedFinalCount: tasks.Count(task => task.Kind != EncodeTaskKind.Pass1),
-                    OutputDirectory: fileMetadata.Path
+                    OutputDirectory: fileMetadata.Path,
+                    PresetIds: mergedPresetIds
                 )
             );
         }
@@ -1136,6 +1520,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             // bundles racing the GPU / CPU / shared writes.
             DecomposedTask[] bundles = BuildResourceBundles(
                 tasks,
+                plan,
                 parentJobId,
                 groupTag,
                 isPartialTopUp
@@ -1147,7 +1532,12 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                 return;
             }
 
-            EncodeTaskJob firstBundleJob = BuildChildJob(bundles[0], presetId, fileMetadata.Path);
+            EncodeTaskJob firstBundleJob = BuildChildJob(
+                bundles[0],
+                primaryPresetId,
+                mergedPresetIds,
+                fileMetadata.Path
+            );
             dispatcher.DispatchChild(
                 firstBundleJob,
                 onQueue: firstBundleJob.QueueName,
@@ -1170,11 +1560,12 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                     Pass1DispatchedAt: null,
                     Pass2DispatchedAt: null,
                     Pass1StatsPath: null,
-                    PresetId: presetId,
+                    PresetId: primaryPresetId,
                     ExpectedFinalCount: tasks.Length,
                     Bundles: bundles,
                     CurrentBundleIndex: 0,
-                    OutputDirectory: fileMetadata.Path
+                    OutputDirectory: fileMetadata.Path,
+                    PresetIds: mergedPresetIds
                 )
             );
         }
@@ -1266,9 +1657,20 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
     }
 
     private EncodeTaskJob BuildChildJob(DecomposedTask task, Ulid presetId) =>
-        BuildChildJob(task, presetId, outputDirectory: null);
+        BuildChildJob(task, presetId, presetIds: null, outputDirectory: null);
 
-    private EncodeTaskJob BuildChildJob(DecomposedTask task, Ulid presetId, string? outputDirectory)
+    private EncodeTaskJob BuildChildJob(
+        DecomposedTask task,
+        Ulid presetId,
+        string? outputDirectory
+    ) => BuildChildJob(task, presetId, presetIds: null, outputDirectory);
+
+    private EncodeTaskJob BuildChildJob(
+        DecomposedTask task,
+        Ulid presetId,
+        Ulid[]? presetIds,
+        string? outputDirectory
+    )
     {
         return new()
         {
@@ -1278,6 +1680,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             InputFile = InputFile,
             SourceDriverId = SourceDriverId,
             PresetId = presetId,
+            PresetIds = presetIds,
             Task = task,
             OutputDirectory = outputDirectory,
         };
@@ -1292,150 +1695,40 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
     }
 
     /// <summary>
-    /// Pack ready single-pass tasks into resource-proportional bundles.
+    /// Pack ready single-pass tasks into decode-cost-driven bundles. Thin
+    /// wrapper: resolves this host's GPU/CPU stream caps (Layer 2 capacity
+    /// scheduling input, unchanged from before this refactor) then hands
+    /// the actual grouping decision to <see cref="DecodeAwareBundlePlanner"/>
+    /// — a plan-aware, unit-testable component that classifies every output
+    /// by decode cost before applying host capacity.
     ///
-    /// <para>GPU-encoder video tasks are chunked by the host's NVENC session
-    /// cap (the smallest <see cref="GpuDevice.MaxEncoderSessions"/> across
-    /// detected GPUs — typically 5 on consumer cards, 8 on RTX 40-series,
-    /// unlimited on pro cards). CPU-encoder video tasks chunk by half the
-    /// physical core count so libx264 / libx265 / libsvtav1 don't overcommit
-    /// the box.</para>
-    ///
-    /// <para>The first bundle absorbs all audio / subtitle / thumbnail /
-    /// chapter aux tasks so a single-bundle encode is exactly one ffmpeg.
-    /// Additional video-only bundles (when the ladder exceeds the host cap)
-    /// queue behind it and the worker pulls them sequentially.</para>
+    /// <para>A full ffmpeg decode is the real cost, not a rung count: a
+    /// stream-copied output needs no decode at all, every plain transcode
+    /// rung off the same source shares ONE decode via the filtergraph
+    /// split the builder already emits, and every HDR→SDR tonemap rung
+    /// shares its own single tonemap pass (and the thumbnail sprite) the
+    /// same way. See <see cref="DecodeAwareBundlePlanner"/> for the full
+    /// two-layer model.</para>
     /// </summary>
     private DecomposedTask[] BuildResourceBundles(
         DecomposedTask[] tasks,
+        OutputPlan plan,
         int parentJobId,
         string groupTag,
         bool isPartialTopUp = false
     )
     {
-        DecomposedTask[] stamped = tasks
-            .Select(task => task with { ParentJobId = parentJobId })
-            .ToArray();
+        (int gpuCap, int cpuCap) = ResolveHostCaps(tasks);
 
-        (int gpuCap, int cpuCap) = ResolveHostCaps(stamped);
-
-        List<(int index, DecomposedTask task)> videoTasks = stamped
-            .Select((task, index) => (index, task))
-            .Where(entry => entry.task.Kind == EncodeTaskKind.Video)
-            .ToList();
-
-        List<(int index, DecomposedTask task)> gpuVideoTasks = videoTasks
-            .Where(entry => entry.task.Resources?.GpuDeviceKey is not null)
-            .ToList();
-
-        List<(int index, DecomposedTask task)> cpuVideoTasks = videoTasks
-            .Where(entry => entry.task.Resources?.GpuDeviceKey is null)
-            .ToList();
-
-        List<int[]> videoChunks = new();
-        videoChunks.AddRange(ChunkIndexes(gpuVideoTasks, gpuCap));
-        videoChunks.AddRange(ChunkIndexes(cpuVideoTasks, cpuCap));
-
-        // Audio / Subtitle / Thumbnails / Chapters — light enough to ride
-        // along the first video bundle (or stand alone when there is no
-        // video). Keep them in one batch attached to bundle[0].
-        int[] audioIndexes = IndexesOf(stamped, task => task.Kind == EncodeTaskKind.Audio);
-        int[] subIndexes = IndexesOf(stamped, task => task.Kind == EncodeTaskKind.Subtitle);
-        bool hasThumbs = stamped.Any(task => task.Kind == EncodeTaskKind.Thumbnails);
-        int[] chapterIndexes = IndexesOf(stamped, task => task.Kind == EncodeTaskKind.Chapters);
-
-        List<DecomposedTask> bundles = new();
-        bool auxAttached = false;
-
-        for (int bundleIndex = 0; bundleIndex < videoChunks.Count; bundleIndex++)
-        {
-            int[] videoChunk = videoChunks[bundleIndex];
-            int[] inThisBundle = videoChunk.ToArray();
-
-            int[] audioForBundle;
-            int[] subsForBundle;
-            bool thumbsForBundle;
-            int[] chaptersForBundle;
-
-            if (!auxAttached)
-            {
-                audioForBundle = audioIndexes;
-                subsForBundle = subIndexes;
-                thumbsForBundle = hasThumbs;
-                chaptersForBundle = chapterIndexes;
-                auxAttached = true;
-
-                inThisBundle = inThisBundle
-                    .Concat(audioIndexes)
-                    .Concat(subIndexes)
-                    .Concat(chapterIndexes)
-                    .ToArray();
-                if (hasThumbs)
-                    inThisBundle = inThisBundle
-                        .Concat(IndexesOf(stamped, task => task.Kind == EncodeTaskKind.Thumbnails))
-                        .ToArray();
-            }
-            else
-            {
-                audioForBundle = [];
-                subsForBundle = [];
-                thumbsForBundle = false;
-                chaptersForBundle = [];
-            }
-
-            bundles.Add(
-                BuildBundleTask(
-                    stamped,
-                    inThisBundle,
-                    videoChunk,
-                    audioForBundle,
-                    subsForBundle,
-                    thumbsForBundle,
-                    chaptersForBundle,
-                    parentJobId,
-                    groupTag,
-                    bundleIndex,
-                    isPartialTopUp
-                )
-            );
-        }
-
-        // No video at all? Emit one aux-only bundle so audio/subs/thumb still
-        // run. (Edge case: profile with no video rungs.)
-        if (
-            videoChunks.Count == 0
-            && (
-                audioIndexes.Length > 0
-                || subIndexes.Length > 0
-                || hasThumbs
-                || chapterIndexes.Length > 0
-            )
-        )
-        {
-            int[] auxOnly = audioIndexes.Concat(subIndexes).Concat(chapterIndexes).ToArray();
-            if (hasThumbs)
-                auxOnly = auxOnly
-                    .Concat(IndexesOf(stamped, task => task.Kind == EncodeTaskKind.Thumbnails))
-                    .ToArray();
-
-            bundles.Add(
-                BuildBundleTask(
-                    stamped,
-                    auxOnly,
-                    videoChunk: [],
-                    audioForBundle: audioIndexes,
-                    subsForBundle: subIndexes,
-                    thumbsForBundle: hasThumbs,
-                    chaptersForBundle: chapterIndexes,
-                    parentJobId,
-                    groupTag,
-                    0,
-                    isPartialTopUp
-                )
-            );
-        }
-
-        return bundles.ToArray();
+        return DecodeAwareBundlePlanner.Plan(
+            tasks,
+            plan,
+            parentJobId,
+            groupTag,
+            gpuCap,
+            cpuCap,
+            isPartialTopUp
+        );
     }
 
     /// <summary>
@@ -1484,115 +1777,6 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         if (lower.Contains("vp9"))
             return VideoCodecType.Vp9;
         return VideoCodecType.H264;
-    }
-
-    private static int[] IndexesOf(DecomposedTask[] tasks, Func<DecomposedTask, bool> predicate)
-    {
-        List<int> indexes = new();
-        for (int i = 0; i < tasks.Length; i++)
-        {
-            if (predicate(tasks[i]))
-                indexes.Add(i);
-        }
-        return indexes.ToArray();
-    }
-
-    private static List<int[]> ChunkIndexes(List<(int index, DecomposedTask task)> entries, int cap)
-    {
-        List<int[]> chunks = new();
-        if (entries.Count == 0 || cap <= 0)
-            return chunks;
-
-        for (int offset = 0; offset < entries.Count; offset += cap)
-        {
-            int[] chunk = entries.Skip(offset).Take(cap).Select(entry => entry.index).ToArray();
-            chunks.Add(chunk);
-        }
-        return chunks;
-    }
-
-    private static DecomposedTask BuildBundleTask(
-        DecomposedTask[] allTasks,
-        int[] containedTaskIndexes,
-        int[] videoChunk,
-        int[] audioForBundle,
-        int[] subsForBundle,
-        bool thumbsForBundle,
-        int[] chaptersForBundle,
-        int parentJobId,
-        string groupTag,
-        int bundleIndex,
-        bool isPartialTopUp = false
-    )
-    {
-        string[] bundledIds = containedTaskIndexes.Select(idx => allTasks[idx].TaskId).ToArray();
-
-        // Video slice descriptors point at OutputPlan.VideoOutputs indexes
-        // (DecomposedTask.OutputIndex on each Video task is the index).
-        int[] videoSliceIndexes = videoChunk.Select(idx => allTasks[idx].OutputIndex).ToArray();
-
-        int[] audioSliceIndexes = audioForBundle.Select(idx => allTasks[idx].OutputIndex).ToArray();
-
-        int[] subSliceIndexes = subsForBundle.Select(idx => allTasks[idx].OutputIndex).ToArray();
-
-        int videoCount = videoSliceIndexes.Length;
-        int totalCount = bundledIds.Length;
-
-        DecomposedTask[] bundleTasks = containedTaskIndexes.Select(idx => allTasks[idx]).ToArray();
-
-        return new(
-            TaskId: $"{groupTag}-bundle-{bundleIndex}",
-            ParentJobId: parentJobId,
-            GroupTag: groupTag,
-            Kind: EncodeTaskKind.Whole,
-            OutputIndex: 0,
-            Resources: ResolveBundleResources(bundleTasks),
-            EstimatedCostUnits: bundleTasks.Sum(task => task.EstimatedCostUnits),
-            Label: $"bundle {bundleIndex} ({videoCount} video / {totalCount} total)",
-            BundledTaskIds: bundledIds,
-            VideoSliceIndexes: videoSliceIndexes,
-            AudioSliceIndexes: audioSliceIndexes,
-            SubtitleSliceIndexes: subSliceIndexes,
-            IncludeThumbnails: thumbsForBundle ? null : false,
-            IsPartialTopUp: isPartialTopUp
-        );
-    }
-
-    /// <summary>
-    /// Sum the real resource demand of every task in the bundle. The bundle
-    /// will spawn ONE ffmpeg that internally runs all the contained encodes
-    /// in parallel via filter_complex, so the GPU/CPU semaphore claim must
-    /// reflect the TOTAL hardware footprint — not the per-task max. Without
-    /// this, eight per-rung tasks each declaring GpuSlots=1 collapse into a
-    /// bundle that only claims one slot from the 8-slot consumer NVIDIA
-    /// semaphore — four such bundles would happily run concurrently, asking
-    /// for 32 NVENC sessions against an 8-session cap.
-    ///
-    /// <para>Per-task CpuThreads values double-count (each NVENC task
-    /// declares 2 threads of muxing overhead; software-encoder tasks
-    /// declare half the box). Naive summing produces a claim larger than
-    /// the CPU semaphore — which is sized to the host's core count — and
-    /// the bundle waits forever for threads it can never acquire. Cap at
-    /// <c>cores - 1</c> so a real-world bundle still leaves headroom for
-    /// SignalR / HTTP / other queue work to make progress.</para>
-    /// </summary>
-    private static ResourceRequirement? ResolveBundleResources(DecomposedTask[] tasks)
-    {
-        string? gpuKey = tasks
-            .Select(task => task.Resources?.GpuDeviceKey)
-            .FirstOrDefault(key => key is not null);
-
-        int gpuSlots = tasks.Sum(task => task.Resources?.GpuSlots ?? 0);
-        int summedCpuThreads = tasks.Sum(task => task.Resources?.CpuThreads ?? 0);
-
-        int cores = Math.Max(1, Environment.ProcessorCount);
-        int cpuCap = Math.Max(1, cores - 1);
-        int cpuThreads = Math.Clamp(summedCpuThreads, 1, cpuCap);
-
-        if (gpuKey is null && gpuSlots == 0 && summedCpuThreads == 0)
-            return null;
-
-        return new(gpuKey, gpuSlots, cpuThreads);
     }
 
     // ------------------------------------------------------------------
@@ -1802,6 +1986,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
 
         ExistingOutputSnapshot existing = await reconciler.InspectAsync(
             fileMetadata.Path,
+            encodingProfile.Id.ToString(),
             destinationStorage,
             CancellationToken.None
         );

@@ -34,6 +34,7 @@ public class EncodeReconcilerInspectAsyncTests
 
         ExistingOutputSnapshot snapshot = await _reconciler.InspectAsync(
             "Show/Show S01E01",
+            "preset-id",
             storage,
             CancellationToken.None
         );
@@ -59,6 +60,7 @@ public class EncodeReconcilerInspectAsyncTests
 
         ExistingOutputSnapshot snapshot = await _reconciler.InspectAsync(
             root,
+            "preset-id",
             storage,
             CancellationToken.None
         );
@@ -82,34 +84,21 @@ public class EncodeReconcilerInspectAsyncTests
     }
 
     [Fact]
-    public async Task InspectAsync_ReadsTheStoredProfileFingerprint_WhenManifestJsonIsPresent()
+    public async Task InspectAsync_ReadsTheStoredProfileFingerprint_WhenTheBlueprintIsPresent()
     {
         TestStorage storage = new();
         const string root = "Show/Show S01E01";
-        BundleManifest manifest = new(
-            Version: 1,
-            EncoderVersion: "3",
-            PresetId: "preset-id",
-            PresetName: "preset",
-            PresetSlug: "preset",
-            MediaType: "episode",
-            MediaId: 1,
-            MediaExternalId: null,
-            MediaFolder: "encodes/preset",
-            Container: "hls-fmp4",
-            CreatedAt: DateTime.UtcNow,
-            CompletedAt: DateTime.UtcNow,
-            MediaKey: "abc123",
-            Files: ["web-1080p_master.m3u8"],
-            ProfileFingerprint: "deadbeef"
+        MediaBlueprint blueprint = MakeBlueprint(
+            MakeEncode(presetId: "preset-id", profileFingerprint: "deadbeef")
         );
         storage.Seed(
-            $"{root}/manifest.json",
-            Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(manifest))
+            $"{root}/{MediaBlueprintWriter.FileName}",
+            Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(blueprint))
         );
 
         ExistingOutputSnapshot snapshot = await _reconciler.InspectAsync(
             root,
+            "preset-id",
             storage,
             CancellationToken.None
         );
@@ -118,37 +107,93 @@ public class EncodeReconcilerInspectAsyncTests
     }
 
     [Fact]
-    public async Task InspectAsync_ReturnsNullFingerprint_WhenManifestJsonHasNoneRecorded_LegacyOutput()
+    public async Task InspectAsync_ReturnsNullFingerprint_WhenTheBlueprintHasNoMatchingPresetEntry()
     {
         TestStorage storage = new();
         const string root = "Show/Show S01E01";
-        BundleManifest legacyManifest = new(
-            Version: 1,
-            EncoderVersion: "3",
-            PresetId: "preset-id",
-            PresetName: "preset",
-            PresetSlug: "preset",
-            MediaType: "episode",
-            MediaId: 1,
-            MediaExternalId: null,
-            MediaFolder: "encodes/preset",
-            Container: "hls-fmp4",
-            CreatedAt: DateTime.UtcNow,
-            CompletedAt: DateTime.UtcNow,
-            MediaKey: "abc123",
-            Files: ["web-1080p_master.m3u8"]
+        // Blueprint carries a sibling preset's entry only — the one being
+        // reconciled has never been encoded yet.
+        MediaBlueprint blueprint = MakeBlueprint(
+            MakeEncode(presetId: "other-preset-id", profileFingerprint: "cafebabe")
         );
         storage.Seed(
-            $"{root}/manifest.json",
-            Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(legacyManifest))
+            $"{root}/{MediaBlueprintWriter.FileName}",
+            Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(blueprint))
         );
 
         ExistingOutputSnapshot snapshot = await _reconciler.InspectAsync(
             root,
+            "preset-id",
             storage,
             CancellationToken.None
         );
 
         snapshot.ProfileFingerprint.Should().BeNull();
     }
+
+    [Fact]
+    public async Task InspectAsync_ReturnsNullFingerprint_WhenTheBlueprintHasNoneRecorded_LegacyOutput()
+    {
+        TestStorage storage = new();
+        const string root = "Show/Show S01E01";
+        MediaBlueprint blueprint = MakeBlueprint(
+            MakeEncode(presetId: "preset-id", profileFingerprint: null)
+        );
+        storage.Seed(
+            $"{root}/{MediaBlueprintWriter.FileName}",
+            Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(blueprint))
+        );
+
+        ExistingOutputSnapshot snapshot = await _reconciler.InspectAsync(
+            root,
+            "preset-id",
+            storage,
+            CancellationToken.None
+        );
+
+        snapshot.ProfileFingerprint.Should().BeNull();
+    }
+
+    // -----------------------------------------------------------------------
+    // Helpers
+    // -----------------------------------------------------------------------
+
+    private static MediaBlueprint MakeBlueprint(BlueprintEncode encode) =>
+        new(
+            Version: 1,
+            Identity: new(
+                Type: "episode",
+                TmdbId: 1,
+                Show: new(TmdbId: 2, Title: "Show"),
+                Season: 1,
+                Episode: 1,
+                Title: "Episode",
+                Year: 2024
+            ),
+            Source: new(
+                Path: "Download/Show/Show.S01E01.mkv",
+                Filename: "Show.S01E01.mkv",
+                Container: "matroska,webm",
+                SizeBytes: 100,
+                DurationSeconds: 60,
+                Sha256: null,
+                Ffprobe: null
+            ),
+            Encodes: [encode]
+        );
+
+    private static BlueprintEncode MakeEncode(string presetId, string? profileFingerprint) =>
+        new(
+            PresetSlug: "preset",
+            PresetId: presetId,
+            ProfileFingerprint: profileFingerprint,
+            EncoderVersion: "3",
+            TargetContainer: "matroska",
+            OutputLocation: "Show/Show S01E01",
+            CreatedAt: DateTime.UtcNow,
+            CompletedAt: DateTime.UtcNow,
+            Tracks: [],
+            ReconstructionCommandTemplate: "ffmpeg -c copy \"reconstructed.mkv\"",
+            LossyWarnings: []
+        );
 }

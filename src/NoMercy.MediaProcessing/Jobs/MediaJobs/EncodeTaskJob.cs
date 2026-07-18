@@ -22,6 +22,7 @@ using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Orchestration;
+using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Events;
@@ -71,6 +72,19 @@ public class EncodeTaskJob
 
     /// <summary>Preset that defines the full encoding profile for this job.</summary>
     public Ulid PresetId { get; set; }
+
+    /// <summary>
+    /// Set only for a smart-orchestrator merged run — every preset id unioned
+    /// into the coordinated encode this task belongs to (index 0 is the
+    /// primary preset). <see cref="Task"/>.OutputIndex is an index into the
+    /// MERGED plan's output arrays, not any single preset's own plan, so this
+    /// task must re-plan every listed preset and re-merge them the same way
+    /// the coordinator did at dispatch time before it can make sense of that
+    /// index. Null (the default) is every other run — <see cref="PresetId"/>
+    /// alone resolves the single profile PlanStage re-derives a plan from,
+    /// exactly as before.
+    /// </summary>
+    public Ulid[]? PresetIds { get; set; }
 
     /// <summary>Task descriptor from the coordinator's decompose call.</summary>
     public DecomposedTask Task { get; set; } = null!;
@@ -164,6 +178,61 @@ public class EncodeTaskJob
             // record of how to reproduce or revert it.
             MediaItem: fileMetadata.MediaItem
         );
+
+        // Smart-orchestrator merged run: Task.OutputIndex is an index into the
+        // MERGED plan (union of every listed preset's video renditions), not
+        // this job's own single-preset plan. Re-plan every preset in
+        // PresetIds and re-merge them the same way the coordinator did at
+        // dispatch time — PlanAsync is deterministic given the same profile
+        // + source, so this reproduces the identical merged plan without
+        // having to carry the whole thing through the queue payload.
+        if (PresetIds is { Length: > 1 } presetIds)
+        {
+            List<EncodingRequest> mergeRequests = new(presetIds.Length);
+            foreach (Ulid presetId in presetIds)
+            {
+                EncodingProfile presetProfile;
+                try
+                {
+                    presetProfile = PresetResolver.Resolve(presetId, new DbPresetLookup(context));
+                }
+                catch (Exception ex)
+                {
+                    Log.LogWarning(
+                        "[EncodeTaskJob] Merged task '{Label}': preset {PresetId} resolve failed — {Message}",
+                        Task.Label,
+                        presetId,
+                        ex.Message
+                    );
+                    await PublishCompletedAsync(success: false, error: ex.Message, artifacts: []);
+                    return;
+                }
+
+                mergeRequests.Add(request with { Profile = presetProfile });
+            }
+
+            OutputPlan? mergedPlan = await orchestrator.PlanMergedAsync(mergeRequests);
+            if (mergedPlan is null)
+            {
+                string error =
+                    $"Could not rebuild the merged plan for preset set [{string.Join(", ", presetIds)}]";
+                Log.LogError(
+                    "[EncodeTaskJob] Merged task '{Label}' failed: {Error}",
+                    Task.Label,
+                    error
+                );
+                await PublishCompletedAsync(success: false, error: error, artifacts: []);
+                return;
+            }
+
+            request = request with
+            {
+                Options = (request.Options ?? new EncodingOptions()) with
+                {
+                    PrecomputedPlan = mergedPlan,
+                },
+            };
+        }
 
         // Propagate StatsFilePath from the task descriptor so TwoPassStrategyBase
         // receives the coordinator-resolved path for Pass2 tasks.

@@ -48,8 +48,7 @@ public class FinalizeStage(
     IOutputStrategyFactory outputStrategyFactory,
     ILogger<FinalizeStage> logger,
     IStorage storage,
-    IBundleManifestWriter? manifestWriter = null,
-    IReconstructionWriter? reconstructionWriter = null
+    IMediaBlueprintWriter? blueprintWriter = null
 ) : IPipelineStage<FinalizeInput, FinalizeOutput>, IFinalizeStage
 {
     public string Name => "Finalize";
@@ -190,32 +189,24 @@ public class FinalizeStage(
 
             long totalSize = allEntries.Where(e => !e.IsDirectory).Sum(e => e.SizeBytes);
 
-            // Emit manifest.json + reconstruction.json when the encode has a resolved
-            // BundleLayout and writers are wired (DI singletons). Skipped when layout
-            // is null (legacy callers that don't set MediaItem on the context).
-            if (input.Plan.Layout is BundleLayout layout)
-            {
-                if (manifestWriter is not null)
-                    await WriteManifestAsync(
-                        effectiveStorage,
-                        input.OutputDirectory,
-                        layout,
-                        allEntries,
-                        context,
-                        input.Profile,
-                        ct
-                    );
-
-                if (reconstructionWriter is not null && context.MediaInfo is not null)
-                    await WriteReconstructionAsync(
-                        effectiveStorage,
-                        input.OutputDirectory,
-                        layout,
-                        input.Plan,
-                        context,
-                        ct
-                    );
-            }
+            // Emit .nomercy.json when the encode has a resolved BundleLayout and
+            // the writer is wired (DI singleton). Skipped when layout is null
+            // (legacy callers that don't set MediaItem on the context).
+            if (
+                input.Plan.Layout is BundleLayout layout
+                && blueprintWriter is not null
+                && context.MediaInfo is not null
+            )
+                await WriteBlueprintAsync(
+                    effectiveStorage,
+                    input.OutputDirectory,
+                    layout,
+                    input.Plan,
+                    allEntries,
+                    context,
+                    input.Profile,
+                    ct
+                );
 
             return new StageSuccess<FinalizeOutput>(new(input.OutputDirectory, totalSize));
         }
@@ -233,67 +224,20 @@ public class FinalizeStage(
         }
     }
 
-    private async Task WriteReconstructionAsync(
+    private async Task WriteBlueprintAsync(
         IStorage effectiveStorage,
         string outputDirectory,
         BundleLayout layout,
         OutputPlan plan,
-        EncodingContext context,
-        CancellationToken ct
-    )
-    {
-        // BundleLayout paths are documented as relative to the media item's own
-        // folder (see BundleLayout.cs) — that folder IS input.OutputDirectory, the
-        // same directory BuildStage already writes video_*/audio_*/chapters.vtt
-        // into. Joining here (rather than writing layout.ReconstructionPath as-is
-        // against the folder-scoped storage root) keeps every media item's
-        // reconstruction.json scoped under its own folder instead of colliding
-        // with every other item in the library that shares the same preset slug.
-        string reconstructionPath = effectiveStorage.CombinePath(
-            outputDirectory,
-            layout.ReconstructionPath
-        );
-
-        await reconstructionWriter!.WriteAsync(
-            effectiveStorage,
-            reconstructionPath,
-            context.MediaInfo!,
-            plan,
-            layout,
-            ct,
-            context.OriginalInputPath
-        );
-
-        logger.LogInformation(
-            "[{CorrelationId}] Wrote reconstruction.json → {Path}",
-            context.CorrelationId,
-            reconstructionPath
-        );
-    }
-
-    private async Task WriteManifestAsync(
-        IStorage effectiveStorage,
-        string outputDirectory,
-        BundleLayout layout,
         IReadOnlyList<StorageEntry> allEntries,
         EncodingContext context,
         EncodingProfile? profile,
         CancellationToken ct
     )
     {
-        // allEntries comes from listing input.OutputDirectory, so entry.Path is
-        // already relative to the storage root (same domain as outputDirectory
-        // itself) — the prefix to strip is the media item's folder joined with
-        // the bundle sub-directory, not the bundle sub-directory alone.
-        string bundleDirectory = effectiveStorage.CombinePath(
-            outputDirectory,
-            layout.BundleDirectory
-        );
         // Relative to the media folder, which is where the encoder actually writes
-        // video_*/, audio_*/ and the rest. Measuring against the bundle directory
-        // instead — a subdirectory none of those files are in — meant no entry
-        // ever matched the prefix, so every one was recorded as an absolute path
-        // into a staging directory that no longer exists once the encode publishes.
+        // video_*/, audio_*/ and the rest — allEntries comes from listing
+        // input.OutputDirectory, so entry.Path is already in that domain.
         string dirPrefix = outputDirectory.TrimEnd('/') + "/";
 
         List<string> relFiles = [];
@@ -304,50 +248,53 @@ public class FinalizeStage(
             string rel = entry.Path.StartsWith(dirPrefix, StringComparison.OrdinalIgnoreCase)
                 ? entry.Path[dirPrefix.Length..]
                 : entry.Path;
-            // Exclude the manifest itself from its own file list.
-            if (rel.Equals("manifest.json", StringComparison.OrdinalIgnoreCase))
+            // Exclude the blueprint itself from its own file list.
+            if (rel.Equals(MediaBlueprintWriter.FileName, StringComparison.OrdinalIgnoreCase))
                 continue;
             relFiles.Add(rel);
         }
 
-        string mediaTypeStr = context.MediaItem?.Type switch
-        {
-            MediaType.Movie => "movie",
-            MediaType.Episode => "episode",
-            MediaType.Track => "track",
-            _ => "unknown",
-        };
-
         string encoderVersion = typeof(FinalizeStage).Assembly.GetName().Version?.ToString() ?? "3";
+        // The real media folder this encode ends up in — recorded INSIDE the file
+        // as output_location. NOT where the file is written: every encode runs in a
+        // staging temp dir and PublishTempDirAsync sweeps that dir's contents to the
+        // real folder afterward. Writing to OriginalOutputDirectory here put the
+        // blueprint outside the temp dir, so publish never carried it and it never
+        // reached the media folder.
+        string mediaRoot = context.OriginalOutputDirectory ?? outputDirectory;
 
-        BundleManifest manifest = new(
-            Version: 1,
-            EncoderVersion: encoderVersion,
-            PresetId: layout.PresetId,
-            PresetName: layout.PresetName,
-            PresetSlug: layout.PresetSlug,
-            MediaType: mediaTypeStr,
-            MediaId: context.MediaItem?.Id ?? 0,
-            MediaExternalId: null,
-            // The folder this bundle ends up in, not the staging directory it was
-            // assembled in — that one is deleted the moment the encode publishes.
-            MediaFolder: context.OriginalOutputDirectory ?? outputDirectory,
-            Container: layout.ContainerString,
-            CreatedAt: DateTime.UtcNow,
-            CompletedAt: DateTime.UtcNow,
-            MediaKey: layout.MediaKey,
-            Files: relFiles,
-            ProfileFingerprint: profile is not null ? ProfileFingerprint.Compute(profile) : null
+        // Layout is only ever resolved (PlanStage) when context.MediaItem is set —
+        // see OutputNamingResolver.Resolve's caller — so MediaItem is guaranteed
+        // non-null here.
+        //
+        // Write to outputDirectory (the staging temp dir where video_*/, audio_*/
+        // etc. are assembled) so the blueprint publishes to the media root exactly
+        // like every rendition does. originalSourcePath carries the real source, not
+        // the staging lease MediaInfo.FilePath points at.
+        await blueprintWriter!.WriteAsync(
+            effectiveStorage,
+            outputDirectory,
+            context.MediaInfo!,
+            BlueprintIdentityFactory.From(context.MediaItem!),
+            plan,
+            layout,
+            relFiles,
+            outputLocation: mediaRoot,
+            encoderVersion: encoderVersion,
+            profileFingerprint: profile is not null ? ProfileFingerprint.Compute(profile) : null,
+            createdAt: DateTime.UtcNow,
+            completedAt: DateTime.UtcNow,
+            ct,
+            originalSourcePath: context.OriginalInputPath
         );
 
-        string manifestPath = effectiveStorage.CombinePath(outputDirectory, layout.ManifestPath);
-        await manifestWriter!.WriteAsync(effectiveStorage, manifestPath, manifest, ct);
-
         logger.LogInformation(
-            "[{CorrelationId}] Wrote manifest.json → {Path} ({FileCount} files)",
+            "[{CorrelationId}] Wrote {FileName} into staging {StagingDir} ({FileCount} files); publishes to media root {MediaRoot}",
             context.CorrelationId,
-            manifestPath,
-            relFiles.Count
+            MediaBlueprintWriter.FileName,
+            outputDirectory,
+            relFiles.Count,
+            mediaRoot
         );
     }
 }

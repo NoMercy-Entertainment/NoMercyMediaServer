@@ -45,6 +45,10 @@ public static class MediaItemRefFactory
             ShowTitle: episode.Tv.Title,
             SeasonNumber: episode.SeasonNumber,
             EpisodeNumber: episode.EpisodeNumber,
+            // Episode.TvId is the show's own TMDB id (Tv.Id uses the same
+            // DatabaseGeneratedOption.None-from-TMDB convention as Episode.Id
+            // and Movie.Id), so no extra navigation load is needed here.
+            ShowTmdbId: episode.TvId,
             Description: episode.Overview
         );
     }

@@ -232,10 +232,39 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
         }
 
         lock (_cacheLock)
-            _introspectCache[token] = (result, DateTime.UtcNow);
+        {
+            // Sweep entries past their TTL so rotated/expired tokens don't
+            // accumulate as permanent keys over the coordinator's lifetime.
+            DateTime now = DateTime.UtcNow;
+            foreach (
+                string expiredKey in ExpiredIntrospectKeys(
+                    _introspectCache,
+                    now,
+                    IntrospectCacheTtl
+                )
+            )
+                _introspectCache.Remove(expiredKey);
+
+            _introspectCache[token] = (result, now);
+        }
 
         return result;
     }
+
+    /// <summary>
+    /// Cache keys whose entry is at or past <paramref name="ttl"/> relative to
+    /// <paramref name="now"/> — the introspect cache is swept by these on write so
+    /// it stays bounded to tokens seen within the TTL window.
+    /// </summary>
+    public static IEnumerable<string> ExpiredIntrospectKeys(
+        IEnumerable<KeyValuePair<string, (IntrospectResult Result, DateTime CachedAt)>> entries,
+        DateTime now,
+        TimeSpan ttl
+    ) =>
+        entries
+            .Where(entry => now - entry.Value.CachedAt >= ttl)
+            .Select(entry => entry.Key)
+            .ToList();
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 

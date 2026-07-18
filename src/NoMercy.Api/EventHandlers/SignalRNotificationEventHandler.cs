@@ -29,16 +29,17 @@ public class SignalRNotificationEventHandler : IDisposable
 
     internal async Task OnUserNotification(UserNotifiedEvent @event, CancellationToken ct)
     {
-        await _clientMessenger.SendToAll(
-            "Notify",
-            @event.Hub,
-            new NotifyDto
-            {
-                Title = @event.Title,
-                Message = @event.Message,
-                Type = @event.Type,
-            }
-        );
+        NotifyDto payload = new()
+        {
+            Title = @event.Title,
+            Message = @event.Message,
+            Type = @event.Type,
+        };
+
+        if (@event.UserId is { } userId)
+            await _clientMessenger.SendTo("Notify", @event.Hub, userId, payload);
+        else
+            await _clientMessenger.SendToAll("Notify", @event.Hub, payload);
     }
 
     public void Dispose()

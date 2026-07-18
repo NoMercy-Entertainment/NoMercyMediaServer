@@ -64,15 +64,40 @@ public class DashboardHub : ConnectionHub
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, "moderators");
         _logger.LogDebug("Dashboard client disconnected");
 
-        StopResources();
+        // Teardown when the last dashboard client leaves must NOT depend on the
+        // disconnecting client's role — otherwise a non-moderator being the last
+        // to leave would leak the shared monitor/log-broadcast services. The
+        // public StopResources RPC stays moderator-gated; this internal path does not.
+        StopResourcesIfLastClient();
     }
 
     public void StartResources()
     {
+        if (!AuthPolicy.IsModerator(Context.User))
+        {
+            _logger.LogDebug(
+                "Non-moderator client attempted to start dashboard resource monitoring"
+            );
+            return;
+        }
+
         _resourceMonitorService.Start();
     }
 
     public void StopResources()
+    {
+        if (!AuthPolicy.IsModerator(Context.User))
+        {
+            _logger.LogDebug(
+                "Non-moderator client attempted to stop dashboard resource monitoring"
+            );
+            return;
+        }
+
+        StopResourcesIfLastClient();
+    }
+
+    private void StopResourcesIfLastClient()
     {
         if (ConnectedClients.Clients.Values.All(x => x.Endpoint != "/dashboardHub"))
         {

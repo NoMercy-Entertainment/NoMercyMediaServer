@@ -211,9 +211,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMetadataMerger, MetadataMerger>();
 
         // Bundle writers
-        services.AddSingleton<IBundleManifestWriter, BundleManifestWriter>();
-        services.AddSingleton<IReconstructionWriter, ReconstructionWriter>();
         services.AddSingleton<IBundleGarbageCollector, BundleGarbageCollector>();
+
+        // Reconstruction blueprint — one .nomercy.json per media item,
+        // replacing the old per-preset manifest.json + reconstruction.json
+        // pair. See .claude/specs/reconstruction-blueprint/SPEC.md.
+        services.AddSingleton<IMediaBlueprintBuilder, MediaBlueprintBuilder>();
+        services.AddSingleton<IMediaBlueprintWriter, MediaBlueprintWriter>();
 
         // Encode-output reconciliation — decides, before any ffmpeg command is
         // built, whether a re-dispatched file needs a full re-encode, only its

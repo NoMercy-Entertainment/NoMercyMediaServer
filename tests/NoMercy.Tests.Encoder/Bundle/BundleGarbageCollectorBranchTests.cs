@@ -21,33 +21,54 @@ using NoMercy.Encoder.Bundle;
 namespace NoMercy.Tests.Encoder.Bundle;
 
 /// <summary>
-/// Branch coverage for BundleGarbageCollector.SweepAsync — the filter
-/// rules that decide which JSON files count as bundle manifests. The
-/// rules are subtle and easy to regress: only files directly inside
-/// {root}/encodes/{slug}/ qualify, sub-dirs are skipped, JSON files
-/// outside /encodes/ are ignored.
+/// Branch coverage for BundleGarbageCollector.SweepAsync — the filter rule
+/// that decides which files count as a per-media-item blueprint (only a
+/// file literally named <c>.nomercy.json</c>, anywhere under the library
+/// root) plus the DB-cancellation and multi-item paths.
 /// </summary>
 public class BundleGarbageCollectorBranchTests
 {
     private const string LibraryRoot = "library";
 
-    private static BundleManifest MakeManifest(string presetId, string presetSlug) =>
-        new(
-            Version: 1,
-            EncoderVersion: "3.0.0",
-            PresetId: presetId,
-            PresetName: "Test Preset",
-            PresetSlug: presetSlug,
-            MediaType: "movie",
-            MediaId: 550,
-            MediaExternalId: null,
-            MediaFolder: "/media/movies/Fight Club",
-            Container: "hls-fmp4",
-            CreatedAt: new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            CompletedAt: new DateTime(2026, 1, 1, 1, 0, 0, DateTimeKind.Utc),
-            MediaKey: "mfa",
-            Files: ["mfa_master.m3u8"]
-        );
+    private static object MakeEncode(string presetId, string presetSlug) =>
+        new
+        {
+            preset_slug = presetSlug,
+            preset_id = presetId,
+            profile_fingerprint = "abc123",
+            encoder_version = "3.0.0",
+            target_container = "matroska",
+            output_location = "",
+            created_at = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            completed_at = new DateTime(2026, 1, 1, 1, 0, 0, DateTimeKind.Utc),
+            tracks = Array.Empty<object>(),
+            reconstruction_command_template = "ffmpeg -i in -c copy out.mkv",
+            lossy_warnings = Array.Empty<string>(),
+        };
+
+    private static object MakeBlueprint(params object[] encodes) =>
+        new
+        {
+            version = 1,
+            identity = new
+            {
+                type = "movie",
+                tmdb_id = 550,
+                title = "Fight Club",
+                year = 1999,
+            },
+            source = new
+            {
+                path = "Download/complete/Fight Club.mkv",
+                filename = "Fight Club.mkv",
+                container = "matroska,webm",
+                size_bytes = 1_500_000_000L,
+                duration_seconds = 8000.0,
+                sha256 = (string?)null,
+                ffprobe = new { },
+            },
+            encodes,
+        };
 
     private static byte[] ToJsonBytes(object value) =>
         Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(value));
@@ -83,51 +104,20 @@ public class BundleGarbageCollectorBranchTests
     private static BundleGarbageCollector MakeCollector(
         TestStorage storage,
         IDbContextFactory<MediaContext> factory
-    )
-    {
-        BundleManifestWriter writer = new();
-        return new(storage, factory, writer, NullLogger<BundleGarbageCollector>.Instance);
-    }
+    ) => new(storage, factory, NullLogger<BundleGarbageCollector>.Instance);
 
     [Fact]
-    public async Task Sweep_JsonInBundleSubdirectory_IsIgnored()
+    public async Task Sweep_JsonNotNamedNomercyJson_IsIgnored()
     {
-        // encodes/{slug}/video/foo.json must NOT count as a second manifest
-        // — only files directly in the bundle root qualify. Without this
-        // rule, any per-segment JSON written by a future plugin would
-        // mass-flag bundles as duplicate-manifest orphans.
-        const string presetId = "01HZTEST00000000000000B001";
-        const string slug = "web-1080p";
-
-        TestStorage storage = new();
-        storage.Seed(
-            $"{LibraryRoot}/encodes/{slug}/manifest.json",
-            ToJsonBytes(MakeManifest(presetId, slug))
-        );
-        storage.Seed($"{LibraryRoot}/encodes/{slug}/mfa_master.m3u8", [0x01]);
-        // JSON in a sub-directory of the bundle — must be ignored.
-        storage.Seed($"{LibraryRoot}/encodes/{slug}/video/segment-meta.json", [0x02]);
-
-        (MediaContext _, IDbContextFactory<MediaContext> factory) = MakeDb(presetId);
-        BundleGarbageCollector gc = MakeCollector(storage, factory);
-
-        IReadOnlyList<BundleOrphan> orphans = await gc.SweepAsync(
-            LibraryRoot,
-            CancellationToken.None
-        );
-
-        orphans.Should().BeEmpty("sub-directory JSON must not trigger duplicate-manifest");
-    }
-
-    [Fact]
-    public async Task Sweep_JsonOutsideEncodesPath_IsIgnored()
-    {
-        // JSON files anywhere but under /encodes/ — config, cache, logs —
-        // must never be considered as bundle manifests.
+        // Any JSON file that isn't literally ".nomercy.json" — cache, config,
+        // metadata sidecars — must never be read as a blueprint.
         TestStorage storage = new();
         storage.Seed($"{LibraryRoot}/cache/lookup.json", [0x01]);
-        storage.Seed($"{LibraryRoot}/metadata/movie.json", [0x02]);
-        storage.Seed($"{LibraryRoot}/some/deep/path/data.json", [0x03]);
+        storage.Seed($"{LibraryRoot}/Movie/metadata.json", [0x02]);
+        storage.Seed(
+            $"{LibraryRoot}/Movie/encodes/web-1080p/manifest.json",
+            ToJsonBytes(MakeBlueprint(MakeEncode("01HZTEST00000000000000B001", "web-1080p")))
+        );
 
         (MediaContext _, IDbContextFactory<MediaContext> factory) = MakeDb();
         BundleGarbageCollector gc = MakeCollector(storage, factory);
@@ -137,19 +127,17 @@ public class BundleGarbageCollectorBranchTests
             CancellationToken.None
         );
 
-        orphans.Should().BeEmpty("JSON outside /encodes/ is not a bundle manifest");
+        orphans.Should().BeEmpty("only a file literally named .nomercy.json is a blueprint");
     }
 
     [Fact]
-    public async Task Sweep_FilesPresentButNoJson_ReturnsNoOrphans()
+    public async Task Sweep_RenditionFilesPresentButNoBlueprint_ReturnsNoOrphans()
     {
-        // Encodes tree exists but no manifest has been written yet —
-        // mid-encode state. The sweep must not invent orphans from
-        // partial segments.
+        // Renditions exist at the media root but the encode hasn't finalized
+        // yet (no .nomercy.json written) — mid-encode state, not an orphan.
         TestStorage storage = new();
-        storage.Seed($"{LibraryRoot}/encodes/web-1080p/mfa_master.m3u8", [0x01]);
-        storage.Seed($"{LibraryRoot}/encodes/web-1080p/video/1080p/mfa_1080p_init.mp4", [0x02]);
-        storage.Seed($"{LibraryRoot}/encodes/web-1080p/video/1080p/mfa_1080p_00001.m4s", [0x03]);
+        storage.Seed($"{LibraryRoot}/Movie/mfa_master.m3u8", [0x01]);
+        storage.Seed($"{LibraryRoot}/Movie/video_1080p/mfa_1080p_init.mp4", [0x02]);
 
         (MediaContext _, IDbContextFactory<MediaContext> factory) = MakeDb();
         BundleGarbageCollector gc = MakeCollector(storage, factory);
@@ -165,17 +153,13 @@ public class BundleGarbageCollectorBranchTests
     [Fact]
     public async Task Sweep_LibraryRootWithTrailingSlash_BehavesSameAsWithoutSlash()
     {
-        // libraryRoot is user-provided — both "library" and "library/"
-        // must yield the same sweep result. The source TrimEnd's the
-        // slash; verify here so a future refactor doesn't drop it.
-        const string slug = "web-4k";
+        const string mediaFolder = "web-4k-item";
 
         TestStorage storage = new();
         storage.Seed(
-            $"{LibraryRoot}/encodes/{slug}/manifest.json",
-            ToJsonBytes(MakeManifest("01HZTEST00000000000000B002", slug))
+            $"{LibraryRoot}/{mediaFolder}/.nomercy.json",
+            ToJsonBytes(MakeBlueprint(MakeEncode("01HZTEST00000000000000B002", "web-4k")))
         );
-        storage.Seed($"{LibraryRoot}/encodes/{slug}/mfa_master.m3u8", [0x01]);
 
         // Preset is missing from DB → expect a "preset deleted" orphan
         // whether the trailing slash is on or off. Each sweep needs its
@@ -194,37 +178,29 @@ public class BundleGarbageCollectorBranchTests
     }
 
     [Fact]
-    public async Task Sweep_MultipleBundles_ProcessesEachIndependently()
+    public async Task Sweep_MultipleMediaItems_ProcessesEachIndependently()
     {
-        // Three bundles: one healthy, one with deleted preset, one with
-        // duplicate manifest. The sweep must return exactly the two
-        // orphans without skipping the third bundle on the first miss.
+        // Three media items: one healthy, one with a deleted preset, one
+        // with a mix of both. The sweep must return exactly the two orphan
+        // entries without skipping the third item on the first miss.
         const string aliveId = "01HZTEST00000000000000B003";
         const string deadId = "01HZTEST00000000000000B004";
 
         TestStorage storage = new();
 
-        // Healthy bundle.
         storage.Seed(
-            $"{LibraryRoot}/encodes/alive/manifest.json",
-            ToJsonBytes(MakeManifest(aliveId, "alive"))
-        );
-        storage.Seed($"{LibraryRoot}/encodes/alive/mfa_master.m3u8", [0x01]);
-
-        // Deleted-preset bundle.
-        storage.Seed(
-            $"{LibraryRoot}/encodes/dead/manifest.json",
-            ToJsonBytes(MakeManifest(deadId, "dead"))
-        );
-
-        // Duplicate-manifest bundle.
-        storage.Seed(
-            $"{LibraryRoot}/encodes/dup/manifest.json",
-            ToJsonBytes(MakeManifest(aliveId, "dup"))
+            $"{LibraryRoot}/Alive Movie/.nomercy.json",
+            ToJsonBytes(MakeBlueprint(MakeEncode(aliveId, "alive")))
         );
         storage.Seed(
-            $"{LibraryRoot}/encodes/dup/manifest.backup.json",
-            ToJsonBytes(MakeManifest(aliveId, "dup"))
+            $"{LibraryRoot}/Dead Movie/.nomercy.json",
+            ToJsonBytes(MakeBlueprint(MakeEncode(deadId, "dead")))
+        );
+        storage.Seed(
+            $"{LibraryRoot}/Mixed Movie/.nomercy.json",
+            ToJsonBytes(
+                MakeBlueprint(MakeEncode(aliveId, "alive-again"), MakeEncode(deadId, "dead-again"))
+            )
         );
 
         (MediaContext _, IDbContextFactory<MediaContext> factory) = MakeDb(aliveId);
@@ -237,7 +213,7 @@ public class BundleGarbageCollectorBranchTests
 
         orphans.Should().HaveCount(2);
         orphans.Should().Contain(o => o.PresetSlug == "dead" && o.Reason == "preset deleted");
-        orphans.Should().Contain(o => o.PresetSlug == "dup" && o.Reason == "duplicate-manifest");
+        orphans.Should().Contain(o => o.PresetSlug == "dead-again" && o.Reason == "preset deleted");
     }
 
     [Fact]
@@ -245,12 +221,10 @@ public class BundleGarbageCollectorBranchTests
     {
         // The factory passes the token through to EF Core; if the caller
         // cancels before any DB work the sweep should observe it.
-        const string presetId = "01HZTEST00000000000000B005";
-
         TestStorage storage = new();
         storage.Seed(
-            $"{LibraryRoot}/encodes/web-1080p/manifest.json",
-            ToJsonBytes(MakeManifest(presetId, "web-1080p"))
+            $"{LibraryRoot}/Movie/.nomercy.json",
+            ToJsonBytes(MakeBlueprint(MakeEncode("01HZTEST00000000000000B005", "web-1080p")))
         );
 
         Mock<IDbContextFactory<MediaContext>> factoryMock = new();
@@ -258,11 +232,9 @@ public class BundleGarbageCollectorBranchTests
             .Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
-        BundleManifestWriter writer = new();
         BundleGarbageCollector gc = new(
             storage,
             factoryMock.Object,
-            writer,
             NullLogger<BundleGarbageCollector>.Instance
         );
 

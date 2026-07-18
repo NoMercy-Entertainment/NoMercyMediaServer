@@ -53,6 +53,11 @@ public class DashOutputStrategy(IStorage storage) : IOutputStrategy
             ["-adaptation_sets"] = "id=0,streams=v id=1,streams=a",
         };
 
+        // VFR sources must be muxed CFR for segmented DASH — same rationale as
+        // HLS: variable PTS gaps drift segment durations off the target.
+        if (plan.NormalizeToConstantFrameRate)
+            extraFlags["-fps_mode"] = "cfr";
+
         if (
             primaryAudio?.Action == StreamAction.Transcode
             && !string.IsNullOrEmpty(primaryAudio.AudioFilter)

@@ -166,8 +166,8 @@ public class ServiceRegistrationBranchTests
     {
         ServiceProvider provider = BuildProvider();
 
-        provider.GetRequiredService<IBundleManifestWriter>().Should().NotBeNull();
-        provider.GetRequiredService<IReconstructionWriter>().Should().NotBeNull();
+        provider.GetRequiredService<IMediaBlueprintBuilder>().Should().NotBeNull();
+        provider.GetRequiredService<IMediaBlueprintWriter>().Should().NotBeNull();
         provider.GetRequiredService<IBundleGarbageCollector>().Should().NotBeNull();
     }
 

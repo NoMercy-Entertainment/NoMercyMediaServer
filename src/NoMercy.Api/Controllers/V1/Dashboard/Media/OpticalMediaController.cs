@@ -57,7 +57,6 @@ public class OpticalMediaController(
     [HttpGet("drives")]
     public IActionResult GetOpticalDrives()
     {
-
         IEnumerable<object> drives = driveMonitor
             .GetDrives()
             .Select(d => new
@@ -75,7 +74,6 @@ public class OpticalMediaController(
     [HttpGet("{drivePath}")]
     public async Task<IActionResult> GetDriveContents(string drivePath, CancellationToken ct)
     {
-
         DiscDrive? drive = FindDrive(drivePath);
         if (drive is null)
             return NotFoundResponse($"No optical drive found at {drivePath}");
@@ -123,7 +121,6 @@ public class OpticalMediaController(
     [HttpPost("{drivePath}/process")]
     public IActionResult ProcessMedia(string drivePath)
     {
-
         if (string.IsNullOrWhiteSpace(drivePath))
             return BadRequestResponse("Drive path is required");
 
@@ -137,7 +134,6 @@ public class OpticalMediaController(
     [HttpPost("{drivePath}/open")]
     public IActionResult OpenDrive(string drivePath)
     {
-
         if (string.IsNullOrWhiteSpace(drivePath))
             return BadRequestResponse("Drive path is required");
 
@@ -152,7 +148,6 @@ public class OpticalMediaController(
     [HttpPost("{drivePath}/close")]
     public IActionResult CloseDrive(string drivePath)
     {
-
         if (string.IsNullOrWhiteSpace(drivePath))
             return BadRequestResponse("Drive path is required");
 
@@ -171,7 +166,6 @@ public class OpticalMediaController(
         CancellationToken ct
     )
     {
-
         if (string.IsNullOrWhiteSpace(drivePath))
             return BadRequestResponse("Drive path is required");
 
@@ -230,7 +224,6 @@ public class OpticalMediaController(
     [HttpPost("{drivePath}/stop")]
     public async Task<IActionResult> StopMedia(string drivePath, CancellationToken ct)
     {
-
         if (string.IsNullOrWhiteSpace(drivePath))
             return BadRequestResponse("Drive path is required");
 
@@ -258,7 +251,6 @@ public class OpticalMediaController(
     [HttpGet("{drivePath}/probe")]
     public async Task<IActionResult> ProbeDisc(string drivePath, CancellationToken ct)
     {
-
         if (string.IsNullOrWhiteSpace(drivePath))
             return BadRequestResponse("Drive path is required");
 
@@ -307,7 +299,6 @@ public class OpticalMediaController(
     [HttpPost("{drivePath}/resolve")]
     public async Task<IActionResult> ResolveDisc(string drivePath, CancellationToken ct)
     {
-
         if (string.IsNullOrWhiteSpace(drivePath))
             return BadRequestResponse("Drive path is required");
 
@@ -360,7 +351,6 @@ public class OpticalMediaController(
         CancellationToken ct
     )
     {
-
         if (string.IsNullOrWhiteSpace(drivePath))
             return BadRequestResponse("Drive path is required");
 
@@ -369,6 +359,12 @@ public class OpticalMediaController(
 
         if (string.IsNullOrWhiteSpace(request.RipOutputPath))
             return BadRequestResponse("RipOutputPath is required");
+
+        string ripStagingRoot = Path.Combine(AppFiles.TranscodePath, "ripper");
+        if (!RipStagingPath.IsWithinStaging(request.RipOutputPath, ripStagingRoot))
+            return BadRequestResponse(
+                "RipOutputPath must be inside the server rip staging directory"
+            );
 
         if (!System.IO.File.Exists(request.RipOutputPath))
             return NotFoundResponse($"Rip output not found at {request.RipOutputPath}");
@@ -484,7 +480,6 @@ public class OpticalMediaController(
         CancellationToken ct
     )
     {
-
         if (string.IsNullOrWhiteSpace(drivePath))
             return BadRequestResponse("Drive path is required");
 

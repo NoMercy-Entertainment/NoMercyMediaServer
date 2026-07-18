@@ -74,7 +74,21 @@ public sealed record CoordinatorState(
     /// payloads without a DB round-trip, enabling orphan-recovery to locate
     /// crash checkpoints by output directory.
     /// </summary>
-    string? OutputDirectory = null
+    string? OutputDirectory = null,
+    /// <summary>
+    /// Set only for a smart-orchestrator merged run — every preset id that
+    /// was unioned into this run's single coordinated encode, in the same
+    /// order the requests were merged (index 0 is the primary preset whose
+    /// source-derived plan fields won the merge). Null for every other run
+    /// (single-preset, two-pass), which keeps using <see cref="PresetId"/>
+    /// alone exactly as before. <c>HandleFinalizeAsync</c> re-resolves each
+    /// preset's profile and re-plans + re-merges them
+    /// (<see cref="Encoder.Orchestration.IEncodingOrchestrator.PlanMergedAsync"/>)
+    /// to rebuild the SAME merged plan the children encoded against, so the
+    /// FinalizeOnly pass writes one master playlist listing every preset's
+    /// video rendition instead of re-deriving a plan from a single preset.
+    /// </summary>
+    Ulid[]? PresetIds = null
 );
 
 /// <summary>

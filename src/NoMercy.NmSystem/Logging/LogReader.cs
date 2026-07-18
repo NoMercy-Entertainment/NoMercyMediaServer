@@ -19,6 +19,16 @@ namespace NoMercy.NmSystem.Logging;
 
 public static class LogReader
 {
+    /// <summary>
+    /// Reads every entry across both log formats the server writes: the legacy
+    /// rolling <c>log*.txt</c> files (still the only sink for the static
+    /// <see cref="Logger"/> API) and the current per-run <c>run-*.jsonl</c> files
+    /// (the sink for every <c>ILogger&lt;T&gt;</c> call site, i.e. the majority of
+    /// the codebase since the L1-L8 logging migration). Reading only <c>*.txt</c>
+    /// made the dashboard's log search blind to almost everything actually logged
+    /// today. Entries mirrored into a run file from the legacy bridge (same log
+    /// call, two sinks) are deduplicated by (type, level, message, second).
+    /// </summary>
     public static async Task<List<LogEntry>> GetLogsAsync(
         IStorage storage,
         string logDirectoryPath,
@@ -29,8 +39,15 @@ public static class LogReader
         if (!dirExists)
             throw new DirectoryNotFoundException($"Log directory not found: {logDirectoryPath}");
 
-        IReadOnlyList<StorageEntry> entries = storage.List(logDirectoryPath, "*.txt", false);
-        IOrderedEnumerable<StorageEntry> logFiles = entries.OrderByDescending(e => e.LastModified);
+        IReadOnlyList<StorageEntry> textEntries = storage.List(logDirectoryPath, "*.txt", false);
+        IReadOnlyList<StorageEntry> jsonlEntries = storage.List(
+            logDirectoryPath,
+            "run-*.jsonl",
+            false
+        );
+        IOrderedEnumerable<StorageEntry> logFiles = textEntries
+            .Concat(jsonlEntries)
+            .OrderByDescending(e => e.LastModified);
 
         List<LogEntry> logEntries = [];
 
@@ -42,7 +59,16 @@ public static class LogReader
         foreach (IEnumerable<LogEntry> chunk in results)
             logEntries.AddRange(chunk);
 
-        return logEntries;
+        return logEntries
+            .DistinctBy(entry =>
+                (
+                    entry.Type,
+                    entry.Level,
+                    entry.Message,
+                    Second: entry.Time.Ticks / TimeSpan.TicksPerSecond
+                )
+            )
+            .ToList();
     }
 
     public static async Task<List<LogEntry>> GetLatestRunLogsAsync(

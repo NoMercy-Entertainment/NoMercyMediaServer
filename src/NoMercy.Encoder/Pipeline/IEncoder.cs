@@ -141,7 +141,21 @@ public record EncodingOptions(
     /// is the only thing allowed to change the command. Defaults to false so every
     /// existing production request keeps emitting the exact command it does today.
     /// </summary>
-    bool EnableMetadataInjection = false
+    bool EnableMetadataInjection = false,
+    /// <summary>
+    /// When set, the pipeline skips PlanStage entirely and uses this plan
+    /// instead of re-deriving one from <see cref="EncodingRequest.Profile"/>.
+    /// Set by the smart-orchestrator merge path
+    /// (<see cref="Orchestration.IEncodingOrchestrator.DecomposeMergedAsync"/>)
+    /// so every child task and the coordinator's FinalizeOnly pass all build
+    /// their ffmpeg command / master playlist against the SAME merged
+    /// <see cref="Output.OutputPlan"/> — one that unions the video renditions
+    /// of every preset in the run — instead of each independently re-deriving
+    /// a plan from just its own preset's profile. Null (default) preserves
+    /// today's behavior exactly: PlanStage runs and derives the plan from
+    /// the single request Profile.
+    /// </summary>
+    Output.OutputPlan? PrecomputedPlan = null
 );
 
 public enum Priority

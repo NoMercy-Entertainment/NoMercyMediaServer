@@ -80,7 +80,8 @@ public static class AudioPlanBuilder
                         ExtraFlags: audioProfile.CustomArguments is not null
                             ? new Dictionary<string, string>(audioProfile.CustomArguments)
                             : null,
-                        SourceCodecName: stream.Codec.ToLowerInvariant()
+                        SourceCodecName: stream.Codec.ToLowerInvariant(),
+                        SourceStreamIndex: stream.Index
                     )
                 );
             }

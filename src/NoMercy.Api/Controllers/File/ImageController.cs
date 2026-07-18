@@ -44,17 +44,18 @@ public class ImageController(
             Response.Headers.Append("Cache-Control", "public, max-age=2592000");
             Response.Headers.Append("Access-Control-Allow-Origin", "*");
 
-            string folder = Path.Join(AppFiles.ImagesPath, type);
+            string folder = Path.Join(AppFiles.ImagesPath, ImageRequestPath.SanitizeSegment(type));
             if (!storage.Exists(folder))
                 return NotFoundResponse("Image folder not found");
 
-            string filePath = Path.Join(folder, path.Replace("/", ""));
+            string safeSegment = ImageRequestPath.SanitizeSegment(path);
+            string filePath = Path.Join(folder, safeSegment);
             try
             {
                 if (!storage.Exists(filePath) && type == "original")
                 {
                     using Image<Rgba32>? downloadedImage = await TmdbImageClient.Download(
-                        "/" + path
+                        "/" + safeSegment
                     )!;
                 }
             }

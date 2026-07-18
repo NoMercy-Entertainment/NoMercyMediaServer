@@ -20,6 +20,8 @@ using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Movies;
+using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
@@ -40,6 +42,7 @@ public class MoviesController(
     IJobDispatcher jobDispatcher,
     IMovieMetadataProvider movieMetadataProvider,
     IServerConfiguration config,
+    IEventBus eventBus,
     ILogger<MoviesController> logger
 ) : BaseController
 {
@@ -84,10 +87,17 @@ public class MoviesController(
     }
 
     [HttpDelete]
-    [Authorize(Policy = "MediaAccess")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> DeleteMovie(int id, CancellationToken ct = default)
     {
         await movieRepository.DeleteAsync(id, ct);
+
+        await eventBus.PublishAsync(
+            new LibraryRefreshedEvent { QueryKey = ["movie", id.ToString()] }
+        );
+        await eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["libraries"] });
+        await eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["home"] });
+        await eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["continue-watching"] });
 
         return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Movie deleted" });
     }

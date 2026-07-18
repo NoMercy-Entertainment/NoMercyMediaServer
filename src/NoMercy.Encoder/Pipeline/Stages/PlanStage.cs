@@ -53,6 +53,13 @@ public class PlanStage(
 {
     public string Name => "Plan";
 
+    // Minimum letterbox / pillarbox thickness (per axis, in source pixels)
+    // before an auto-detected crop is honoured. Below this a detected border is
+    // treated as noise and ignored so copyable rungs are not forced into a
+    // full transcode; at or above it the bars are real and removed even though
+    // cropping disables stream-copy on every rung it touches.
+    private const int CropBarThresholdPx = 100;
+
     // Stateless — the resolver holds no configuration, so PlanStage owns one
     // instance rather than threading it through DI like the interface-backed
     // dependencies above (matches how PlanStageHelpers / PlanStageDisambiguation
@@ -565,16 +572,54 @@ public class PlanStage(
 
         try
         {
+            VideoStreamInfo sourceStream = media.VideoStreams[0];
+
             CropResult crop = await cropDetector
-                .DetectAsync(media.FilePath, ct)
+                .DetectAsync(
+                    media.FilePath,
+                    sourceVideoFileId: null,
+                    sourceIsHdr: sourceStream.IsHdr,
+                    ct
+                )
                 .ConfigureAwait(false);
 
             if (!crop.ShouldCrop)
                 return null;
 
+            // Only crop when the bars are big enough to matter. A crop forces a
+            // re-encode of every rung it touches (you cannot crop a stream-copy),
+            // so a few stray pixels of detected border are not worth turning an
+            // otherwise copyable 4K rung into a full transcode. Bars over the
+            // threshold on either axis are real letterbox / pillarbox and MUST
+            // be removed even at the cost of the copy.
+            int barsHorizontal = sourceStream.Width - crop.Width;
+            int barsVertical = sourceStream.Height - crop.Height;
+
+            if (barsHorizontal <= CropBarThresholdPx && barsVertical <= CropBarThresholdPx)
+            {
+                logger.LogInformation(
+                    "[{CorrelationId}] Crop detected ({W}x{H}+{X}+{Y}) but bars "
+                        + "({BarsH}px h / {BarsV}px v) are within the {Threshold}px tolerance "
+                        + "— leaving frame uncropped so copyable rungs stay copyable.",
+                    correlationId,
+                    crop.Width,
+                    crop.Height,
+                    crop.X,
+                    crop.Y,
+                    barsHorizontal,
+                    barsVertical,
+                    CropBarThresholdPx
+                );
+                return null;
+            }
+
             logger.LogInformation(
-                "[{CorrelationId}] Crop detected: {W}x{H}+{X}+{Y}",
+                "[{CorrelationId}] Crop forced: bars {BarsH}px h / {BarsV}px v exceed "
+                    + "{Threshold}px → {W}x{H}+{X}+{Y}. Re-encode required (stream-copy cannot crop).",
                 correlationId,
+                barsHorizontal,
+                barsVertical,
+                CropBarThresholdPx,
                 crop.Width,
                 crop.Height,
                 crop.X,
@@ -933,7 +978,11 @@ public class PlanStage(
                                     ? tonemapPlan.FilterStringFragment
                                     : null,
                                 CropFilter: cropFilter,
-                                IsHdrOutput: preservesHdr
+                                IsHdrOutput: preservesHdr,
+                                // Every rung here is built from media.VideoStreams[0] —
+                                // the source stream this output was planned against. See
+                                // VideoOutputPlan.SourceStreamIndex.
+                                SourceStreamIndex: media.VideoStreams[0].Index
                             );
                         }
                     )
@@ -1091,7 +1140,9 @@ public class PlanStage(
             Layout: layout,
             GenerateChapterThumbs: generateChapterThumbs,
             EmitSubtitleWebVttChunks: emitSubtitleChunks,
-            GlobalExtraFlags: BuildGlobalExtraFlags(profile.CustomArguments)
+            GlobalExtraFlags: BuildGlobalExtraFlags(profile.CustomArguments),
+            NormalizeToConstantFrameRate: media.VideoStreams.Count > 0
+                && media.VideoStreams[0].IsVariableFrameRate
         );
     }
 

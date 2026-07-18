@@ -56,10 +56,19 @@ public class PeopleController(
     [ResponseCache(Duration = 300)]
     public async Task<IActionResult> Show(int id)
     {
-
         string country = Country();
 
-        TmdbPersonAppends? personAppends = await personMetadataProvider.GetPersonAsync(id, default);
+        TmdbPersonAppends? personAppends;
+        try
+        {
+            personAppends = await personMetadataProvider.GetPersonAsync(id, default);
+        }
+        catch (Exception)
+        {
+            // Mirror Movies/Tv: a transient provider (TMDB) failure degrades to a
+            // clean 404 rather than surfacing an unhandled 500.
+            return NotFoundResponse("Person not found");
+        }
 
         if (personAppends is null)
             return NotFoundResponse("Person not found");

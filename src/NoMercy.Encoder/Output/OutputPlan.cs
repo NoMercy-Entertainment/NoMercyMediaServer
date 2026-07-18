@@ -72,7 +72,12 @@ public record OutputPlan(
     // these as ffmpeg global options (before the -i input) so a profile or plugin
     // can pass whole-command flags the schema doesn't model. Per-stream overrides
     // live on each VideoOutputPlan/AudioOutputPlan/SubtitleOutputPlan.ExtraFlags.
-    Dictionary<string, string>? GlobalExtraFlags = null
+    Dictionary<string, string>? GlobalExtraFlags = null,
+    // Set by PlanStage when the source is variable-frame-rate. Segmented output
+    // strategies (HLS/DASH) then force constant-frame-rate muxing (-fps_mode cfr)
+    // so segment durations stay aligned to the target — VFR PTS gaps otherwise
+    // drift the segment boundaries and desync playback across an ABR switch.
+    bool NormalizeToConstantFrameRate = false
 );
 
 public record VideoOutputPlan(
@@ -99,7 +104,16 @@ public record VideoOutputPlan(
     // and playlist names label outputs HDR vs SDR based on the actual color
     // pipeline, not bit depth — 10-bit BT.709 is SDR and conflating depth with
     // HDR was mislabeling every 10-bit anime / SDR remux as HDR.
-    bool IsHdrOutput = false
+    bool IsHdrOutput = false,
+    // The ffprobe stream index of the source video stream this output was
+    // built from — set by PlanStage at the point the source stream is in
+    // hand. -1 (default) means unset, kept only so existing positional
+    // constructions elsewhere in the codebase keep compiling. The
+    // reconstruction blueprint joins tracks back to source.ffprobe.streams[]
+    // by this index rather than re-deriving it by array position later — see
+    // .claude/specs/reconstruction-blueprint/SPEC.md "The match key must be
+    // captured, not guessed".
+    int SourceStreamIndex = -1
 );
 
 public record AudioOutputPlan(
@@ -121,7 +135,12 @@ public record AudioOutputPlan(
     // EncoderName resolves to the literal "copy" pseudo-encoder for a copied
     // stream, so CodecToken below falls back to this field to name the
     // on-disk rendition after what the bytes actually are.
-    string? SourceCodecName = null
+    string? SourceCodecName = null,
+    // The ffprobe stream index of the source audio stream this output was
+    // built from — set by AudioPlanBuilder at the point the source stream is
+    // in hand. -1 (default) means unset. See VideoOutputPlan.SourceStreamIndex
+    // for why this must be captured rather than re-derived by language match.
+    int SourceStreamIndex = -1
 )
 {
     /// <summary>

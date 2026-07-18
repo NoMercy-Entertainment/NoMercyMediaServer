@@ -51,7 +51,12 @@ public static class FilterGraphAssembler
     /// <c>-hwaccel</c> decode flags and the GPU scale branch.
     /// </summary>
     public static bool UsesGpuResidentPath(OutputPlan plan) =>
-        plan.GpuAccel is not null && plan.Thumbnails is null && plan.VideoOutputs.Length > 0;
+        plan.GpuAccel is not null
+        && plan.Thumbnails is null
+        && plan.VideoOutputs.Length > 0
+        // A crop must run on the CPU filter graph before the GPU scale chain;
+        // the GPU-resident path has no crop stage, so any cropped rung disqualifies it.
+        && plan.VideoOutputs.All(v => string.IsNullOrWhiteSpace(v.CropFilter));
 
     public static string? BuildFilterGraph(
         OutputPlan plan,
@@ -81,9 +86,27 @@ public static class FilterGraphAssembler
         bool sourceIs10Bit = mediaInfo.VideoStreams[0].BitDepth > 8;
         bool hasThumbnails = plan.Thumbnails is not null;
         bool sourceIsHdr = mediaInfo.VideoStreams[0].IsHdr;
+        bool sourceIsInterlaced = mediaInfo.VideoStreams[0].IsInterlaced;
+        bool sourceIsAnamorphic = mediaInfo.VideoStreams[0].IsAnamorphic;
         string? thumbnailTonemapChain = videoOutputs
             .Select(v => v.TonemapFilterChain)
             .FirstOrDefault(c => !string.IsNullOrEmpty(c));
+
+        // Crop is a property of the SOURCE (its letterbox / pillarbox), not of
+        // any single rung — every participating output resolves the same crop
+        // rectangle. Hoist it to a single crop on the decoded source BEFORE the
+        // split so the cropped picture feeds every consumer once: the HDR rung,
+        // the tonemapped SDR rung, and the thumbnail sprite all inherit it, and
+        // the expensive tonemap runs on the real picture instead of the bars.
+        // Falls back to per-branch crop only if rungs somehow disagree on the
+        // rectangle (never happens for a single source, but keeps the old path
+        // correct if it ever did).
+        string[] distinctCrops = videoOutputs
+            .Where(v => !string.IsNullOrWhiteSpace(v.CropFilter))
+            .Select(v => v.CropFilter!)
+            .Distinct()
+            .ToArray();
+        string? sharedCrop = distinctCrops.Length == 1 ? distinctCrops[0] : null;
 
         // First text-based subtitle output with BurnIn mode (PGS burn-in uses
         // the overlay path handled before this method is called).
@@ -96,11 +119,49 @@ public static class FilterGraphAssembler
 
         FilterGraphBuilder fg = new();
 
+        // Source-level filters that every branch shares are hoisted here, once,
+        // before the split — so the whole ladder (and the sprite) inherits them
+        // and the work is not repeated per rung. Order matters: deinterlace
+        // first (it reconstructs full frames), then crop (letterbox is measured
+        // on progressive frames), then the per-branch tonemap/scale downstream.
+        string baseLabel = "0:v:0";
+
+        // Deinterlace: an interlaced source scaled without a deinterlace combs.
+        // Single-rate yadif (mode 0) keeps the frame rate; every rung needs the
+        // progressive frames, so it runs once on the shared source.
+        if (sourceIsInterlaced)
+        {
+            fg.AddFilter(baseLabel, "yadif", "deint");
+            baseLabel = "deint";
+        }
+
+        // Hoisted crop: run it once on the decoded source and route every
+        // downstream branch from the cropped label. Per-branch crop is then
+        // cleared so a rung does not crop twice.
+        if (sharedCrop is not null)
+        {
+            fg.AddFilter(baseLabel, $"crop={sharedCrop}", "cropped");
+            baseLabel = "cropped";
+            videoOutputs = videoOutputs.Select(v => v with { CropFilter = null }).ToArray();
+        }
+
+        // Un-anamorph: a non-square-pixel (anamorphic) source scaled by the
+        // ladder — which works in square pixels — comes out stretched. Square
+        // the pixels once on the shared source (after crop, which measures coded
+        // pixels), scaling width by the SAR so the display geometry is baked in
+        // and SAR is reset to 1:1 for every downstream rung.
+        if (sourceIsAnamorphic)
+        {
+            string[] sar = mediaInfo.VideoStreams[0].SampleAspectRatio!.Split(':');
+            fg.AddFilter(baseLabel, $"scale=trunc(iw*{sar[0]}/{sar[1]}/2)*2:ih,setsar=1", "square");
+            baseLabel = "square";
+        }
+
         // GPU-resident path: frames are decoded into GPU memory (-hwaccel set on
         // the input) and scaled on the GPU. Eligibility guarantees no tonemap /
         // crop / burn-in, so every branch is just a GPU scale. Sprites need a CPU
         // download, so this path is skipped when thumbnails are requested.
-        if (UsesGpuResidentPath(plan))
+        if (UsesGpuResidentPath(plan) && !sourceIsInterlaced && !sourceIsAnamorphic)
         {
             string scaleFilter = plan.GpuAccel!.ScaleFilter;
             if (videoOutputs.Length == 1)
@@ -174,7 +235,7 @@ public static class FilterGraphAssembler
             string outputLabel = single.MapLabel.Trim('[', ']');
             BuildBranchFilter(
                 fg,
-                "0:v:0",
+                baseLabel,
                 outputLabel,
                 single,
                 sourceWidth,
@@ -205,13 +266,13 @@ public static class FilterGraphAssembler
 
             if (sourceSplitCount == 1)
             {
-                // Only one downstream consumer of [0:v:0] — the tonemap input.
-                // No source split needed; tonemap directly from [0:v:0].
-                fg.AddFilter("0:v:0", sharedTonemap!, "sdr");
+                // Only one downstream consumer of the source — the tonemap input.
+                // No source split needed; tonemap directly from the base label.
+                fg.AddFilter(baseLabel, sharedTonemap!, "sdr");
             }
             else
             {
-                fg.AddSplit("0:v:0", sourceSplitLabels.ToArray());
+                fg.AddSplit(baseLabel, sourceSplitLabels.ToArray());
                 fg.AddFilter("tonemap_in", sharedTonemap!, "sdr");
             }
 
@@ -251,7 +312,7 @@ public static class FilterGraphAssembler
                 }
                 else
                 {
-                    inputLabel = sourceSplitCount == 1 ? "0:v:0" : $"hdr{hdrIdx++}";
+                    inputLabel = sourceSplitCount == 1 ? baseLabel : $"hdr{hdrIdx++}";
                     tonemapApplied = false;
                 }
 
@@ -288,7 +349,7 @@ public static class FilterGraphAssembler
             if (hasThumbnails)
                 splitLabels.Add("thumbsrc");
 
-            fg.AddSplit("0:v:0", splitLabels.ToArray());
+            fg.AddSplit(baseLabel, splitLabels.ToArray());
 
             for (int i = 0; i < videoOutputs.Length; i++)
             {

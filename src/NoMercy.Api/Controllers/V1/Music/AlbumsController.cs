@@ -35,7 +35,7 @@ namespace NoMercy.Api.Controllers.V1.Music;
 
 [ApiController]
 [Tags("Music Albums")]
-[Authorize]
+[Authorize(Policy = "MediaAccess")]
 [Route("api/v{version:apiVersion}/music/albums")]
 public class AlbumsController : BaseController
 {

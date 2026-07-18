@@ -48,18 +48,48 @@ public partial class CropDetector(
     // of 2 (the previous default) tripped a handful of HEVC encoders that
     // require modulo-4 — and the visual difference between mod2 and mod4
     // crops is imperceptible.
-    private const string CropDetectFilter = "cropdetect=limit=24:round=4:reset=0";
+    //
+    // The black-bar threshold (cropdetect limit) is transfer-dependent. SDR
+    // black sits at code value 16 (or 0 for full-range), so limit=24 catches
+    // it. HDR/PQ (smpte2084) and HLG (arib-std-b67) map "black" to a much
+    // higher code value plus mastering noise, so limit=24 sees the whole
+    // frame as picture and reports NO crop — baking the letterbox into a
+    // stream-copy. HDR sources therefore need a higher limit. Measured on a
+    // real 2160p HDR10 source: limit=24 → crop=3840:2160:0:0 (wrong),
+    // limit=128 → crop=3616:1608:224:276 (the actual scope frame).
+    private const int SdrCropDetectLimit = 24;
+    private const int HdrCropDetectLimit = 128;
+
+    private static string CropDetectFilter(bool sourceIsHdr) =>
+        $"cropdetect=limit={(sourceIsHdr ? HdrCropDetectLimit : SdrCropDetectLimit)}:round=4:reset=0";
+
+    private static readonly HashSet<string> HdrTransfers = ["smpte2084", "arib-std-b67"];
 
     public Task<CropResult> DetectAsync(string inputPath, CancellationToken ct) =>
-        DetectAsync(inputPath, sourceVideoFileId: null, ct);
+        DetectAsync(inputPath, sourceVideoFileId: null, sourceIsHdr: false, ct);
+
+    public Task<CropResult> DetectAsync(
+        string inputPath,
+        Guid? sourceVideoFileId,
+        CancellationToken ct
+    ) => DetectAsync(inputPath, sourceVideoFileId, sourceIsHdr: false, ct);
 
     public async Task<CropResult> DetectAsync(
         string inputPath,
         Guid? sourceVideoFileId,
+        bool? sourceIsHdr,
         CancellationToken ct
     )
     {
         await using LocalPathLease inputLease = storage.AcquireLocalPath(inputPath);
+
+        // Callers that already analysed the source (PlanStage) pass the known
+        // HDR flag so no extra probe runs. Callers that don't (the on-demand
+        // content-analysis API) pass null and we probe the transfer here so
+        // the limit is still transfer-correct instead of silently SDR.
+        bool isHdr =
+            sourceIsHdr ?? await ProbeIsHdrAsync(inputLease.Path, ct).ConfigureAwait(false);
+
         string[] args =
         [
             "-hide_banner",
@@ -70,7 +100,7 @@ public partial class CropDetector(
             "-t",
             ((int)ScanDuration.TotalSeconds).ToString(),
             "-vf",
-            CropDetectFilter,
+            CropDetectFilter(isHdr),
             "-f",
             "null",
             "-",
@@ -217,6 +247,49 @@ public partial class CropDetector(
             SampleFramesAnalyzed: count,
             Confidence: confidence
         );
+    }
+
+    /// <summary>
+    /// Probes the first video stream's colour transfer to decide whether the
+    /// source is HDR (PQ / HLG). Best-effort: any failure returns false so the
+    /// detector falls back to the SDR limit rather than failing the analysis.
+    /// </summary>
+    private async Task<bool> ProbeIsHdrAsync(string localPath, CancellationToken ct)
+    {
+        try
+        {
+            string[] args =
+            [
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-show_entries",
+                "stream=color_transfer",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                localPath,
+            ];
+
+            ProcessResult probe = await processRunner
+                .RunAsync(options.FfprobePath, args, workingDirectory: null, cancellationToken: ct)
+                .ConfigureAwait(false);
+
+            if (!probe.IsSuccess)
+                return false;
+
+            string transfer = probe.StdOut.Trim().ToLowerInvariant();
+            return HdrTransfers.Contains(transfer);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogDebug(
+                ex,
+                "HDR transfer probe failed for {Input}; assuming SDR crop threshold",
+                localPath
+            );
+            return false;
+        }
     }
 
     [GeneratedRegex(@"crop=(?<crop>\d+:\d+:\d+:\d+)")]

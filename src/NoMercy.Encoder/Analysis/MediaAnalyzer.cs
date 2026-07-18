@@ -176,7 +176,11 @@ public class MediaAnalyzer(IProcessRunner processRunner, IStorage storage, Encod
             Attachments: attachments,
             DolbyVision: dolbyVision,
             StereoMode: stereoMode,
-            SphericalProjection: sphericalProjection
+            SphericalProjection: sphericalProjection,
+            // Already parsed above — retained verbatim, never re-parsed, so
+            // the reconstruction blueprint's source.ffprobe is byte-identical
+            // to what ffprobe emitted.
+            Ffprobe: root
         );
     }
 
@@ -267,7 +271,9 @@ public class MediaAnalyzer(IProcessRunner processRunner, IStorage storage, Encod
             IsDefault: stream["disposition"]?.Value<int>("default") == 1,
             BitRateKbps: ParseLong(stream, "bit_rate") / 1000,
             AverageFrameRate: avgFrameRate,
-            RealFrameRate: realFrameRate
+            RealFrameRate: realFrameRate,
+            FieldOrder: stream.Value<string>("field_order"),
+            SampleAspectRatio: stream.Value<string>("sample_aspect_ratio")
         );
     }
 

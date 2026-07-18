@@ -69,5 +69,9 @@ public record EpisodeMediaRef(
     string ShowTitle,
     int SeasonNumber,
     int EpisodeNumber,
+    // The show's own TMDB id (Tv.Id), distinct from Id above (the episode's
+    // TMDB id). Feeds BlueprintIdentity.Show.TmdbId. Defaults to 0 so
+    // existing named-argument callers keep compiling.
+    long ShowTmdbId = 0,
     string? Description = null
 ) : MediaItemRef(Type, Id, Title, Year);

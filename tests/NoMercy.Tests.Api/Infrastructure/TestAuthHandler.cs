@@ -84,8 +84,10 @@ public class TestAuthHandler(
             new(ClaimTypes.Name, userName),
             new(ClaimTypes.Email, userEmail),
             new(ClaimTypes.Role, "user"),
-            new("scope", "openid"),
-            new("scope", "profile"),
+            // Single space-delimited scope claim, mirroring the real Keycloak token
+            // shape so tests exercise the same split-aware ApiScopePolicy path as
+            // production rather than a pre-split multi-claim shape that masks it.
+            new("scope", "openid profile email"),
         ];
 
         ClaimsIdentity identity = new(claims, TestAuthDefaults.AuthenticationScheme);

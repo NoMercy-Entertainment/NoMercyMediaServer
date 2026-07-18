@@ -34,19 +34,25 @@ public interface IEncodeReconciler
     /// writes to today (<c>video_*/</c>, <c>audio_*/</c>, <c>subtitles/</c>,
     /// a master playlist, <c>chapters.vtt</c>, <c>fonts.json</c> — all
     /// directly under the media folder, per <see cref="Output.TemplateResolver"/>'s
-    /// naming tokens) — and additionally reads <c>manifest.json</c> for a
-    /// stored profile fingerprint when one is present. Output encoded before
-    /// the fingerprint existed carries no manifest and hits the "no
-    /// fingerprint, fall back to the real listing" branch, which stays the
-    /// common case for a long while yet and is exactly the legacy path
-    /// reconciliation must keep handling correctly.
+    /// naming tokens) — and additionally reads the media item's
+    /// <c>.nomercy.json</c> blueprint for <paramref name="presetId"/>'s stored
+    /// profile fingerprint, when present. Output encoded before the
+    /// fingerprint existed (or before the blueprint shipped) carries none and
+    /// hits the "no fingerprint, fall back to the real listing" branch, which
+    /// stays the common case for a long while yet and is exactly the legacy
+    /// path reconciliation must keep handling correctly.
     /// </summary>
     /// <param name="mediaRootPath">
     /// The media item's folder, scope-relative to <paramref name="destinationStorage"/>
     /// (e.g. <c>"Show Name/Show Name S01E01"</c>).
     /// </param>
+    /// <param name="presetId">
+    /// The resolved profile's id — selects this preset's entry out of the
+    /// blueprint's <c>encodes[]</c> (one media item can carry several presets).
+    /// </param>
     Task<ExistingOutputSnapshot> InspectAsync(
         string mediaRootPath,
+        string presetId,
         IStorage destinationStorage,
         CancellationToken ct
     );

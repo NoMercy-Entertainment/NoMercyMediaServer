@@ -545,6 +545,34 @@ public class EncodingOrchestrator(
         CancellationToken ct = default
     )
     {
+        (_, DecomposedTask[] tasks) = await DecomposeCoreAsync(request, groupTag, ct)
+            .ConfigureAwait(false);
+        return tasks;
+    }
+
+    public async Task<(OutputPlan? Plan, DecomposedTask[] Tasks)> DecomposeWithPlanAsync(
+        EncodingRequest request,
+        string groupTag,
+        CancellationToken ct = default
+    ) => await DecomposeCoreAsync(request, groupTag, ct).ConfigureAwait(false);
+
+    /// <summary>
+    /// Shared implementation behind <see cref="DecomposeAsync"/> and
+    /// <see cref="DecomposeWithPlanAsync"/> — plans once and hands the
+    /// resolved <see cref="OutputPlan"/> back alongside the decomposed
+    /// tasks so a caller that needs both (the decode-aware bundler) does
+    /// not have to re-plan, which would re-stage/re-probe a remote source.
+    /// <see cref="OutputPlan"/> is null exactly when the strategy or the
+    /// plan itself could not be resolved — both cases already degrade to
+    /// the single <see cref="EncodeTaskKind.Whole"/> fallback task, which
+    /// never reaches the decode-aware bundler.
+    /// </summary>
+    private async Task<(OutputPlan? Plan, DecomposedTask[] Tasks)> DecomposeCoreAsync(
+        EncodingRequest request,
+        string groupTag,
+        CancellationToken ct
+    )
+    {
         OutputFormat profileFormat = PlanStageHelpers.ContainerToOutputFormat(
             request.Profile.Container
         );
@@ -552,7 +580,7 @@ public class EncodingOrchestrator(
         IEncodingStrategy? strategy = resolver.Resolve(profileFormat, request.Profile.EncodeMode);
 
         if (strategy is null)
-            return [IEncodingStrategy.WholeTask(groupTag)];
+            return (null, [IEncodingStrategy.WholeTask(groupTag)]);
 
         // Stage the input file locally so PlanAsync can probe it via ffprobe
         // regardless of the source storage backend.
@@ -571,9 +599,127 @@ public class EncodingOrchestrator(
         OutputPlan? plan = await encoder.PlanAsync(stagedRequest, ct);
 
         if (plan is null)
-            return [IEncodingStrategy.WholeTask(groupTag)];
+            return (null, [IEncodingStrategy.WholeTask(groupTag)]);
 
-        return strategy.Decompose(plan, groupTag);
+        return (plan, strategy.Decompose(plan, groupTag));
+    }
+
+    public async Task<OutputPlan?> PlanMergedAsync(
+        IReadOnlyList<EncodingRequest> requests,
+        CancellationToken ct = default
+    )
+    {
+        if (requests.Count == 0)
+            return null;
+
+        List<OutputPlan> plans = new(requests.Count);
+
+        foreach (EncodingRequest request in requests)
+        {
+            await using LocalPathLease lease = await (
+                request.SourceStorage ?? storage
+            ).AcquireLocalPathAsync(request.InputPath, ct);
+
+            EncodingRequest stagedRequest = request with
+            {
+                InputPath = lease.Path,
+                SourceStorage = storage,
+                DestinationStorage = storage,
+                OriginalInputPath = request.InputPath,
+            };
+
+            OutputPlan? plan = await encoder.PlanAsync(stagedRequest, ct);
+            if (plan is null)
+            {
+                logger.LogWarning(
+                    "[EncodingOrchestrator] PlanMergedAsync: preset '{Name}' failed to plan — cannot merge.",
+                    request.Profile.Name
+                );
+                return null;
+            }
+
+            if (plans.Count > 0 && plan.Format != plans[0].Format)
+            {
+                logger.LogWarning(
+                    "[EncodingOrchestrator] PlanMergedAsync: preset '{Name}' resolves to {Format}, "
+                        + "incompatible with the primary preset's {PrimaryFormat} — cannot merge.",
+                    request.Profile.Name,
+                    plan.Format,
+                    plans[0].Format
+                );
+                return null;
+            }
+
+            plans.Add(plan);
+        }
+
+        return OutputPlanMerger.Merge(plans);
+    }
+
+    public async Task<DecomposedTask[]> DecomposeMergedAsync(
+        IReadOnlyList<EncodingRequest> requests,
+        string groupTag,
+        CancellationToken ct = default
+    )
+    {
+        (_, DecomposedTask[] tasks) = await DecomposeMergedWithPlanAsync(requests, groupTag, ct)
+            .ConfigureAwait(false);
+        return tasks;
+    }
+
+    /// <summary>
+    /// Plan is null exactly when planning failed or no strategy resolved —
+    /// both cases degrade <paramref name="requests"/>[0]'s decompose to the
+    /// single <see cref="EncodeTaskKind.Whole"/> fallback, which the
+    /// coordinator runs inline and never hands to the decode-aware bundler,
+    /// so a null Plan never reaches <c>DecodeAwareBundlePlanner</c>.
+    /// </summary>
+    public async Task<(OutputPlan? Plan, DecomposedTask[] Tasks)> DecomposeMergedWithPlanAsync(
+        IReadOnlyList<EncodingRequest> requests,
+        string groupTag,
+        CancellationToken ct = default
+    )
+    {
+        if (requests.Count == 0)
+            throw new MergedEncodingIncompatibleException(
+                "DecomposeMergedAsync requires at least one request."
+            );
+
+        // Merge of one is exactly today's single-preset path — no strategy
+        // resolution differences, no plan-merge machinery involved.
+        if (requests.Count == 1)
+            return await DecomposeCoreAsync(requests[0], groupTag, ct).ConfigureAwait(false);
+
+        EncodingRequest primaryRequest = requests[0];
+
+        if (
+            requests.Any(request => request.Profile.EncodeMode != primaryRequest.Profile.EncodeMode)
+        )
+            throw new MergedEncodingIncompatibleException(
+                "Cannot merge presets with different encode modes (single-pass vs two-pass)."
+            );
+
+        OutputPlan? mergedPlan = await PlanMergedAsync(requests, ct);
+        if (mergedPlan is null)
+            throw new MergedEncodingIncompatibleException(
+                "One or more presets failed to plan, or their plans resolve to incompatible "
+                    + "output formats — see the preceding warning for which preset."
+            );
+
+        OutputFormat profileFormat = PlanStageHelpers.ContainerToOutputFormat(
+            primaryRequest.Profile.Container
+        );
+        IEncodingStrategy? strategy = resolver.Resolve(
+            profileFormat,
+            primaryRequest.Profile.EncodeMode
+        );
+
+        if (strategy is null)
+            throw new MergedEncodingIncompatibleException(
+                $"No strategy registered for {profileFormat} / {primaryRequest.Profile.EncodeMode}."
+            );
+
+        return (mergedPlan, strategy.Decompose(mergedPlan, groupTag));
     }
 
     /// <summary>

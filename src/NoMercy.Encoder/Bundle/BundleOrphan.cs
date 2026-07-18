@@ -12,17 +12,17 @@
 namespace NoMercy.Encoder.Bundle;
 
 /// <summary>
-/// Describes a bundle directory that is no longer backed by a live preset
-/// row (or has a structural anomaly) and should be reviewed for purge.
+/// Describes a blueprint <c>encodes[]</c> entry that is no longer backed by
+/// a live preset row and should be reviewed for purge.
 /// </summary>
 public record BundleOrphan(
-    /// <summary>Bundle directory path relative to the library root.</summary>
+    /// <summary>The encode's output location, or the media folder holding
+    /// the <c>.nomercy.json</c> blueprint when no output location was
+    /// recorded.</summary>
     string Path,
     string PresetSlug,
     string PresetId,
-    /// <summary>
-    /// Why the bundle is considered orphaned:
-    /// "preset deleted" | "extra-files" | "missing-files" | "duplicate-manifest"
-    /// </summary>
+    /// <summary>Why the entry is considered orphaned: currently always
+    /// <c>"preset deleted"</c>.</summary>
     string Reason
 );

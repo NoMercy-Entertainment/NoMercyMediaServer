@@ -139,9 +139,11 @@ public class StartupOptions
 
             ExternalServicesConfig.Current.AppBaseUrl = "https://app-dev.nomercy.tv/";
             ExternalServicesConfig.Current.ApiBaseUrl = "https://api-dev.nomercy.tv/";
-            ExternalServicesConfig.Current.ApiServerBaseUrl = $"{ExternalServicesConfig.Current.ApiBaseUrl}v1/server/";
+            ExternalServicesConfig.Current.ApiServerBaseUrl =
+                $"{ExternalServicesConfig.Current.ApiBaseUrl}v1/server/";
 
-            ExternalServicesConfig.Current.AuthBaseUrl = "https://auth-dev.nomercy.tv/realms/NoMercyTV/";
+            ExternalServicesConfig.Current.AuthBaseUrl =
+                "https://auth-dev.nomercy.tv/realms/NoMercyTV/";
 
             Logger.App("Running in development mode.");
         }
@@ -151,9 +153,20 @@ public class StartupOptions
 
         if (!string.IsNullOrEmpty(LogLevel))
         {
-            Logger.App($"Setting log level to: {LogLevel}.");
-            Logger.SetLogLevel(Enum.Parse<LogEventLevel>(LogLevel.ToTitleCase()));
-            options.Add("loglevel", LogLevel);
+            if (TryParseLogLevel(LogLevel, out LogEventLevel level))
+            {
+                Logger.App($"Setting log level to: {LogLevel}.");
+                Logger.SetLogLevel(level);
+                options.Add("loglevel", LogLevel);
+            }
+            else
+            {
+                Logger.App(
+                    $"Unknown log level '{LogLevel}', falling back to Information.",
+                    LogEventLevel.Warning
+                );
+                Logger.SetLogLevel(LogEventLevel.Information);
+            }
         }
 
         InternalPort = ResolvePort(
@@ -210,18 +223,14 @@ public class StartupOptions
             return cliPort;
         }
 
-        int resolved = 7626;
+        string? dbValue = null;
         try
         {
             AppDbContext appContext = new();
             ConfigurationModel? portConfig = appContext.Configuration.FirstOrDefault(c =>
                 c.Key == configKey
             );
-            if (portConfig != null)
-            {
-                resolved = int.Parse(portConfig.Value);
-                Logger.App($"Loaded {label} port from database: " + resolved);
-            }
+            dbValue = portConfig?.Value;
             appContext.Dispose();
         }
         catch (Exception)
@@ -232,8 +241,54 @@ public class StartupOptions
             );
         }
 
+        bool hasValue = !string.IsNullOrEmpty(dbValue);
+        bool parsed = hasValue && int.TryParse(dbValue, out int _);
+        int resolved = ResolvePortFrom(cliPort, dbValue, 7626);
+
+        if (parsed)
+            Logger.App($"Loaded {label} port from database: " + resolved);
+        else if (hasValue)
+            Logger.App(
+                $"Configured {label} port '{dbValue}' is not a valid number; using default {resolved}.",
+                LogEventLevel.Warning
+            );
+
         setConfigPort(resolved);
         options.Add(configKey, resolved.ToString());
         return resolved;
+    }
+
+    /// <summary>
+    /// Resolves the effective port from layered sources: an explicit CLI/env port
+    /// wins; otherwise a valid numeric database value; otherwise
+    /// <paramref name="fallback"/>. A present-but-unparseable database value never
+    /// throws — it falls back, so a corrupt configuration row cannot crash startup.
+    /// </summary>
+    public static int ResolvePortFrom(int cliPort, string? dbValue, int fallback)
+    {
+        if (cliPort != 0)
+            return cliPort;
+
+        return !string.IsNullOrEmpty(dbValue) && int.TryParse(dbValue, out int port)
+            ? port
+            : fallback;
+    }
+
+    /// <summary>
+    /// Parses a Serilog log level from user input (CLI or NOMERCY_LOG_LEVEL),
+    /// case-insensitively. Returns false for null/empty/unknown values instead of
+    /// throwing, so a typo degrades to a warning rather than crashing startup.
+    /// </summary>
+    public static bool TryParseLogLevel(string? raw, out LogEventLevel level)
+    {
+        if (
+            !string.IsNullOrWhiteSpace(raw)
+            && Enum.TryParse(raw, ignoreCase: true, out level)
+            && Enum.IsDefined(level)
+        )
+            return true;
+
+        level = LogEventLevel.Information;
+        return false;
     }
 }

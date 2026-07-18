@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -22,7 +23,8 @@ namespace NoMercy.Api.Controllers.Devices;
 
 [ApiController]
 [Authorize]
-[Route("api/devices/{deviceId}/forget")]
+[ApiVersion(1.0)]
+[Route("api/v{version:apiVersion}/devices/{deviceId}/forget")]
 public sealed class ForgetDeviceController : BaseController
 {
     private readonly IDbContextFactory<MediaContext> _contextFactory;

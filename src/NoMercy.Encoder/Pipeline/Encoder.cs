@@ -101,12 +101,28 @@ public class Encoder(
         progress?.OnStageCompleted("Validate", stopwatch.Elapsed);
 
         // Stage 3: Plan
+        // The smart-orchestrator merge path (DecomposeMergedAsync) already ran
+        // PlanAsync once per preset and unioned the results into one OutputPlan
+        // BEFORE any child task or the coordinator's FinalizeOnly pass gets here.
+        // Re-deriving a plan from this single request's Profile would only see
+        // that one preset's renditions — PrecomputedPlan lets every participant
+        // in a merged run build its command / master playlist against the exact
+        // same merged plan instead. Null (the default) is every other caller —
+        // Plan stage runs exactly as before.
         progress?.OnStageStarted("Plan");
-        StageResult planResult = await planStage.ExecuteAsync(validateInput, context, ct);
-        if (planResult is StageFailure planFailure)
-            return Fail(planFailure.Error, stopwatch.Elapsed, progress);
+        ExecutionPlan plan;
+        if (request.Options?.PrecomputedPlan is { } precomputedPlan)
+        {
+            plan = new ExecutionPlan([], TimeSpan.Zero, precomputedPlan);
+        }
+        else
+        {
+            StageResult planResult = await planStage.ExecuteAsync(validateInput, context, ct);
+            if (planResult is StageFailure planFailure)
+                return Fail(planFailure.Error, stopwatch.Elapsed, progress);
 
-        ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)planResult).Value;
+            plan = ((StageSuccess<ExecutionPlan>)planResult).Value;
+        }
 
         // Update observer with resolved stream info from the actual output plan.
         // Format: "{index}:{detail}" for dashboard display.

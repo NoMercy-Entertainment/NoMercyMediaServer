@@ -157,7 +157,7 @@ public class FindMediaFilesJob : IShouldQueue, IJobStorageInjector
                         library.Type == MediaTypes.MovieMediaType
                             ? MediaTypes.MovieMediaType
                             : MediaTypes.TvMediaType,
-                        Id,
+                        Id.ToString(),
                     ],
                 }
             );

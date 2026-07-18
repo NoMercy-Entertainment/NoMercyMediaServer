@@ -195,7 +195,13 @@ public class AccessLogMiddleware
             return;
         }
 
-        _logger.LogInformation("{Name}: {Path}", user.Name, path);
+        // Per-request access logging is Debug, not Information: a dashboard or
+        // client polls dozens of endpoints every few seconds, so logging every
+        // authenticated request at Information floods the console and drowns real
+        // events. The whack-a-mole ignore lists above only ever caught the
+        // pollers someone noticed. Auth failures above stay at Information — those
+        // are rare and worth surfacing.
+        _logger.LogDebug("{Name}: {Path}", user.Name, path);
 
         await _next(context);
     }

@@ -23,7 +23,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 [ApiController]
 [Tags("Dashboard Libraries")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "Moderator")]
 [Route("api/v{version:apiVersion}/dashboard/logs", Order = 10)]
 public class LogController : BaseController
 {
@@ -54,10 +54,7 @@ public class LogController : BaseController
                 {
                     return typeMatch
                         && levelMatch
-                        && entry.Message.Contains(
-                            filter,
-                            StringComparison.CurrentCultureIgnoreCase
-                        );
+                        && entry.Message.Contains(filter, StringComparison.OrdinalIgnoreCase);
                 }
 
                 return typeMatch && levelMatch;
@@ -79,6 +76,7 @@ public class LogController : BaseController
                     Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Verbose)).ToString(),
                     Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Debug)).ToString(),
                     Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Information)).ToString(),
+                    Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Warning)).ToString(),
                     Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Error)).ToString(),
                     Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Fatal)).ToString(),
                 ],

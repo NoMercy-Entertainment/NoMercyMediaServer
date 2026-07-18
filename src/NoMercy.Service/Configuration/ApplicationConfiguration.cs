@@ -255,6 +255,21 @@ public static class ApplicationConfiguration
                     options.CloseOnAuthenticationExpiration = true;
                 }
             );
+
+            // ContentAnalysisHub was declared and broadcast to (WhisperProgress /
+            // OCR progress via IHubContext<ContentAnalysisHub> from
+            // EncoderContentAnalysisController) but never mapped, so those
+            // broadcasts reached no client. Map it like every other hub so the
+            // content-analysis progress stream is actually deliverable.
+            endpoints.MapHub<ContentAnalysisHub>(
+                "/contentAnalysisHub",
+                options =>
+                {
+                    options.Transports = HttpTransportType.WebSockets;
+                    options.TransportSendTimeout = TimeSpan.FromSeconds(40);
+                    options.CloseOnAuthenticationExpiration = true;
+                }
+            );
         });
     }
 

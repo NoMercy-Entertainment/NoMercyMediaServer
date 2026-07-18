@@ -33,6 +33,7 @@ public class NetworkDiscovery : INetworkDiscovery
     private INatDevice? _device;
     private bool _hasFoundDevice;
     private bool _containerIpWarned;
+    private static bool _natHandlersSubscribed;
 
     private readonly IAuthTokenStore _authTokenStore;
     private readonly IConnectivityStatus _connectivityStatus;
@@ -53,6 +54,20 @@ public class NetworkDiscovery : INetworkDiscovery
         _connectivityStatus = connectivityStatus;
         _driver = driver;
         _networkProbeConfig = networkProbeConfig;
+    }
+
+    /// <summary>
+    /// Returns true exactly once for a given flag, flipping it to true. Used to
+    /// subscribe the process-wide static Mono.Nat handlers a single time instead
+    /// of on every rediscovery.
+    /// </summary>
+    public static bool ShouldSubscribeOnce(ref bool alreadySubscribed)
+    {
+        if (alreadySubscribed)
+            return false;
+
+        alreadySubscribed = true;
+        return true;
     }
 
     public string InternalIp
@@ -157,8 +172,16 @@ public class NetworkDiscovery : INetworkDiscovery
 
             _logger.LogInformation("Discovering Networking");
 
-            NatUtility.DeviceFound += DeviceFound;
-            NatUtility.UnknownDeviceFound += (_, _) => { };
+            if (ShouldSubscribeOnce(ref _natHandlersSubscribed))
+            {
+                // Static Mono.Nat events. Without a subscribe-once guard each
+                // rediscovery re-adds these handlers (the UnknownDeviceFound
+                // lambda can never even be removed), so they accumulate on the
+                // static NatUtility over a long uptime and every device event
+                // then fires N duplicate handlers.
+                NatUtility.DeviceFound += DeviceFound;
+                NatUtility.UnknownDeviceFound += (_, _) => { };
+            }
 
             _logger.LogInformation("Discovering UPNP devices");
 

@@ -389,6 +389,21 @@ public class BuildStage(
                     // pattern below. Filenames must stay byte-identical to the
                     // inline path so the VTT references the player follows still
                     // resolve.
+                    //
+                    // On an HDR source this bundle carries no filtergraph rung to
+                    // borrow a tonemap chain from (it is stream-copy or has no
+                    // video at all), so the sprite must resolve its own — a bare
+                    // -vf here would sample raw HDR and produce crushed, wrong
+                    // colours. ThumbnailFilterResolver is the one place that
+                    // decision lives; it degrades to the plain filter untouched
+                    // for an SDR source.
+                    bool sourceIsHdr =
+                        context.MediaInfo.VideoStreams.Count > 0
+                        && context.MediaInfo.VideoStreams[0].IsHdr;
+                    string? thumbnailTonemapChain = input
+                        .Plan.OutputPlan.VideoOutputs.Select(v => v.TonemapFilterChain)
+                        .FirstOrDefault(c => !string.IsNullOrEmpty(c));
+
                     spriteCommands.Add(
                         new FfmpegCommandBuilder()
                             .WithGlobalOptions(new(ProgressPipe: false, Overwrite: true))
@@ -399,8 +414,12 @@ public class BuildStage(
                                     MapStreams: ["0:v:0"],
                                     ExtraFlags: new()
                                     {
-                                        ["-vf"] =
-                                            $"fps=1/{thumbs.IntervalSeconds},scale={thumbs.Width}:-2",
+                                        ["-vf"] = ThumbnailFilterResolver.Resolve(
+                                            thumbs.IntervalSeconds,
+                                            thumbs.Width,
+                                            sourceIsHdr,
+                                            thumbnailTonemapChain
+                                        ),
                                         ["-f"] = "spritevtt",
                                         ["-vtt_filename"] =
                                             $"thumbs_{thumbs.Width}x{thumbs.Height}.vtt",

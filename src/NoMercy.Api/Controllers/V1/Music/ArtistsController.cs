@@ -37,7 +37,7 @@ namespace NoMercy.Api.Controllers.V1.Music;
 [ApiController]
 [ApiVersion(1.0)]
 [Tags("Music Artists")]
-[Authorize]
+[Authorize(Policy = "MediaAccess")]
 [Route("api/v{version:apiVersion}/music/artists")]
 public class ArtistsController : BaseController
 {
@@ -205,7 +205,7 @@ public class ArtistsController : BaseController
     [HttpPost]
     [Route("{id:guid}/rescan")]
     [Authorize(Policy = "Moderator")]
-    public async Task<IActionResult> Like(Guid id)
+    public async Task<IActionResult> Rescan(Guid id)
     {
         return Ok(
             new StatusResponseDto<string>

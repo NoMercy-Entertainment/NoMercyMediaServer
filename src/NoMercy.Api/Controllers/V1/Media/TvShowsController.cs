@@ -21,6 +21,8 @@ using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.TvShows;
+using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.KitsuIo;
@@ -40,6 +42,7 @@ public class TvShowsController(
     ILibraryRepository libraryRepository,
     IJobDispatcher jobDispatcher,
     ITvShowMetadataProvider tvShowMetadataProvider,
+    IEventBus eventBus,
     ILogger<TvShowsController> logger
 ) : BaseController
 {
@@ -79,10 +82,15 @@ public class TvShowsController(
     }
 
     [HttpDelete]
-    [Authorize(Policy = "MediaAccess")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> DeleteTv(int id, CancellationToken ct = default)
     {
         await tvShowRepository.DeleteAsync(id, ct);
+
+        await eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["tv", id.ToString()] });
+        await eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["libraries"] });
+        await eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["home"] });
+        await eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["continue-watching"] });
 
         return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Show deleted" });
     }

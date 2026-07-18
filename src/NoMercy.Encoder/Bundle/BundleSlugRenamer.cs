@@ -21,20 +21,23 @@ using NoMercy.Storage;
 namespace NoMercy.Encoder.Bundle;
 
 /// <summary>
-/// Startup-time pass that renames on-disk bundle directories when a built-in
-/// preset's display name (and therefore its computed slug) changes between
-/// releases.
+/// Startup-time pass that relabels the <c>preset_slug</c> recorded inside a
+/// media item's <c>.nomercy.json</c> blueprint when a built-in preset's
+/// display name (and therefore its computed slug) changes between releases.
+///
+/// The slug lives purely as a data field on each <c>encodes[]</c> entry —
+/// unlike the retired per-preset <c>encodes/{slug}/</c> layout, there is no
+/// directory to rename and no artifact to move.
 ///
 /// For each <c>oldSlug → newSlug</c> pair supplied, the renamer:
 /// <list type="bullet">
-///   <item>Walks every library folder for <c>encodes/{oldSlug}/</c> directories.</item>
-///   <item>Renames the directory to <c>encodes/{newSlug}/</c> via the storage facade.</item>
-///   <item>Reads the relocated <c>manifest.json</c> and patches its <c>preset_slug</c> field.</item>
+///   <item>Walks every library folder for every <c>.nomercy.json</c> file.</item>
+///   <item>Rewrites any <c>encodes[].preset_slug</c> matching <c>oldSlug</c>
+///   to <c>newSlug</c> and saves the file.</item>
 /// </list>
 ///
-/// The pass is idempotent: if no <c>encodes/{oldSlug}/</c> directory exists the
-/// pair is silently skipped. If the destination <c>encodes/{newSlug}/</c> already
-/// exists a warning is logged and the old directory is left untouched.
+/// The pass is idempotent: once an entry's slug has been rewritten it no
+/// longer matches <c>oldSlug</c>, so a second run is a no-op.
 /// </summary>
 public class BundleSlugRenamer(
     IReadOnlyDictionary<string, string> slugMap,
@@ -44,38 +47,23 @@ public class BundleSlugRenamer(
 )
 {
     /// <summary>
-    /// Runs the rename pass. Reads all library folders from the database,
-    /// then for each folder checks each slug pair and renames when applicable.
+    /// Runs the rewrite pass. Reads all library folders from the database,
+    /// then for each folder rewrites every blueprint that references an old
+    /// slug.
     /// </summary>
     public async Task RunAsync(CancellationToken ct = default)
     {
         if (slugMap.Count == 0)
             return;
 
-        List<Folder> folders = await context
-            .Folders.Include(f => f.Driver)
-            .AsNoTracking()
-            .ToListAsync(ct);
-
-        foreach (Folder folder in folders)
-        {
-            IStorage storage = storageFactory.For(folder.Id, folder.DriverId, folder.Path);
-            await RenameInFolderAsync(storage, folder.Path, ct);
-        }
-    }
-
-    private async Task RenameInFolderAsync(
-        IStorage storage,
-        string folderPath,
-        CancellationToken ct
-    )
-    {
+        // Guard: empty/whitespace slugs would match every entry whose
+        // preset_slug is itself empty and would rewrite it to an equally
+        // meaningless value. Slugs come from BuiltinPresets which never
+        // emits empty strings, but a faulty override map must NOT corrupt
+        // a library's blueprints.
+        Dictionary<string, string> validPairs = new(StringComparer.OrdinalIgnoreCase);
         foreach (KeyValuePair<string, string> pair in slugMap)
         {
-            // Guard: empty/whitespace slugs would resolve to "encodes/" and
-            // mass-rename every bundle in the folder. Slugs come from
-            // BuiltinPresets which never emits empty strings, but a faulty
-            // override map must NOT corrupt the library.
             if (string.IsNullOrWhiteSpace(pair.Key) || string.IsNullOrWhiteSpace(pair.Value))
             {
                 logger.LogWarning(
@@ -86,87 +74,110 @@ public class BundleSlugRenamer(
                 continue;
             }
 
-            string oldDir = $"encodes/{pair.Key}";
-            string newDir = $"encodes/{pair.Value}";
+            validPairs[pair.Key] = pair.Value;
+        }
 
-            bool oldExists = await storage.ExistsAsync(oldDir, ct);
-            if (!oldExists)
-                continue;
+        if (validPairs.Count == 0)
+            return;
 
-            bool newExists = await storage.ExistsAsync(newDir, ct);
-            if (newExists)
-            {
-                logger.LogWarning(
-                    "BundleSlugRenamer: collision — '{NewDir}' already exists in '{FolderPath}'. Leaving '{OldDir}' untouched.",
-                    newDir,
-                    folderPath,
-                    oldDir
-                );
-                continue;
-            }
+        List<Folder> folders = await context
+            .Folders.Include(f => f.Driver)
+            .AsNoTracking()
+            .ToListAsync(ct);
 
-            try
-            {
-                await storage.MoveDirectoryAsync(oldDir, newDir, ct);
-                logger.LogInformation(
-                    "BundleSlugRenamer: renamed '{OldDir}' → '{NewDir}' in '{FolderPath}'",
-                    oldDir,
-                    newDir,
-                    folderPath
-                );
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(
-                    "BundleSlugRenamer: failed to rename '{OldDir}' → '{NewDir}' in '{FolderPath}': {Message}",
-                    oldDir,
-                    newDir,
-                    folderPath,
-                    ex.Message
-                );
-                continue;
-            }
-
-            await PatchManifestAsync(storage, newDir, pair.Value, ct);
+        foreach (Folder folder in folders)
+        {
+            IStorage storage = storageFactory.For(folder.Id, folder.DriverId, folder.Path);
+            await RewriteFolderAsync(storage, folder.Path, validPairs, ct);
         }
     }
 
-    private async Task PatchManifestAsync(
+    private async Task RewriteFolderAsync(
         IStorage storage,
-        string bundleDir,
-        string newSlug,
+        string folderPath,
+        IReadOnlyDictionary<string, string> validPairs,
         CancellationToken ct
     )
     {
-        string manifestPath = $"{bundleDir}/manifest.json";
-
-        bool manifestExists = await storage.ExistsAsync(manifestPath, ct);
-        if (!manifestExists)
-            return;
-
+        IReadOnlyList<StorageEntry> allFiles;
         try
         {
-            string json = await storage.ReadAllTextAsync(manifestPath, ct);
-            JObject? obj = JsonConvert.DeserializeObject<JObject>(json);
-            if (obj is null)
+            allFiles = storage.List(string.Empty, pattern: null, recursive: true);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                "BundleSlugRenamer: failed to list '{FolderPath}': {Message}",
+                folderPath,
+                ex.Message
+            );
+            return;
+        }
+
+        foreach (StorageEntry entry in allFiles)
+        {
+            if (entry.IsDirectory)
+                continue;
+            if (
+                !string.Equals(
+                    storage.GetName(entry.Path),
+                    MediaBlueprintWriter.FileName,
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
+                continue;
+
+            await RewriteBlueprintAsync(storage, entry.Path, folderPath, validPairs, ct);
+        }
+    }
+
+    private async Task RewriteBlueprintAsync(
+        IStorage storage,
+        string blueprintPath,
+        string folderPath,
+        IReadOnlyDictionary<string, string> validPairs,
+        CancellationToken ct
+    )
+    {
+        try
+        {
+            string json = await storage.ReadAllTextAsync(blueprintPath, ct);
+            JObject? blueprint = JsonConvert.DeserializeObject<JObject>(json);
+            if (blueprint?["encodes"] is not JArray encodes)
                 return;
 
-            obj["preset_slug"] = newSlug;
+            bool changed = false;
+            foreach (JToken encode in encodes)
+            {
+                string? currentSlug = encode["preset_slug"]?.Value<string>();
+                if (
+                    string.IsNullOrWhiteSpace(currentSlug)
+                    || !validPairs.TryGetValue(currentSlug, out string? newSlug)
+                )
+                    continue;
 
-            string updated = JsonConvert.SerializeObject(obj, Formatting.Indented);
-            await storage.WriteAsync(manifestPath, Encoding.UTF8.GetBytes(updated), ct);
+                encode["preset_slug"] = newSlug;
+                changed = true;
+            }
 
-            logger.LogTrace(
-                "BundleSlugRenamer: patched manifest.json preset_slug → '{NewSlug}' in '{BundleDir}'",
-                newSlug,
-                bundleDir
+            if (!changed)
+                return;
+
+            string updated = JsonConvert.SerializeObject(blueprint, Formatting.Indented);
+            await storage.WriteAsync(blueprintPath, Encoding.UTF8.GetBytes(updated), ct);
+
+            logger.LogInformation(
+                "BundleSlugRenamer: rewrote preset_slug in '{Path}' ('{FolderPath}')",
+                blueprintPath,
+                folderPath
             );
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                "BundleSlugRenamer: failed to patch manifest.json in '{BundleDir}': {Message}",
-                bundleDir,
+                "BundleSlugRenamer: failed to rewrite blueprint '{Path}' in '{FolderPath}': {Message}",
+                blueprintPath,
+                folderPath,
                 ex.Message
             );
         }

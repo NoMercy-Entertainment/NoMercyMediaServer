@@ -197,15 +197,39 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
     /// deferred jobs in a tight loop (per-job DB query + JSON deserialize +
     /// budget probe) before any of them landed under the headroom threshold.
     /// </remarks>
-    public void ReleaseReservation(QueueJobModel job, TimeSpan availableAfter)
+    public void ReleaseReservation(QueueJobModel job, TimeSpan availableAfter, int attempt = 0)
     {
-        lock (_writeLock)
+        try
         {
-            job.ReservedAt = null;
-            job.AvailableAt = DateTime.UtcNow + availableAfter;
-            job.Attempts = (byte)Math.Max(0, job.Attempts - 1);
-            context.UpdateJob(job);
-            context.SaveChanges();
+            lock (_writeLock)
+            {
+                job.ReservedAt = null;
+                job.AvailableAt = DateTime.UtcNow + availableAfter;
+                job.Attempts = (byte)Math.Max(0, job.Attempts - 1);
+                context.UpdateJob(job);
+                context.SaveChanges();
+            }
+        }
+        catch (Exception e)
+        {
+            if (e.Source == "Microsoft.EntityFrameworkCore.Relational")
+            {
+                logger?.LogDebug(
+                    e,
+                    "Queue DB contention releasing reservation for job {JobId}",
+                    job.Id
+                );
+                return;
+            }
+            if (attempt < MaxDbRetryAttempts)
+            {
+                Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
+                ReleaseReservation(job, availableAfter, attempt + 1);
+            }
+            else
+            {
+                logger?.LogError(e, "Failed to release reservation for job {JobId}", job.Id);
+            }
         }
     }
 
@@ -215,14 +239,85 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
     /// <paramref name="availableAfter"/>. The job's existing ID and queue
     /// slot are preserved — no deduplication check fires.
     /// </summary>
-    public void UpdateJobPayload(int jobId, string newPayload, TimeSpan availableAfter)
+    public void UpdateJobPayload(
+        int jobId,
+        string newPayload,
+        TimeSpan availableAfter,
+        int attempt = 0
+    )
     {
-        lock (_writeLock)
+        try
         {
-            context.UpdateJobPayload(jobId, newPayload, DateTime.UtcNow + availableAfter);
-        }
+            lock (_writeLock)
+            {
+                context.UpdateJobPayload(jobId, newPayload, DateTime.UtcNow + availableAfter);
+            }
 
-        WorkAvailable.Release();
+            WorkAvailable.Release();
+        }
+        catch (Exception e)
+        {
+            if (e.Source == "Microsoft.EntityFrameworkCore.Relational")
+            {
+                logger?.LogDebug(e, "Queue DB contention updating payload for job {JobId}", jobId);
+                return;
+            }
+            if (attempt < MaxDbRetryAttempts)
+            {
+                Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
+                UpdateJobPayload(jobId, newPayload, availableAfter, attempt + 1);
+            }
+            else
+            {
+                logger?.LogError(e, "Failed to update payload for job {JobId}", jobId);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Moves a reserved job onto a different queue with a replaced payload
+    /// and resets its reservation so it re-enters immediately. Used by the
+    /// GPU-budget safety net: a job pinned to a GPU device key that will
+    /// never be satisfiable (the vendor isn't physically present on this
+    /// host) is re-planned onto a software <c>ResourceRequirement</c> and
+    /// rerouted to its now-CPU queue instead of looping at the budget gate
+    /// forever. Attempts reset to 0 — the degraded requirement is a
+    /// different, previously-unattempted shape of the job.
+    /// </summary>
+    public void Requeue(QueueJobModel job, string newQueue, string newPayload, int attempt = 0)
+    {
+        try
+        {
+            lock (_writeLock)
+            {
+                job.Queue = newQueue;
+                job.ReservedAt = null;
+                job.AvailableAt = DateTime.UtcNow;
+                job.Attempts = 0;
+                context.UpdateJob(job);
+                context.UpdateJobPayload(job.Id, newPayload, DateTime.UtcNow);
+                context.SaveChanges();
+            }
+
+            WorkAvailable.Release();
+        }
+        catch (Exception e)
+        {
+            if (e.Source == "Microsoft.EntityFrameworkCore.Relational")
+            {
+                logger?.LogDebug(e, "Queue DB contention requeuing job {JobId}", job.Id);
+                return;
+            }
+            if (attempt < MaxDbRetryAttempts)
+            {
+                Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
+                Requeue(job, newQueue, newPayload, attempt + 1);
+            }
+            else
+            {
+                logger?.LogError(e, "Failed to requeue job {JobId}", job.Id);
+            }
+        }
     }
 
     /// <summary>

@@ -21,56 +21,69 @@ using NoMercy.Encoder.Bundle;
 namespace NoMercy.Tests.Encoder.Bundle;
 
 /// <summary>
-/// Unit tests for BundleGarbageCollector.SweepAsync.
+/// Unit tests for BundleGarbageCollector.SweepAsync against the unified
+/// per-media-item <c>.nomercy.json</c> blueprint (replaces the old
+/// per-preset <c>encodes/{slug}/manifest.json</c> sweep).
 ///
 /// DB context: EF Core in-memory provider (UseInMemoryDatabase).
-/// Storage: TestStorage (from BundleManifestWriterTests.cs in same namespace).
+/// Storage: TestStorage (shared fake, see TestStorage.cs).
 /// </summary>
-public class BundleGarbageCollectorTests : IDisposable
+public class BundleGarbageCollectorTests
 {
-    // -----------------------------------------------------------------------
-    // Helpers
-    // -----------------------------------------------------------------------
-
     private const string LibraryRoot = "library";
 
-    private static BundleManifest MakeManifest(
-        string presetId,
-        string presetSlug,
-        IReadOnlyList<string>? files = null
-    ) =>
-        new(
-            Version: 1,
-            EncoderVersion: "3.0.0",
-            PresetId: presetId,
-            PresetName: "Test Preset",
-            PresetSlug: presetSlug,
-            MediaType: "movie",
-            MediaId: 550,
-            MediaExternalId: null,
-            MediaFolder: "/media/movies/Fight Club",
-            Container: "hls-fmp4",
-            CreatedAt: new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            CompletedAt: new DateTime(2026, 1, 1, 1, 0, 0, DateTimeKind.Utc),
-            MediaKey: "mfa",
-            Files: files ?? ["mfa_master.m3u8", "video/1080p/mfa_1080p_init.mp4"]
-        );
+    private static object MakeEncode(string presetId, string presetSlug, string outputLocation) =>
+        new
+        {
+            preset_slug = presetSlug,
+            preset_id = presetId,
+            profile_fingerprint = "abc123",
+            encoder_version = "3.0.0",
+            target_container = "matroska",
+            output_location = outputLocation,
+            created_at = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            completed_at = new DateTime(2026, 1, 1, 1, 0, 0, DateTimeKind.Utc),
+            tracks = Array.Empty<object>(),
+            reconstruction_command_template = "ffmpeg -i in -c copy out.mkv",
+            lossy_warnings = Array.Empty<string>(),
+        };
+
+    private static object MakeBlueprint(string mediaFolder, params object[] encodes) =>
+        new
+        {
+            version = 1,
+            identity = new
+            {
+                type = "movie",
+                tmdb_id = 550,
+                title = "Fight Club",
+                year = 1999,
+            },
+            source = new
+            {
+                path = "Download/complete/Fight Club.mkv",
+                filename = "Fight Club.mkv",
+                container = "matroska,webm",
+                size_bytes = 1_500_000_000L,
+                duration_seconds = 8000.0,
+                sha256 = (string?)null,
+                ffprobe = new { },
+            },
+            encodes,
+        };
 
     private static byte[] ToJsonBytes(object value) =>
         Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(value));
 
-    // Seed a manifest.json at encodes/{slug}/manifest.json under the library root.
-    private static void SeedManifest(TestStorage storage, string slug, BundleManifest manifest)
+    // Seed a .nomercy.json at {mediaFolder}/.nomercy.json under the library root.
+    private static void SeedBlueprint(
+        TestStorage storage,
+        string mediaFolder,
+        params object[] encodes
+    )
     {
-        string path = $"{LibraryRoot}/encodes/{slug}/manifest.json";
-        storage.Seed(path, ToJsonBytes(manifest));
-    }
-
-    // Seed a regular file inside a bundle dir.
-    private static void SeedFile(TestStorage storage, string slug, string relPath)
-    {
-        string path = $"{LibraryRoot}/encodes/{slug}/{relPath}";
-        storage.Seed(path, [0x01]);
+        string path = $"{LibraryRoot}/{mediaFolder}/.nomercy.json";
+        storage.Seed(path, ToJsonBytes(MakeBlueprint(mediaFolder, encodes)));
     }
 
     // Build an in-memory MediaContext with an optional set of preset IDs.
@@ -106,32 +119,24 @@ public class BundleGarbageCollectorTests : IDisposable
     private static BundleGarbageCollector MakeCollector(
         TestStorage storage,
         IDbContextFactory<MediaContext> factory
-    )
-    {
-        BundleManifestWriter writer = new();
-        return new(storage, factory, writer, NullLogger<BundleGarbageCollector>.Instance);
-    }
-
-    // -----------------------------------------------------------------------
-    // Dispose
-    // -----------------------------------------------------------------------
-
-    public void Dispose() { }
+    ) => new(storage, factory, NullLogger<BundleGarbageCollector>.Instance);
 
     // -----------------------------------------------------------------------
     // Test 1: preset present in DB — no orphan
     // -----------------------------------------------------------------------
 
     [Fact]
-    public async Task Sweep_ManifestWithKnownPreset_ReturnsNoOrphans()
+    public async Task Sweep_BlueprintWithKnownPreset_ReturnsNoOrphans()
     {
         const string presetId = "01HZTEST000000000000000001";
-        const string slug = "web-1080p";
+        const string mediaFolder = "Fight Club (1999)";
 
         TestStorage storage = new();
-        SeedManifest(storage, slug, MakeManifest(presetId, slug));
-        SeedFile(storage, slug, "mfa_master.m3u8");
-        SeedFile(storage, slug, "video/1080p/mfa_1080p_init.mp4");
+        SeedBlueprint(
+            storage,
+            mediaFolder,
+            MakeEncode(presetId, "web-1080p", $"{LibraryRoot}/{mediaFolder}")
+        );
 
         (MediaContext _, IDbContextFactory<MediaContext> factory) = MakeDb(presetId);
         BundleGarbageCollector gc = MakeCollector(storage, factory);
@@ -149,13 +154,14 @@ public class BundleGarbageCollectorTests : IDisposable
     // -----------------------------------------------------------------------
 
     [Fact]
-    public async Task Sweep_ManifestWithDeletedPreset_ReturnsPresetDeletedOrphan()
+    public async Task Sweep_BlueprintWithDeletedPreset_ReturnsPresetDeletedOrphan()
     {
         const string presetId = "01HZTEST000000000000000002";
-        const string slug = "web-4k";
+        const string mediaFolder = "Se7en (1995)";
+        string outputLocation = $"{LibraryRoot}/{mediaFolder}";
 
         TestStorage storage = new();
-        SeedManifest(storage, slug, MakeManifest(presetId, slug));
+        SeedBlueprint(storage, mediaFolder, MakeEncode(presetId, "web-4k", outputLocation));
 
         // DB has no preset with this ID.
         (MediaContext _, IDbContextFactory<MediaContext> factory) = MakeDb();
@@ -169,28 +175,32 @@ public class BundleGarbageCollectorTests : IDisposable
         orphans.Should().ContainSingle();
         BundleOrphan orphan = orphans[0];
         orphan.Reason.Should().Be("preset deleted");
-        orphan.PresetSlug.Should().Be(slug);
+        orphan.PresetSlug.Should().Be("web-4k");
         orphan.PresetId.Should().Be(presetId);
+        orphan.Path.Should().Be(outputLocation);
     }
 
     // -----------------------------------------------------------------------
-    // Test 3: multiple manifests in same preset folder — "duplicate-manifest"
+    // Test 3: multiple encode entries in one blueprint — only the dead one
+    // is orphaned, the live one is not double-counted or dropped.
     // -----------------------------------------------------------------------
 
     [Fact]
-    public async Task Sweep_TwoManifestsInSameFolder_ReturnsDuplicateManifestOrphan()
+    public async Task Sweep_BlueprintWithMixedPresets_OnlyOrphansDeletedPreset()
     {
-        const string presetId = "01HZTEST000000000000000003";
-        const string slug = "web-720p";
+        const string aliveId = "01HZTEST000000000000000003";
+        const string deadId = "01HZTEST000000000000000004";
+        const string mediaFolder = "Interstellar (2014)";
 
         TestStorage storage = new();
+        SeedBlueprint(
+            storage,
+            mediaFolder,
+            MakeEncode(aliveId, "web-1080p", $"{LibraryRoot}/{mediaFolder}"),
+            MakeEncode(deadId, "web-720p-legacy", $"{LibraryRoot}/{mediaFolder}")
+        );
 
-        // Two manifests with different names in the same preset directory.
-        string dir = $"{LibraryRoot}/encodes/{slug}";
-        storage.Seed($"{dir}/manifest.json", ToJsonBytes(MakeManifest(presetId, slug)));
-        storage.Seed($"{dir}/manifest.backup.json", ToJsonBytes(MakeManifest(presetId, slug)));
-
-        (MediaContext _, IDbContextFactory<MediaContext> factory) = MakeDb(presetId);
+        (MediaContext _, IDbContextFactory<MediaContext> factory) = MakeDb(aliveId);
         BundleGarbageCollector gc = MakeCollector(storage, factory);
 
         IReadOnlyList<BundleOrphan> orphans = await gc.SweepAsync(
@@ -199,66 +209,35 @@ public class BundleGarbageCollectorTests : IDisposable
         );
 
         orphans.Should().ContainSingle();
-        orphans[0].Reason.Should().Be("duplicate-manifest");
-        orphans[0].PresetSlug.Should().Be(slug);
+        orphans[0].PresetSlug.Should().Be("web-720p-legacy");
+        orphans[0].PresetId.Should().Be(deadId);
     }
 
     // -----------------------------------------------------------------------
-    // Test 4: extra file on disk (not in manifest) — warning logged, no orphan
+    // Test 4: a leftover pre-blueprint encodes/{slug}/manifest.json must not
+    // crash the sweep and must not be double-counted as an orphan.
     // -----------------------------------------------------------------------
 
     [Fact]
-    public async Task Sweep_ExtraFileOnDisk_LogsWarningAndReturnsNoOrphan()
-    {
-        const string presetId = "01HZTEST000000000000000004";
-        const string slug = "web-480p";
-
-        TestStorage storage = new();
-        BundleManifest manifest = MakeManifest(
-            presetId,
-            slug,
-            ["mfa_master.m3u8", "video/480p/mfa_480p_init.mp4"]
-        );
-        SeedManifest(storage, slug, manifest);
-        SeedFile(storage, slug, "mfa_master.m3u8");
-        SeedFile(storage, slug, "video/480p/mfa_480p_init.mp4");
-        // Extra file not tracked in manifest — user addition.
-        SeedFile(storage, slug, "mfa_thumbnails.vtt");
-
-        (MediaContext _, IDbContextFactory<MediaContext> factory) = MakeDb(presetId);
-        BundleGarbageCollector gc = MakeCollector(storage, factory);
-
-        IReadOnlyList<BundleOrphan> orphans = await gc.SweepAsync(
-            LibraryRoot,
-            CancellationToken.None
-        );
-
-        // Extra files are user additions — not surfaced as orphans.
-        orphans.Should().BeEmpty();
-    }
-
-    // -----------------------------------------------------------------------
-    // Test 5: manifest entry missing on disk — warning logged, no orphan
-    // -----------------------------------------------------------------------
-
-    [Fact]
-    public async Task Sweep_ManifestEntryMissingOnDisk_LogsWarningAndReturnsNoOrphan()
+    public async Task Sweep_VestigialLegacyManifestPresent_DoesNotCrashAndIsNotCounted()
     {
         const string presetId = "01HZTEST000000000000000005";
-        const string slug = "web-1080p-avc";
+        const string mediaFolder = "The Matrix (1999)";
+        string outputLocation = $"{LibraryRoot}/{mediaFolder}";
 
         TestStorage storage = new();
-        BundleManifest manifest = MakeManifest(
-            presetId,
-            slug,
-            ["mfa_master.m3u8", "video/1080p/mfa_1080p_init.mp4", "video/1080p/mfa_1080p_00001.m4s"]
-        );
-        SeedManifest(storage, slug, manifest);
-        SeedFile(storage, slug, "mfa_master.m3u8");
-        SeedFile(storage, slug, "video/1080p/mfa_1080p_init.mp4");
-        // mfa_1080p_00001.m4s intentionally absent — encode incomplete.
+        SeedBlueprint(storage, mediaFolder, MakeEncode(presetId, "web-1080p", outputLocation));
 
-        (MediaContext _, IDbContextFactory<MediaContext> factory) = MakeDb(presetId);
+        // Vestigial old-layout file left behind by a pre-migration install —
+        // never inspected because its filename isn't ".nomercy.json".
+        storage.Seed(
+            $"{LibraryRoot}/{mediaFolder}/encodes/web-1080p/manifest.json",
+            Encoding.UTF8.GetBytes("{\"preset_slug\":\"web-1080p\"}")
+        );
+
+        // Preset is missing from DB — the blueprint entry (not the legacy
+        // file) is the one that must produce exactly one orphan.
+        (MediaContext _, IDbContextFactory<MediaContext> factory) = MakeDb();
         BundleGarbageCollector gc = MakeCollector(storage, factory);
 
         IReadOnlyList<BundleOrphan> orphans = await gc.SweepAsync(
@@ -266,18 +245,45 @@ public class BundleGarbageCollectorTests : IDisposable
             CancellationToken.None
         );
 
-        // Missing files signal incomplete encode, not an orphan — user can re-encode.
-        orphans.Should().BeEmpty();
+        orphans.Should().ContainSingle();
+        orphans[0].Reason.Should().Be("preset deleted");
+        orphans[0].PresetSlug.Should().Be("web-1080p");
     }
 
     // -----------------------------------------------------------------------
-    // Test 6: empty library root — returns empty list
+    // Test 5: empty library root — returns empty list
     // -----------------------------------------------------------------------
 
     [Fact]
     public async Task Sweep_EmptyLibraryRoot_ReturnsEmptyList()
     {
         TestStorage storage = new();
+
+        (MediaContext _, IDbContextFactory<MediaContext> factory) = MakeDb();
+        BundleGarbageCollector gc = MakeCollector(storage, factory);
+
+        IReadOnlyList<BundleOrphan> orphans = await gc.SweepAsync(
+            LibraryRoot,
+            CancellationToken.None
+        );
+
+        orphans.Should().BeEmpty();
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 6: unreadable / malformed blueprint is skipped, not thrown
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task Sweep_MalformedBlueprintJson_IsSkippedWithoutThrowing()
+    {
+        const string mediaFolder = "Corrupt Item";
+
+        TestStorage storage = new();
+        storage.Seed(
+            $"{LibraryRoot}/{mediaFolder}/.nomercy.json",
+            Encoding.UTF8.GetBytes("not valid json")
+        );
 
         (MediaContext _, IDbContextFactory<MediaContext> factory) = MakeDb();
         BundleGarbageCollector gc = MakeCollector(storage, factory);

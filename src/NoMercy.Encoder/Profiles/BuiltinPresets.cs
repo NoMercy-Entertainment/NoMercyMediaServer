@@ -306,7 +306,8 @@ public static class BuiltinPresets
         string description,
         HardwarePreference hw = HardwarePreference.PreferHardware,
         ClientCompatibility compat = ClientCompatibility.Universal,
-        EncodeMode encodeMode = EncodeMode.SinglePass
+        EncodeMode encodeMode = EncodeMode.SinglePass,
+        bool autoDetectCrop = false
     ) =>
         new(
             Id: IdFromName(name),
@@ -328,6 +329,9 @@ public static class BuiltinPresets
             IsBuiltin = true,
             HardwarePreference = hw,
             ClientCompatibility = compat,
+            // Off by default: a stream-copy (Remux) and audio-only presets have
+            // nothing to crop. The video-transcoding callers opt in.
+            AutoDetectCrop = autoDetectCrop,
         };
 
     private static EncodingProfile Remux() =>
@@ -376,7 +380,8 @@ public static class BuiltinPresets
             video: VideoCrf(codec, CodecTunings.For(codec, quality)),
             audio: [AacStereo()],
             subs: [DefaultSubs()],
-            description: description
+            description: description,
+            autoDetectCrop: true
         );
 
     /// <summary>
@@ -422,7 +427,8 @@ public static class BuiltinPresets
             subs: [DefaultSubs()],
             description: "H.264 1080p MP4 at a measured 5 Mbps using two passes. Pick this when the file has to land on a predictable size; the CRF presets give better quality per bit when size is not fixed.",
             hw: HardwarePreference.PreferQuality,
-            encodeMode: EncodeMode.TwoPass
+            encodeMode: EncodeMode.TwoPass,
+            autoDetectCrop: true
         );
     }
 
@@ -440,7 +446,8 @@ public static class BuiltinPresets
             audio: [AacStereo()],
             subs: [DefaultSubs()],
             description: "H.264 Baseline MP4 for hardware that chokes on anything else. Larger than the universal export at the same quality, and the last resort rather than a default.",
-            compat: ClientCompatibility.Universal | ClientCompatibility.LegacyDevices
+            compat: ClientCompatibility.Universal | ClientCompatibility.LegacyDevices,
+            autoDetectCrop: true
         );
 
     /// <summary>
@@ -580,10 +587,19 @@ public static class BuiltinPresets
             Description = description,
             IsBuiltin = true,
             ClientCompatibility = ClientCompatibility.Universal,
-            HardwarePreference = HardwarePreference.PreferQuality,
+            // Fixed-resolution library encodes run across a whole library, so
+            // speed matters: hit NVENC/QSV/AMF when present and fall back to the
+            // CPU encoder only when no hardware encoder is available. The
+            // archival presets are the ones that spend CPU for quality.
+            HardwarePreference = HardwarePreference.PreferHardware,
             BitDepthPolicy = BitDepthPolicy.WarnAndDowngrade,
             HdrPolicies = hdrPolicy,
             HdrOptions = hdrOptions,
+            // Detect and strip letterbox/pillarbox bars. A fixed-resolution
+            // library encode of a 2.39:1 film into a 16:9 rung would otherwise
+            // bake the black bars into the output; the detector no-ops when the
+            // frame is already bar-free.
+            AutoDetectCrop = true,
         };
     }
 
@@ -643,6 +659,10 @@ public static class BuiltinPresets
             BitDepthPolicy = BitDepthPolicy.WarnAndDowngrade,
             HdrPolicies = hdrPolicy,
             HdrOptions = hdrOptions,
+            // Strip letterbox/pillarbox bars once and apply the crop to every
+            // rung the ladder expands. No-ops when the source is already
+            // bar-free.
+            AutoDetectCrop = true,
         };
     }
 }

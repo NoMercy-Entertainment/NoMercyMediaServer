@@ -15,11 +15,28 @@ namespace NoMercy.Api.DTOs.Media;
 
 public class PageRequestDto
 {
-    [FromQuery(Name = "page")]
-    public int Page { get; set; }
+    private const int DefaultTake = 300;
+    private const int MaxTake = 1000;
 
+    private int _page;
+    private int _take = DefaultTake;
+
+    [FromQuery(Name = "page")]
+    public int Page
+    {
+        get => _page;
+        set => _page = value < 0 ? 0 : value;
+    }
+
+    // Clamp so a caller can't force an unbounded materialization with e.g.
+    // ?take=500000. MaxTake is generous relative to the 300 default, so normal
+    // paging is unaffected; a non-positive take falls back to the default.
     [FromQuery(Name = "take")]
-    public int Take { get; set; } = 300;
+    public int Take
+    {
+        get => _take;
+        set => _take = value < 1 ? DefaultTake : Math.Min(value, MaxTake);
+    }
 
     [FromQuery(Name = "version")]
     public string? Version { get; set; }

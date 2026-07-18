@@ -17,6 +17,7 @@ using NoMercy.Api.Services.Video;
 using NoMercy.Api.WebSockets;
 using NoMercy.Authorization;
 using NoMercy.Data.Activity;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Networking;
@@ -41,6 +42,7 @@ public partial class VideoHub : ConnectionHub
     private readonly CastSessionTokenService _castTokenService;
     private readonly DeviceBusRegistry _busRegistry;
     private readonly INetworkDiscovery? _networkDiscovery;
+    private readonly IUserDataRepository _userDataRepository;
 
     private readonly IDbContextFactory<MediaContext> _contextFactory;
 
@@ -63,6 +65,7 @@ public partial class VideoHub : ConnectionHub
         CastSessionTokenService castTokenService,
         DeviceBusRegistry busRegistry,
         IChromeCastService chromeCast,
+        IUserDataRepository userDataRepository,
         INetworkDiscovery? networkDiscovery = null
     )
         : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
@@ -80,6 +83,7 @@ public partial class VideoHub : ConnectionHub
         _busRegistry = busRegistry;
         _chromeCast = chromeCast;
         _networkDiscovery = networkDiscovery;
+        _userDataRepository = userDataRepository;
     }
 
     private static readonly ConcurrentDictionary<Guid, Device> CurrentDevice = new();
