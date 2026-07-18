@@ -74,6 +74,21 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         UserCache.Current.InitializeAsync(userCacheContext).GetAwaiter().GetResult();
     }
 
+    // Every existing test in this fixture authenticates via TestAuthHandler (a header-
+    // driven fake scheme), which never exercises the real Keycloak JwtBearer pipeline
+    // wired in ServiceConfiguration.Auth.cs. A subclass overrides this to true (and
+    // ConfigureRealAuthentication) when a test needs to prove something about that real
+    // pipeline itself — e.g. that an invalid/expired token is still rejected. Default
+    // behavior for every other test is unchanged.
+    protected virtual bool UseRealAuthentication => false;
+
+    protected virtual void ConfigureRealAuthentication(IServiceCollection services) { }
+
+    // Default plugin manager for tests that don't care about plugins. A subclass
+    // overrides this to supply a manager with real/fake plugin instances (e.g. an auth
+    // plugin, to prove OnTokenValidated can only ever add claims, never grant access).
+    protected virtual IPluginManager CreateTestPluginManager() => new StubPluginManager();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -81,7 +96,12 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         builder.ConfigureTestServices(services =>
         {
             RemoveHostedServices(services);
-            ReplaceAuth(services);
+
+            if (UseRealAuthentication)
+                ConfigureRealAuthentication(services);
+            else
+                ReplaceAuth(services);
+
             ReplacePluginManager(services);
             ReplaceSetupState(services);
 
@@ -697,10 +717,10 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         );
     }
 
-    private static void ReplacePluginManager(IServiceCollection services)
+    private void ReplacePluginManager(IServiceCollection services)
     {
         services.RemoveAll<IPluginManager>();
-        services.AddSingleton<IPluginManager>(new StubPluginManager());
+        services.AddSingleton(CreateTestPluginManager());
     }
 
     private static void ReplaceAuth(IServiceCollection services)

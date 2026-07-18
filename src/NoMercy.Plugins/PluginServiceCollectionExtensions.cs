@@ -76,6 +76,10 @@ public static class PluginServiceCollectionExtensions
 
         services.AddSingleton<IPluginCronRegistrar, PluginCronRegistrar>();
 
+        // Additive auth claims: OnTokenValidated (ServiceConfiguration.Auth.cs) resolves
+        // this per authenticated request to enrich the principal. It never decides auth.
+        services.AddSingleton<IPluginClaimsAugmentor, PluginClaimsAugmentor>();
+
         return services;
     }
 

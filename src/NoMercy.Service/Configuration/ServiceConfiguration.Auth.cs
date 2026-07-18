@@ -14,10 +14,12 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Primitives;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using NoMercy.Authorization;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Plugins.Hooks;
 using NoMercy.Service.Authorization;
 using NoMercy.Setup.Auth;
 using Serilog.Events;
@@ -185,6 +187,31 @@ public static partial class ServiceConfiguration
                     // at Keycloak; the server has no notion of "login" via JWT validation.
                     // If we ever want session timeline data, log "session_start" from
                     // ConnectionHub.OnConnectedAsync (one row per actual hub connection).
+                    //
+                    // Runs ONLY after Keycloak's own signing-key/issuer/audience validation
+                    // (above) has already succeeded. It may only ADD claims to the already-
+                    // authenticated identity — it must never call context.Fail(...), never
+                    // replace context.Principal, and never short-circuit. A plugin cannot
+                    // grant access; it can only enrich a principal Keycloak already accepted.
+                    // Keep this cheap: it is a hot path, not a login event.
+                    OnTokenValidated = async context =>
+                    {
+                        if (context.Principal?.Identity is not ClaimsIdentity identity)
+                            return;
+
+                        IPluginClaimsAugmentor augmentor =
+                            context.HttpContext.RequestServices.GetRequiredService<IPluginClaimsAugmentor>();
+
+                        string token = (context.SecurityToken as JsonWebToken)?.EncodedToken ?? string.Empty;
+                        IReadOnlyList<Claim> extraClaims = await augmentor.CollectAdditionalClaimsAsync(
+                            token,
+                            context.HttpContext.RequestAborted
+                        );
+
+                        foreach (Claim claim in extraClaims)
+                            if (!identity.HasClaim(claim.Type, claim.Value))
+                                identity.AddClaim(claim);
+                    },
                     OnAuthenticationFailed = context =>
                     {
                         HttpRequest req = context.Request;
