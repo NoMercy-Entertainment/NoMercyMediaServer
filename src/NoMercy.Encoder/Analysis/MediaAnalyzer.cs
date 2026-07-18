@@ -271,7 +271,8 @@ public class MediaAnalyzer(IProcessRunner processRunner, IStorage storage, Encod
             IsDefault: stream["disposition"]?.Value<int>("default") == 1,
             BitRateKbps: ParseLong(stream, "bit_rate") / 1000,
             AverageFrameRate: avgFrameRate,
-            RealFrameRate: realFrameRate
+            RealFrameRate: realFrameRate,
+            FieldOrder: stream.Value<string>("field_order")
         );
     }
 

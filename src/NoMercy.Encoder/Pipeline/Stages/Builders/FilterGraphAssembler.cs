@@ -86,6 +86,7 @@ public static class FilterGraphAssembler
         bool sourceIs10Bit = mediaInfo.VideoStreams[0].BitDepth > 8;
         bool hasThumbnails = plan.Thumbnails is not null;
         bool sourceIsHdr = mediaInfo.VideoStreams[0].IsHdr;
+        bool sourceIsInterlaced = mediaInfo.VideoStreams[0].IsInterlaced;
         string? thumbnailTonemapChain = videoOutputs
             .Select(v => v.TonemapFilterChain)
             .FirstOrDefault(c => !string.IsNullOrEmpty(c));
@@ -117,13 +118,28 @@ public static class FilterGraphAssembler
 
         FilterGraphBuilder fg = new();
 
-        // Hoisted crop: run it once on the decoded source and route every
-        // downstream branch from the cropped label instead of [0:v:0]. Per-branch
-        // crop is then cleared so a rung does not crop twice.
+        // Source-level filters that every branch shares are hoisted here, once,
+        // before the split — so the whole ladder (and the sprite) inherits them
+        // and the work is not repeated per rung. Order matters: deinterlace
+        // first (it reconstructs full frames), then crop (letterbox is measured
+        // on progressive frames), then the per-branch tonemap/scale downstream.
         string baseLabel = "0:v:0";
+
+        // Deinterlace: an interlaced source scaled without a deinterlace combs.
+        // Single-rate yadif (mode 0) keeps the frame rate; every rung needs the
+        // progressive frames, so it runs once on the shared source.
+        if (sourceIsInterlaced)
+        {
+            fg.AddFilter(baseLabel, "yadif", "deint");
+            baseLabel = "deint";
+        }
+
+        // Hoisted crop: run it once on the decoded source and route every
+        // downstream branch from the cropped label. Per-branch crop is then
+        // cleared so a rung does not crop twice.
         if (sharedCrop is not null)
         {
-            fg.AddFilter("0:v:0", $"crop={sharedCrop}", "cropped");
+            fg.AddFilter(baseLabel, $"crop={sharedCrop}", "cropped");
             baseLabel = "cropped";
             videoOutputs = videoOutputs.Select(v => v with { CropFilter = null }).ToArray();
         }
@@ -132,7 +148,7 @@ public static class FilterGraphAssembler
         // the input) and scaled on the GPU. Eligibility guarantees no tonemap /
         // crop / burn-in, so every branch is just a GPU scale. Sprites need a CPU
         // download, so this path is skipped when thumbnails are requested.
-        if (UsesGpuResidentPath(plan))
+        if (UsesGpuResidentPath(plan) && !sourceIsInterlaced)
         {
             string scaleFilter = plan.GpuAccel!.ScaleFilter;
             if (videoOutputs.Length == 1)

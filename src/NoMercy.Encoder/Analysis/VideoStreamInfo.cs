@@ -26,10 +26,19 @@ public record VideoStreamInfo(
     long BitRateKbps,
     double? AverageFrameRate = null,
     double? RealFrameRate = null,
-    int Rotation = 0
+    int Rotation = 0,
+    string? FieldOrder = null
 )
 {
     private static readonly HashSet<string> HdrTransfers = ["smpte2084", "arib-std-b67"];
+
+    // ffprobe field_order values for interlaced content. "progressive"
+    // (or an absent tag) is not interlaced; the four interlaced orders all
+    // need a deinterlace before scale or the output combs.
+    private static readonly HashSet<string> InterlacedFieldOrders = ["tt", "bb", "tb", "bt"];
+
+    public bool IsInterlaced =>
+        FieldOrder is not null && InterlacedFieldOrders.Contains(FieldOrder);
 
     public bool IsHdr =>
         ColorTransfer is not null
