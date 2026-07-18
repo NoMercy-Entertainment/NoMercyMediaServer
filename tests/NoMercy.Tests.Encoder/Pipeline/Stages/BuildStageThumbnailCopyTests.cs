@@ -97,6 +97,35 @@ public class BuildStageThumbnailCopyTests
             Chapters: []
         );
 
+    private static MediaInfo BuildHdrMediaInfo(int width = 3840, int height = 2160) =>
+        new(
+            FilePath: "/movies/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromHours(2),
+            OverallBitRateKbps: 20000,
+            FileSizeBytes: 18_000_000_000,
+            VideoStreams:
+            [
+                new(
+                    Index: 0,
+                    Codec: "hevc",
+                    Width: width,
+                    Height: height,
+                    FrameRate: 24.0,
+                    BitDepth: 10,
+                    PixelFormat: "yuv420p10le",
+                    ColorPrimaries: "bt2020",
+                    ColorTransfer: "smpte2084",
+                    ColorSpace: "bt2020nc",
+                    IsDefault: true,
+                    BitRateKbps: 18000
+                ),
+            ],
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
+        );
+
     private static VideoOutputPlan BuildCopyVideoOutput() =>
         new(
             Width: 1920,
@@ -377,5 +406,103 @@ public class BuildStageThumbnailCopyTests
             .ContainSingle("only the sprite command has anything to write")
             .Which.Arguments.Should()
             .Contain("spritevtt");
+    }
+
+    // ── Standalone sprite color pipeline (HDR vs SDR source) ─────────────────
+    // The standalone sprite command (copy-video / no-video branch above) has no
+    // filtergraph rung to borrow a tonemap chain from. Sampling raw HDR through
+    // a bare -vf produces crushed, wrong colours — ThumbnailFilterResolver is
+    // the one place that decision lives, and BuildStage must actually call it
+    // instead of hardcoding a tonemap-blind filter string.
+
+    [Fact]
+    public async Task CopyVideoPlan_HdrSource_SpriteCommandIncludesTonemapChain()
+    {
+        OutputPlan outputPlan = new(
+            Format: OutputFormat.Hls,
+            VideoOutputs: [BuildCopyVideoOutput()],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: new(160, 90, 10)
+        );
+
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
+        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildHdrMediaInfo());
+
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
+
+        FfmpegCommand sprite = ((StageSuccess<FfmpegCommand[]>)result).Value.Single(c =>
+            c.Arguments.Contains("spritevtt")
+        );
+
+        int vfIdx = Array.IndexOf(sprite.Arguments, "-vf");
+        vfIdx.Should().BeGreaterThan(-1);
+        sprite
+            .Arguments[vfIdx + 1]
+            .Should()
+            .Contain(
+                "tonemap",
+                "an HDR source sampled without tonemap produces crushed, wrong-coloured thumbnails"
+            );
+        sprite.Arguments[vfIdx + 1].Should().Contain("fps=1/10");
+        sprite.Arguments[vfIdx + 1].Should().Contain("scale=160:-2");
+    }
+
+    [Fact]
+    public async Task CopyVideoPlan_SdrSource_SpriteCommandHasBareFilter_NoTonemap()
+    {
+        OutputPlan outputPlan = new(
+            Format: OutputFormat.Hls,
+            VideoOutputs: [BuildCopyVideoOutput()],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: new(160, 90, 10)
+        );
+
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
+        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildMediaInfo());
+
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
+
+        FfmpegCommand sprite = ((StageSuccess<FfmpegCommand[]>)result).Value.Single(c =>
+            c.Arguments.Contains("spritevtt")
+        );
+
+        int vfIdx = Array.IndexOf(sprite.Arguments, "-vf");
+        sprite
+            .Arguments[vfIdx + 1]
+            .Should()
+            .NotContain("tonemap", "an SDR source needs no HDR→SDR conversion");
+    }
+
+    [Fact]
+    public async Task NoVideoOutputs_HdrSource_SpriteCommandIncludesTonemapChain()
+    {
+        // Same standalone-sprite branch fires for the zero-video-output bundle
+        // (an audio/subtitle-only decomposed task) — it must resolve the same
+        // HDR-aware filter as the copy-video case above.
+        OutputPlan outputPlan = new(
+            Format: OutputFormat.Hls,
+            VideoOutputs: [],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: new(160, 90, 10)
+        );
+
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
+        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildHdrMediaInfo());
+
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
+
+        FfmpegCommand sprite = ((StageSuccess<FfmpegCommand[]>)result).Value.Single(c =>
+            c.Arguments.Contains("spritevtt")
+        );
+
+        int vfIdx = Array.IndexOf(sprite.Arguments, "-vf");
+        vfIdx.Should().BeGreaterThan(-1);
+        sprite.Arguments[vfIdx + 1].Should().Contain("tonemap");
     }
 }

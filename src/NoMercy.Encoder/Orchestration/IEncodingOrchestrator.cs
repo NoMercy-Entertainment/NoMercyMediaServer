@@ -68,6 +68,22 @@ public interface IEncodingOrchestrator
     );
 
     /// <summary>
+    /// Same decompose <paramref name="request"/> takes through <see cref="DecomposeAsync"/>,
+    /// but also hands back the <see cref="OutputPlan"/> the strategy decomposed —
+    /// needed by the decode-aware bundler (<c>DecodeAwareBundlePlanner</c>) to
+    /// classify each output by decode cost. Plans exactly once; <see cref="DecomposeAsync"/>
+    /// delegates here and discards the plan, so no caller re-stages or re-probes
+    /// the source. <c>Plan</c> is null only when no strategy resolved or the plan
+    /// itself failed — both cases return the single <see cref="EncodeTaskKind.Whole"/>
+    /// fallback task, which the coordinator runs inline and never hands to the bundler.
+    /// </summary>
+    Task<(OutputPlan? Plan, DecomposedTask[] Tasks)> DecomposeWithPlanAsync(
+        EncodingRequest request,
+        string groupTag,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
     /// Plans every request in <paramref name="requests"/> independently — one
     /// <c>PlanAsync</c> call per preset, so each keeps its own hardware
     /// preference / HDR handling / codec resolution — then unions the results
@@ -106,6 +122,21 @@ public interface IEncodingOrchestrator
     /// callers fall back to dispatching each preset independently.
     /// </summary>
     Task<DecomposedTask[]> DecomposeMergedAsync(
+        IReadOnlyList<EncodingRequest> requests,
+        string groupTag,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
+    /// Same merged decompose <paramref name="requests"/> take through
+    /// <see cref="DecomposeMergedAsync"/>, but also hands back the merged
+    /// <see cref="OutputPlan"/> — needed by the decode-aware bundler for the
+    /// same reason <see cref="DecomposeWithPlanAsync"/> hands it back for the
+    /// single-preset path. <c>Plan</c> is null only when the merge-of-one
+    /// shortcut hits a planning failure; every other failure mode still
+    /// throws <see cref="MergedEncodingIncompatibleException"/> as before.
+    /// </summary>
+    Task<(OutputPlan? Plan, DecomposedTask[] Tasks)> DecomposeMergedWithPlanAsync(
         IReadOnlyList<EncodingRequest> requests,
         string groupTag,
         CancellationToken ct = default

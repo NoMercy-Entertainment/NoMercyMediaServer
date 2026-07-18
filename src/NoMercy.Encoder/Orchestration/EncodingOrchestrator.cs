@@ -545,6 +545,34 @@ public class EncodingOrchestrator(
         CancellationToken ct = default
     )
     {
+        (_, DecomposedTask[] tasks) = await DecomposeCoreAsync(request, groupTag, ct)
+            .ConfigureAwait(false);
+        return tasks;
+    }
+
+    public async Task<(OutputPlan? Plan, DecomposedTask[] Tasks)> DecomposeWithPlanAsync(
+        EncodingRequest request,
+        string groupTag,
+        CancellationToken ct = default
+    ) => await DecomposeCoreAsync(request, groupTag, ct).ConfigureAwait(false);
+
+    /// <summary>
+    /// Shared implementation behind <see cref="DecomposeAsync"/> and
+    /// <see cref="DecomposeWithPlanAsync"/> — plans once and hands the
+    /// resolved <see cref="OutputPlan"/> back alongside the decomposed
+    /// tasks so a caller that needs both (the decode-aware bundler) does
+    /// not have to re-plan, which would re-stage/re-probe a remote source.
+    /// <see cref="OutputPlan"/> is null exactly when the strategy or the
+    /// plan itself could not be resolved — both cases already degrade to
+    /// the single <see cref="EncodeTaskKind.Whole"/> fallback task, which
+    /// never reaches the decode-aware bundler.
+    /// </summary>
+    private async Task<(OutputPlan? Plan, DecomposedTask[] Tasks)> DecomposeCoreAsync(
+        EncodingRequest request,
+        string groupTag,
+        CancellationToken ct
+    )
+    {
         OutputFormat profileFormat = PlanStageHelpers.ContainerToOutputFormat(
             request.Profile.Container
         );
@@ -552,7 +580,7 @@ public class EncodingOrchestrator(
         IEncodingStrategy? strategy = resolver.Resolve(profileFormat, request.Profile.EncodeMode);
 
         if (strategy is null)
-            return [IEncodingStrategy.WholeTask(groupTag)];
+            return (null, [IEncodingStrategy.WholeTask(groupTag)]);
 
         // Stage the input file locally so PlanAsync can probe it via ffprobe
         // regardless of the source storage backend.
@@ -571,9 +599,9 @@ public class EncodingOrchestrator(
         OutputPlan? plan = await encoder.PlanAsync(stagedRequest, ct);
 
         if (plan is null)
-            return [IEncodingStrategy.WholeTask(groupTag)];
+            return (null, [IEncodingStrategy.WholeTask(groupTag)]);
 
-        return strategy.Decompose(plan, groupTag);
+        return (plan, strategy.Decompose(plan, groupTag));
     }
 
     public async Task<OutputPlan?> PlanMergedAsync(
@@ -634,6 +662,24 @@ public class EncodingOrchestrator(
         CancellationToken ct = default
     )
     {
+        (_, DecomposedTask[] tasks) = await DecomposeMergedWithPlanAsync(requests, groupTag, ct)
+            .ConfigureAwait(false);
+        return tasks;
+    }
+
+    /// <summary>
+    /// Plan is null exactly when planning failed or no strategy resolved —
+    /// both cases degrade <paramref name="requests"/>[0]'s decompose to the
+    /// single <see cref="EncodeTaskKind.Whole"/> fallback, which the
+    /// coordinator runs inline and never hands to the decode-aware bundler,
+    /// so a null Plan never reaches <c>DecodeAwareBundlePlanner</c>.
+    /// </summary>
+    public async Task<(OutputPlan? Plan, DecomposedTask[] Tasks)> DecomposeMergedWithPlanAsync(
+        IReadOnlyList<EncodingRequest> requests,
+        string groupTag,
+        CancellationToken ct = default
+    )
+    {
         if (requests.Count == 0)
             throw new MergedEncodingIncompatibleException(
                 "DecomposeMergedAsync requires at least one request."
@@ -642,7 +688,7 @@ public class EncodingOrchestrator(
         // Merge of one is exactly today's single-preset path — no strategy
         // resolution differences, no plan-merge machinery involved.
         if (requests.Count == 1)
-            return await DecomposeAsync(requests[0], groupTag, ct);
+            return await DecomposeCoreAsync(requests[0], groupTag, ct).ConfigureAwait(false);
 
         EncodingRequest primaryRequest = requests[0];
 
@@ -673,7 +719,7 @@ public class EncodingOrchestrator(
                 $"No strategy registered for {profileFormat} / {primaryRequest.Profile.EncodeMode}."
             );
 
-        return strategy.Decompose(mergedPlan, groupTag);
+        return (mergedPlan, strategy.Decompose(mergedPlan, groupTag));
     }
 
     /// <summary>
