@@ -255,6 +255,9 @@ public class LibraryFileWatcher
                 OldFullPath = group.OldFullPath,
             };
             FileChangeGroups.Remove(group.FolderPath);
+            // The one-shot debounce timer has fired; dispose it so its handle is
+            // released now instead of leaking until GC on a busy library.
+            group.Timer?.Dispose();
         }
 
         Task.Run(async () =>
