@@ -52,6 +52,7 @@ public class ActivityRepository(MediaContext context) : IActivityRepository
 
         return query
             .OrderByDescending(activityLog => activityLog.CreatedAt)
+            .ThenByDescending(activityLog => activityLog.Id)
             .Skip(skip)
             .Take(take)
             .ToListAsync(ct);

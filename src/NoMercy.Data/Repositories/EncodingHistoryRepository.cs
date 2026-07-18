@@ -38,6 +38,7 @@ public class EncodingHistoryRepository(MediaContext context) : IEncodingHistoryR
         return context
             .EncodingHistory.AsNoTracking()
             .OrderByDescending(h => h.CreatedAt)
+            .ThenByDescending(h => h.Id)
             .Skip(pageIndex * pageSize)
             .Take(pageSize)
             .ToListAsync();

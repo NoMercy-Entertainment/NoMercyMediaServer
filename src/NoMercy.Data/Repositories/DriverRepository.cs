@@ -23,6 +23,7 @@ public class DriverRepository(MediaContext context) : IDriverRepository
             .Drivers.AsNoTracking()
             .Include(d => d.Folders)
             .OrderBy(d => d.Name)
+            .ThenBy(d => d.Id)
             .ToListAsync();
     }
 
