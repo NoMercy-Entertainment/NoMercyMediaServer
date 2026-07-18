@@ -13,14 +13,12 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
-using NoMercy.Database.Models.Users;
 using NoMercy.Authorization;
-using NoMercy.Service.Authorization;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Service.Authorization;
 using NoMercy.Setup.Auth;
 using Serilog.Events;
 
@@ -30,32 +28,30 @@ public static partial class ServiceConfiguration
 {
     private static void ConfigureAuth(IServiceCollection services)
     {
-        // Configure Authorization
-        services
-            .AddAuthorizationBuilder()
-            .AddPolicy(
-                "api",
-                policy =>
-                {
-                    policy.RequireAuthenticatedUser();
-                    policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
-                    policy.RequireClaim("scope", "openid", "profile");
-                    policy.AddRequirements(
-                        new AssertionRequirement(context =>
-                        {
-                            string? sub = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
-                            if (!Guid.TryParse(sub, out Guid userId))
-                                return false;
+        // Configure Authorization.
+        //
+        // The "api" policy is ALSO the default policy: a bare [Authorize] must mean
+        // "a token for a user provisioned on THIS server", not merely "any valid
+        // token". Keycloak issues one shared audience ("nomercy-server") across all
+        // installs, so without the local-user check below a token minted for any
+        // NoMercy account is accepted by every server (cross-tenant). No scheme is
+        // pinned so the ambient authenticated principal is used (JWT in production,
+        // the test scheme under WebApplicationFactory). Scope is checked split-aware
+        // via ApiScopePolicy because the real token carries one space-delimited claim.
+        AuthorizationPolicy apiPolicy = new AuthorizationPolicyBuilder()
+            .RequireAuthenticatedUser()
+            .RequireAssertion(context => ApiScopePolicy.HasRequiredScope(context.User))
+            .RequireAssertion(context =>
+            {
+                string? sub = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (!Guid.TryParse(sub, out Guid userId))
+                    return false;
 
-                            User? user = UserCache.Current.Users.FirstOrDefault(u =>
-                                u.Id == userId
-                            );
-                            Logger.App($"User: {user?.Name ?? "Unknown"}");
-                            return user is not null;
-                        })
-                    );
-                }
-            );
+                return UserCache.Current.Users.Any(user => user.Id == userId);
+            })
+            .Build();
+
+        services.AddAuthorizationBuilder().SetDefaultPolicy(apiPolicy).AddPolicy("api", apiPolicy);
 
         // Permission policies backed by IMediaAuthorizationPolicy so endpoints can
         // declare [Authorize(Policy = ...)] instead of imperative permission checks.
@@ -101,15 +97,18 @@ public static partial class ServiceConfiguration
             .AddJwtBearer(options =>
             {
                 options.Authority = ExternalServicesConfig.Current.AuthBaseUrl;
-                options.RequireHttpsMetadata = ExternalServicesConfig.Current.AuthBaseUrl.StartsWith(
-                    "https://",
-                    StringComparison.OrdinalIgnoreCase
-                );
+                options.RequireHttpsMetadata =
+                    ExternalServicesConfig.Current.AuthBaseUrl.StartsWith(
+                        "https://",
+                        StringComparison.OrdinalIgnoreCase
+                    );
                 options.Audience = ExternalServicesConfig.Current.TokenClientId;
 
                 // Enable offline token validation via cached signing keys
                 options.TokenValidationParameters.ValidateIssuerSigningKey = true;
-                options.TokenValidationParameters.ValidIssuer = ExternalServicesConfig.Current.AuthBaseUrl;
+                options.TokenValidationParameters.ValidIssuer = ExternalServicesConfig
+                    .Current
+                    .AuthBaseUrl;
 
                 // Explicitly enforce audience validation. options.Audience already sets
                 // ValidAudience; this line makes the intent unambiguous and guards against
