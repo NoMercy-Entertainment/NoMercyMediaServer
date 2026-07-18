@@ -205,7 +205,7 @@ public class ArtistsController : BaseController
     [HttpPost]
     [Route("{id:guid}/rescan")]
     [Authorize(Policy = "Moderator")]
-    public async Task<IActionResult> Like(Guid id)
+    public async Task<IActionResult> Rescan(Guid id)
     {
         return Ok(
             new StatusResponseDto<string>

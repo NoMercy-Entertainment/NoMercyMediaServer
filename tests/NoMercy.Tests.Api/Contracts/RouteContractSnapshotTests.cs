@@ -32,6 +32,8 @@ public class RouteContractSnapshotTests : IClassFixture<NoMercyApiFactory>
     [
         "(any) /castHub [(hub/other)]",
         "(any) /castHub/negotiate [(hub/other)]",
+        "(any) /contentAnalysisHub [(hub/other)]",
+        "(any) /contentAnalysisHub/negotiate [(hub/other)]",
         "(any) /dashboardHub [(hub/other)]",
         "(any) /dashboardHub/negotiate [(hub/other)]",
         "(any) /deviceHub [(hub/other)]",
@@ -387,7 +389,7 @@ public class RouteContractSnapshotTests : IClassFixture<NoMercyApiFactory>
         "POST api/v{version:apiVersion}/music/albums/{id:guid}/rescan [Albums.Rescan]",
         "POST api/v{version:apiVersion}/music/artists/{id:guid}/cover [Artists.Cover]",
         "POST api/v{version:apiVersion}/music/artists/{id:guid}/like [Artists.Like]",
-        "POST api/v{version:apiVersion}/music/artists/{id:guid}/rescan [Artists.Like]",
+        "POST api/v{version:apiVersion}/music/artists/{id:guid}/rescan [Artists.Rescan]",
         "POST api/v{version:apiVersion}/music/playlists [Playlists.Create]",
         "POST api/v{version:apiVersion}/music/playlists/{id:guid}/cover [Playlists.Cover]",
         "POST api/v{version:apiVersion}/music/playlists/{id:guid}/tracks [Playlists.AddTrack]",
