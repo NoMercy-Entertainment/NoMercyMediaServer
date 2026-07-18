@@ -402,6 +402,10 @@ public static class ServiceCollectionExtensions
         // At startup: delete any lts-* orphan dirs left by a previous crash.
         services.AddHostedService<LiveTranscodeOrphanSweeper>();
 
+        // At startup: delete batch-encode working dirs (nomercy-enc-* and
+        // output-mirrored show dirs) left under the transcode root by a crash.
+        services.AddHostedService<TranscodeRootOrphanSweeper>();
+
         // Every 30 s: evict sessions with no playlist/segment hit in the last N minutes.
         services.AddHostedService<LiveSessionIdleReaper>();
 
