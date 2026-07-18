@@ -17,12 +17,12 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Dashboard;
 
-// Locks the CURRENT contract of LogController: the class carries a bare
-// [Authorize] with NO per-action policy, so — unlike every other Dashboard/Admin
-// controller in this suite — a merely-authenticated, non-moderator user (the
-// seeded SecondaryUserId: Allowed=true, Owner=false, Manage=false) currently
-// gets a 200, not a 403. This suite characterizes that reality exactly as it
-// stands today; it does NOT assert a stricter tier should apply.
+// Locks the current contract of LogController: the class carries
+// [Authorize(Policy = "Moderator")], matching every other Dashboard/Admin
+// controller in this suite. A merely-authenticated, non-moderator user (the
+// seeded SecondaryUserId: Allowed=true, Owner=false, Manage=false) is rejected
+// with a 403; the default test identity (Owner+Manage, which satisfies
+// "Moderator") still gets a 200.
 [Trait("Category", "DashboardLogs")]
 public class LogControllerTests : IClassFixture<NoMercyApiFactory>
 {
@@ -61,19 +61,14 @@ public class LogControllerTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Fact]
-    public async Task GetLogs_ReturnsOkWithDataArray_WhenSecondaryUserNonModerator()
+    public async Task GetLogs_ReturnsForbidden_WhenSecondaryUserNonModerator()
     {
-        // The current contract: LogController has no per-action policy, so ANY
-        // authenticated user — including a non-moderator — reaches the log
-        // stream. This is intentionally locked as-is, not asserted as correct.
+        // LogController requires the "Moderator" policy: a merely-authenticated,
+        // non-moderator user (Allowed=true, Owner=false, Manage=false) is
+        // rejected — server logs are not readable by any authenticated user.
         HttpResponseMessage response = await _secondaryUser.GetAsync(BaseUrl);
-        string body = await response.Content.ReadAsStringAsync();
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
-
-        using JsonDocument doc = JsonDocument.Parse(body);
-        doc.RootElement.TryGetProperty("data", out JsonElement data).Should().BeTrue();
-        data.ValueKind.Should().Be(JsonValueKind.Array);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -145,11 +140,11 @@ public class LogControllerTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Fact]
-    public async Task GetLogLevels_ReturnsOk_WhenSecondaryUserNonModerator()
+    public async Task GetLogLevels_ReturnsForbidden_WhenSecondaryUserNonModerator()
     {
         HttpResponseMessage response = await _secondaryUser.GetAsync($"{BaseUrl}/levels");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -178,11 +173,11 @@ public class LogControllerTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Fact]
-    public async Task GetLogTypes_ReturnsOk_WhenSecondaryUserNonModerator()
+    public async Task GetLogTypes_ReturnsForbidden_WhenSecondaryUserNonModerator()
     {
         HttpResponseMessage response = await _secondaryUser.GetAsync($"{BaseUrl}/types");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]

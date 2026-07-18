@@ -23,7 +23,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 [ApiController]
 [Tags("Dashboard Libraries")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "Moderator")]
 [Route("api/v{version:apiVersion}/dashboard/logs", Order = 10)]
 public class LogController : BaseController
 {

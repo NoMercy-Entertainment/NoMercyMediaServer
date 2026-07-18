@@ -79,7 +79,7 @@ public class TvShowsController(
     }
 
     [HttpDelete]
-    [Authorize(Policy = "MediaAccess")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> DeleteTv(int id, CancellationToken ct = default)
     {
         await tvShowRepository.DeleteAsync(id, ct);

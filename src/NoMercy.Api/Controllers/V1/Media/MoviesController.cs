@@ -84,7 +84,7 @@ public class MoviesController(
     }
 
     [HttpDelete]
-    [Authorize(Policy = "MediaAccess")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> DeleteMovie(int id, CancellationToken ct = default)
     {
         await movieRepository.DeleteAsync(id, ct);

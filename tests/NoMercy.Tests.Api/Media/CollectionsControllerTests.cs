@@ -22,11 +22,13 @@ public class CollectionsControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly HttpClient _authed;
     private readonly HttpClient _unauthed;
+    private readonly HttpClient _secondaryUser;
 
     public CollectionsControllerTests(NoMercyApiFactory factory)
     {
         _authed = factory.CreateClient().AsAuthenticated();
         _unauthed = factory.CreateClient().AsUnauthenticated();
+        _secondaryUser = factory.CreateClient().AsSecondaryUser();
     }
 
     [Fact]
@@ -100,5 +102,30 @@ public class CollectionsControllerTests : IClassFixture<NoMercyApiFactory>
         HttpResponseMessage response = await _unauthed.DeleteAsync("/api/v1/collection/313369");
 
         response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task DeleteCollection_ReturnsForbidden_WhenSecondaryUserNonModerator()
+    {
+        // Deleting a collection is irreversible: raised from "MediaAccess" to
+        // "Moderator". SecondaryUserId (Allowed=true, Owner=false, Manage=false)
+        // must now be rejected, where it previously reached the repository.
+        HttpResponseMessage response = await _secondaryUser.DeleteAsync(
+            "/api/v1/collection/313369"
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task DeleteCollection_ReturnsOk_WhenModerator()
+    {
+        // Uses a non-existent id: CollectionRepository.DeleteAsync is a no-op
+        // delete-if-present, always returning 200, so this proves the
+        // Moderator tier still reaches the repository without disturbing any
+        // seeded collection other tests in this class depend on.
+        HttpResponseMessage response = await _authed.DeleteAsync("/api/v1/collection/999999999");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 }
