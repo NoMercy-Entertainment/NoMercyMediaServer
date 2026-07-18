@@ -95,20 +95,27 @@ public class InlineEncodeMediaItemWiringTests
     }
 
     [Fact]
-    public void HandleInitialRunAsync_RequestReachingRunInlineAsync_CarriesMediaItem()
+    public void RunSinglePresetEncodeAsync_RequestReachingRunInlineAsync_CarriesMediaItem()
     {
-        // This is the actual gap: before the fix, the EncodingRequest built in
-        // HandleInitialRunAsync (the one RunInlineAsync passes straight into
+        // This is the actual gap: before the fix, the EncodingRequest built for
+        // a preset (the one RunInlineAsync passes straight into
         // orchestrator.EncodeAsync for a Whole task) never set MediaItem, so
         // PlanStage never resolved a BundleLayout and FinalizeStage's manifest/
         // reconstruction gate was always skipped for every inline encode.
+        //
+        // The smart-orchestrator unification moved per-preset dispatch out of
+        // HandleInitialRunAsync (which now only resolves + reconciles presets
+        // and picks the merged vs. per-preset path) and into
+        // RunSinglePresetEncodeAsync — the method that still builds the exact
+        // request RunInlineAsync consumes for a single-file (Whole task)
+        // preset, so the guard now targets that method.
         string source = LoadVideoEncodeJobSource();
 
         int methodStart = source.IndexOf(
-            "private async Task HandleInitialRunAsync",
+            "private async Task RunSinglePresetEncodeAsync",
             StringComparison.Ordinal
         );
-        methodStart.Should().BeGreaterThan(0, "HandleInitialRunAsync must exist");
+        methodStart.Should().BeGreaterThan(0, "RunSinglePresetEncodeAsync must exist");
 
         string window = ExtractMethodWindow(source, methodStart, maxChars: 8000);
 
@@ -118,7 +125,7 @@ public class InlineEncodeMediaItemWiringTests
         );
         requestStart
             .Should()
-            .BeGreaterThan(0, "HandleInitialRunAsync must build an EncodingRequest");
+            .BeGreaterThan(0, "RunSinglePresetEncodeAsync must build an EncodingRequest");
 
         // Isolate just the request-construction call so a MediaItem: mention
         // anywhere later in the (long) method can't produce a false pass.
@@ -142,6 +149,43 @@ public class InlineEncodeMediaItemWiringTests
                 "Options:",
                 "this request must NOT set EncodingOptions.EnableMetadataInjection — "
                     + "attaching MediaItem here must never change the emitted ffmpeg command"
+            );
+    }
+
+    [Fact]
+    public void RunMergedEncodeAsync_RequestsReachingDecomposeMergedAsync_CarryMediaItem()
+    {
+        // The smart-orchestrator merged path builds one EncodingRequest per
+        // preset before calling DecomposeMergedAsync — RunInlineAsync only
+        // ever sees requests[0] out of that list when the merge covers a
+        // single preset, so every request built here needs the same
+        // MediaItem wiring RunSinglePresetEncodeAsync carries.
+        string source = LoadVideoEncodeJobSource();
+
+        int methodStart = source.IndexOf(
+            "private async Task RunMergedEncodeAsync",
+            StringComparison.Ordinal
+        );
+        methodStart.Should().BeGreaterThan(0, "RunMergedEncodeAsync must exist");
+
+        string window = ExtractMethodWindow(source, methodStart, maxChars: 4000);
+
+        int requestStart = window.IndexOf("new EncodingRequest(", StringComparison.Ordinal);
+        requestStart
+            .Should()
+            .BeGreaterThan(0, "RunMergedEncodeAsync must build an EncodingRequest per preset");
+
+        int requestEnd = window.IndexOf("))", requestStart, StringComparison.Ordinal);
+        requestEnd.Should().BeGreaterThan(requestStart);
+
+        string requestConstruction = window.Substring(requestStart, requestEnd - requestStart);
+
+        requestConstruction
+            .Should()
+            .Contain(
+                "MediaItem:",
+                "every request in a merged run must carry MediaItem so DecomposeMergedAsync's "
+                    + "plans resolve a BundleLayout the same way a single-preset run does"
             );
     }
 

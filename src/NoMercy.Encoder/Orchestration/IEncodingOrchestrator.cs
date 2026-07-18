@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Encoder.Decomposition;
+using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
 
@@ -62,6 +63,50 @@ public interface IEncodingOrchestrator
     /// </summary>
     Task<DecomposedTask[]> DecomposeAsync(
         EncodingRequest request,
+        string groupTag,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
+    /// Plans every request in <paramref name="requests"/> independently — one
+    /// <c>PlanAsync</c> call per preset, so each keeps its own hardware
+    /// preference / HDR handling / codec resolution — then unions the results
+    /// into ONE <see cref="OutputPlan"/> via <see cref="OutputPlanMerger"/>.
+    /// <paramref name="requests"/>[0] is the PRIMARY request: its
+    /// source-derived plan fields (subtitles, thumbnails, chapters, layout, …)
+    /// win in the merge.
+    ///
+    /// Used by the smart-orchestrator merge path (<see cref="DecomposeMergedAsync"/>)
+    /// and by the encode coordinator's FinalizeOnly pass so a merged run's
+    /// master playlist is rebuilt from the SAME merged plan the children
+    /// encoded against, without re-deriving it from just one preset's profile.
+    ///
+    /// Returns null when any request fails to plan, or when the plans don't
+    /// share a compatible <see cref="OutputPlan.Format"/> — callers fall back
+    /// to per-preset handling rather than merging an inconsistent set.
+    /// </summary>
+    Task<OutputPlan?> PlanMergedAsync(
+        IReadOnlyList<EncodingRequest> requests,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
+    /// The multi-preset counterpart to <see cref="DecomposeAsync"/>: builds
+    /// ONE merged <see cref="OutputPlan"/> via <see cref="PlanMergedAsync"/>
+    /// (union of every preset's video renditions, one shared audio/subtitle/
+    /// thumbnail/chapter set) then calls <c>strategy.Decompose</c> once — a
+    /// single coordinated encode instead of one independent encode per preset.
+    ///
+    /// A single-element <paramref name="requests"/> list degrades to exactly
+    /// <see cref="DecomposeAsync"/> — "merge of one" is identical to today.
+    ///
+    /// Throws <see cref="MergedEncodingIncompatibleException"/> when the
+    /// requests cannot be coordinated (different containers/formats, a plan
+    /// failure, or no strategy registered for the resolved format/mode) —
+    /// callers fall back to dispatching each preset independently.
+    /// </summary>
+    Task<DecomposedTask[]> DecomposeMergedAsync(
+        IReadOnlyList<EncodingRequest> requests,
         string groupTag,
         CancellationToken ct = default
     );

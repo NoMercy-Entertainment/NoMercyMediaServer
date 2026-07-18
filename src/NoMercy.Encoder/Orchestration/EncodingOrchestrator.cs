@@ -576,6 +576,106 @@ public class EncodingOrchestrator(
         return strategy.Decompose(plan, groupTag);
     }
 
+    public async Task<OutputPlan?> PlanMergedAsync(
+        IReadOnlyList<EncodingRequest> requests,
+        CancellationToken ct = default
+    )
+    {
+        if (requests.Count == 0)
+            return null;
+
+        List<OutputPlan> plans = new(requests.Count);
+
+        foreach (EncodingRequest request in requests)
+        {
+            await using LocalPathLease lease = await (
+                request.SourceStorage ?? storage
+            ).AcquireLocalPathAsync(request.InputPath, ct);
+
+            EncodingRequest stagedRequest = request with
+            {
+                InputPath = lease.Path,
+                SourceStorage = storage,
+                DestinationStorage = storage,
+                OriginalInputPath = request.InputPath,
+            };
+
+            OutputPlan? plan = await encoder.PlanAsync(stagedRequest, ct);
+            if (plan is null)
+            {
+                logger.LogWarning(
+                    "[EncodingOrchestrator] PlanMergedAsync: preset '{Name}' failed to plan — cannot merge.",
+                    request.Profile.Name
+                );
+                return null;
+            }
+
+            if (plans.Count > 0 && plan.Format != plans[0].Format)
+            {
+                logger.LogWarning(
+                    "[EncodingOrchestrator] PlanMergedAsync: preset '{Name}' resolves to {Format}, "
+                        + "incompatible with the primary preset's {PrimaryFormat} — cannot merge.",
+                    request.Profile.Name,
+                    plan.Format,
+                    plans[0].Format
+                );
+                return null;
+            }
+
+            plans.Add(plan);
+        }
+
+        return OutputPlanMerger.Merge(plans);
+    }
+
+    public async Task<DecomposedTask[]> DecomposeMergedAsync(
+        IReadOnlyList<EncodingRequest> requests,
+        string groupTag,
+        CancellationToken ct = default
+    )
+    {
+        if (requests.Count == 0)
+            throw new MergedEncodingIncompatibleException(
+                "DecomposeMergedAsync requires at least one request."
+            );
+
+        // Merge of one is exactly today's single-preset path — no strategy
+        // resolution differences, no plan-merge machinery involved.
+        if (requests.Count == 1)
+            return await DecomposeAsync(requests[0], groupTag, ct);
+
+        EncodingRequest primaryRequest = requests[0];
+
+        if (
+            requests.Any(request => request.Profile.EncodeMode != primaryRequest.Profile.EncodeMode)
+        )
+            throw new MergedEncodingIncompatibleException(
+                "Cannot merge presets with different encode modes (single-pass vs two-pass)."
+            );
+
+        OutputPlan? mergedPlan = await PlanMergedAsync(requests, ct);
+        if (mergedPlan is null)
+            throw new MergedEncodingIncompatibleException(
+                "One or more presets failed to plan, or their plans resolve to incompatible "
+                    + "output formats — see the preceding warning for which preset."
+            );
+
+        OutputFormat profileFormat = PlanStageHelpers.ContainerToOutputFormat(
+            primaryRequest.Profile.Container
+        );
+        IEncodingStrategy? strategy = resolver.Resolve(
+            profileFormat,
+            primaryRequest.Profile.EncodeMode
+        );
+
+        if (strategy is null)
+            throw new MergedEncodingIncompatibleException(
+                $"No strategy registered for {profileFormat} / {primaryRequest.Profile.EncodeMode}."
+            );
+
+        return strategy.Decompose(mergedPlan, groupTag);
+    }
+
     /// <summary>
     /// Moves every file under <paramref name="tempDir"/> to its mirrored path
     /// under <paramref name="outputDirectory"/> on <paramref name="destinationStorage"/>.

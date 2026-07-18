@@ -74,7 +74,7 @@ public record MusicCardData
     {
         Id = album.Id.ToString();
         Name = album.Name;
-        Cover = album.Cover is not null ? $"/images/music{album.Cover}" : null;
+        Cover = MusicCover.Url(album.Cover);
         Type = "album";
         Link = $"/music/albums/{album.Id}";
         ColorPalette = album.ColorPalette;
@@ -87,7 +87,7 @@ public record MusicCardData
     {
         Id = artist.Id.ToString();
         Name = artist.Name;
-        Cover = artist.Cover is not null ? $"/images/music{artist.Cover}" : null;
+        Cover = MusicCover.Url(artist.Cover);
         Type = "artist";
         Link = $"/music/artists/{artist.Id}";
         ColorPalette = artist.ColorPalette;
@@ -101,7 +101,7 @@ public record MusicCardData
     {
         Id = playlist.Id.ToString();
         Name = playlist.Name;
-        Cover = playlist.Cover is not null ? $"/images/music{playlist.Cover}" : null;
+        Cover = MusicCover.Url(playlist.Cover);
         Type = "playlist";
         Link = $"/music/playlists/{playlist.Id}";
         Tracks = playlist.Tracks.Count;
@@ -121,7 +121,7 @@ public record MusicCardData
     {
         Id = carousel.Id;
         Name = carousel.Name;
-        Cover = carousel.Cover is not null ? $"/images/music{carousel.Cover}" : null;
+        Cover = MusicCover.Url(carousel.Cover);
         Type = carousel.Type;
         Link = carousel.Link.ToString();
         Tracks = carousel.Tracks;
@@ -132,7 +132,7 @@ public record MusicCardData
     {
         Id = carousel.Id;
         Name = carousel.Name.ToTitleCase();
-        Cover = carousel.Cover is not null ? $"/images/music{carousel.Cover}" : null;
+        Cover = MusicCover.Url(carousel.Cover);
         Type = carousel.Type;
         Link = carousel.Link.ToString();
         Tracks = carousel.Tracks;
@@ -143,7 +143,7 @@ public record MusicCardData
     {
         Id = artist.Id.ToString();
         Name = artist.Name;
-        Cover = artist.Cover is not null ? $"/images/music{artist.Cover}" : null;
+        Cover = MusicCover.Url(artist.Cover);
         Type = "artist";
         Link = $"/music/artists/{artist.Id}";
         ColorPalette = ColorPalette.FromJsonOrNull(artist.ColorPalette);
@@ -157,7 +157,7 @@ public record MusicCardData
     {
         Id = album.Id.ToString();
         Name = album.Name;
-        Cover = album.Cover is not null ? $"/images/music{album.Cover}" : null;
+        Cover = MusicCover.Url(album.Cover);
         Type = "album";
         Link = $"/music/albums/{album.Id}";
         ColorPalette = ColorPalette.FromJsonOrNull(album.ColorPalette);
@@ -170,7 +170,7 @@ public record MusicCardData
     {
         Id = playlist.Id.ToString();
         Name = playlist.Name;
-        Cover = playlist.Cover is not null ? $"/images/music{playlist.Cover}" : null;
+        Cover = MusicCover.Url(playlist.Cover);
         Type = "playlist";
         Link = $"/music/playlists/{playlist.Id}";
         ColorPalette = ColorPalette.FromJsonOrNull(playlist.ColorPalette);
@@ -240,8 +240,7 @@ public record MusicHomeCardData
     {
         Id = album.Id.ToString();
         Name = album.Name;
-        Cover = album.Cover is not null ? $"/images/music{album.Cover}" : null;
-        Cover = $"/images/music{album.Cover}";
+        Cover = MusicCover.Url(album.Cover);
         Type = "album";
         Link = $"/music/albums/{album.Id}";
         ColorPalette = album.ColorPalette;
@@ -254,8 +253,7 @@ public record MusicHomeCardData
     {
         Id = artist.Id.ToString();
         Name = artist.Name;
-        Cover = artist.Cover is not null ? $"/images/music{artist.Cover}" : null;
-        Cover = $"/images/music{artist.Cover}";
+        Cover = MusicCover.Url(artist.Cover);
         Type = "artist";
         Link = $"/music/artists/{artist.Id}";
         ColorPalette = artist.ColorPalette;
@@ -269,8 +267,7 @@ public record MusicHomeCardData
     {
         Id = topMusic.Id;
         Name = topMusic.Name;
-        Cover = topMusic.Cover is not null ? $"/images/music{topMusic.Cover}" : null;
-        Cover = topMusic.Cover;
+        Cover = MusicCover.Url(topMusic.Cover);
         Type = topMusic.Type;
         Link = topMusic.Link.ToString();
         ColorPalette = topMusic.ColorPalette;

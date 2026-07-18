@@ -219,7 +219,7 @@ public partial class MusicRepository
 
         artist.Name = name;
         artist.Description = description;
-        artist.Cover = cover;
+        artist.Cover = string.IsNullOrEmpty(cover) ? null : cover;
         artist._colorPalette = colorPalette;
 
         return await mediaContext.SaveChangesAsync(ct);
@@ -237,7 +237,7 @@ public partial class MusicRepository
         if (artist is null)
             return;
 
-        artist.Cover = cover;
+        artist.Cover = string.IsNullOrEmpty(cover) ? null : cover;
         artist._colorPalette = colorPalette;
 
         await mediaContext.SaveChangesAsync(ct);
@@ -259,7 +259,7 @@ public partial class MusicRepository
 
         album.Name = name;
         album.Description = description;
-        album.Cover = cover;
+        album.Cover = string.IsNullOrEmpty(cover) ? null : cover;
         album._colorPalette = colorPalette;
 
         return await mediaContext.SaveChangesAsync(ct);
@@ -277,7 +277,7 @@ public partial class MusicRepository
         if (album is null)
             return;
 
-        album.Cover = cover;
+        album.Cover = string.IsNullOrEmpty(cover) ? null : cover;
         album._colorPalette = colorPalette;
 
         await mediaContext.SaveChangesAsync(ct);
@@ -302,7 +302,7 @@ public partial class MusicRepository
 
         playlist.Name = name;
         playlist.Description = description;
-        playlist.Cover = cover;
+        playlist.Cover = string.IsNullOrEmpty(cover) ? null : cover;
         playlist._colorPalette = colorPalette;
 
         return await mediaContext.SaveChangesAsync(ct);
@@ -323,7 +323,7 @@ public partial class MusicRepository
         if (playlist is null)
             return;
 
-        playlist.Cover = cover;
+        playlist.Cover = string.IsNullOrEmpty(cover) ? null : cover;
         playlist._colorPalette = colorPalette;
 
         await mediaContext.SaveChangesAsync(ct);
