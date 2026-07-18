@@ -99,6 +99,13 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
         if (!e.IsAvailable)
             return;
 
+        // Share the single-flight lock with OnNetworkAddressChanged: a NIC flap
+        // raises both events, and two concurrent EvaluateAsync calls would race on
+        // the ConnectivityManager's active strategy (tear down / double-establish
+        // the tunnel or port-forward against each other).
+        if (!await _reevaluationLock.WaitAsync(0))
+            return;
+
         try
         {
             await _networkDiscovery.ForceRediscoveryAsync();
@@ -110,6 +117,10 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
                 "Network availability change handling failed: {Message}",
                 ex.Message
             );
+        }
+        finally
+        {
+            _reevaluationLock.Release();
         }
     }
 
