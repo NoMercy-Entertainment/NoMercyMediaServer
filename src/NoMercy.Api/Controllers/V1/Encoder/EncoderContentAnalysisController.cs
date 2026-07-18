@@ -66,7 +66,6 @@ public class EncoderContentAnalysisController(
     [HttpPost("crop/{videoFileId}")]
     public async Task<IActionResult> DetectCrop(string videoFileId, CancellationToken ct)
     {
-
         if (!Ulid.TryParse(videoFileId, out Ulid fileId))
             return BadRequestResponse("Invalid video file id");
 
@@ -84,7 +83,12 @@ public class EncoderContentAnalysisController(
 
         try
         {
-            CropResult result = await cropDetector.DetectAsync(path, sourceVideoFileId, ct);
+            CropResult result = await cropDetector.DetectAsync(
+                path,
+                sourceVideoFileId,
+                sourceIsHdr: null,
+                ct
+            );
             return Ok(
                 new
                 {
@@ -116,7 +120,6 @@ public class EncoderContentAnalysisController(
     [HttpPost("intro/{seasonId:int}")]
     public async Task<IActionResult> DetectIntroForSeason(int seasonId, CancellationToken ct)
     {
-
         await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         List<Episode> episodes = await context
             .Episodes.AsNoTracking()
@@ -318,7 +321,6 @@ public class EncoderContentAnalysisController(
         CancellationToken ct
     )
     {
-
         if (ocrEngine is null)
             return NotImplementedResponse("Subtitle OCR engine is not registered on this build");
 
@@ -380,7 +382,6 @@ public class EncoderContentAnalysisController(
         CancellationToken ct
     )
     {
-
         if (whisperTranscriber is null)
             return NotImplementedResponse("Whisper transcriber is not registered on this build");
 
@@ -461,7 +462,6 @@ public class EncoderContentAnalysisController(
         CancellationToken ct
     )
     {
-
         if (!Ulid.TryParse(segmentId, out Ulid id))
             return BadRequestResponse("Invalid segment id");
 

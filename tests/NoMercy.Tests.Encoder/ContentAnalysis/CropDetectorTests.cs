@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Composition;
@@ -21,7 +22,11 @@ namespace NoMercy.Tests.Encoder.ContentAnalysis;
 public class CropDetectorTests
 {
     private readonly Mock<IProcessRunner> _processRunner = new();
-    private readonly EncoderOptions _options = new() { FfmpegPathOverride = "ffmpeg" };
+    private readonly EncoderOptions _options = new()
+    {
+        FfmpegPathOverride = "ffmpeg",
+        FfprobePathOverride = "ffprobe",
+    };
 
     [Fact]
     public async Task Detect_StableCrop_ReturnsWithShouldCropTrue()
@@ -256,6 +261,141 @@ public class CropDetectorTests
         Assert.False(result.ShouldCrop);
         Assert.Equal(3, result.SampleFramesAnalyzed);
         Assert.Equal(1.0, result.Confidence);
+    }
+
+    [Fact]
+    public async Task Detect_HdrSource_UsesHdrCropLimit()
+    {
+        // HDR/PQ black bars sit far above the SDR limit=24, so an HDR source
+        // MUST raise the cropdetect limit or the letterbox is never detected
+        // and gets baked into a stream-copy. Regression guard for the exact
+        // failure seen live (cropdetect → 3840x2160:0:0 on an HDR10 source).
+        StrongBox<string[]?> args = CaptureCropDetectArgs();
+        CropDetector detector = NewDetector();
+
+        await detector.DetectAsync(
+            "/tmp/in.mkv",
+            sourceVideoFileId: null,
+            sourceIsHdr: true,
+            CancellationToken.None
+        );
+
+        Assert.NotNull(args.Value);
+        Assert.Contains(args.Value!, a => a.Contains("cropdetect") && a.Contains("limit=128"));
+        Assert.DoesNotContain(args.Value!, a => a.Contains("limit=24"));
+    }
+
+    [Fact]
+    public async Task Detect_SdrSource_UsesSdrCropLimit()
+    {
+        StrongBox<string[]?> args = CaptureCropDetectArgs();
+        CropDetector detector = NewDetector();
+
+        await detector.DetectAsync(
+            "/tmp/in.mkv",
+            sourceVideoFileId: null,
+            sourceIsHdr: false,
+            CancellationToken.None
+        );
+
+        Assert.NotNull(args.Value);
+        Assert.Contains(args.Value!, a => a.Contains("cropdetect") && a.Contains("limit=24"));
+        Assert.DoesNotContain(args.Value!, a => a.Contains("limit=128"));
+    }
+
+    [Fact]
+    public async Task Detect_NullHdrFlag_ProbesPqTransfer_UsesHdrLimit()
+    {
+        // Caller doesn't know the transfer (content-analysis API): the detector
+        // probes color_transfer itself. A PQ transfer must select the HDR limit.
+        SetupTransferProbe("smpte2084");
+        StrongBox<string[]?> args = CaptureCropDetectArgs();
+        CropDetector detector = NewDetector();
+
+        await detector.DetectAsync(
+            "/tmp/in.mkv",
+            sourceVideoFileId: null,
+            sourceIsHdr: null,
+            CancellationToken.None
+        );
+
+        Assert.NotNull(args.Value);
+        Assert.Contains(args.Value!, a => a.Contains("cropdetect") && a.Contains("limit=128"));
+    }
+
+    [Fact]
+    public async Task Detect_NullHdrFlag_ProbesSdrTransfer_UsesSdrLimit()
+    {
+        SetupTransferProbe("bt709");
+        StrongBox<string[]?> args = CaptureCropDetectArgs();
+        CropDetector detector = NewDetector();
+
+        await detector.DetectAsync(
+            "/tmp/in.mkv",
+            sourceVideoFileId: null,
+            sourceIsHdr: null,
+            CancellationToken.None
+        );
+
+        Assert.NotNull(args.Value);
+        Assert.Contains(args.Value!, a => a.Contains("cropdetect") && a.Contains("limit=24"));
+    }
+
+    private CropDetector NewDetector() =>
+        new(
+            _options,
+            _processRunner.Object,
+            TestStorageFactory.CreateLocal(),
+            NullLogger<CropDetector>.Instance
+        );
+
+    private void SetupTransferProbe(string transfer) =>
+        _processRunner
+            .Setup(r =>
+                r.RunAsync(
+                    "ffprobe",
+                    It.IsAny<string[]>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(new ProcessResult(0, transfer + "\n", string.Empty, TimeSpan.Zero));
+
+    /// <summary>
+    /// Wires the cropdetect (stderr) process call to capture its argument array
+    /// into the returned box, filled when the call fires.
+    /// </summary>
+    private StrongBox<string[]?> CaptureCropDetectArgs()
+    {
+        StrongBox<string[]?> box = new(null);
+        _processRunner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<Action<string>?>(),
+                    It.IsAny<Action<string>?>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Returns(
+                (
+                    string _,
+                    string[] args,
+                    Action<string>? _,
+                    Action<string>? _,
+                    string? _,
+                    CancellationToken _
+                ) =>
+                {
+                    box.Value = args;
+                    return Task.FromResult(
+                        new ProcessResult(0, string.Empty, string.Empty, TimeSpan.Zero)
+                    );
+                }
+            );
+        return box;
     }
 
     private void SetupStderr(string[] lines, int exitCode)

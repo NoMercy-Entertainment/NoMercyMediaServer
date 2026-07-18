@@ -430,4 +430,73 @@ public class BuildStageFilterGraphTests
         int scaleIdx = filterValue.IndexOf("scale=", StringComparison.Ordinal);
         cropIdx.Should().BeLessThan(scaleIdx);
     }
+
+    // ------------------------------------------------------------------
+    // Test 8: shared crop across a 4K-HDR rung + a 1080p-SDR (tonemapped)
+    // rung + thumbnails is hoisted to ONE crop on the decoded source, run
+    // before the split/tonemap, so the cropped picture feeds every consumer
+    // (the HDR rung, the tonemapped SDR rung, AND the sprite) exactly once.
+    // This is the "crop the 4K, reuse the cropped frame for the 1080p SDR and
+    // the sprite" design — the sprite must never carry the black bars.
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task BuildStage_SharedCropAcrossRungs_HoistsCropOnceBeforeTonemapAndSplit()
+    {
+        const string tonemapChain =
+            "zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,"
+            + "tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p";
+        const string crop = "3616:1608:224:276";
+
+        VideoOutputPlan hdrRung = BuildVideoOutput(3840, 2160, "[v0]", "hevc_nvenc") with
+        {
+            TenBit = true,
+            PixelFormat = "p010le",
+            CropFilter = crop,
+        };
+        VideoOutputPlan sdrRung = BuildVideoOutput(1920, 1080, "[v1]", "hevc_nvenc") with
+        {
+            ConvertHdrToSdr = true,
+            TonemapFilterChain = tonemapChain,
+            CropFilter = crop,
+        };
+
+        OutputPlan outputPlan = new(
+            Format: OutputFormat.Hls,
+            VideoOutputs: [hdrRung, sdrRung],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: new(320, 180, 10)
+        );
+
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
+        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildHdrMediaInfo());
+
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
+
+        result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
+        FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
+
+        int filterComplexIdx = Array.IndexOf(commands[0].Arguments, "-filter_complex");
+        string filterValue = commands[0].Arguments[filterComplexIdx + 1];
+
+        // Exactly one crop for the whole graph — not one per rung, not one per branch.
+        CountOccurrences(filterValue, $"crop={crop}")
+            .Should()
+            .Be(1, "the source is cropped once and every branch reuses the cropped picture");
+
+        // The single crop runs before the tonemap and before the split, so the
+        // expensive tonemap and the sprite both operate on the cropped picture.
+        int cropIdx = filterValue.IndexOf("crop=", StringComparison.Ordinal);
+        int tonemapIdx = filterValue.IndexOf("tonemap=hable", StringComparison.Ordinal);
+        int splitIdx = filterValue.IndexOf("split", StringComparison.Ordinal);
+        cropIdx.Should().BeGreaterThan(-1);
+        cropIdx.Should().BeLessThan(tonemapIdx, "tonemap must run on the cropped picture");
+        cropIdx.Should().BeLessThan(splitIdx, "the crop feeds the split, not the other way round");
+
+        // Tonemap still happens exactly once (shared SDR intermediate for the
+        // 1080p rung and the sprite).
+        CountOccurrences(filterValue, "tonemap=hable").Should().Be(1);
+    }
 }

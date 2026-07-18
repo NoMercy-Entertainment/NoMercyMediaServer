@@ -57,7 +57,6 @@ public class ContentAnalysisController(
     [HttpGet("crop/{videoFileId}")]
     public async Task<IActionResult> DetectCrop(string videoFileId, CancellationToken ct)
     {
-
         if (!Ulid.TryParse(videoFileId, out Ulid fileId))
             return BadRequestResponse("Invalid video file id");
 
@@ -74,7 +73,12 @@ public class ContentAnalysisController(
 
         try
         {
-            CropResult result = await cropDetector.DetectAsync(path, sourceVideoFileId, ct);
+            CropResult result = await cropDetector.DetectAsync(
+                path,
+                sourceVideoFileId,
+                sourceIsHdr: null,
+                ct
+            );
             return Ok(
                 new
                 {
@@ -109,7 +113,6 @@ public class ContentAnalysisController(
         CancellationToken ct
     )
     {
-
         if (ocrEngine is null)
             return NotImplementedResponse("Subtitle OCR engine is not registered on this build");
 
@@ -168,7 +171,6 @@ public class ContentAnalysisController(
         CancellationToken ct = default
     )
     {
-
         if (whisperTranscriber is null)
             return NotImplementedResponse("Whisper transcriber is not registered on this build");
 
@@ -230,7 +232,6 @@ public class ContentAnalysisController(
     [HttpPost("intro/{seasonId:int}")]
     public async Task<IActionResult> DetectIntroForSeason(int seasonId, CancellationToken ct)
     {
-
         List<Episode> encoded = await videoFileRepository.GetEncodedEpisodesForSeasonAsync(
             seasonId,
             ct

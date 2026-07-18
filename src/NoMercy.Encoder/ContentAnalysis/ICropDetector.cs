@@ -16,6 +16,20 @@ public interface ICropDetector
     Task<CropResult> DetectAsync(string inputPath, CancellationToken ct);
 
     Task<CropResult> DetectAsync(string inputPath, Guid? sourceVideoFileId, CancellationToken ct);
+
+    /// <summary>
+    /// Runs crop detection with a transfer-correct black-bar threshold.
+    /// <paramref name="sourceIsHdr"/> selects the cropdetect limit (HDR/PQ
+    /// black sits far above the SDR threshold); pass the known value from an
+    /// already-analysed source, or <c>null</c> to let the detector probe the
+    /// colour transfer itself.
+    /// </summary>
+    Task<CropResult> DetectAsync(
+        string inputPath,
+        Guid? sourceVideoFileId,
+        bool? sourceIsHdr,
+        CancellationToken ct
+    );
 }
 
 /// <summary>

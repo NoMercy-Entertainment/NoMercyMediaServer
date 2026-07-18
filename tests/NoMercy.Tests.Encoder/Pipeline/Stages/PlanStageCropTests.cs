@@ -40,7 +40,13 @@ public class PlanStageCropTests
         OutputPlan plan = await RunPlan(stage, profile);
 
         detector.Verify(
-            d => d.DetectAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            d =>
+                d.DetectAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<Guid?>(),
+                    It.IsAny<bool?>(),
+                    It.IsAny<CancellationToken>()
+                ),
             Times.Never
         );
         plan.VideoOutputs[0].CropFilter.Should().BeNull();
@@ -51,7 +57,14 @@ public class PlanStageCropTests
     {
         Mock<ICropDetector> detector = new();
         detector
-            .Setup(d => d.DetectAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(d =>
+                d.DetectAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<Guid?>(),
+                    It.IsAny<bool?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
             .ReturnsAsync(new CropResult(Width: 1920, Height: 800, X: 0, Y: 140, ShouldCrop: true));
 
         PlanStage stage = BuildStage(detector.Object);
@@ -62,7 +75,13 @@ public class PlanStageCropTests
         plan.VideoOutputs.Should().HaveCountGreaterThan(0);
         plan.VideoOutputs[0].CropFilter.Should().Be("1920:800:0:140");
         detector.Verify(
-            d => d.DetectAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            d =>
+                d.DetectAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<Guid?>(),
+                    It.IsAny<bool?>(),
+                    It.IsAny<CancellationToken>()
+                ),
             Times.Once
         );
     }
@@ -72,7 +91,14 @@ public class PlanStageCropTests
     {
         Mock<ICropDetector> detector = new();
         detector
-            .Setup(d => d.DetectAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(d =>
+                d.DetectAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<Guid?>(),
+                    It.IsAny<bool?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
             .ReturnsAsync(new CropResult(0, 0, 0, 0, ShouldCrop: false));
 
         PlanStage stage = BuildStage(detector.Object);
@@ -88,7 +114,14 @@ public class PlanStageCropTests
     {
         Mock<ICropDetector> detector = new();
         detector
-            .Setup(d => d.DetectAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(d =>
+                d.DetectAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<Guid?>(),
+                    It.IsAny<bool?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
             .ThrowsAsync(new InvalidOperationException("boom"));
 
         PlanStage stage = BuildStage(detector.Object);
@@ -97,6 +130,82 @@ public class PlanStageCropTests
         OutputPlan plan = await RunPlan(stage, profile);
 
         plan.VideoOutputs[0].CropFilter.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task AutoDetectCropOn_BarsWithinTolerance_CropFilterNull()
+    {
+        // Source 1920x1080; detected content 1920x1000 → only 80px of vertical
+        // bar, under the 100px threshold. A stray border must NOT force a crop
+        // (which would disable stream-copy on every rung it touches).
+        Mock<ICropDetector> detector = new();
+        detector
+            .Setup(d =>
+                d.DetectAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<Guid?>(),
+                    It.IsAny<bool?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(new CropResult(Width: 1920, Height: 1000, X: 0, Y: 40, ShouldCrop: true));
+
+        PlanStage stage = BuildStage(detector.Object);
+        OutputPlan plan = await RunPlan(stage, BuildProfile(autoDetectCrop: true));
+
+        plan.VideoOutputs[0].CropFilter.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task AutoDetectCropOn_HorizontalBarsOverThreshold_PopulatesCropFilter()
+    {
+        // Pillarbox: 1920x1080 source, content 1700x1080 → 220px horizontal bar,
+        // over the threshold, so the crop is honoured even though it forces a
+        // re-encode.
+        Mock<ICropDetector> detector = new();
+        detector
+            .Setup(d =>
+                d.DetectAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<Guid?>(),
+                    It.IsAny<bool?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(
+                new CropResult(Width: 1700, Height: 1080, X: 110, Y: 0, ShouldCrop: true)
+            );
+
+        PlanStage stage = BuildStage(detector.Object);
+        OutputPlan plan = await RunPlan(stage, BuildProfile(autoDetectCrop: true));
+
+        plan.VideoOutputs[0].CropFilter.Should().Be("1700:1080:110:0");
+    }
+
+    [Fact]
+    public async Task AutoDetectCropOn_HdrSource_PassesHdrFlagToDetector()
+    {
+        // The HDR flag must reach the detector so it can pick the HDR cropdetect
+        // limit — the whole reason letterbox on HDR sources was being missed.
+        bool? capturedHdr = null;
+        Mock<ICropDetector> detector = new();
+        detector
+            .Setup(d =>
+                d.DetectAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<Guid?>(),
+                    It.IsAny<bool?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Callback((string _, Guid? _, bool? isHdr, CancellationToken _) => capturedHdr = isHdr)
+            .ReturnsAsync(new CropResult(0, 0, 0, 0, ShouldCrop: false));
+
+        PlanStage stage = BuildStage(detector.Object);
+        ValidateInput input = new(BuildHdrMedia(), BuildProfile(autoDetectCrop: true));
+        await stage.ExecuteAsync(input, EncodingContext.Create(), CancellationToken.None);
+
+        capturedHdr.Should().BeTrue();
     }
 
     private static PlanStage BuildStage(ICropDetector cropDetector)
@@ -185,6 +294,35 @@ public class PlanStageCropTests
                     ColorSpace: null,
                     IsDefault: true,
                     BitRateKbps: 6000
+                ),
+            ],
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
+        );
+
+    private static MediaInfo BuildHdrMedia() =>
+        new(
+            FilePath: "/media/test-hdr.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: 40000,
+            FileSizeBytes: 20_000_000_000,
+            VideoStreams:
+            [
+                new(
+                    Index: 0,
+                    Codec: "hevc",
+                    Width: 3840,
+                    Height: 2160,
+                    FrameRate: 24.0,
+                    BitDepth: 10,
+                    PixelFormat: "yuv420p10le",
+                    ColorPrimaries: "bt2020",
+                    ColorTransfer: "smpte2084",
+                    ColorSpace: "bt2020nc",
+                    IsDefault: true,
+                    BitRateKbps: 35000
                 ),
             ],
             AudioStreams: [],

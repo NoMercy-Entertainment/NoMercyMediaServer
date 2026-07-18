@@ -31,4 +31,14 @@ internal sealed class NoOpCropDetector : ICropDetector
         Task.FromResult(
             new CropResult(0, 0, 0, 0, ShouldCrop: false, SourceVideoFileId: sourceVideoFileId)
         );
+
+    public Task<CropResult> DetectAsync(
+        string inputPath,
+        Guid? sourceVideoFileId,
+        bool? sourceIsHdr,
+        CancellationToken ct
+    ) =>
+        Task.FromResult(
+            new CropResult(0, 0, 0, 0, ShouldCrop: false, SourceVideoFileId: sourceVideoFileId)
+        );
 }
