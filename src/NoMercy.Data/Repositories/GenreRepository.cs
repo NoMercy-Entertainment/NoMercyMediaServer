@@ -73,6 +73,7 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                         gm.Movie.Library.LibraryUsers.Any(u => u.UserId == userId)
                     )
                     .Where(gm => gm.Movie.VideoFiles.Any(v => v.Folder != null))
+                    .OrderBy(gm => gm.MovieId)
                     .Take(take)
             )
                 .ThenInclude(gm => gm.Movie)
@@ -82,7 +83,12 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                     .ThenInclude(m => m.VideoFiles.Where(v => v.Folder != null))
             .Include(genre => genre.GenreMovies)
                 .ThenInclude(gm => gm.Movie)
-                    .ThenInclude(m => m.Images.Where(i => i.Type == "logo").Take(1))
+                    .ThenInclude(m =>
+                        m.Images.Where(i => i.Type == "logo")
+                            .OrderByDescending(i => i.VoteAverage)
+                            .ThenBy(i => i.Id)
+                            .Take(1)
+                    )
             .Include(genre => genre.GenreMovies)
                 .ThenInclude(gm => gm.Movie)
                     .ThenInclude(m =>
@@ -90,6 +96,7 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                                 c.Certification.Iso31661 == "US"
                                 || c.Certification.Iso31661 == country
                             )
+                            .OrderBy(c => c.CertificationId)
                             .Take(1)
                     )
                         .ThenInclude(c => c.Certification)
@@ -114,6 +121,7 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                             )
                         )
                     )
+                    .OrderBy(gt => gt.TvId)
                     .Take(take)
             )
                 .ThenInclude(gt => gt.Tv)
@@ -140,7 +148,12 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                         .ThenInclude(e => e.VideoFiles.Where(v => v.Folder != null))
             .Include(genre => genre.GenreTvShows)
                 .ThenInclude(gt => gt.Tv)
-                    .ThenInclude(tv => tv.Images.Where(i => i.Type == "logo").Take(1))
+                    .ThenInclude(tv =>
+                        tv.Images.Where(i => i.Type == "logo")
+                            .OrderByDescending(i => i.VoteAverage)
+                            .ThenBy(i => i.Id)
+                            .Take(1)
+                    )
             .Include(genre => genre.GenreTvShows)
                 .ThenInclude(gt => gt.Tv)
                     .ThenInclude(tv =>
@@ -148,6 +161,7 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                                 c.Certification.Iso31661 == "US"
                                 || c.Certification.Iso31661 == country
                             )
+                            .OrderBy(c => c.CertificationId)
                             .Take(1)
                     )
                         .ThenInclude(c => c.Certification)
@@ -191,6 +205,7 @@ public class GenreRepository(MediaContext context) : IGenreRepository
             .Where(gm => gm.Movie.Library.LibraryUsers.Any(u => u.UserId == userId))
             .Where(gm => gm.Movie.VideoFiles.Any(v => v.Folder != null))
             .OrderBy(gm => gm.Movie.TitleSort)
+            .ThenBy(gm => gm.MovieId)
             .Skip(page * take)
             .Take(take)
             .Select(gm => new HomeMovieCardDto
@@ -253,6 +268,7 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                 )
             )
             .OrderBy(gt => gt.Tv.TitleSort)
+            .ThenBy(gt => gt.TvId)
             .Skip(page * take)
             .Take(take)
             .Select(gt => new HomeTvCardDto
@@ -343,6 +359,7 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                 )
             )
             .OrderBy(genre => genre.Name)
+            .ThenBy(genre => genre.Id)
             .Skip(page * take)
             .Take(take)
             .ToListAsync(ct);
@@ -371,6 +388,7 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                 )
             )
             .OrderBy(genre => genre.Name)
+            .ThenBy(genre => genre.Id)
             .Skip(page * take)
             .Take(take)
             .Select(genre => new
@@ -461,6 +479,7 @@ public class GenreRepository(MediaContext context) : IGenreRepository
             .Where(genre => genre.MusicGenreTracks.Any())
             .Include(genre => genre.MusicGenreTracks)
             .OrderBy(genre => genre.Name)
+            .ThenBy(genre => genre.Id)
             .ToListAsync(ct);
     }
 
@@ -481,6 +500,7 @@ public class GenreRepository(MediaContext context) : IGenreRepository
             )
             .Where(genre => genre.MusicGenreTracks.Any())
             .OrderBy(genre => genre.Name)
+            .ThenBy(genre => genre.Id)
             .Select(genre => new MusicGenreCardDto
             {
                 Id = genre.Id,
@@ -516,6 +536,7 @@ public class GenreRepository(MediaContext context) : IGenreRepository
             )
             .Include(genre => genre.MusicGenreTracks)
             .OrderBy(genre => genre.Name)
+            .ThenBy(genre => genre.Id)
             .Skip(page * take)
             .Take(take)
             .ToListAsync(ct);
@@ -546,6 +567,7 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                     : genre.Name.StartsWith(letter.ToLower())
             )
             .OrderBy(genre => genre.Name)
+            .ThenBy(genre => genre.Id)
             .Skip(page * take)
             .Take(take)
             .Select(genre => new MusicGenreCardDto
