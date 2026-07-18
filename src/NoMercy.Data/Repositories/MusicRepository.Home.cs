@@ -223,6 +223,7 @@ public partial class MusicRepository
                 ColorPalette = at.Artist._colorPalette ?? string.Empty,
             })
             .OrderByDescending(g => g.Count())
+            .ThenBy(g => g.Key.Id)
             .Select(g => new TopMusicItemDto
             {
                 Id = g.Key.Id.ToString(),
@@ -252,6 +253,7 @@ public partial class MusicRepository
                 ColorPalette = at.Album._colorPalette ?? string.Empty,
             })
             .OrderByDescending(g => g.Count())
+            .ThenBy(g => g.Key.Id)
             .Select(g => new TopMusicItemDto
             {
                 Id = g.Key.Id.ToString(),
@@ -282,6 +284,7 @@ public partial class MusicRepository
                 ColorPalette = pt.Playlist._colorPalette ?? string.Empty,
             })
             .OrderByDescending(g => g.Count())
+            .ThenBy(g => g.Key.Id)
             .Select(g => new TopMusicItemDto
             {
                 Id = g.Key.Id.ToString(),
@@ -401,6 +404,7 @@ public partial class MusicRepository
                 ColorPalette = at.Artist._colorPalette ?? string.Empty,
             })
             .OrderByDescending(g => g.Count())
+            .ThenBy(g => g.Key.Id)
             .Select(g => new TopMusicItemDto
             {
                 Id = g.Key.Id.ToString(),
@@ -425,6 +429,7 @@ public partial class MusicRepository
                 ColorPalette = at.Album._colorPalette ?? string.Empty,
             })
             .OrderByDescending(g => g.Count())
+            .ThenBy(g => g.Key.Id)
             .Select(g => new TopMusicItemDto
             {
                 Id = g.Key.Id.ToString(),
@@ -450,6 +455,7 @@ public partial class MusicRepository
                 ColorPalette = pt.Playlist._colorPalette ?? string.Empty,
             })
             .OrderByDescending(g => g.Count())
+            .ThenBy(g => g.Key.Id)
             .Select(g => new TopMusicItemDto
             {
                 Id = g.Key.Id.ToString(),
