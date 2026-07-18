@@ -273,3 +273,9 @@ public record MusicHomeCardData
         ColorPalette = topMusic.ColorPalette;
     }
 }
+
+file static class MusicCover
+{
+    public static string? Url(string? cover) =>
+        string.IsNullOrEmpty(cover) ? null : $"/images/music{cover}";
+}
