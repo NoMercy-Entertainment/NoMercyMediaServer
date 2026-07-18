@@ -134,15 +134,40 @@ public partial class FileManager(
         switch (library.Type)
         {
             case MediaTypes.MovieMediaType:
-            case MediaTypes.TvMediaType:
-            case MediaTypes.AnimeMediaType:
                 if (EventBusProvider.IsConfigured)
+                {
                     await EventBusProvider.Current.PublishAsync(
                         new LibraryRefreshedEvent
                         {
                             QueryKey = ["libraries", library.Id.ToString()],
                         }
                     );
+                    // Info-page invalidation: this is the choke point every
+                    // Movie scan path (encoder finalize, manual rescan, initial
+                    // import) runs through, so publishing here covers them all
+                    // instead of duplicating the publish at each call site.
+                    await EventBusProvider.Current.PublishAsync(
+                        new LibraryRefreshedEvent { QueryKey = ["movie", id.ToString()] }
+                    );
+                }
+                break;
+            case MediaTypes.TvMediaType:
+            case MediaTypes.AnimeMediaType:
+                if (EventBusProvider.IsConfigured)
+                {
+                    await EventBusProvider.Current.PublishAsync(
+                        new LibraryRefreshedEvent
+                        {
+                            QueryKey = ["libraries", library.Id.ToString()],
+                        }
+                    );
+                    // Anime shows have no /anime/:id route on the client — they
+                    // render at /tv/:id, so an anime-type library's info-page
+                    // key is "tv", never "anime".
+                    await EventBusProvider.Current.PublishAsync(
+                        new LibraryRefreshedEvent { QueryKey = ["tv", (Show?.Id ?? id).ToString()] }
+                    );
+                }
                 break;
             case MediaTypes.MusicMediaType:
                 if (EventBusProvider.IsConfigured)

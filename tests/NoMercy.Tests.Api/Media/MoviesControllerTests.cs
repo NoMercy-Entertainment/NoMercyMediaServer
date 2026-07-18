@@ -13,6 +13,9 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 
@@ -21,6 +24,7 @@ namespace NoMercy.Tests.Api.Media;
 [Trait("Category", "MediaMovies")]
 public class MoviesControllerTests : IClassFixture<NoMercyApiFactory>
 {
+    private readonly NoMercyApiFactory _factory;
     private readonly HttpClient _authed;
     private readonly HttpClient _unauthed;
     private readonly HttpClient _secondaryUser;
@@ -29,6 +33,7 @@ public class MoviesControllerTests : IClassFixture<NoMercyApiFactory>
 
     public MoviesControllerTests(NoMercyApiFactory factory)
     {
+        _factory = factory;
         _authed = factory.CreateClient().AsAuthenticated();
         _unauthed = factory.CreateClient().AsUnauthenticated();
         _secondaryUser = factory.CreateClient().AsSecondaryUser();
@@ -167,6 +172,56 @@ public class MoviesControllerTests : IClassFixture<NoMercyApiFactory>
         HttpResponseMessage response = await _authed.DeleteAsync("/api/v1/movie/999999999");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task DeleteMovie_PublishesInfoPageGridHomeAndContinueWatchingInvalidation()
+    {
+        // MovieRepository.DeleteAsync is unconditional (delete-if-present), so
+        // the controller must publish the invalidation events regardless of
+        // whether the id actually exists — matching DeleteMovie_ReturnsOk_WhenModerator
+        // above, this uses a non-existent id so it never disturbs the seeded
+        // movie other tests in this class depend on.
+        const int deletedId = 777777777;
+
+        IEventBus eventBus = _factory.Services.GetRequiredService<IEventBus>();
+        List<LibraryRefreshedEvent> captured = [];
+        using IDisposable subscription = eventBus.Subscribe<LibraryRefreshedEvent>(
+            (evt, _) =>
+            {
+                captured.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
+
+        HttpResponseMessage response = await _authed.DeleteAsync($"/api/v1/movie/{deletedId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        captured
+            .Should()
+            .Contain(
+                evt => evt.QueryKey.SequenceEqual(new object?[] { "movie", deletedId.ToString() }),
+                "the deleted movie's info page must be invalidated"
+            );
+        captured
+            .Should()
+            .Contain(
+                evt => evt.QueryKey.SequenceEqual(new object?[] { "libraries" }),
+                "every library grid must be invalidated (no id -> prefix match)"
+            );
+        captured
+            .Should()
+            .Contain(
+                evt => evt.QueryKey.SequenceEqual(new object?[] { "home" }),
+                "the home page must be invalidated"
+            );
+        captured
+            .Should()
+            .Contain(
+                evt => evt.QueryKey.SequenceEqual(new object?[] { "continue-watching" }),
+                "continue watching must be invalidated"
+            );
     }
 
     [Fact]
