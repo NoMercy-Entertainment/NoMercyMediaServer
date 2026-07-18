@@ -256,6 +256,7 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
                         .CertificationMovies.Where(c =>
                             c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country
                         )
+                        .OrderBy(c => c.CertificationId)
                         .Take(1)
                 )
                     .ThenInclude(c => c.Certification)
@@ -273,6 +274,7 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
                 .ThenInclude(e => e!.VideoFiles.Where(v => v.Folder != null))
             .Include(pi => pi.Special)
             .OrderBy(pi => pi.Order)
+            .ThenBy(pi => pi.Id)
             .ToListAsync(ct);
     }
 
