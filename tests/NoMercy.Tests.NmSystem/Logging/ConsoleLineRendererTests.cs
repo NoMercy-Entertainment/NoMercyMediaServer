@@ -18,8 +18,8 @@ namespace NoMercy.Tests.NmSystem;
 
 /// <summary>
 /// Pins <see cref="ConsoleLineRenderer"/>: column alignment, the level marker slot,
-/// the hanging gutter for continuation lines, the dim scope suffix, and that colour
-/// escapes add zero display width (so alignment is identical coloured or plain).
+/// the hanging gutter for continuation lines, and that colour escapes add zero
+/// display width (so alignment is identical coloured or plain).
 /// </summary>
 [Trait("Category", "Unit")]
 public class ConsoleLineRendererTests
@@ -34,7 +34,6 @@ public class ConsoleLineRendererTests
             LogLevel.Information,
             LogCategories.Resolve("moviedb"),
             "Fetching \"Inception\"",
-            null,
             null,
             NoMercyConsoleTheme.Dark,
             color: false
@@ -52,7 +51,6 @@ public class ConsoleLineRendererTests
             LogCategories.Resolve("moviedb"),
             "x",
             null,
-            null,
             NoMercyConsoleTheme.Dark,
             color: false
         );
@@ -61,7 +59,6 @@ public class ConsoleLineRendererTests
             LogLevel.Warning,
             LogCategories.Resolve("moviedb"),
             "x",
-            null,
             null,
             NoMercyConsoleTheme.Dark,
             color: false
@@ -82,7 +79,6 @@ public class ConsoleLineRendererTests
             LogCategories.Resolve("moviedb"),
             "first\nsecond",
             null,
-            null,
             NoMercyConsoleTheme.Dark,
             color: false
         );
@@ -90,23 +86,6 @@ public class ConsoleLineRendererTests
         string[] lines = block.Split('\n');
         lines.Should().HaveCount(2);
         lines[1].Should().Be(new string(' ', 26) + "│ second");
-    }
-
-    [Fact]
-    public void Render_Scope_AppendsDimSuffix()
-    {
-        string line = ConsoleLineRenderer.Render(
-            At,
-            LogLevel.Information,
-            LogCategories.Resolve("moviedb"),
-            "msg",
-            "imp=7f3a",
-            null,
-            NoMercyConsoleTheme.Dark,
-            color: false
-        );
-
-        line.Should().EndWith("· imp=7f3a");
     }
 
     [Fact]
@@ -118,7 +97,6 @@ public class ConsoleLineRendererTests
             LogCategories.Resolve("musicbrainz"),
             "Rate limit 429",
             null,
-            null,
             NoMercyConsoleTheme.Dark,
             color: false
         );
@@ -127,7 +105,6 @@ public class ConsoleLineRendererTests
             LogLevel.Warning,
             LogCategories.Resolve("musicbrainz"),
             "Rate limit 429",
-            null,
             null,
             NoMercyConsoleTheme.Dark,
             color: true
