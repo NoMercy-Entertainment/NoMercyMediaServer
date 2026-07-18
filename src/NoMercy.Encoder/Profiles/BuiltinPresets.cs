@@ -587,7 +587,11 @@ public static class BuiltinPresets
             Description = description,
             IsBuiltin = true,
             ClientCompatibility = ClientCompatibility.Universal,
-            HardwarePreference = HardwarePreference.PreferQuality,
+            // Fixed-resolution library encodes run across a whole library, so
+            // speed matters: hit NVENC/QSV/AMF when present and fall back to the
+            // CPU encoder only when no hardware encoder is available. The
+            // archival presets are the ones that spend CPU for quality.
+            HardwarePreference = HardwarePreference.PreferHardware,
             BitDepthPolicy = BitDepthPolicy.WarnAndDowngrade,
             HdrPolicies = hdrPolicy,
             HdrOptions = hdrOptions,
