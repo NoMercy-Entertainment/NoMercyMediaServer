@@ -26,6 +26,13 @@ public class CronWorker : BackgroundService
     private readonly ILogger<CronWorker> _logger;
     private readonly IQueueContext _queueContext;
     private readonly Dictionary<string, Type> _registeredJobs = new();
+
+    // Runtime executor INSTANCES (e.g. one per loaded plugin) can't go through
+    // _registeredJobs — that dictionary resolves an executor by DI type at fire
+    // time, and a plugin instance was never registered in the container. Keyed
+    // by JobName (== CronJobModel.JobType for these jobs); ExecuteJob checks
+    // this map before falling back to DI resolution.
+    private readonly Dictionary<string, ICronJobExecutor> _instanceExecutors = new();
     private readonly List<CronJobModel> _codeDefinedJobs = [];
     private readonly Dictionary<string, CancellationTokenSource> _jobCancellationTokens = new();
     private readonly Dictionary<string, Task> _jobTasks = new();
@@ -246,6 +253,11 @@ public class CronWorker : BackgroundService
     {
         try
         {
+            if (_instanceExecutors.TryGetValue(job.JobType, out ICronJobExecutor? instanceExecutor))
+            {
+                return await RunExecutor(instanceExecutor, job, cancellationToken);
+            }
+
             if (!_registeredJobs.TryGetValue(job.JobType, out Type? jobExecutorType))
             {
                 _logger.LogWarning(
@@ -260,15 +272,7 @@ public class CronWorker : BackgroundService
             ICronJobExecutor executor = (ICronJobExecutor)
                 scope.ServiceProvider.GetRequiredService(jobExecutorType);
 
-            using CancellationTokenSource timeoutCts = new(TimeSpan.FromMinutes(30));
-            using CancellationTokenSource combinedCts =
-                CancellationTokenSource.CreateLinkedTokenSource(
-                    cancellationToken,
-                    timeoutCts.Token
-                );
-
-            await executor.ExecuteAsync(job.Parameters.OrEmpty(), combinedCts.Token);
-            return true;
+            return await RunExecutor(executor, job, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -294,6 +298,22 @@ public class CronWorker : BackgroundService
             );
             return false;
         }
+    }
+
+    private static async Task<bool> RunExecutor(
+        ICronJobExecutor executor,
+        CronJobModel job,
+        CancellationToken cancellationToken
+    )
+    {
+        using CancellationTokenSource timeoutCts = new(TimeSpan.FromMinutes(30));
+        using CancellationTokenSource combinedCts = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken,
+            timeoutCts.Token
+        );
+
+        await executor.ExecuteAsync(job.Parameters.OrEmpty(), combinedCts.Token);
+        return true;
     }
 
     private void UpdateDatabaseJob(CronJobModel job)
@@ -334,6 +354,31 @@ public class CronWorker : BackgroundService
             Parameters = null,
             IsEnabled = true,
             NextRun = CronService.GetNextOccurrence(cronExpression, now),
+            CreatedAt = now,
+        };
+
+        _codeDefinedJobs.Add(job);
+        StartJobWorker(job);
+    }
+
+    // Schedules an executor INSTANCE directly — for runtime-discovered executors
+    // (plugins) that have no DI registration to resolve by type. JobType is set
+    // to the executor's own JobName so the instance registry lookup in
+    // ExecuteJob and the dedup check in StartJobWorker key off the same value.
+    public void RegisterExecutor(ICronJobExecutor executor)
+    {
+        _instanceExecutors[executor.JobName] = executor;
+
+        DateTime now = DateTime.UtcNow;
+
+        CronJobModel job = new()
+        {
+            Name = executor.JobName,
+            CronExpression = executor.CronExpression,
+            JobType = executor.JobName,
+            Parameters = null,
+            IsEnabled = true,
+            NextRun = CronService.GetNextOccurrence(executor.CronExpression, now),
             CreatedAt = now,
         };
 
@@ -417,7 +462,10 @@ public class CronWorker : BackgroundService
 
             foreach (CronJobModel job in dbJobs)
             {
-                if (_registeredJobs.ContainsKey(job.JobType))
+                if (
+                    _registeredJobs.ContainsKey(job.JobType)
+                    || _instanceExecutors.ContainsKey(job.JobType)
+                )
                 {
                     StartJobWorker(job);
                 }
