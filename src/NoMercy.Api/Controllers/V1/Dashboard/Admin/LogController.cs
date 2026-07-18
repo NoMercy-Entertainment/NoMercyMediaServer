@@ -54,10 +54,7 @@ public class LogController : BaseController
                 {
                     return typeMatch
                         && levelMatch
-                        && entry.Message.Contains(
-                            filter,
-                            StringComparison.CurrentCultureIgnoreCase
-                        );
+                        && entry.Message.Contains(filter, StringComparison.OrdinalIgnoreCase);
                 }
 
                 return typeMatch && levelMatch;
@@ -79,6 +76,7 @@ public class LogController : BaseController
                     Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Verbose)).ToString(),
                     Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Debug)).ToString(),
                     Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Information)).ToString(),
+                    Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Warning)).ToString(),
                     Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Error)).ToString(),
                     Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Fatal)).ToString(),
                 ],
