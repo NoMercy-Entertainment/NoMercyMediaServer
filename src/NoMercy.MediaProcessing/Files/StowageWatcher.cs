@@ -10,8 +10,8 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.SystemCalls;
 using Stowage;
 
 namespace NoMercy.MediaProcessing.Files;
@@ -93,8 +93,28 @@ internal class StowageWatcher : IDisposable
     private async Task WatchLoopAsync(TimeSpan interval, CancellationToken ct)
     {
         using PeriodicTimer timer = new(interval);
-        // Stowage gebruikt IOEntry in plaats van Blob
-        await Scan(initial: true);
+
+        // Seed the snapshot WITHOUT emitting events. A network backend (NFS/SMB/S3)
+        // may not be reachable yet at boot; if this first scan threw here — outside
+        // the loop — the whole watch task faulted and died unobserved, leaving the
+        // folder permanently unwatched until a restart. Retry on the timer instead,
+        // and don't enter change-detection until a baseline exists, otherwise the
+        // first successful scan would report every pre-existing file as newly Created.
+        bool seeded = false;
+        do
+        {
+            try
+            {
+                await Scan(initial: true);
+                seeded = true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(
+                    $"StowageWatcher initial scan of '{_path}' failed, retrying: {ex.Message}"
+                );
+            }
+        } while (!seeded && await timer.WaitForNextTickAsync(ct));
 
         while (await timer.WaitForNextTickAsync(ct))
         {
