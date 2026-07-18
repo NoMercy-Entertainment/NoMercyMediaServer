@@ -40,6 +40,12 @@ public class QueueRunner
 
     private volatile bool _isInitialized;
 
+    // Guards the check-and-set of _isInitialized. Initialize() is invoked from
+    // several boot paths (bootstrapper, deferred init, HTTPS/port rebuild) that can
+    // overlap; without this a plain check-then-set let two callers both pass the
+    // guard and spawn duplicate worker sets.
+    private readonly object _initializationLock = new();
+
     private readonly ConcurrentDictionary<string, Thread> _activeWorkerThreads = new();
 
     private readonly JobQueue _jobQueue;
@@ -114,13 +120,16 @@ public class QueueRunner
 
     public async Task Initialize()
     {
-        if (_isInitialized)
+        lock (_initializationLock)
         {
-            _logger.LogDebug("QueueRunner.Initialize() skipped — already initialized");
-            return;
-        }
+            if (_isInitialized)
+            {
+                _logger.LogDebug("QueueRunner.Initialize() skipped — already initialized");
+                return;
+            }
 
-        _isInitialized = true;
+            _isInitialized = true;
+        }
 
         _jobQueue.ResetAllReservedJobs();
 
