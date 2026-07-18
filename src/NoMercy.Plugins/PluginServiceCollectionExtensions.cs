@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Events;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Plugins.Capabilities;
 using NoMercy.Plugins.Verification;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
@@ -34,14 +35,38 @@ public static class PluginServiceCollectionExtensions
 
         services.AddSingleton<IPluginVerifier, PluginVerifier>();
 
+        services.AddSingleton<IPluginConsentStore>(sp =>
+        {
+            IStorageDriver driver = sp.GetRequiredService<IStorageDriver>();
+            IStorage storage = new LocalStorage(driver, new([pluginsPath], driver));
+            string platformDataFolder = Path.Combine(pluginsPath, "data", "platform");
+            IPluginConfiguration configuration = new PluginConfiguration(
+                platformDataFolder,
+                storage
+            );
+            return new ConfigPluginConsentStore(configuration);
+        });
+
+        services.AddSingleton<IPluginConsentService, PluginConsentService>();
+
         services.AddSingleton<IPluginManager>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             ILogger<PluginManager> logger = sp.GetRequiredService<ILogger<PluginManager>>();
             IStorageDriver driver = sp.GetRequiredService<IStorageDriver>();
             IPluginVerifier verifier = sp.GetRequiredService<IPluginVerifier>();
+            IPluginConsentService consentService = sp.GetRequiredService<IPluginConsentService>();
             IStorage storage = new LocalStorage(driver, new([pluginsPath], driver));
-            return new PluginManager(eventBus, sp, logger, pluginsPath, storage, driver, verifier);
+            return new PluginManager(
+                eventBus,
+                sp,
+                logger,
+                pluginsPath,
+                storage,
+                driver,
+                verifier,
+                consentService
+            );
         });
 
         // Wire encoder plugins' GetProfile into the encoder's profile-override seam.

@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Events;
 using NoMercy.Events.Plugins;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Plugins.Capabilities;
 using NoMercy.Plugins.Verification;
 using NoMercy.Storage;
 
@@ -31,7 +32,8 @@ internal sealed class PluginLoader(
     string pluginsPath,
     IStorage storage,
     IPluginRegistry registry,
-    IPluginVerifier verifier
+    IPluginVerifier verifier,
+    IPluginConsentService consentService
 )
 {
     private readonly IEventBus _eventBus = eventBus;
@@ -41,6 +43,7 @@ internal sealed class PluginLoader(
     private readonly IStorage _storage = storage;
     private readonly IPluginRegistry _registry = registry;
     private readonly IPluginVerifier _verifier = verifier;
+    private readonly IPluginConsentService _consentService = consentService;
 
     internal async Task LoadPluginFromManifestAsync(
         string manifestPath,
@@ -148,11 +151,22 @@ internal sealed class PluginLoader(
                         continue;
                     }
 
-                    PluginStatus initialStatus = manifest.AutoEnabled
+                    // An elevated plugin (declares network/rest/ws/auth capabilities)
+                    // must not silently start reaching the network or claims pipeline
+                    // on first install — it loads but stays Disabled until the owner
+                    // grants consent from the dashboard (Phase 2).
+                    bool mayAutoEnable =
+                        manifest.AutoEnabled
+                        && (
+                            _consentService.IsBaseline(manifest.Capabilities)
+                            || _consentService.HasConsent(manifest.Id)
+                        );
+
+                    PluginStatus initialStatus = mayAutoEnable
                         ? PluginStatus.Active
                         : PluginStatus.Disabled;
 
-                    if (manifest.AutoEnabled)
+                    if (mayAutoEnable)
                     {
                         string dataFolder = Path.Combine(
                             _pluginsPath,

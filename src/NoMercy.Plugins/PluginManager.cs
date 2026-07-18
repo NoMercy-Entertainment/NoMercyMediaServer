@@ -12,6 +12,7 @@
 using Microsoft.Extensions.Logging;
 using NoMercy.Events;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Plugins.Capabilities;
 using NoMercy.Plugins.Verification;
 using NoMercy.Storage;
 
@@ -26,6 +27,7 @@ public class PluginManager : IPluginManager, IDisposable
     private readonly IStorage _storage;
     private readonly IStorageDriver _driver;
     private readonly IPluginVerifier _verifier;
+    private readonly IPluginConsentService _consentService;
     private readonly IPluginRegistry _registry;
     private readonly PluginLoader _loader;
     private readonly PluginLifecycleManager _lifecycle;
@@ -37,7 +39,8 @@ public class PluginManager : IPluginManager, IDisposable
         string pluginsPath,
         IStorage storage,
         IStorageDriver driver,
-        IPluginVerifier? verifier = null
+        IPluginVerifier? verifier = null,
+        IPluginConsentService? consentService = null
     )
     {
         _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
@@ -48,6 +51,16 @@ public class PluginManager : IPluginManager, IDisposable
         _driver = driver ?? throw new ArgumentNullException(nameof(driver));
         _storage = storage ?? throw new ArgumentNullException(nameof(storage));
         _verifier = verifier ?? new PluginVerifier();
+        _consentService =
+            consentService
+            ?? new PluginConsentService(
+                new ConfigPluginConsentStore(
+                    new PluginConfiguration(
+                        Path.Combine(_pluginsPath, "data", "platform"),
+                        _storage
+                    )
+                )
+            );
         _registry = new PluginRegistry();
         _loader = new(
             _eventBus,
@@ -56,7 +69,8 @@ public class PluginManager : IPluginManager, IDisposable
             _pluginsPath,
             _storage,
             _registry,
-            _verifier
+            _verifier,
+            _consentService
         );
         _lifecycle = new(
             _eventBus,
