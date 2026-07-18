@@ -272,7 +272,8 @@ public class MediaAnalyzer(IProcessRunner processRunner, IStorage storage, Encod
             BitRateKbps: ParseLong(stream, "bit_rate") / 1000,
             AverageFrameRate: avgFrameRate,
             RealFrameRate: realFrameRate,
-            FieldOrder: stream.Value<string>("field_order")
+            FieldOrder: stream.Value<string>("field_order"),
+            SampleAspectRatio: stream.Value<string>("sample_aspect_ratio")
         );
     }
 

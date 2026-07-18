@@ -87,6 +87,7 @@ public static class FilterGraphAssembler
         bool hasThumbnails = plan.Thumbnails is not null;
         bool sourceIsHdr = mediaInfo.VideoStreams[0].IsHdr;
         bool sourceIsInterlaced = mediaInfo.VideoStreams[0].IsInterlaced;
+        bool sourceIsAnamorphic = mediaInfo.VideoStreams[0].IsAnamorphic;
         string? thumbnailTonemapChain = videoOutputs
             .Select(v => v.TonemapFilterChain)
             .FirstOrDefault(c => !string.IsNullOrEmpty(c));
@@ -144,11 +145,23 @@ public static class FilterGraphAssembler
             videoOutputs = videoOutputs.Select(v => v with { CropFilter = null }).ToArray();
         }
 
+        // Un-anamorph: a non-square-pixel (anamorphic) source scaled by the
+        // ladder — which works in square pixels — comes out stretched. Square
+        // the pixels once on the shared source (after crop, which measures coded
+        // pixels), scaling width by the SAR so the display geometry is baked in
+        // and SAR is reset to 1:1 for every downstream rung.
+        if (sourceIsAnamorphic)
+        {
+            string[] sar = mediaInfo.VideoStreams[0].SampleAspectRatio!.Split(':');
+            fg.AddFilter(baseLabel, $"scale=trunc(iw*{sar[0]}/{sar[1]}/2)*2:ih,setsar=1", "square");
+            baseLabel = "square";
+        }
+
         // GPU-resident path: frames are decoded into GPU memory (-hwaccel set on
         // the input) and scaled on the GPU. Eligibility guarantees no tonemap /
         // crop / burn-in, so every branch is just a GPU scale. Sprites need a CPU
         // download, so this path is skipped when thumbnails are requested.
-        if (UsesGpuResidentPath(plan) && !sourceIsInterlaced)
+        if (UsesGpuResidentPath(plan) && !sourceIsInterlaced && !sourceIsAnamorphic)
         {
             string scaleFilter = plan.GpuAccel!.ScaleFilter;
             if (videoOutputs.Length == 1)

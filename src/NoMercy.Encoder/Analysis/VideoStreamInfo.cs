@@ -27,9 +27,31 @@ public record VideoStreamInfo(
     double? AverageFrameRate = null,
     double? RealFrameRate = null,
     int Rotation = 0,
-    string? FieldOrder = null
+    string? FieldOrder = null,
+    string? SampleAspectRatio = null
 )
 {
+    // ffprobe reports sample_aspect_ratio as "num:den". Anamorphic content has
+    // non-square pixels (SAR != 1:1) that MUST be squared on transcode or the
+    // picture comes out stretched/squished. "0:1" is ffprobe's "unknown" and is
+    // treated as square, as is an absent tag.
+    public bool IsAnamorphic
+    {
+        get
+        {
+            if (SampleAspectRatio is null)
+                return false;
+            string[] parts = SampleAspectRatio.Split(':');
+            if (
+                parts.Length != 2
+                || !int.TryParse(parts[0], out int num)
+                || !int.TryParse(parts[1], out int den)
+            )
+                return false;
+            return num > 0 && den > 0 && num != den;
+        }
+    }
+
     private static readonly HashSet<string> HdrTransfers = ["smpte2084", "arib-std-b67"];
 
     // ffprobe field_order values for interlaced content. "progressive"
