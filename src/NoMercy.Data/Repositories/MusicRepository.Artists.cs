@@ -166,6 +166,7 @@ public partial class MusicRepository
             )
             .Where(artist => artist.ArtistTrack.Any())
             .OrderBy(artist => artist.TitleSort ?? artist.Name)
+            .ThenBy(artist => artist.Id)
             .Select(artist => new ArtistCardDto
             {
                 Id = artist.Id,
@@ -206,6 +207,7 @@ public partial class MusicRepository
             .ForUser(userId)
             .Where(artist => artist.ArtistTrack.Any())
             .OrderBy(artist => artist.TitleSort ?? artist.Name)
+            .ThenBy(artist => artist.Id)
             .Select(artist => new ArtistCardDto
             {
                 Id = artist.Id,
@@ -240,6 +242,7 @@ public partial class MusicRepository
             .Artists.AsNoTracking()
             .Where(artist => !string.IsNullOrEmpty(artist.Cover) && artist.ArtistTrack.Any())
             .OrderByDescending(artist => artist.CreatedAt)
+            .ThenBy(artist => artist.Id)
             .Select(artist => new ArtistCardDto
             {
                 Id = artist.Id,
@@ -270,6 +273,8 @@ public partial class MusicRepository
         return await mediaContext
             .ArtistUser.AsNoTracking()
             .Where(artistUser => artistUser.UserId == userId)
+            .OrderBy(artistUser => artistUser.Artist.Name)
+            .ThenBy(artistUser => artistUser.Artist.Id)
             .Select(artistUser => new ArtistCardDto
             {
                 Id = artistUser.Artist.Id,
