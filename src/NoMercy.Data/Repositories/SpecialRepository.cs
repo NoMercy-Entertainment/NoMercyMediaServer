@@ -17,8 +17,8 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
 using NoMercy.MediaProcessing.Images;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Data.Repositories;
 
@@ -45,10 +45,14 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             .Include(special => special.Items)
                 .ThenInclude(item => item.Movie)
                     .ThenInclude(m =>
-                        m!.CertificationMovies.Where(c => c.Certification.Iso31661 == "US").Take(1)
+                        m!
+                            .CertificationMovies.Where(c => c.Certification.Iso31661 == "US")
+                            .OrderBy(c => c.CertificationId)
+                            .Take(1)
                     )
                         .ThenInclude(c => c.Certification)
             .OrderBy(special => special.TitleSort)
+            .ThenBy(special => special.Id)
             .Skip(page * take)
             .Take(take)
             .ToListAsync(ct);
@@ -68,6 +72,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             .Specials.AsNoTracking()
             .AsSingleQuery()
             .OrderBy(special => special.TitleSort)
+            .ThenBy(special => special.Id)
             .Skip(page * take)
             .Take(take)
             .Select(special => new SpecialCardDto
@@ -117,6 +122,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             .Specials.AsNoTracking()
             .AsSingleQuery()
             .OrderBy(special => special.TitleSort)
+            .ThenBy(special => special.Id)
             .Skip(page * take)
             .Take(take)
             .Select(special => new SpecialCardDto
@@ -187,6 +193,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
                 ),
                 Items = special
                     .Items.OrderBy(i => i.Order)
+                    .ThenBy(i => i.Id)
                     .Select(i => new SpecialItemRefDto
                     {
                         MovieId = i.MovieId,
@@ -300,6 +307,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
                 g => g.Key,
                 g =>
                     g.OrderByDescending(i => i.VoteAverage)
+                        .ThenBy(i => i.Id)
                         .Take(2)
                         .Select(i => new SpecialImageProjection
                         {
@@ -324,6 +332,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
                 g => g.Key,
                 g =>
                     g.OrderByDescending(i => i.VoteAverage)
+                        .ThenBy(i => i.Id)
                         .Take(2)
                         .Select(i => new SpecialImageProjection
                         {
@@ -573,6 +582,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
                 g => g.Key,
                 g =>
                     g.OrderByDescending(i => i.VoteAverage)
+                        .ThenBy(i => i.Id)
                         .Take(2)
                         .Select(i => new SpecialImageProjection
                         {
@@ -597,6 +607,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
                 g => g.Key,
                 g =>
                     g.OrderByDescending(i => i.VoteAverage)
+                        .ThenBy(i => i.Id)
                         .Take(2)
                         .Select(i => new SpecialImageProjection
                         {
@@ -720,28 +731,32 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
         return tvs;
     }
 
-    public async Task<Special?> GetSpecialAsync(Guid userId, Ulid id, CancellationToken ct = default)
+    public async Task<Special?> GetSpecialAsync(
+        Guid userId,
+        Ulid id,
+        CancellationToken ct = default
+    )
     {
         return await context
-                .Specials.AsNoTracking()
-                .AsSplitQuery()
-                .Where(special => special.Id == id)
-                .Include(special => special.Items.OrderBy(specialItem => specialItem.Order))
-                    .ThenInclude(specialItem => specialItem.Movie)
-                        .ThenInclude(movie => movie!.VideoFiles)
-                            .ThenInclude(file =>
-                                file.UserData.Where(userData => userData.UserId.Equals(userId))
-                            )
-                .Include(special => special.Items.OrderBy(specialItem => specialItem.Order))
-                    .ThenInclude(specialItem => specialItem.Episode)
-                        .ThenInclude(movie => movie!.VideoFiles)
-                            .ThenInclude(file =>
-                                file.UserData.Where(userData => userData.UserId.Equals(userId))
-                            )
-                .Include(special =>
-                    special.SpecialUser.Where(specialUser => specialUser.UserId.Equals(userId))
-                )
-                .FirstOrDefaultAsync(ct);
+            .Specials.AsNoTracking()
+            .AsSplitQuery()
+            .Where(special => special.Id == id)
+            .Include(special => special.Items.OrderBy(specialItem => specialItem.Order))
+                .ThenInclude(specialItem => specialItem.Movie)
+                    .ThenInclude(movie => movie!.VideoFiles)
+                        .ThenInclude(file =>
+                            file.UserData.Where(userData => userData.UserId.Equals(userId))
+                        )
+            .Include(special => special.Items.OrderBy(specialItem => specialItem.Order))
+                .ThenInclude(specialItem => specialItem.Episode)
+                    .ThenInclude(movie => movie!.VideoFiles)
+                        .ThenInclude(file =>
+                            file.UserData.Where(userData => userData.UserId.Equals(userId))
+                        )
+            .Include(special =>
+                special.SpecialUser.Where(specialUser => specialUser.UserId.Equals(userId))
+            )
+            .FirstOrDefaultAsync(ct);
     }
 
     private static readonly Func<
@@ -799,6 +814,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
                     )
                         .ThenInclude(c => c.Certification)
             .OrderBy(special => special.TitleSort)
+            .ThenBy(special => special.Id)
             .Skip(page * take)
             .Take(take)
             .ToListAsync(ct);
