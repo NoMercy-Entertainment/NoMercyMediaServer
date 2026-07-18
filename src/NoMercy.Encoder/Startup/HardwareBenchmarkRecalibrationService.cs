@@ -101,7 +101,25 @@ public sealed class HardwareBenchmarkRecalibrationService : BackgroundService
 
         while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
         {
-            await EvaluateAndRecalibrateAsync(stoppingToken).ConfigureAwait(false);
+            try
+            {
+                await EvaluateAndRecalibrateAsync(stoppingToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                // An unhandled throw here would fault the BackgroundService and trip
+                // the StopHost default — a single bad hourly tick must not take the
+                // server down. Log and retry on the next interval (as the sibling
+                // periodic services already do).
+                _logger.LogError(
+                    ex,
+                    "Hardware recalibration tick failed; retrying on the next interval"
+                );
+            }
         }
     }
 
