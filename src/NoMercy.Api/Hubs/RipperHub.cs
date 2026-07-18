@@ -78,6 +78,9 @@ public class RipperHub : ConnectionHub
         if (!AuthPolicy.IsModerator(Context.User))
             return null;
 
+        if (string.IsNullOrWhiteSpace(drivePath))
+            return null;
+
         DiscDrive? drive = _driveMonitor
             .GetDrives()
             .FirstOrDefault(d =>
