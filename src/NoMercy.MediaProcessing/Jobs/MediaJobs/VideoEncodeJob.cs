@@ -75,6 +75,7 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInjector
 {
     private IEncodingOrchestrator? _encodingOrchestrator;
+    private IHardwareBenchmark? _hardwareBenchmark;
     private IHardwareCapabilities? _hardwareCapabilities;
     private IEncoderProcessRegistry? _encoderProcessRegistry;
     private IMediaAnalyzer? _mediaAnalyzer;
@@ -91,6 +92,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
     {
         base.InjectStorageServices(serviceProvider);
         _encodingOrchestrator = serviceProvider.GetRequiredService<IEncodingOrchestrator>();
+        _hardwareBenchmark = serviceProvider.GetRequiredService<IHardwareBenchmark>();
         _hardwareCapabilities = serviceProvider.GetRequiredService<IHardwareCapabilities>();
         _encoderProcessRegistry = serviceProvider.GetRequiredService<IEncoderProcessRegistry>();
         _mediaAnalyzer = serviceProvider.GetRequiredService<IMediaAnalyzer>();
@@ -1731,16 +1733,16 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
 
     /// <summary>
     /// Resolve per-host bundle caps from <see cref="BundleCapResolver"/>.
-    /// The cap is the number of encode sessions that may SHARE one ffmpeg
-    /// (one decode): for the GPU that is the driver's concurrent NVENC
-    /// session limit, for the CPU it is core-bounded. It is a hard
-    /// concurrency ceiling, never a throughput knob — rungs off one source
-    /// share a single hoisted decode/crop, so keeping them together is
-    /// always cheaper than re-decoding, and only running out of encoder
-    /// sessions forces a split.
+    /// Caps are derived from real per-rung benchmark measurements
+    /// (<see cref="IHardwareBenchmark"/> → <see cref="SpeedIndex"/>) on this
+    /// exact host — no hardcoded model-name tiers, no driver-allowed
+    /// maximums conflated with practical throughput. A weak GPU with a
+    /// slow benchmark earns a smaller cap; a strong GPU earns a larger
+    /// one. Driver-imposed session limits still apply as an outer ceiling.
     /// </summary>
     private (int GpuCap, int CpuCap) ResolveHostCaps(DecomposedTask[] tasks)
     {
+        IHardwareBenchmark? benchmark = _hardwareBenchmark;
         IHardwareCapabilities? hardware = _hardwareCapabilities;
 
         BundleCapResolver.PlannedRung[] plannedRungs = tasks
@@ -1757,7 +1759,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             ))
             .ToArray();
 
-        return BundleCapResolver.Resolve(plannedRungs, hardware);
+        return BundleCapResolver.Resolve(plannedRungs, benchmark, hardware);
     }
 
     /// <summary>

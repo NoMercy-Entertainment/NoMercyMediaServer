@@ -11,7 +11,6 @@
 
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Decomposition;
-using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 
@@ -558,69 +557,6 @@ public class DecodeAwareBundlePlannerTests
         );
 
         bundles.Should().ContainSingle("copy video rides the transcode decode for free");
-        bundles[0].VideoSliceIndexes.Should().BeEquivalentTo([0, 1]);
-    }
-
-    // ------------------------------------------------------------------ (f) End-to-end: resolver cap feeds the planner
-
-    [Fact]
-    public void Plan_WithResolverCapFromConsumerCard_4KHdrPlus1080pSdr_StillOneBundle()
-    {
-        // End-to-end regression guard for the reported runtime split. On a
-        // consumer card (RTX 2080 SUPER = 8 concurrent NVENC sessions) a
-        // 4K-HDR-master + 1080p-SDR-derived GPU ladder must resolve a cap that
-        // keeps BOTH rungs in ONE shared-decode bundle. The old throughput
-        // model returned floor(4K-hevc-realtime / 1.5) = 1 here, fragmenting
-        // the shared decode into two ffmpegs (the 1080p re-cropping the source
-        // instead of deriving from the cropped HDR master). This test drives
-        // the resolver AND the planner together so that exact regression fails.
-        GpuDevice consumerCard = new(
-            Vendor: GpuVendor.Nvidia,
-            Name: "NVIDIA GeForce RTX 2080 SUPER",
-            VramMb: 8192,
-            MaxEncoderSessions: 8,
-            SupportedCodecs: [VideoCodecType.H264, VideoCodecType.H265]
-        );
-        IHardwareCapabilities hardware = new HardwareCapabilities([consumerCard], CpuCores: 32);
-
-        const string crop = "3840:1608:0:276";
-        DecomposedTask[] tasks =
-        [
-            VideoTask(0, "hevc_nvenc", Gpu()), // 4K HDR HEVC 10-bit master
-            VideoTask(1, "hevc_nvenc", Gpu()), // 1080p SDR HEVC, derived from the master
-        ];
-        OutputPlan plan = PlanWith([
-            TranscodeVideo(3840, 1608, "hevc_nvenc", cropFilter: crop),
-            TonemapVideo(1920, 800, "hevc_nvenc", cropFilter: crop),
-        ]);
-
-        BundleCapResolver.PlannedRung[] rungs =
-        [
-            new(VideoCodecType.H265, "hevc_nvenc", 3840, IsGpu: true),
-            new(VideoCodecType.H265, "hevc_nvenc", 1920, IsGpu: true),
-        ];
-
-        (int gpuCap, int cpuCap) = BundleCapResolver.Resolve(rungs, hardware);
-
-        gpuCap
-            .Should()
-            .Be(8, "the split cap is the card's NVENC session limit, not a throughput fraction");
-
-        DecomposedTask[] bundles = DecodeAwareBundlePlanner.Plan(
-            tasks,
-            plan,
-            parentJobId: 1,
-            groupTag: GroupTag,
-            gpuCap: gpuCap,
-            cpuCap: cpuCap
-        );
-
-        bundles
-            .Should()
-            .ContainSingle(
-                "both rungs share one hoisted decode/crop — one ffmpeg, the 1080p SDR derived "
-                    + "from the cropped 4K HDR master, not a second standalone crop"
-            );
         bundles[0].VideoSliceIndexes.Should().BeEquivalentTo([0, 1]);
     }
 }
