@@ -245,6 +245,37 @@ public class FolderWatcher : IDisposable
         _instance?.OnError?.Invoke(fileWatcherEventArgs);
 
         Logger.System($"FolderWatcher error:  {e.GetException().Message}", LogEventLevel.Error);
+
+        // A FileSystemWatcher stops raising events after an error (typically an
+        // InternalBufferOverflow during a burst of changes). Without re-arming it
+        // here the folder goes permanently blind and new media is never picked up
+        // until the server restarts.
+        TryReArm(sender as FileSystemWatcher);
+    }
+
+    public static bool TryReArm(FileSystemWatcher? watcher)
+    {
+        if (watcher is null)
+            return false;
+
+        try
+        {
+            watcher.EnableRaisingEvents = false;
+            watcher.EnableRaisingEvents = true;
+            Logger.System(
+                $"FolderWatcher re-armed after error on {watcher.Path}",
+                LogEventLevel.Warning
+            );
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.System(
+                $"FolderWatcher failed to re-arm watcher: {ex.Message}",
+                LogEventLevel.Error
+            );
+            return false;
+        }
     }
 
     public void Dispose()
