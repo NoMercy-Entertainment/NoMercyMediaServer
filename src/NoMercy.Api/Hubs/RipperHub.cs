@@ -84,11 +84,8 @@ public class RipperHub : ConnectionHub
         DiscDrive? drive = _driveMonitor
             .GetDrives()
             .FirstOrDefault(d =>
-                d.Path.TrimEnd(Path.DirectorySeparatorChar)
-                    .Equals(
-                        drivePath.TrimEnd(Path.DirectorySeparatorChar),
-                        StringComparison.OrdinalIgnoreCase
-                    )
+                d.Path.TrimEnd('\\', '/')
+                    .Equals(drivePath.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase)
             );
 
         if (drive is null)
@@ -98,7 +95,7 @@ public class RipperHub : ConnectionHub
         {
             return new
             {
-                path = drive.Path.TrimEnd(Path.DirectorySeparatorChar),
+                path = drive.Path.TrimEnd('\\', '/'),
                 label = drive.Label.OrEmpty(),
                 open = true,
                 has_disc = false,
@@ -111,7 +108,7 @@ public class RipperHub : ConnectionHub
         {
             return new
             {
-                path = drive.Path.TrimEnd(Path.DirectorySeparatorChar),
+                path = drive.Path.TrimEnd('\\', '/'),
                 label = drive.Label.OrEmpty(),
                 open = false,
                 has_disc = true,
@@ -124,7 +121,7 @@ public class RipperHub : ConnectionHub
             DiscInfo info = await source.ProbeAsync(drive, CancellationToken.None);
             return new
             {
-                path = drive.Path.TrimEnd(Path.DirectorySeparatorChar),
+                path = drive.Path.TrimEnd('\\', '/'),
                 label = (info.DiscTitle ?? info.DiscLabel ?? drive.Label).OrEmpty(),
                 open = false,
                 has_disc = true,
@@ -136,7 +133,7 @@ public class RipperHub : ConnectionHub
         {
             return new
             {
-                path = drive.Path.TrimEnd(Path.DirectorySeparatorChar),
+                path = drive.Path.TrimEnd('\\', '/'),
                 label = drive.Label.OrEmpty(),
                 open = false,
                 has_disc = true,
