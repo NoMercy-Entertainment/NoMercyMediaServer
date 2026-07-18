@@ -31,6 +31,8 @@ public partial class MusicRepository
             .Where(playlist => playlist.UserId == userId)
             .Include(playlist => playlist.Tracks)
                 .ThenInclude(trackUser => trackUser.Track)
+            .OrderBy(playlist => playlist.Name)
+            .ThenBy(playlist => playlist.Id)
             .Select(playlist => new CarouselResponseItemDto(playlist))
             .Take(36)
             .ToListAsync(ct);
@@ -357,6 +359,8 @@ public partial class MusicRepository
         return await mediaContext
             .Playlists.AsNoTracking()
             .Where(playlist => playlist.UserId == userId)
+            .OrderBy(playlist => playlist.Name)
+            .ThenBy(playlist => playlist.Id)
             .Select(playlist => new PlaylistCardDto
             {
                 Id = playlist.Id,
