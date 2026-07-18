@@ -96,7 +96,11 @@ public class SqliteQueueContext : IQueueContext
     {
         if (string.IsNullOrEmpty(queueName))
         {
-            QueueJobEntity? anyJob = _context.QueueJobs.FirstOrDefault();
+            QueueJobEntity? anyJob = _context
+                .QueueJobs.OrderByDescending(j => j.Priority)
+                .ThenBy(j => j.CreatedAt)
+                .ThenBy(j => j.Id)
+                .FirstOrDefault();
             return anyJob == null ? null : ToModel(anyJob);
         }
 
