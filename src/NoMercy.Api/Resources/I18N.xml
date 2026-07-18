@@ -767,18 +767,26 @@
   </Entry>
   <Entry>
     <Key>Gone.</Key>
-    <Value lang="nl">Gone.</Value>
+    <Value lang="nl">Niet meer beschikbaar.</Value>
   </Entry>
   <Entry>
     <Key>Live session has ended or expired</Key>
-    <Value lang="nl">Live session has ended or expired</Value>
+    <Value lang="nl">Livesessie is beëindigd of verlopen</Value>
   </Entry>
   <Entry>
     <Key>Video file not found or you lack access</Key>
-    <Value lang="nl">Video file not found or you lack access</Value>
+    <Value lang="nl">Videobestand niet gevonden of je hebt geen toegang</Value>
   </Entry>
   <Entry>
     <Key>Conflict.</Key>
     <Value lang="nl">Conflict.</Value>
+  </Entry>
+  <Entry>
+    <Key>Bad Request.</Key>
+    <Value lang="nl">Ongeldig verzoek.</Value>
+  </Entry>
+  <Entry>
+    <Key>Invalid id for the requested type</Key>
+    <Value lang="nl">Ongeldige id voor het gevraagde type</Value>
   </Entry>
 </I18N>
