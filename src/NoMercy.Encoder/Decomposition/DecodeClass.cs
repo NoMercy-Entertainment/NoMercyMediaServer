@@ -40,15 +40,10 @@ public enum DecodeClass
     /// The HDR→Rec.709 pass runs once; its single <c>[sdr]</c> intermediate
     /// feeds every SDR-tonemap rung sharing the same chain AND the thumbnail
     /// sprite (correct Rec.709 color, one decode instead of a separate pass
-    /// per consumer). Kept as its own class purely for classification — a
-    /// distinct tonemap chain is meaningfully different metadata from a plain
-    /// <see cref="Transcode"/> rung. It is NOT a separate physical decode:
-    /// <c>FilterGraphAssembler</c> hoists the shared source crop once, before
-    /// any branching, so an HDR-preserve rung and every SDR-tonemap rung
-    /// derived from the same source still share one ffmpeg. See
-    /// <see cref="DecodeAwareBundlePlanner.Plan"/>, which unions this class
-    /// with <see cref="Transcode"/> before capacity-chunking so that sharing
-    /// actually happens.
+    /// per consumer). Kept as its own class rather than merged with
+    /// <see cref="Transcode"/> so a plan mixing an HDR-preserve rung with an
+    /// SDR-tonemap rung gets two clearly separate decode groups instead of
+    /// silently sharing one via <c>FilterGraphAssembler</c>'s dedupe path.
     /// </summary>
     Tonemap,
 }

@@ -24,23 +24,18 @@ namespace NoMercy.Encoder.Decomposition;
 /// decode at all. Transcode rungs off the same source share ONE decode via
 /// the filtergraph split the builder already emits. Tonemap rungs share
 /// their own single HDR→SDR pass (and the thumbnail sprite, for correct
-/// Rec.709 color) via the same mechanism — kept as its own class purely for
-/// classification (distinct tonemap chains are tracked separately). It is
-/// NOT a separate physical decode: <see cref="FilterGraphAssembler"/> always
-/// hoists the shared source crop once, before any branching, so an
-/// HDR-preserve rung and every SDR-tonemap rung derived from the same source
-/// still share one ffmpeg. <see cref="Plan"/> unions Transcode and every
-/// Tonemap group before capacity-chunking so that sharing actually happens.</para>
+/// Rec.709 color) via the same mechanism — kept as a separate class from
+/// Transcode so a mixed HDR-preserve + SDR-tonemap ladder gets two distinct
+/// decode groups rather than silently sharing one.</para>
 ///
 /// <para><b>Layer 2 — capacity scheduling</b> (inside <see cref="Plan"/>):
-/// the union of every real-decode (Transcode + Tonemap) video index becomes
-/// ONE bundle by default — one ffmpeg, one decode. It is split into multiple
-/// bundles only when host/encoder capacity (<paramref name="gpuCap"/> /
-/// <paramref name="cpuCap"/> in <see cref="Plan"/>) forces it, and only on
-/// decode-independent boundaries — every split bundle re-decodes (and, for a
-/// rung that tonemaps, re-tonemaps) its own share. This is the future
-/// distributed-encoding knob and is deliberately kept separate from Layer 1's
-/// classification.</para>
+/// each decode group becomes ONE bundle by default — one ffmpeg, one decode.
+/// A group is split into multiple bundles only when host/encoder capacity
+/// (<paramref name="gpuCap"/> / <paramref name="cpuCap"/> in <see cref="Plan"/>)
+/// forces it, and only on decode-independent boundaries — every split bundle
+/// re-decodes (and, for a Tonemap group, re-tonemaps) its own share. This is
+/// the future distributed-encoding knob and is deliberately kept separate
+/// from Layer 1's classification.</para>
 ///
 /// <para>Copy video / audio / subtitle / chapters never need their own
 /// decode: they ride the first real decode bundle produced (Tonemap first,
@@ -151,28 +146,20 @@ public static class DecodeAwareBundlePlanner
                 ?.VideoTaskIndexes.ToArray()
             ?? [];
 
-        // Transcode (HDR-preserve or plain) and every Tonemap chain share the
-        // SAME physical source decode: FilterGraphAssembler always hoists the
-        // shared crop once, before branching, then either dedupes a single
-        // tonemap chain into one [sdr] intermediate or falls through to a
-        // per-branch legacy split for genuinely mixed chains — either way ONE
-        // ffmpeg, ONE decode. Union them here so Layer 2 packs an HDR master
-        // and the SDR rung derived from it into the same bundle instead of
-        // decoding (and cropping) the source twice.
-        //
-        // Tonemap indexes are listed first so that when host capacity DOES
-        // force a split, the FIRST resulting unit — the one that inherits
-        // aux/copy/sprite below — still contains a tonemap rung whenever the
-        // plan has one. That is what gives the thumbnail sprite the shared
-        // [sdr] intermediate (correct Rec.709 color) instead of a raw-HDR
-        // sample.
-        List<int> realDecodeIndexes = new();
+        // Tonemap bundles are ordered before Transcode bundles so the FIRST
+        // real-decode bundle — the one that inherits aux/copy/sprite below —
+        // is always a Tonemap bundle whenever the plan has one. That is what
+        // gives the thumbnail sprite the shared [sdr] intermediate (correct
+        // Rec.709 color) instead of a raw-HDR sample.
+        List<int[]> orderedRealUnits = new();
         foreach (DecodeGroup group in decodeGroups.Where(g => g.Class == DecodeClass.Tonemap))
-            realDecodeIndexes.AddRange(group.VideoTaskIndexes);
+            orderedRealUnits.AddRange(
+                ChunkByCapacity(group.VideoTaskIndexes, stamped, gpuCap, cpuCap)
+            );
         foreach (DecodeGroup group in decodeGroups.Where(g => g.Class == DecodeClass.Transcode))
-            realDecodeIndexes.AddRange(group.VideoTaskIndexes);
-
-        List<int[]> orderedRealUnits = ChunkByCapacity(realDecodeIndexes, stamped, gpuCap, cpuCap);
+            orderedRealUnits.AddRange(
+                ChunkByCapacity(group.VideoTaskIndexes, stamped, gpuCap, cpuCap)
+            );
 
         bool hasThumbs = stamped.Any(task => task.Kind == EncodeTaskKind.Thumbnails);
         int[] audioIndexes = IndexesOf(stamped, task => task.Kind == EncodeTaskKind.Audio);
