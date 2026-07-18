@@ -9,17 +9,18 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using Moq;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
 
 namespace NoMercy.Tests.Encoder.Hardware;
 
 /// <summary>
-/// Bundle-cap resolution from real benchmark measurements. Caps are the
-/// practical-throughput ceiling, not the driver-allowed maximum, so a weak
-/// GPU earns a smaller cap and a strong GPU earns a larger one — based on
-/// what fps each rung actually hit on this exact host.
+/// Bundle-cap resolution. The cap is a HARD concurrency limit — how many
+/// encode sessions may share ONE ffmpeg (one decode) — not a throughput knob.
+/// For the GPU that is the driver's concurrent NVENC session limit; for the
+/// CPU it is core-bounded. Rungs off one source share a single hoisted
+/// decode/crop, so splitting them is never a throughput win (it only
+/// re-decodes) and only running out of sessions forces a split.
 /// </summary>
 public class BundleCapResolverTests
 {
@@ -35,181 +36,132 @@ public class BundleCapResolverTests
     private static IHardwareCapabilities MakeHardware(GpuDevice? gpu, int cpuCores = 16) =>
         new HardwareCapabilities(gpu is null ? [] : [gpu], cpuCores);
 
-    private static IHardwareBenchmark MakeBenchmark(SpeedIndex? index)
-    {
-        Mock<IHardwareBenchmark> mock = new();
-        mock.Setup(b => b.GetCachedIndex()).Returns(index!);
-        return mock.Object;
-    }
-
-    private static SpeedIndex IndexWith(params (SpeedKey key, double speed)[] entries)
-    {
-        Dictionary<SpeedKey, SpeedMeasurement> dict = entries.ToDictionary(
-            t => t.key,
-            t => new SpeedMeasurement(t.speed * 30, t.speed, DateTime.UtcNow)
-        );
-        return new(dict);
-    }
-
-    // ── Fallbacks when no benchmark or hardware available ───────────────────
+    // ── GPU cap = driver concurrent-session limit ───────────────────────────
 
     [Fact]
-    public void Resolve_NoBenchmark_UsesConservativeFallback()
+    public void Resolve_ConsumerCard_GpuCapIsTheDriverSessionLimit()
     {
-        BundleCapResolver.PlannedRung[] rungs = [Rung("hevc_nvenc", 1920, isGpu: true)];
-        IHardwareCapabilities hw = MakeHardware(MakeGpu());
+        // RTX 2080 SUPER reports 8 concurrent NVENC sessions — every rung of a
+        // realistic ladder shares one decode up to that limit.
+        IHardwareCapabilities hw = MakeHardware(MakeGpu("RTX 2080 SUPER", maxSessions: 8));
+        BundleCapResolver.PlannedRung[] rungs = [Rung("hevc_nvenc", 3840, isGpu: true)];
 
-        (int gpuCap, int cpuCap) = BundleCapResolver.Resolve(rungs, benchmark: null, hardware: hw);
-
-        gpuCap.Should().Be(2); // UnknownGpuCapFallback
-        cpuCap.Should().Be(1); // UnknownCpuCapFallback
-    }
-
-    [Fact]
-    public void Resolve_NoHardware_GpuCapFalls()
-    {
-        BundleCapResolver.PlannedRung[] rungs = [Rung("hevc_nvenc", 1920, isGpu: true)];
-        IHardwareBenchmark benchmark = MakeBenchmark(null);
-
-        (int gpuCap, _) = BundleCapResolver.Resolve(rungs, benchmark, hardware: null);
-
-        gpuCap.Should().Be(2);
-    }
-
-    [Fact]
-    public void Resolve_NoMatchingMeasurement_UsesConservativeFallback()
-    {
-        // Benchmark has data for a different codec/width than what's in the plan.
-        SpeedIndex index = IndexWith(
-            (new(VideoCodecType.H264, "h264_nvenc", 1280, "RTX 4080"), 10.0)
-        );
-        IHardwareBenchmark benchmark = MakeBenchmark(index);
-        IHardwareCapabilities hw = MakeHardware(MakeGpu());
-        BundleCapResolver.PlannedRung[] rungs = [Rung("hevc_nvenc", 1920, isGpu: true)];
-
-        (int gpuCap, _) = BundleCapResolver.Resolve(rungs, benchmark, hw);
-
-        gpuCap.Should().Be(2);
-    }
-
-    // ── Benchmark-driven caps ───────────────────────────────────────────────
-
-    [Fact]
-    public void Resolve_FastGpu_AllowsLargeBundle()
-    {
-        // 12× realtime / 1.5× target = 8 streams per bundle.
-        SpeedIndex index = IndexWith(
-            (new(VideoCodecType.H265, "hevc_nvenc", 1920, "RTX 4080"), 12.0)
-        );
-        IHardwareBenchmark benchmark = MakeBenchmark(index);
-        IHardwareCapabilities hw = MakeHardware(MakeGpu());
-        BundleCapResolver.PlannedRung[] rungs = [Rung("hevc_nvenc", 1920, isGpu: true)];
-
-        (int gpuCap, _) = BundleCapResolver.Resolve(rungs, benchmark, hw);
+        (int gpuCap, _) = BundleCapResolver.Resolve(rungs, hw);
 
         gpuCap.Should().Be(8);
     }
 
     [Fact]
-    public void Resolve_SlowGpu_StillReturnsAtLeastOne()
+    public void Resolve_LowerSessionLimit_IsRespected()
     {
-        // 1× realtime / 1.5× target = 0 → floor at 1.
-        SpeedIndex index = IndexWith(
-            (new(VideoCodecType.H265, "hevc_nvenc", 1920, "RTX 4080"), 1.0)
-        );
-        IHardwareBenchmark benchmark = MakeBenchmark(index);
-        IHardwareCapabilities hw = MakeHardware(MakeGpu());
+        // Older consumer cards cap at 3 concurrent sessions — a 5-rung ladder
+        // physically cannot open more than 3 in one ffmpeg.
+        IHardwareCapabilities hw = MakeHardware(MakeGpu(maxSessions: 3));
         BundleCapResolver.PlannedRung[] rungs = [Rung("hevc_nvenc", 1920, isGpu: true)];
 
-        (int gpuCap, _) = BundleCapResolver.Resolve(rungs, benchmark, hw);
+        (int gpuCap, _) = BundleCapResolver.Resolve(rungs, hw);
 
-        gpuCap.Should().Be(1);
+        gpuCap.Should().Be(3);
     }
 
     [Fact]
-    public void Resolve_MultipleRungs_PickedByTheSlowest()
+    public void Resolve_UnlimitedDriverCap_UsesPracticalCeiling()
     {
-        // 4K HEVC (slow) + 1080p HEVC (fast) — slowest sets the cap.
-        SpeedIndex index = IndexWith(
-            (new(VideoCodecType.H265, "hevc_nvenc", 3840, "RTX 4080"), 3.0),
-            (new(VideoCodecType.H265, "hevc_nvenc", 1920, "RTX 4080"), 12.0)
-        );
-        IHardwareBenchmark benchmark = MakeBenchmark(index);
-        IHardwareCapabilities hw = MakeHardware(MakeGpu());
-        BundleCapResolver.PlannedRung[] rungs =
-        [
-            Rung("hevc_nvenc", 3840, isGpu: true),
-            Rung("hevc_nvenc", 1920, isGpu: true),
-        ];
-
-        (int gpuCap, _) = BundleCapResolver.Resolve(rungs, benchmark, hw);
-
-        gpuCap.Should().Be(2); // floor(3.0 / 1.5) = 2
-    }
-
-    [Fact]
-    public void Resolve_DriverCapAppliesAsCeiling()
-    {
-        // Benchmark says 12 / 1.5 = 8 but driver caps at 5 → 5.
-        SpeedIndex index = IndexWith(
-            (new(VideoCodecType.H265, "hevc_nvenc", 1920, "RTX 4080"), 12.0)
-        );
-        IHardwareBenchmark benchmark = MakeBenchmark(index);
-        IHardwareCapabilities hw = MakeHardware(MakeGpu(maxSessions: 5));
-        BundleCapResolver.PlannedRung[] rungs = [Rung("hevc_nvenc", 1920, isGpu: true)];
-
-        (int gpuCap, _) = BundleCapResolver.Resolve(rungs, benchmark, hw);
-
-        gpuCap.Should().Be(5);
-    }
-
-    [Fact]
-    public void Resolve_UnlimitedDriverCap_DoesNotConstrain()
-    {
-        // Professional/datacenter cards report MaxEncoderSessions = int.MaxValue.
-        SpeedIndex index = IndexWith(
-            (new(VideoCodecType.H265, "hevc_nvenc", 1920, "L40"), 30.0)
-        );
-        IHardwareBenchmark benchmark = MakeBenchmark(index);
+        // Professional / patched-driver cards report int.MaxValue. A single
+        // bundle must not grow unbounded, but every realistic ladder still
+        // stays together under the practical ceiling.
         IHardwareCapabilities hw = MakeHardware(MakeGpu("L40", maxSessions: int.MaxValue));
         BundleCapResolver.PlannedRung[] rungs = [Rung("hevc_nvenc", 1920, isGpu: true)];
 
-        (int gpuCap, _) = BundleCapResolver.Resolve(rungs, benchmark, hw);
+        (int gpuCap, _) = BundleCapResolver.Resolve(rungs, hw);
 
-        gpuCap.Should().Be(20); // 30/1.5 = 20, no driver clamp
+        gpuCap.Should().Be(32); // UnlimitedGpuBundleCap
     }
 
     [Fact]
-    public void Resolve_CpuRungsScoredSeparately()
+    public void Resolve_NoGpu_GpuCapFallsBackToPracticalCeiling()
     {
-        SpeedIndex index = IndexWith(
-            (new(VideoCodecType.H265, "libx265", 1920, null), 6.0)
-        );
-        IHardwareBenchmark benchmark = MakeBenchmark(index);
-        IHardwareCapabilities hw = MakeHardware(MakeGpu());
+        // No GPU means no GPU rungs to chunk; the cap is irrelevant but must
+        // never be a fragmenting value.
+        IHardwareCapabilities hw = MakeHardware(gpu: null, cpuCores: 16);
         BundleCapResolver.PlannedRung[] rungs = [Rung("libx265", 1920, isGpu: false)];
 
-        (_, int cpuCap) = BundleCapResolver.Resolve(rungs, benchmark, hw);
+        (int gpuCap, _) = BundleCapResolver.Resolve(rungs, hw);
 
-        cpuCap.Should().Be(4); // floor(6/1.5)
+        gpuCap.Should().Be(32);
     }
 
     [Fact]
-    public void Resolve_GpuRungsDontAffectCpuCap()
+    public void Resolve_NullHardware_GpuCapFallsBackToPracticalCeiling()
     {
-        // CPU plan has nothing — should hit the CPU fallback (1) regardless
-        // of how good the GPU benchmark looks.
-        SpeedIndex index = IndexWith(
-            (new(VideoCodecType.H265, "hevc_nvenc", 1920, "RTX 4080"), 12.0)
-        );
-        IHardwareBenchmark benchmark = MakeBenchmark(index);
-        IHardwareCapabilities hw = MakeHardware(MakeGpu());
         BundleCapResolver.PlannedRung[] rungs = [Rung("hevc_nvenc", 1920, isGpu: true)];
 
-        (int gpuCap, int cpuCap) = BundleCapResolver.Resolve(rungs, benchmark, hw);
+        (int gpuCap, _) = BundleCapResolver.Resolve(rungs, hardware: null);
 
-        gpuCap.Should().Be(8);
+        gpuCap.Should().Be(32);
+    }
+
+    // ── The regression: a 4K + 1080p ladder must NOT fragment ───────────────
+
+    [Fact]
+    public void Resolve_MultiRung4KLadder_OnConsumerCard_DoesNotFragmentSharedDecode()
+    {
+        // The reported bug: the old throughput model returned
+        // floor(4K-hevc-realtime / 1.5) — which on a 2080 SUPER is 1 — so the
+        // 4K-HDR master and the 1080p-SDR rung derived from it were split into
+        // two ffmpegs, the 1080p re-cropping the source. The cap must be the
+        // card's 8-session limit, keeping both rungs in one shared decode.
+        IHardwareCapabilities hw = MakeHardware(MakeGpu("RTX 2080 SUPER", maxSessions: 8));
+        BundleCapResolver.PlannedRung[] rungs =
+        [
+            Rung("hevc_nvenc", 3840, isGpu: true), // 4K HDR master (slowest rung)
+            Rung("hevc_nvenc", 1920, isGpu: true), // 1080p SDR, derived
+        ];
+
+        (int gpuCap, _) = BundleCapResolver.Resolve(rungs, hw);
+
+        gpuCap
+            .Should()
+            .Be(8)
+            .And.BeGreaterThanOrEqualTo(
+                rungs.Length,
+                "both rungs share one hoisted decode/crop and must fit one bundle"
+            );
+    }
+
+    // ── CPU cap = core-bounded ──────────────────────────────────────────────
+
+    [Fact]
+    public void Resolve_CpuCap_IsCoreBounded()
+    {
+        // 32 cores / 2 minimum threads per software encode = 16.
+        IHardwareCapabilities hw = MakeHardware(MakeGpu(), cpuCores: 32);
+        BundleCapResolver.PlannedRung[] rungs = [Rung("libx265", 1920, isGpu: false)];
+
+        (_, int cpuCap) = BundleCapResolver.Resolve(rungs, hw);
+
+        cpuCap.Should().Be(16);
+    }
+
+    [Fact]
+    public void Resolve_CpuCap_SmallHost_StillAtLeastOne()
+    {
+        IHardwareCapabilities hw = MakeHardware(MakeGpu(), cpuCores: 1);
+        BundleCapResolver.PlannedRung[] rungs = [Rung("libx265", 1920, isGpu: false)];
+
+        (_, int cpuCap) = BundleCapResolver.Resolve(rungs, hw);
+
         cpuCap.Should().Be(1);
+    }
+
+    [Fact]
+    public void Resolve_CpuCap_UnknownCores_FallsBackToOne()
+    {
+        BundleCapResolver.PlannedRung[] rungs = [Rung("libx265", 1920, isGpu: false)];
+
+        (_, int cpuCap) = BundleCapResolver.Resolve(rungs, hardware: null);
+
+        cpuCap.Should().Be(1); // UnknownCpuCapFallback
     }
 
     private static BundleCapResolver.PlannedRung Rung(string encoder, int width, bool isGpu)
