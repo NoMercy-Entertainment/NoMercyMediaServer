@@ -84,6 +84,7 @@ public static class PluginManifestParser
             ManifestPath = manifestPath,
             Verified = verified,
             Trusted = trusted,
+            Capabilities = manifest.Capabilities,
         };
     }
 

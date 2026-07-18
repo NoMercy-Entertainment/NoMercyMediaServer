@@ -9,17 +9,19 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using Microsoft.Extensions.Logging;
-using NoMercy.Events;
+using NoMercy.Plugins.Abstractions;
 
-namespace NoMercy.Plugins.Abstractions;
+namespace NoMercy.Plugins.Network;
 
-public interface IPluginContext
+public static class PluginHttpClientFactory
 {
-    IEventBus EventBus { get; }
-    IServiceProvider Services { get; }
-    ILogger Logger { get; }
-    string DataFolderPath { get; }
-    IPluginConfiguration Configuration { get; }
-    HttpClient HttpClient { get; }
+    public static HttpClient Create(PluginCapabilities? capabilities)
+    {
+        IReadOnlyList<string> hosts = capabilities?.Network?.Hosts ?? [];
+        PluginNetworkAllowlistHandler handler = new(hosts)
+        {
+            InnerHandler = new SocketsHttpHandler(),
+        };
+        return new(handler);
+    }
 }

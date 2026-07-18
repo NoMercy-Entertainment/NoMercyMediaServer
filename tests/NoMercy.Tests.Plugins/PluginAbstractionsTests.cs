@@ -164,6 +164,7 @@ public class PluginAbstractionsTests
         public ILogger Logger { get; }
         public string DataFolderPath { get; }
         public IPluginConfiguration Configuration { get; }
+        public HttpClient HttpClient { get; }
 
         public TestPluginContext(IEventBus eventBus, string dataFolder = "/tmp/plugin-test")
         {
@@ -172,6 +173,7 @@ public class PluginAbstractionsTests
             Logger = NullLogger.Instance;
             DataFolderPath = dataFolder;
             Configuration = new NullPluginConfiguration();
+            HttpClient = new(new HttpClientHandler());
         }
 
         private sealed class MinimalServiceProvider : IServiceProvider

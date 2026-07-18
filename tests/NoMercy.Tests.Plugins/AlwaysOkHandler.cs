@@ -9,17 +9,17 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using Microsoft.Extensions.Logging;
-using NoMercy.Events;
+using System.Net;
 
-namespace NoMercy.Plugins.Abstractions;
+namespace NoMercy.Tests.Plugins;
 
-public interface IPluginContext
+internal sealed class AlwaysOkHandler : HttpMessageHandler
 {
-    IEventBus EventBus { get; }
-    IServiceProvider Services { get; }
-    ILogger Logger { get; }
-    string DataFolderPath { get; }
-    IPluginConfiguration Configuration { get; }
-    HttpClient HttpClient { get; }
+    protected override Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken
+    )
+    {
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+    }
 }

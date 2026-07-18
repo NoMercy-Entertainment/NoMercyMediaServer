@@ -12,6 +12,7 @@
 using Microsoft.Extensions.Logging;
 using NoMercy.Events;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Plugins.Network;
 using NoMercy.Storage;
 
 namespace NoMercy.Plugins;
@@ -23,13 +24,15 @@ public class PluginContext : IPluginContext
     public ILogger Logger { get; }
     public string DataFolderPath { get; }
     public IPluginConfiguration Configuration { get; }
+    public HttpClient HttpClient { get; }
 
     public PluginContext(
         IEventBus eventBus,
         IServiceProvider services,
         ILogger logger,
         string dataFolderPath,
-        IStorage storage
+        IStorage storage,
+        PluginCapabilities? capabilities = null
     )
     {
         EventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
@@ -37,5 +40,6 @@ public class PluginContext : IPluginContext
         Logger = logger ?? throw new ArgumentNullException(nameof(logger));
         DataFolderPath = dataFolderPath ?? throw new ArgumentNullException(nameof(dataFolderPath));
         Configuration = new PluginConfiguration(dataFolderPath, storage);
+        HttpClient = PluginHttpClientFactory.Create(capabilities);
     }
 }

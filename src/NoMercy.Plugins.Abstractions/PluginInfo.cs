@@ -25,4 +25,5 @@ public class PluginInfo
     public string? ManifestPath { get; init; }
     public bool Verified { get; init; }
     public bool Trusted { get; init; }
+    public PluginCapabilities? Capabilities { get; init; }
 }

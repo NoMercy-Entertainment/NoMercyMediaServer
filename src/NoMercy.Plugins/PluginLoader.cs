@@ -183,7 +183,8 @@ internal sealed class PluginLoader(
                             _serviceProvider,
                             _logger,
                             dataFolder,
-                            _storage
+                            _storage,
+                            manifest.Capabilities
                         );
 
                         try
