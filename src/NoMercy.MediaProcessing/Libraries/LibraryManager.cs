@@ -198,6 +198,26 @@ public class LibraryManager(
         logger.LogInformation("Scan for new items done — {ItemsFound} new items found", itemsFound);
     }
 
+    // The IStorage facade's GetFullPath joins the configured backend root:
+    // LocalStorage resolves the relative folder path against its rootPath guard,
+    // producing the real absolute scan path. Remote backends (NFS/S3/WebDAV) do
+    // not implement the facade escape-hatch and throw NotSupportedException; for
+    // those the low-level driver already embeds its export/prefix, so resolve
+    // through it. Using the driver for LOCAL would canonicalize against the
+    // process CWD (the local driver is a shared, root-less singleton) and scan a
+    // path that does not exist — the "0 subfolders" discovery bug.
+    private static string ResolveScanRoot(IStorage storage, string folderPath)
+    {
+        try
+        {
+            return storage.GetFullPath(folderPath);
+        }
+        catch (NotSupportedException)
+        {
+            return storage.Driver.GetFullPath(folderPath);
+        }
+    }
+
     private async Task<int> ScanNewVideoFolder(
         Folder folder,
         int depth,
@@ -207,12 +227,13 @@ public class LibraryManager(
         // Mount at configured root; MediaScan walks via absolute paths.
         IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
         await using MediaScan mediaScan = new(folderStorage.Driver);
-        // Resolve through the driver, not the IStorage facade: the facade's
-        // GetFullPath is a LocalStorage-only escape hatch that throws on every
-        // remote backend, so a facade call here killed every rescan of an
-        // NFS / SMB / S3 / WebDAV library. The driver resolves the path within
-        // its own backend, exactly as MediaScan.Process does internally.
-        string scanRoot = folderStorage.Driver.GetFullPath(folder.Path);
+        // Resolve the scan root through the facade so a LOCAL folder joins its
+        // configured driver rootPath. The local driver is a shared, root-less
+        // singleton (the root lives in the facade's guard), so driver.GetFullPath
+        // canonicalizes a relative folder path against the process CWD -> a path
+        // that does not exist -> "0 subfolders". ResolveScanRoot falls back to the
+        // driver only for remote backends, whose driver embeds its own export.
+        string scanRoot = ResolveScanRoot(folderStorage, folder.Path);
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan.Process(scanRoot, depth);
 
         List<MediaFolderExtend> newFolders = rootFolders
@@ -263,12 +284,13 @@ public class LibraryManager(
         // Mount at configured root; MediaScan walks via absolute paths.
         IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
         await using MediaScan mediaScan = new(folderStorage.Driver);
-        // Resolve through the driver, not the IStorage facade: the facade's
-        // GetFullPath is a LocalStorage-only escape hatch that throws on every
-        // remote backend, so a facade call here killed every rescan of an
-        // NFS / SMB / S3 / WebDAV library. The driver resolves the path within
-        // its own backend, exactly as MediaScan.Process does internally.
-        string scanRoot = folderStorage.Driver.GetFullPath(folder.Path);
+        // Resolve the scan root through the facade so a LOCAL folder joins its
+        // configured driver rootPath. The local driver is a shared, root-less
+        // singleton (the root lives in the facade's guard), so driver.GetFullPath
+        // canonicalizes a relative folder path against the process CWD -> a path
+        // that does not exist -> "0 subfolders". ResolveScanRoot falls back to the
+        // driver only for remote backends, whose driver embeds its own export.
+        string scanRoot = ResolveScanRoot(folderStorage, folder.Path);
         List<MediaFolderExtend> rootFolders = (
             await mediaScan.DisableRegexFilter().Process(scanRoot, depth)
         )
@@ -319,12 +341,13 @@ public class LibraryManager(
         // Mount at configured root; MediaScan walks via absolute paths.
         IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
         await using MediaScan mediaScan = new(folderStorage.Driver);
-        // Resolve through the driver, not the IStorage facade: the facade's
-        // GetFullPath is a LocalStorage-only escape hatch that throws on every
-        // remote backend, so a facade call here killed every rescan of an
-        // NFS / SMB / S3 / WebDAV library. The driver resolves the path within
-        // its own backend, exactly as MediaScan.Process does internally.
-        string scanRoot = folderStorage.Driver.GetFullPath(folder.Path);
+        // Resolve the scan root through the facade so a LOCAL folder joins its
+        // configured driver rootPath. The local driver is a shared, root-less
+        // singleton (the root lives in the facade's guard), so driver.GetFullPath
+        // canonicalizes a relative folder path against the process CWD -> a path
+        // that does not exist -> "0 subfolders". ResolveScanRoot falls back to the
+        // driver only for remote backends, whose driver embeds its own export.
+        string scanRoot = ResolveScanRoot(folderStorage, folder.Path);
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan.Process(scanRoot, depth);
 
         IEventBus? bus =
@@ -363,12 +386,13 @@ public class LibraryManager(
         // Mount at configured root; MediaScan walks via absolute paths.
         IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
         await using MediaScan mediaScan = new(folderStorage.Driver);
-        // Resolve through the driver, not the IStorage facade: the facade's
-        // GetFullPath is a LocalStorage-only escape hatch that throws on every
-        // remote backend, so a facade call here killed every rescan of an
-        // NFS / SMB / S3 / WebDAV library. The driver resolves the path within
-        // its own backend, exactly as MediaScan.Process does internally.
-        string scanRoot = folderStorage.Driver.GetFullPath(folder.Path);
+        // Resolve the scan root through the facade so a LOCAL folder joins its
+        // configured driver rootPath. The local driver is a shared, root-less
+        // singleton (the root lives in the facade's guard), so driver.GetFullPath
+        // canonicalizes a relative folder path against the process CWD -> a path
+        // that does not exist -> "0 subfolders". ResolveScanRoot falls back to the
+        // driver only for remote backends, whose driver embeds its own export.
+        string scanRoot = ResolveScanRoot(folderStorage, folder.Path);
         List<MediaFolderExtend> rootFolders = (
             await mediaScan.DisableRegexFilter().Process(scanRoot, depth)
         )
