@@ -48,7 +48,7 @@ public class LocalStorageUnitTests
             driver.Setup(b => b.ResolveLinkTarget(It.IsAny<string>())).Returns((string?)null);
             driver
                 .Setup(b =>
-                    b.EnumerateFileSystemEntries(
+                    b.EnumerateEntries(
                         It.IsAny<string>(),
                         It.IsAny<string>(),
                         It.IsAny<SearchOption>()
@@ -56,7 +56,6 @@ public class LocalStorageUnitTests
                 )
                 .Returns([]);
             driver.Setup(b => b.DirectoryExists(It.IsAny<string>())).Returns(true);
-            driver.Setup(b => b.GetLastWriteTimeUtc(It.IsAny<string>())).Returns(DateTime.UtcNow);
 
             StoragePathGuard guard = new([root], driver.Object);
             LocalStorage storage = new(driver.Object, guard);
@@ -66,7 +65,7 @@ public class LocalStorageUnitTests
             entries.Should().NotBeNull();
             driver.Verify(
                 b =>
-                    b.EnumerateFileSystemEntries(
+                    b.EnumerateEntries(
                         It.Is<string>(p => p.StartsWith(root, StringComparison.OrdinalIgnoreCase)),
                         It.IsAny<string>(),
                         It.IsAny<SearchOption>()
@@ -257,12 +256,10 @@ public class LocalStorageUnitTests
                         It.IsAny<SearchOption>()
                     )
                 )
-                .Returns(
-                    [
-                        new(fileA, false, 99, DateTime.UtcNow),
-                        new(subDir, true, 0, DateTime.UtcNow),
-                    ]
-                );
+                .Returns([
+                    new(fileA, false, 99, DateTime.UtcNow),
+                    new(subDir, true, 0, DateTime.UtcNow),
+                ]);
 
             StoragePathGuard guard = new([root], driver.Object);
             LocalStorage storage = new(driver.Object, guard);

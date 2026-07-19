@@ -96,7 +96,7 @@ public class IStorageFacadeTests
 			Mock<IStorageDriver> driver = NewDriver();
 			driver
 				.Setup(d =>
-					d.EnumerateFileSystemEntries(
+					d.EnumerateEntries(
 						It.IsAny<string>(),
 						It.IsAny<string>(),
 						It.IsAny<SearchOption>()
@@ -104,8 +104,6 @@ public class IStorageFacadeTests
 				)
 				.Returns([]);
 			driver.Setup(d => d.DirectoryExists(It.IsAny<string>())).Returns(true);
-			driver.Setup(d => d.GetLastWriteTimeUtc(It.IsAny<string>()))
-				.Returns(DateTime.UtcNow);
 
 			StoragePathGuard guard = new([root], driver.Object);
 			IStorage storage = new LocalStorage(driver.Object, guard);
@@ -117,7 +115,7 @@ public class IStorageFacadeTests
 				.NotBeNull("empty path should not throw");
 			driver.Verify(
 				d =>
-					d.EnumerateFileSystemEntries(
+					d.EnumerateEntries(
 						It.Is<string>(p => p.StartsWith(root, StringComparison.OrdinalIgnoreCase)),
 						It.IsAny<string>(),
 						It.IsAny<SearchOption>()
@@ -610,19 +608,18 @@ public class IStorageFacadeTests
 
 		driver
 			.Setup(d =>
-				d.EnumerateFileSystemEntries(
+				d.EnumerateEntries(
 					It.IsAny<string>(),
 					It.IsAny<string>(),
 					It.IsAny<SearchOption>()
 				)
 			)
-			.Returns([absoluteFile, absoluteDir]);
-		driver.Setup(d => d.DirectoryExists(It.Is<string>(p => p.EndsWith("childdir"))))
-			.Returns(true);
-		driver.Setup(d => d.DirectoryExists(It.IsAny<string>())).Returns(false);
-		driver.Setup(d => d.GetFileSize(It.IsAny<string>())).Returns(42L);
-		driver.Setup(d => d.GetLastWriteTimeUtc(It.IsAny<string>()))
-			.Returns(DateTime.UtcNow);
+			.Returns(
+				[
+					new StorageEntryInfo(absoluteFile, false, 42L, DateTime.UtcNow),
+					new StorageEntryInfo(absoluteDir, true, 0L, DateTime.UtcNow),
+				]
+			);
 
 		StoragePathGuard guard = new([root], driver.Object);
 		IStorage storage = new LocalStorage(driver.Object, guard);
@@ -654,17 +651,15 @@ public class IStorageFacadeTests
 		Mock<IStorageDriver> driver = NewDriver();
 		driver
 			.Setup(d =>
-				d.EnumerateFileSystemEntries(
+				d.EnumerateEntries(
 					It.IsAny<string>(),
 					"*.mkv",
 					SearchOption.TopDirectoryOnly
 				)
 			)
-			.Returns([Path.Combine(root, "movie.mkv")]);
-		driver.Setup(d => d.DirectoryExists(It.IsAny<string>())).Returns(false);
-		driver.Setup(d => d.GetFileSize(It.IsAny<string>())).Returns(1024L);
-		driver.Setup(d => d.GetLastWriteTimeUtc(It.IsAny<string>()))
-			.Returns(DateTime.UtcNow);
+			.Returns(
+				[new StorageEntryInfo(Path.Combine(root, "movie.mkv"), false, 1024L, DateTime.UtcNow)]
+			);
 
 		StoragePathGuard guard = new([root], driver.Object);
 		IStorage storage = new LocalStorage(driver.Object, guard);
@@ -677,7 +672,7 @@ public class IStorageFacadeTests
 			.EndWith(".mkv", "only matching files must be returned");
 		driver.Verify(
 			d =>
-				d.EnumerateFileSystemEntries(
+				d.EnumerateEntries(
 					It.IsAny<string>(),
 					"*.mkv",
 					SearchOption.TopDirectoryOnly
@@ -695,7 +690,7 @@ public class IStorageFacadeTests
 		Mock<IStorageDriver> driver = NewDriver();
 		driver
 			.Setup(d =>
-				d.EnumerateFileSystemEntries(
+				d.EnumerateEntries(
 					It.IsAny<string>(),
 					It.IsAny<string>(),
 					SearchOption.AllDirectories
@@ -703,15 +698,21 @@ public class IStorageFacadeTests
 			)
 			.Returns(
 				[
-					Path.Combine(root, "a.txt"),
-					Path.Combine(root, "deep", "b.txt"),
-					Path.Combine(root, "deep", "deeper", "c.txt"),
+					new StorageEntryInfo(Path.Combine(root, "a.txt"), false, 100L, DateTime.UtcNow),
+					new StorageEntryInfo(
+						Path.Combine(root, "deep", "b.txt"),
+						false,
+						100L,
+						DateTime.UtcNow
+					),
+					new StorageEntryInfo(
+						Path.Combine(root, "deep", "deeper", "c.txt"),
+						false,
+						100L,
+						DateTime.UtcNow
+					),
 				]
 			);
-		driver.Setup(d => d.DirectoryExists(It.IsAny<string>())).Returns(false);
-		driver.Setup(d => d.GetFileSize(It.IsAny<string>())).Returns(100L);
-		driver.Setup(d => d.GetLastWriteTimeUtc(It.IsAny<string>()))
-			.Returns(DateTime.UtcNow);
 
 		StoragePathGuard guard = new([root], driver.Object);
 		IStorage storage = new LocalStorage(driver.Object, guard);
@@ -722,7 +723,7 @@ public class IStorageFacadeTests
 			.HaveCount(3, "all files in the tree must be returned");
 		driver.Verify(
 			d =>
-				d.EnumerateFileSystemEntries(
+				d.EnumerateEntries(
 					It.IsAny<string>(),
 					It.IsAny<string>(),
 					SearchOption.AllDirectories

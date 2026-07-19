@@ -276,20 +276,22 @@ public sealed class LocalStorage : IStorage
         string effectivePattern = string.IsNullOrEmpty(pattern) ? "*" : pattern;
 
         List<StorageEntry> entries = [];
-        foreach (string entry in _driver.EnumerateFileSystemEntries(safe, effectivePattern, option))
-        {
-            bool isDir = _driver.DirectoryExists(entry);
-            long size = isDir ? 0L : _driver.GetFileSize(entry);
-            DateTime utc = _driver.GetLastWriteTimeUtc(entry);
+        // Single-pass metadata via the driver's readdir enumeration — size,
+        // last-write and is-directory ride in on the OS directory listing, the
+        // same path ListAsync already takes. The previous
+        // EnumerateFileSystemEntries loop issued three extra stat calls per entry
+        // (DirectoryExists + GetFileSize + GetLastWriteTimeUtc); over a network
+        // mount that turned one listing of a rendition dir into hundreds of
+        // round-trips, and a library scan lists every rendition dir of every file.
+        foreach (StorageEntryInfo info in _driver.EnumerateEntries(safe, effectivePattern, option))
             entries.Add(
                 new(
-                    ToScopeRelative(entry),
-                    isDir,
-                    size,
-                    new(utc, TimeSpan.Zero)
+                    ToScopeRelative(info.Path),
+                    info.IsDirectory,
+                    info.Size,
+                    new(info.LastWriteUtc, TimeSpan.Zero)
                 )
             );
-        }
         return entries;
     }
 

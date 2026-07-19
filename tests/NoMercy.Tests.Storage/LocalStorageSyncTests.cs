@@ -159,17 +159,12 @@ public class LocalStorageSyncTests
 
         driver
             .Setup(b =>
-                b.EnumerateFileSystemEntries(
-                    It.IsAny<string>(),
-                    It.IsAny<string>(),
-                    It.IsAny<SearchOption>()
-                )
+                b.EnumerateEntries(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<SearchOption>())
             )
-            .Returns([fileA, subDir]);
-        driver.Setup(b => b.DirectoryExists(fileA)).Returns(false);
-        driver.Setup(b => b.DirectoryExists(subDir)).Returns(true);
-        driver.Setup(b => b.GetFileSize(fileA)).Returns(42);
-        driver.Setup(b => b.GetLastWriteTimeUtc(It.IsAny<string>())).Returns(DateTime.UtcNow);
+            .Returns([
+                new StorageEntryInfo(fileA, false, 42, DateTime.UtcNow),
+                new StorageEntryInfo(subDir, true, 0, DateTime.UtcNow),
+            ]);
 
         IReadOnlyList<StorageEntry> entries = storage.List(root, "*", recursive: false);
 
