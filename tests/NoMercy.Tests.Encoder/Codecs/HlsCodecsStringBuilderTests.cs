@@ -262,4 +262,113 @@ public class HlsCodecsStringBuilderTests
         HlsCodecsStringBuilder.AudioCodecString("OPUS", false).Should().Be("opus");
         HlsCodecsStringBuilder.AudioCodecString("EAC3", false).Should().Be("ec-3");
     }
+
+    // ── Resolution-derived level floor ──────────────────────────────────────
+    //
+    // The Punisher master advertised hvc1.2.4.L120.B0 (HEVC level 4.0) for the
+    // 4K HDR rung — a level that legally tops out at 1080p. The level came
+    // straight from the preset (or its null → L4.0 default) and was never
+    // checked against the resolution. A player validating the codec string can
+    // reject the variant. The advertised level must be clamped UP to the
+    // minimum the resolution + frame rate actually require.
+
+    [Fact]
+    public void ForHevc_4KHdr_ClampsLevelUpFromPresetDefault()
+    {
+        // 3840×2160 @ 23.976 needs ≥ L5.0 (150). A preset saying "4.0" (120)
+        // or nothing must NOT win — the emitted level rises to the 4K floor.
+        HlsCodecsStringBuilder
+            .ForHevc("main10", "4.0", tenBit: true, width: 3840, height: 2160, frameRate: 23.976)
+            .Should()
+            .Be("hvc1.2.4.L150.B0");
+
+        HlsCodecsStringBuilder
+            .ForHevc("main10", null, tenBit: true, width: 3840, height: 2160, frameRate: 23.976)
+            .Should()
+            .Be("hvc1.2.4.L150.B0");
+    }
+
+    [Fact]
+    public void ForHevc_4KHighFrameRate_NeedsLevel5_1()
+    {
+        // 3840×2160 @ 60 exceeds L5.0's sample-rate ceiling → L5.1 (153).
+        HlsCodecsStringBuilder
+            .ForHevc("main10", "4.0", tenBit: true, width: 3840, height: 2160, frameRate: 60)
+            .Should()
+            .Be("hvc1.2.4.L153.B0");
+    }
+
+    [Fact]
+    public void ForHevc_1080p_KeepsPresetLevelWhenResolutionAllows()
+    {
+        // 1080p genuinely fits L4.0 — the clamp is a floor, not an override, so
+        // the correct low level is preserved.
+        HlsCodecsStringBuilder
+            .ForHevc("main10", "4.0", tenBit: true, width: 1920, height: 1080, frameRate: 23.976)
+            .Should()
+            .Be("hvc1.2.4.L120.B0");
+    }
+
+    [Fact]
+    public void ForHevc_PresetAboveFloor_IsNotLowered()
+    {
+        // A preset that already over-states the level (5.2 on 1080p) is kept —
+        // the clamp only raises, never lowers.
+        HlsCodecsStringBuilder
+            .ForHevc("main10", "5.2", tenBit: true, width: 1920, height: 1080, frameRate: 23.976)
+            .Should()
+            .Be("hvc1.2.4.L156.B0");
+    }
+
+    [Fact]
+    public void ForH264_4K_ClampsToLevel5_1()
+    {
+        // 3840×2160 H.264 needs ≥ L5.1 (0x33) — L4.0 cannot carry the frame
+        // size. Preset "4.0" must be raised.
+        HlsCodecsStringBuilder
+            .ForH264("high", "4.0", width: 3840, height: 2160, frameRate: 23.976)
+            .Should()
+            .Be("avc1.640033");
+    }
+
+    [Fact]
+    public void ForAv1_4K8Bit_ClampsToLevel5_0()
+    {
+        // 3840×2160 @ 23.976 8-bit AV1 needs level index 12 (5.0). A preset
+        // "4.0" (index 8) under-states it.
+        HlsCodecsStringBuilder
+            .ForAv1("4.0", tenBit: false, width: 3840, height: 2160, frameRate: 23.976)
+            .Should()
+            .Be("av01.0.12M.08");
+    }
+
+    [Fact]
+    public void VideoCodecString_4KHevc_EmitsResolutionCorrectLevel()
+    {
+        // End-to-end through the classifier: the exact regression the Punisher
+        // master hit — hevc_nvenc, 4K, preset level 4.0 → must NOT be L120.
+        HlsCodecsStringBuilder
+            .VideoCodecString(
+                "hevc_nvenc",
+                "main10",
+                "4.0",
+                tenBit: true,
+                width: 3840,
+                height: 2160,
+                frameRate: 23.976
+            )
+            .Should()
+            .Be("hvc1.2.4.L150.B0");
+    }
+
+    [Fact]
+    public void VideoCodecString_NoResolution_LeavesLevelUnclamped()
+    {
+        // Callers that don't pass a resolution (width/height default 0) keep the
+        // pre-clamp behavior — the floor only applies with real dimensions.
+        HlsCodecsStringBuilder
+            .VideoCodecString("hevc_nvenc", "main10", "4.0", tenBit: true)
+            .Should()
+            .Be("hvc1.2.4.L120.B0");
+    }
 }

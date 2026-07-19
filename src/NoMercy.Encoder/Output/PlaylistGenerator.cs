@@ -300,7 +300,10 @@ public class PlaylistGenerator : IPlaylistGenerator
             video.EncoderName,
             video.Profile,
             video.Level,
-            video.TenBit
+            video.TenBit,
+            video.Width,
+            video.Height,
+            video.FrameRate
         );
 
     private static string? GetAudioCodecTag(AudioOutputPlan audio) =>
