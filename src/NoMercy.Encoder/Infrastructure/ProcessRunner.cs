@@ -12,6 +12,7 @@
 using System.Diagnostics;
 using System.Text;
 using Microsoft.Extensions.Logging;
+using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Encoder.Infrastructure;
 
@@ -228,6 +229,12 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         }
 
         process.Start();
+
+        // Bind the child to the server's kill-on-close job object so a hard
+        // crash/kill of the server (where the graceful cancellation path never
+        // runs) can't leave an orphaned ffmpeg. No-op fallback off Windows.
+        Shell.ProcessHelper.AttachToParentLifetime(process);
+
         onProcessStarted?.Invoke(process.Id);
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
