@@ -303,6 +303,137 @@ public class EncodeFidelityOracleTests
         violations.Should().ContainSingle().Which.Should().Contain("chapters-dropped");
     }
 
+    // ── SDR colour consistency ─────────────────────────────────────────────────
+
+    [Fact]
+    public void Sdr_WithResidualPqTransfer_IsFlagged()
+    {
+        // bt709 primaries but still tagged PQ — the colour re-stamp after tonemap
+        // was missed.
+        ProbedMedia output = Media(
+            streams: [VideoStream(transfer: "smpte2084", primaries: "bt709", space: "bt709")],
+            sideData: []
+        );
+
+        List<string> violations = [];
+        EncodeFidelityOracle.CheckSdrColorConsistency(output, violations);
+
+        violations.Should().Contain(v => v.Contains("SDR-residual-hdr-transfer"));
+    }
+
+    [Fact]
+    public void Sdr_CleanBt709_IsClean()
+    {
+        ProbedMedia output = Media(
+            streams:
+            [
+                VideoStream(
+                    transfer: "bt709",
+                    primaries: "bt709",
+                    space: "bt709",
+                    pixFmt: "yuv420p"
+                ),
+            ],
+            sideData: []
+        );
+
+        List<string> violations = [];
+        EncodeFidelityOracle.CheckSdrColorConsistency(output, violations);
+
+        violations.Should().BeEmpty();
+    }
+
+    // ── A/V start alignment ─────────────────────────────────────────────────────
+
+    [Fact]
+    public void AvSync_LargeStartDelta_IsFlagged()
+    {
+        JObject video = VideoStream();
+        video["start_time"] = "0.000";
+        JObject audio = AudioStream();
+        audio["start_time"] = "0.400"; // 400ms ahead → lip-sync drift
+
+        ProbedMedia output = Media(streams: [video, audio]);
+
+        List<string> violations = [];
+        EncodeFidelityOracle.CheckAvStartAlignment(output, violations);
+
+        violations.Should().Contain(v => v.Contains("av-sync-drift"));
+    }
+
+    [Fact]
+    public void AvSync_Aligned_IsClean()
+    {
+        JObject video = VideoStream();
+        video["start_time"] = "0.000";
+        JObject audio = AudioStream();
+        audio["start_time"] = "0.010";
+
+        ProbedMedia output = Media(streams: [video, audio]);
+
+        List<string> violations = [];
+        EncodeFidelityOracle.CheckAvStartAlignment(output, violations);
+
+        violations.Should().BeEmpty();
+    }
+
+    // ── anamorphic + rotation ───────────────────────────────────────────────────
+
+    [Fact]
+    public void Anamorphic_DarCollapsed_IsFlagged()
+    {
+        JObject src = VideoStream();
+        src["display_aspect_ratio"] = "16:9";
+        JObject outp = VideoStream();
+        outp["display_aspect_ratio"] = "4:3"; // squished
+
+        List<string> violations = [];
+        EncodeFidelityOracle.CheckAnamorphicPreserved(
+            Media(streams: [src]),
+            Media(streams: [outp]),
+            violations
+        );
+
+        violations.Should().Contain(v => v.Contains("anamorphic-dar-lost"));
+    }
+
+    [Fact]
+    public void Rotation_Lost_IsFlagged()
+    {
+        JObject srcV = VideoStream();
+        srcV["width"] = 1080;
+        srcV["height"] = 1920;
+        ProbedMedia source = new()
+        {
+            Path = "s",
+            Streams = [srcV],
+            Format = new JObject(),
+            Chapters = [],
+            FirstFrameSideData =
+            [
+                new JObject { ["side_data_type"] = "Display Matrix", ["rotation"] = "90" },
+            ],
+        };
+
+        // Output: same dims, no rotation matrix, dims NOT swapped → rotation lost.
+        JObject outV = VideoStream();
+        outV["width"] = 1080;
+        outV["height"] = 1920;
+        ProbedMedia output = new()
+        {
+            Path = "o",
+            Streams = [outV],
+            Format = new JObject(),
+            Chapters = [],
+            FirstFrameSideData = [],
+        };
+
+        List<string> violations = [];
+        EncodeFidelityOracle.CheckRotationPreserved(source, output, violations);
+
+        violations.Should().Contain(v => v.Contains("rotation-lost-or-doubled"));
+    }
+
     // ── the full suite on a clean vs corrupt output ────────────────────────────
 
     [Fact]

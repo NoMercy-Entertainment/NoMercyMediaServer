@@ -273,6 +273,137 @@ public static partial class EncodeFidelityOracle
             );
     }
 
+    // ── Output-only: SDR must not carry a residual HDR transfer ────────────────
+
+    /// <summary>
+    /// A tone-mapped SDR output must NOT keep an HDR transfer (smpte2084/HLG) or
+    /// mastering-display side-data — a scale/tonemap chain that fails to re-stamp
+    /// the colour tags leaves the stream flagged HDR while the pixels are SDR,
+    /// which players render crushed/washed. HLG output must carry arib-std-b67 +
+    /// bt2020 (not PQ).
+    /// </summary>
+    public static void CheckSdrColorConsistency(ProbedMedia output, List<string> violations)
+    {
+        JObject? video = output.PrimaryVideo;
+        if (video is null)
+            return;
+
+        string transfer = ((string?)video["color_transfer"] ?? string.Empty).ToLowerInvariant();
+        string primaries = ((string?)video["color_primaries"] ?? string.Empty).ToLowerInvariant();
+
+        // Heuristic for "this is meant to be SDR": BT.709 primaries. If a BT.709
+        // stream still advertises a PQ/HLG transfer, the colour re-stamp was missed.
+        bool looksSdr = primaries == "bt709";
+        if (looksSdr && transfer is "smpte2084" or "arib-std-b67")
+            violations.Add(
+                $"SDR-residual-hdr-transfer: bt709 primaries but color_transfer='{transfer}' — "
+                    + "an SDR output must not keep an HDR transfer characteristic."
+            );
+        if (looksSdr && output.HasSideData("Mastering display metadata"))
+            violations.Add(
+                "SDR-residual-mastering-display: an SDR (bt709) output still carries HDR "
+                    + "mastering-display side-data."
+            );
+    }
+
+    // ── Source→output: A/V start alignment (edit-list / priming drift) ─────────
+
+    /// <summary>
+    /// The primary video and audio must start at (near) the same time. A large
+    /// per-stream start_time delta — an unhandled encoder-priming edit list, or
+    /// <c>-ss</c> before <c>-i</c> — shows as lip-sync drift on players that
+    /// ignore edit lists.
+    /// </summary>
+    public static void CheckAvStartAlignment(ProbedMedia output, List<string> violations)
+    {
+        JObject? video = output.PrimaryVideo;
+        JObject? audio = output.AudioStreams.FirstOrDefault();
+        if (video is null || audio is null)
+            return;
+
+        double vStart = StartTime(video);
+        double aStart = StartTime(audio);
+
+        if (Math.Abs(vStart) > 0.5)
+            violations.Add(
+                $"av-video-start-offset: primary video start_time={vStart:F3}s (expected ≈0)."
+            );
+        if (Math.Abs(aStart) > 0.5)
+            violations.Add(
+                $"av-audio-start-offset: primary audio start_time={aStart:F3}s (expected ≈0)."
+            );
+        if (Math.Abs(vStart - aStart) > 0.1)
+            violations.Add(
+                $"av-sync-drift: video/audio start_time differ by {Math.Abs(vStart - aStart):F3}s "
+                    + "(>100ms → lip-sync drift on edit-list-ignoring players)."
+            );
+    }
+
+    // ── Source→output: anamorphic SAR/DAR + rotation preservation ──────────────
+
+    /// <summary>
+    /// A non-square-pixel (anamorphic) source must not be collapsed to 1:1 — that
+    /// squishes/stretches the picture. When the source SAR ≠ 1:1, the output must
+    /// preserve the display aspect ratio (via SAR carried, or pixels scaled to the
+    /// display geometry with SAR reset to 1:1 — either keeps DAR intact).
+    /// </summary>
+    public static void CheckAnamorphicPreserved(
+        ProbedMedia source,
+        ProbedMedia output,
+        List<string> violations
+    )
+    {
+        JObject? src = source.PrimaryVideo;
+        JObject? outp = output.PrimaryVideo;
+        if (src is null || outp is null)
+            return;
+
+        string srcDar = (string?)src["display_aspect_ratio"] ?? string.Empty;
+        string outDar = (string?)outp["display_aspect_ratio"] ?? string.Empty;
+        if (srcDar.Length == 0 || srcDar is "0:1" or "N/A")
+            return; // source DAR unknown — nothing to preserve
+
+        // Compare DAR as a ratio within tolerance (16:9 == 1.778).
+        double srcRatio = Ratio(srcDar);
+        double outRatio = Ratio(outDar);
+        if (srcRatio > 0 && (outRatio <= 0 || Math.Abs(srcRatio - outRatio) / srcRatio > 0.02))
+            violations.Add(
+                $"anamorphic-dar-lost: source display_aspect_ratio='{srcDar}' but output='{outDar}' "
+                    + "— anamorphic geometry collapsed (SAR reset to 1:1 without a compensating scale)."
+            );
+    }
+
+    /// <summary>
+    /// Rotation must survive: a source display-matrix rotation is either preserved
+    /// (remux) or physically applied with the matrix cleared (transcode+transpose)
+    /// — never lost (plays sideways) or left in place after the pixels were already
+    /// rotated (double rotation).
+    /// </summary>
+    public static void CheckRotationPreserved(
+        ProbedMedia source,
+        ProbedMedia output,
+        List<string> violations
+    )
+    {
+        int srcRot = Rotation(source);
+        if (srcRot == 0)
+            return;
+
+        int outRot = Rotation(output);
+        bool dimsSwapped = DimsSwapped(source.PrimaryVideo, output.PrimaryVideo);
+
+        // Preserved (remux): output keeps the same rotation. Applied (transcode):
+        // output rotation is 0 AND width/height swapped for 90/270. Anything else
+        // = lost or double-applied.
+        bool preserved = outRot == srcRot;
+        bool applied = outRot == 0 && (srcRot % 180 == 0 || dimsSwapped);
+        if (!preserved && !applied)
+            violations.Add(
+                $"rotation-lost-or-doubled: source rotation={srcRot}° but output rotation={outRot}° "
+                    + $"(dims swapped={dimsSwapped}) — plays sideways or double-rotated."
+            );
+    }
+
     // ── Convenience: run the full suite ───────────────────────────────────────
 
     /// <summary>
@@ -288,13 +419,76 @@ public static partial class EncodeFidelityOracle
         List<string> violations = [];
         CheckDolbyVisionTagCoherence(output, violations);
         CheckHdr10Signaling(output, violations);
+        CheckSdrColorConsistency(output, violations);
         CheckHevcFmp4Tag(output, violations);
+        CheckAvStartAlignment(output, violations);
         CheckAudioFidelity(source, output, violations);
         CheckSubtitleFidelity(source, output, violations);
         CheckChaptersPreserved(source, output, violations);
+        CheckAnamorphicPreserved(source, output, violations);
+        CheckRotationPreserved(source, output, violations);
         if (masterPlaylistText is not null)
             CheckMasterPlaylist(masterPlaylistText, violations);
         return violations;
+    }
+
+    private static double StartTime(JObject stream) =>
+        double.TryParse(
+            (string?)stream["start_time"],
+            System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out double v
+        )
+            ? v
+            : 0.0;
+
+    private static double Ratio(string aspect)
+    {
+        string[] parts = aspect.Split(':');
+        if (
+            parts.Length == 2
+            && double.TryParse(
+                parts[0],
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out double w
+            )
+            && double.TryParse(
+                parts[1],
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out double h
+            )
+            && h != 0
+        )
+            return w / h;
+        return 0;
+    }
+
+    private static int Rotation(ProbedMedia media)
+    {
+        // ffmpeg exposes rotation on the Display Matrix side-data (negative =
+        // clockwise); normalise to 0..359.
+        JObject? matrix = media.SideData("Display Matrix");
+        if (matrix?["rotation"] is not null && int.TryParse((string?)matrix["rotation"], out int r))
+            return ((r % 360) + 360) % 360;
+
+        // Legacy tag fallback.
+        string? tag = (string?)media.PrimaryVideo?["tags"]?["rotate"];
+        if (int.TryParse(tag, out int t))
+            return ((t % 360) + 360) % 360;
+        return 0;
+    }
+
+    private static bool DimsSwapped(JObject? a, JObject? b)
+    {
+        if (a is null || b is null)
+            return false;
+        int aw = (int?)a["width"] ?? 0;
+        int ah = (int?)a["height"] ?? 0;
+        int bw = (int?)b["width"] ?? 0;
+        int bh = (int?)b["height"] ?? 0;
+        return aw == bh && ah == bw && aw != ah;
     }
 
     private static string Lang(JObject stream) => (string?)stream["tags"]?["language"] ?? "und";
