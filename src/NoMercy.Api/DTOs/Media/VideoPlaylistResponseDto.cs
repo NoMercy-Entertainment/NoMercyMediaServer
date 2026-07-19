@@ -191,6 +191,11 @@ public class VideoPlaylistResponseDto
             ? [new() { File = $"{baseFolder}/fonts.json", Kind = "fonts" }]
             : [];
 
+        List<VideoTrack> chaptersTrack = videoFile.Metadata?.ChapterFile
+            is { FileSize: > 0 } chaptersFile
+            ? [new() { File = $"{baseFolder}{chaptersFile.FileName}", Kind = "chapters" }]
+            : [];
+
         Tracks = videoFile
             .Tracks.Select(t => new VideoTrack
             {
@@ -201,6 +206,7 @@ public class VideoPlaylistResponseDto
             })
             .Concat(subs.TextTracks)
             .Concat(fontsTrack)
+            .Concat(chaptersTrack)
             .OrderBy(track => track.Language)
             .ToList();
 
@@ -306,6 +312,11 @@ public class VideoPlaylistResponseDto
             ? [new() { File = $"{baseFolder}/fonts.json", Kind = "fonts" }]
             : [];
 
+        List<VideoTrack> chaptersTrack = videoFile.Metadata?.ChapterFile
+            is { FileSize: > 0 } chaptersFile
+            ? [new() { File = $"{baseFolder}{chaptersFile.FileName}", Kind = "chapters" }]
+            : [];
+
         Tracks = videoFile
             .Tracks.Select(t => new VideoTrack
             {
@@ -316,6 +327,7 @@ public class VideoPlaylistResponseDto
             })
             .Concat(subs.TextTracks)
             .Concat(fontsTrack)
+            .Concat(chaptersTrack)
             .OrderBy(track => track.Language)
             .ToList();
 
