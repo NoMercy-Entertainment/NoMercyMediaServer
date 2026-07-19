@@ -105,6 +105,23 @@ public class StoragePathGuardTests
     }
 
     [Fact]
+    public void Enforced_accepts_path_under_a_bare_drive_or_volume_root()
+    {
+        // A driver rooted at a bare drive/volume root ("G:\" on Windows, "/" on
+        // Unix) already ends in a separator. IsUnderRoot must still accept paths
+        // under it: the earlier code appended a second separator ("G:\\") which
+        // no real child path starts with, so every path on the drive was wrongly
+        // rejected as "not under any allowed root".
+        string driveRoot = Path.GetPathRoot(Path.GetFullPath(Path.GetTempPath()))!;
+        StoragePathGuard guard = new([driveRoot], NewBackend().Object);
+
+        string inner = Path.Combine(driveRoot, "nm-drive-root-child", "file.mkv");
+        string result = guard.Validate(inner);
+
+        result.Should().Be(Path.GetFullPath(inner));
+    }
+
+    [Fact]
     public void Enforced_rejects_path_outside_root()
     {
         string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-guard-root-deny"));
