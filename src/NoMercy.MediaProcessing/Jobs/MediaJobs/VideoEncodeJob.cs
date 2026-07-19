@@ -1096,6 +1096,9 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         IEncodingOrchestrator orchestrator = _encodingOrchestrator!;
 
         EncodingRequest finalizeRequest;
+        // Set below only in the multi-preset branch (comes for free there);
+        // see ReconcileMasterPlaylistAsync for why/how it's used.
+        OutputPlan? reconciliationPlan = null;
         await using (MediaContext profileLookup = new())
         {
             if (state.PresetIds is { Length: > 1 } presetIds)
@@ -1157,6 +1160,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                 {
                     Options = new(FinalizeOnly: true, PrecomputedPlan: mergedPlan),
                 };
+                reconciliationPlan = mergedPlan;
             }
             else
             {
@@ -1206,6 +1210,15 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         {
             Log.LogInformation(
                 "[VideoEncodeJob] Finalize: bundles for GroupTag={GroupTag} finalized and published themselves; continuing to post-encode.",
+                state.GroupTag
+            );
+
+            await ReconcileMasterPlaylistAsync(
+                orchestrator,
+                finalizeRequest,
+                reconciliationPlan,
+                destinationStorage,
+                fileMetadata,
                 state.GroupTag
             );
         }
@@ -1299,6 +1312,61 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             "[VideoEncodeJob] Finalize complete for GroupTag={GroupTag}",
             state.GroupTag
         );
+    }
+
+    /// <summary>
+    /// Rebuilds the HLS master playlist from the union of every video/audio/
+    /// subtitle rendition the decode-aware bundler split across several
+    /// self-finalizing <see cref="EncodeTaskKind.Whole"/> bundles. Each such
+    /// bundle finalizes and publishes independently against only its own
+    /// slice of the merged plan (<see cref="DecomposedTask.VideoSliceIndexes"/>
+    /// / <see cref="DecomposedTask.AudioSliceIndexes"/> /
+    /// <see cref="DecomposedTask.SubtitleSliceIndexes"/>) — the last one to
+    /// publish overwrites the master with only its own rendition, orphaning
+    /// every earlier bundle's video/audio/subtitle tracks even though their
+    /// segments are still on disk. Re-running
+    /// <see cref="HlsOutputStrategy.FinalizeAsync"/> once, against the real
+    /// destination storage and the full merged plan (which lists every
+    /// rendition, not just the last bundle's), measures every rendition
+    /// straight from what actually published and rewrites a complete master.
+    /// Best-effort: a failure here leaves whatever the last bundle published
+    /// standing rather than failing the whole post-encode pass.
+    /// </summary>
+    private async Task ReconcileMasterPlaylistAsync(
+        IEncodingOrchestrator orchestrator,
+        EncodingRequest finalizeRequest,
+        OutputPlan? reconciliationPlan,
+        IStorage destinationStorage,
+        FileMetadata fileMetadata,
+        string groupTag
+    )
+    {
+        reconciliationPlan ??= await orchestrator.PlanMergedAsync(
+            [finalizeRequest],
+            _shutdownToken
+        );
+
+        if (reconciliationPlan is null || reconciliationPlan.Format != OutputFormat.Hls)
+            return;
+
+        try
+        {
+            HlsOutputStrategy hlsStrategy = new(destinationStorage);
+            await hlsStrategy.FinalizeAsync(
+                fileMetadata.Path ?? string.Empty,
+                reconciliationPlan,
+                fileMetadata.FileName,
+                _shutdownToken
+            );
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(
+                ex,
+                "[VideoEncodeJob] Master playlist reconciliation failed for GroupTag={GroupTag} — the last-published bundle's master stands as-is.",
+                groupTag
+            );
+        }
     }
 
     // ------------------------------------------------------------------
