@@ -15,6 +15,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.NmSystem.Domain;
@@ -29,7 +30,8 @@ namespace NoMercy.MediaProcessing.Files;
 public partial class FileManager(
     IFileRepository fileRepository,
     IStorageFactory storageFactory,
-    IStorageDriver storageDriver
+    IStorageDriver storageDriver,
+    IMediaAnalyzer mediaAnalyzer
 ) : IFileManager
 {
     private IStorage StorageFor(Folder folder) =>

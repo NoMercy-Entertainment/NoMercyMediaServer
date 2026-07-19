@@ -28,6 +28,7 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Files;
@@ -56,6 +57,7 @@ public class LibrariesController(
     IStorageDriver storageDriver,
     IStorageFactory storageFactory,
     IDefaultEncodingPresetLinker defaultEncodingPresetLinker,
+    IMediaAnalyzer mediaAnalyzer,
     ILogger<LibrariesController> logger
 ) : BaseController
 {
@@ -893,7 +895,12 @@ public class LibrariesController(
                 await mediaContextFactory.CreateDbContextAsync();
 
             FileRepository fileRepository = new(mediaContext, storageDriver);
-            FileManager fileManager = new(fileRepository, storageFactory, storageDriver);
+            FileManager fileManager = new(
+                fileRepository,
+                storageFactory,
+                storageDriver,
+                mediaAnalyzer
+            );
 
             await fileManager.MoveToLibraryFolder(request.Id, folder);
 

@@ -15,6 +15,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.TvShows;
+using NoMercy.Encoder.Output;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Storage;
@@ -214,6 +215,8 @@ public partial class FileManager
         List<IFont> fonts = GetFontHashList(storage, hostFolder);
         List<IPreview> previews = GetPreviewHashList(storage, hostFolder, extraFiles);
 
+        await RebuildHlsMasterFromDiskAsync(storage, hostFolder, fileName, video);
+
         VideoTrack? chaptersFile = extraFiles.FirstOrDefault(file => file.Kind == "chapters");
 
         List<IChapter> chapters = chaptersFile?.File is not null
@@ -288,5 +291,60 @@ public partial class FileManager
         };
 
         return metadata;
+    }
+
+    /// <summary>
+    /// Rebuilds <c>{masterTitle}.m3u8</c> from the renditions actually on disk
+    /// under <paramref name="hostFolder"/> — the fully-published media root a
+    /// scan walks, with none of the encode-finalize path's staging/scope
+    /// fragility (a coordinator's finalize can resolve against a scope that
+    /// only sees the last bundle's own rendition when a preset gets split
+    /// into several self-finalizing dispatch bundles; a completed scan always
+    /// sees every rendition every bundle ever published). A no-op for a
+    /// non-HLS item (<paramref name="video"/> empty — GetVideoHashList only
+    /// ever populates from <c>video_*/</c> dirs, which only exist for HLS
+    /// output). Best-effort: a rebuild failure must never fail the scan.
+    /// </summary>
+    private async Task RebuildHlsMasterFromDiskAsync(
+        IStorage storage,
+        string hostFolder,
+        string fileName,
+        List<IVideo> video
+    )
+    {
+        if (video.Count == 0)
+            return;
+
+        string masterTitle = fileName.TrimStart('/');
+        if (masterTitle.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase))
+            masterTitle = masterTitle[..^".m3u8".Length];
+
+        try
+        {
+            HlsOnDiskPlanReconstructor reconstructor = new(mediaAnalyzer);
+            OutputPlan plan = await reconstructor.ReconstructAsync(
+                storage,
+                hostFolder,
+                CancellationToken.None
+            );
+
+            if (plan.VideoOutputs.Length == 0)
+                return;
+
+            HlsOutputStrategy hlsOutputStrategy = new(storage);
+            await hlsOutputStrategy.FinalizeAsync(
+                hostFolder,
+                plan,
+                masterTitle,
+                CancellationToken.None
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.App(
+                $"[RebuildHlsMasterFromDisk] {masterTitle}: master rebuild failed — {ex.Message}",
+                LogEventLevel.Warning
+            );
+        }
     }
 }

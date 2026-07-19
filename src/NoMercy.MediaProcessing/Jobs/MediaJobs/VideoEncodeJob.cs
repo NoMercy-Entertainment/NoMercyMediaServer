@@ -153,7 +153,12 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         await using MediaContext context = new();
         await using LibraryRepository libraryRepository = new(context, StorageDriver);
         FileRepository fileRepository = new(context, StorageDriver);
-        FileManager fileManager = new(fileRepository, StorageFactory, StorageDriver);
+        FileManager fileManager = new(
+            fileRepository,
+            StorageFactory,
+            StorageDriver,
+            _mediaAnalyzer!
+        );
 
         Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
         if (folder is null)
@@ -981,7 +986,12 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         await using MediaContext context = new();
 
         FileRepository fileRepository = new(context, StorageDriver);
-        FileManager fileManager = new(fileRepository, StorageFactory, StorageDriver);
+        FileManager fileManager = new(
+            fileRepository,
+            StorageFactory,
+            StorageDriver,
+            _mediaAnalyzer!
+        );
 
         await using LibraryRepository libraryRepository = new(context, StorageDriver);
         Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
@@ -1201,15 +1211,17 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         // The bundles already finalized and published themselves. Running the
         // pipeline again over the tempDir they emptied would only rediscover that
         // there is nothing there. Fall through to post-encode, which is the part
-        // that still has work to do.
+        // that still has work to do. The post-encode scan (FileManager.MakeMetadata)
+        // is what rebuilds the master playlist from disk now — see
+        // RebuildHlsMasterFromDiskAsync — because it reliably reads the fully-
+        // published media root, unlike this coordinator's own scope which can
+        // resolve against only the last bundle's own rendition.
         if (bundlesSelfFinalized)
         {
             Log.LogInformation(
                 "[VideoEncodeJob] Finalize: bundles for GroupTag={GroupTag} finalized and published themselves; continuing to post-encode.",
                 state.GroupTag
             );
-
-            await ReconcileMasterPlaylistAsync(destinationStorage, fileMetadata, state.GroupTag);
         }
         else
         {
@@ -1301,58 +1313,6 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             "[VideoEncodeJob] Finalize complete for GroupTag={GroupTag}",
             state.GroupTag
         );
-    }
-
-    /// <summary>
-    /// Rebuilds the HLS master playlist from the union of every video/audio/
-    /// subtitle rendition actually published under the destination directory —
-    /// not from any in-memory plan. The decode-aware bundler can split a
-    /// single preset (or several) into multiple self-finalizing
-    /// <see cref="EncodeTaskKind.Whole"/> bundles; each one finalizes and
-    /// publishes independently against only its own slice, and the last one
-    /// to publish overwrites the master with only its own rendition —
-    /// orphaning every earlier bundle's video/audio/subtitle tracks even
-    /// though their segments are still on disk. A re-planned OutputPlan (even
-    /// a freshly merged one) describes what the request in hand asks for, not
-    /// what every bundle that ran actually published — only the filesystem
-    /// is the ground truth, hence <see cref="HlsOnDiskPlanReconstructor"/>.
-    /// Best-effort: a failure here leaves whatever the last bundle published
-    /// standing rather than failing the whole post-encode pass.
-    /// </summary>
-    private async Task ReconcileMasterPlaylistAsync(
-        IStorage destinationStorage,
-        FileMetadata fileMetadata,
-        string groupTag
-    )
-    {
-        try
-        {
-            HlsOnDiskPlanReconstructor reconstructor = new(_mediaAnalyzer!);
-            OutputPlan reconstructedPlan = await reconstructor.ReconstructAsync(
-                destinationStorage,
-                fileMetadata.Path ?? string.Empty,
-                _shutdownToken
-            );
-
-            if (reconstructedPlan.VideoOutputs.Length == 0)
-                return;
-
-            HlsOutputStrategy hlsStrategy = new(destinationStorage);
-            await hlsStrategy.FinalizeAsync(
-                fileMetadata.Path ?? string.Empty,
-                reconstructedPlan,
-                fileMetadata.FileName,
-                _shutdownToken
-            );
-        }
-        catch (Exception ex)
-        {
-            Log.LogWarning(
-                ex,
-                "[VideoEncodeJob] Master playlist reconciliation failed for GroupTag={GroupTag} — the last-published bundle's master stands as-is.",
-                groupTag
-            );
-        }
     }
 
     // ------------------------------------------------------------------

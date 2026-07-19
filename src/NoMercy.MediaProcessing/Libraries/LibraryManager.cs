@@ -14,6 +14,7 @@ using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Events.Media;
@@ -39,6 +40,7 @@ public class LibraryManager(
     MediaContext mediaContext,
     IStorageDriver storageDriver,
     IStorageFactory storageFactory,
+    IMediaAnalyzer mediaAnalyzer,
     ILogger<LibraryManager> logger,
     IEventBus? eventBus = null
 ) : BaseManager, ILibraryManager
@@ -513,7 +515,7 @@ public class LibraryManager(
         }
 
         FileRepository fileRepository = new(mediaContext, storageDriver);
-        FileManager fileManager = new(fileRepository, storageFactory, storageDriver);
+        FileManager fileManager = new(fileRepository, storageFactory, storageDriver, mediaAnalyzer);
 
         _ = await fileManager.FindFiles(id, library);
 

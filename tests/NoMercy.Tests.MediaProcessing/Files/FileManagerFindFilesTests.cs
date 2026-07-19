@@ -14,6 +14,7 @@ using Moq;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Files;
@@ -72,7 +73,13 @@ public sealed class FileManagerFindFilesTests
     {
         Mock<IStorageFactory> factoryMock = new();
         Mock<IStorageDriver> driverMock = new();
-        return new(repoMock.Object, factoryMock.Object, driverMock.Object);
+        Mock<IMediaAnalyzer> mediaAnalyzerMock = new();
+        return new(
+            repoMock.Object,
+            factoryMock.Object,
+            driverMock.Object,
+            mediaAnalyzerMock.Object
+        );
     }
 
     private static bool HasKey(LibraryRefreshedEvent evt, params object?[] key) =>
