@@ -27,12 +27,17 @@ public class HlsSubtitleMediaTagTests
     {
         // Seed non-zero metrics so the variant rows render — GenerateMasterPlaylist
         // skips any variant whose measured bandwidth is zero (dead-variant guard).
-        Dictionary<string, VariantMetrics> videoMetrics = plan
-            .VideoOutputs.Where(v => !string.IsNullOrEmpty(v.MapLabel))
-            .ToDictionary(v => v.MapLabel, _ => new VariantMetrics(5_000_000, 4_500_000));
-        Dictionary<string, VariantMetrics> audioMetrics = plan
-            .AudioOutputs.Where(a => !string.IsNullOrEmpty(a.MapLabel))
-            .ToDictionary(a => a.MapLabel, _ => new VariantMetrics(192_000, 180_000));
+        // Metrics are keyed by the resolved playlist path (VideoVariantKey /
+        // AudioVariantKey), not MapLabel — every rung re-plans as MapLabel "[v0]"
+        // in its own bundle, so keying by label collapsed the ladder.
+        Dictionary<string, VariantMetrics> videoMetrics = plan.VideoOutputs.ToDictionary(
+            PlaylistGenerator.VideoVariantKey,
+            _ => new VariantMetrics(5_000_000, 4_500_000)
+        );
+        Dictionary<string, VariantMetrics> audioMetrics = plan.AudioOutputs.ToDictionary(
+            PlaylistGenerator.AudioVariantKey,
+            _ => new VariantMetrics(192_000, 180_000)
+        );
 
         PlaylistGenerator gen = new();
         return gen.GenerateMasterPlaylist(plan, "Test.Movie", videoMetrics, audioMetrics);
