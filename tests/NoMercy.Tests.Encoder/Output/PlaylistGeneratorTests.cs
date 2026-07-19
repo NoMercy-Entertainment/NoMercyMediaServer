@@ -28,23 +28,38 @@ public class PlaylistGeneratorTests
         // that build a synthetic OutputPlan need to seed non-zero metrics so
         // the variant rows still render — otherwise the master is empty and
         // every codec-tag / structure assertion fails.
-        Dictionary<string, VariantMetrics> videoMetrics = plan
-            .VideoOutputs.Where(v => !string.IsNullOrEmpty(v.MapLabel))
-            .ToDictionary(
-                v => v.MapLabel,
-                _ => new VariantMetrics(PeakBandwidth: 5_000_000, AverageBandwidth: 4_500_000)
-            );
+        // Metrics are keyed by each variant's resolved playlist path (NOT
+        // MapLabel — every rung re-plans as "[v0]", so MapLabel keys collide and
+        // collapse the ladder onto one shared BANDWIDTH). Mirror the production
+        // keying so the lookup in GenerateMasterPlaylist resolves.
+        Dictionary<string, VariantMetrics> videoMetrics = plan.VideoOutputs.ToDictionary(
+            VideoVariantKey,
+            _ => new VariantMetrics(PeakBandwidth: 5_000_000, AverageBandwidth: 4_500_000)
+        );
 
-        Dictionary<string, VariantMetrics> audioMetrics = plan
-            .AudioOutputs.Where(a => !string.IsNullOrEmpty(a.MapLabel))
-            .ToDictionary(
-                a => a.MapLabel,
-                _ => new VariantMetrics(PeakBandwidth: 192_000, AverageBandwidth: 180_000)
-            );
+        Dictionary<string, VariantMetrics> audioMetrics = plan.AudioOutputs.ToDictionary(
+            AudioVariantKey,
+            _ => new VariantMetrics(PeakBandwidth: 192_000, AverageBandwidth: 180_000)
+        );
 
         PlaylistGenerator generator = new();
         return generator.GenerateMasterPlaylist(plan, MediaTitle, videoMetrics, audioMetrics);
     }
+
+    // The metrics-dict key a variant is stored/looked-up under: its resolved
+    // playlist path, unique per resolution/HDR. Mirrors HlsOutputStrategy +
+    // PlaylistGenerator exactly.
+    private static string VideoVariantKey(VideoOutputPlan video) =>
+        TemplateResolver.Resolve(
+            video.PlaylistNameTemplate,
+            TemplateResolver.VideoTokens(video.Width, video.Height, video.IsHdrOutput)
+        );
+
+    private static string AudioVariantKey(AudioOutputPlan audio) =>
+        TemplateResolver.Resolve(
+            audio.PlaylistNameTemplate,
+            TemplateResolver.AudioTokens(audio.Language ?? "und", audio.CodecToken, audio.Channels)
+        );
 
     [Fact]
     public void MasterPlaylist_ContainsExtm3u()
@@ -208,9 +223,12 @@ public class PlaylistGeneratorTests
         OutputPlan plan = CreatePlan();
         Dictionary<string, VariantMetrics> vidMetrics = new()
         {
-            ["[v0]"] = new(5_000_000, 3_500_000),
+            [VideoVariantKey(plan.VideoOutputs[0])] = new(5_000_000, 3_500_000),
         };
-        Dictionary<string, VariantMetrics> audMetrics = new() { ["0:a:0"] = new(0, 0) };
+        Dictionary<string, VariantMetrics> audMetrics = new()
+        {
+            [AudioVariantKey(plan.AudioOutputs[0])] = new(0, 0),
+        };
 
         string playlist = generator.GenerateMasterPlaylist(
             plan,
@@ -229,8 +247,14 @@ public class PlaylistGeneratorTests
         // ship in the master.
         PlaylistGenerator generator = new();
         OutputPlan plan = CreatePlan();
-        Dictionary<string, VariantMetrics> vidMetrics = new() { ["[v0]"] = new(0, 0) };
-        Dictionary<string, VariantMetrics> audMetrics = new() { ["0:a:0"] = new(192_000, 180_000) };
+        Dictionary<string, VariantMetrics> vidMetrics = new()
+        {
+            [VideoVariantKey(plan.VideoOutputs[0])] = new(0, 0),
+        };
+        Dictionary<string, VariantMetrics> audMetrics = new()
+        {
+            [AudioVariantKey(plan.AudioOutputs[0])] = new(192_000, 180_000),
+        };
 
         string playlist = generator.GenerateMasterPlaylist(
             plan,
@@ -275,9 +299,12 @@ public class PlaylistGeneratorTests
         OutputPlan plan = CreatePlan();
         Dictionary<string, VariantMetrics> vidMetrics = new()
         {
-            ["[v0]"] = new(5_000_000, 3_500_000),
+            [VideoVariantKey(plan.VideoOutputs[0])] = new(5_000_000, 3_500_000),
         };
-        Dictionary<string, VariantMetrics> audMetrics = new() { ["0:a:0"] = new(256_000, 192_000) };
+        Dictionary<string, VariantMetrics> audMetrics = new()
+        {
+            [AudioVariantKey(plan.AudioOutputs[0])] = new(256_000, 192_000),
+        };
 
         string playlist = generator.GenerateMasterPlaylist(
             plan,
@@ -288,6 +315,55 @@ public class PlaylistGeneratorTests
 
         playlist.Should().Contain("BANDWIDTH=5256000");
         playlist.Should().Contain("AVERAGE-BANDWIDTH=3692000");
+    }
+
+    [Fact]
+    public void MasterPlaylist_VariantsSharingMapLabel_EachGetTheirOwnBandwidth()
+    {
+        // Regression for the identical-BANDWIDTH bug: every rung re-plans in its
+        // own bundle as MapLabel "[v0]", so two variants can carry the SAME
+        // MapLabel at different resolutions. Metrics are keyed by the resolved
+        // playlist PATH, so each variant must still advertise its OWN measured
+        // bandwidth — not one value shared across the whole ladder (which is what
+        // MapLabel keying produced).
+        OutputPlan plan = CreateMultiResPlan() with
+        { };
+        plan = plan with
+        {
+            VideoOutputs =
+            [
+                plan.VideoOutputs[0] with
+                {
+                    MapLabel = "[v0]",
+                }, // 1080p
+                plan.VideoOutputs[1] with
+                {
+                    MapLabel = "[v0]",
+                }, // 720p, SAME label
+            ],
+        };
+
+        Dictionary<string, VariantMetrics> vidMetrics = new()
+        {
+            [VideoVariantKey(plan.VideoOutputs[0])] = new(8_000_000, 6_000_000),
+            [VideoVariantKey(plan.VideoOutputs[1])] = new(3_000_000, 2_400_000),
+        };
+        Dictionary<string, VariantMetrics> audMetrics = new()
+        {
+            [AudioVariantKey(plan.AudioOutputs[0])] = new(192_000, 180_000),
+        };
+
+        string playlist = new PlaylistGenerator().GenerateMasterPlaylist(
+            plan,
+            MediaTitle,
+            vidMetrics,
+            audMetrics
+        );
+
+        // Each variant advertises its own bandwidth (video + audio), proving the
+        // shared-MapLabel collision no longer collapses the ladder.
+        playlist.Should().Contain("BANDWIDTH=8192000");
+        playlist.Should().Contain("BANDWIDTH=3192000");
     }
 
     private static OutputPlan CreatePlan(string encoderName = "libx264", bool tenBit = false)
