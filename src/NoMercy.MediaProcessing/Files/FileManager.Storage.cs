@@ -16,11 +16,15 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Encoder.Output;
+using NoMercy.Encoder.Subtitles;
+using NoMercy.MediaProcessing.Jobs.SubtitleJobs;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Storage;
+using NoMercyQueue;
 using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
+using QueueJobDispatcher = NoMercyQueue.JobDispatcher;
 
 namespace NoMercy.MediaProcessing.Files;
 
@@ -132,6 +136,8 @@ public partial class FileManager
 
         List<Subtitle> subtitles = GetSubtitles(storage, hostFolder);
 
+        DispatchOrphanedBitmapOcrBackfill(storage, folder, hostFolder);
+
         List<VideoTrack> tracks = GetExtraFiles(storage, hostFolder);
 
         Episode? episode = await fileRepository.GetEpisode(Show?.Id, item);
@@ -198,6 +204,98 @@ public partial class FileManager
         };
 
         await fileRepository.StoreVideoFile(videoFile);
+    }
+
+    /// <summary>
+    /// Queues an OCR backfill for every preserved bitmap subtitle
+    /// (<c>.sup</c>/<c>.sub</c>) under <paramref name="hostFolder"/> that has no
+    /// text sibling carrying the same <c>{lang}.{variant}</c>. A title encoded
+    /// before the OCR pipeline worked keeps its bitmap sidecar but never got a
+    /// <c>.vtt</c>, so clients that cannot render PGS show nothing. OCR is minutes
+    /// of ffmpeg per track, far too slow for the scan thread, so the actual work
+    /// runs as a low-priority <see cref="SubtitleOcrBackfillJob"/> on the encoder
+    /// queue; the job is idempotent, so re-queuing across scans until it lands is
+    /// harmless. A bitmap track that already has an <c>.ass</c>/<c>.srt</c>/<c>.vtt</c>
+    /// is left alone — OCRing it would double the track in the picker.
+    /// </summary>
+    private static void DispatchOrphanedBitmapOcrBackfill(
+        IStorage storage,
+        Folder folder,
+        string hostFolder
+    )
+    {
+        string subtitleFolder = storage.CombinePath(hostFolder, "subtitles");
+        if (!storage.Exists(subtitleFolder))
+            return;
+
+        QueueJobDispatcher? dispatcher = QueueRunner.Current?.Dispatcher;
+        if (dispatcher is null)
+            return;
+
+        IReadOnlyList<OrphanedBitmapSubtitle> orphans = SelectOrphanedBitmapSubtitles(
+            storage
+                .List(subtitleFolder, null, recursive: false)
+                .Where(candidate => !candidate.IsDirectory)
+                .Select(candidate => storage.GetName(candidate.Path))
+        );
+
+        foreach ((string supName, string mediaTitle, string language, string variant) in orphans)
+        {
+            dispatcher.Dispatch(
+                new SubtitleOcrBackfillJob(
+                    folder.Id.ToString(),
+                    folder.DriverId.ToString(),
+                    hostFolder,
+                    supName,
+                    mediaTitle,
+                    language,
+                    variant
+                ),
+                "encoder",
+                2
+            );
+
+            Logger.App(
+                $"[SubtitleOcrBackfill] queued OCR for orphaned bitmap subtitle {supName}",
+                LogEventLevel.Information
+            );
+        }
+    }
+
+    /// <summary>
+    /// From a flat list of <c>subtitles/</c> filenames, returns each bitmap
+    /// sidecar (<c>.sup</c>/<c>.sub</c>) that has no text track (<c>.vtt</c>,
+    /// <c>.ass</c>, <c>.srt</c>, …) carrying the same <c>{lang}.{variant}</c>. A
+    /// bitmap already backed by a text track is skipped so OCR never produces a
+    /// duplicate track in the picker. The <c>MediaTitle</c> is the filename stem
+    /// before <c>.{lang}.{variant}.{ext}</c>, reproduced on the OCR output so the
+    /// scan pairs the new <c>.vtt</c> with its bitmap sibling.
+    /// </summary>
+    internal static IReadOnlyList<OrphanedBitmapSubtitle> SelectOrphanedBitmapSubtitles(
+        IEnumerable<string> subtitleFileNames
+    )
+    {
+        HashSet<string> textKeys = new(StringComparer.OrdinalIgnoreCase);
+        List<OrphanedBitmapSubtitle> bitmaps = [];
+
+        foreach (string name in subtitleFileNames)
+        {
+            Match match = SubtitleFileRegex().Match(name);
+            if (!match.Success)
+                continue;
+
+            string language = match.Groups["lang"].Value;
+            string variant = match.Groups["type"].Value;
+
+            if (SubtitleClassifier.IsBitmapSidecarExtension(match.Groups["ext"].Value))
+                bitmaps.Add(new(name, name[..match.Index].TrimEnd('.'), language, variant));
+            else
+                textKeys.Add($"{language}|{variant}");
+        }
+
+        return bitmaps
+            .Where(bitmap => !textKeys.Contains($"{bitmap.Language}|{bitmap.Variant}"))
+            .ToList();
     }
 
     private async Task<Metadata> MakeMetadata(
@@ -329,6 +427,13 @@ public partial class FileManager
         // listed — falls through to the full reconstruction.
         if (MasterCoversDiskOutput(storage, hostFolder, masterTitle, video))
             return;
+
+        // Only logged when the rebuild actually runs (a missing or incomplete
+        // master), so it stays quiet on the common already-complete rescan.
+        Logger.App(
+            $"[MasterRebuild] {masterTitle}: rebuilding (master missing or incomplete)",
+            LogEventLevel.Information
+        );
 
         try
         {
