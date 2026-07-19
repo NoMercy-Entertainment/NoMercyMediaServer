@@ -32,8 +32,10 @@ public static class OutputPlanMerger
     /// bundle layout, DRM, HLS options, …) are taken from it rather than
     /// duplicated. Video renditions are the union of every plan's
     /// <see cref="OutputPlan.VideoOutputs"/>; audio renditions are unioned
-    /// and deduplicated by language + codec so two presets that both carry
-    /// "eng AAC 2.0" don't produce it twice.
+    /// and deduplicated by (source stream, language, codec) so two presets that
+    /// both carry "eng AAC 2.0" from the same source track don't produce it
+    /// twice, while two distinct source tracks that share language + codec both
+    /// survive.
     ///
     /// Every plan must share the same <see cref="OutputPlan.Format"/> — the
     /// caller (<see cref="Orchestration.EncodingOrchestrator.DecomposeMergedAsync"/>)
@@ -70,20 +72,27 @@ public static class OutputPlanMerger
     }
 
     /// <summary>
-    /// Unions audio renditions across presets, keeping the first occurrence
-    /// of each distinct (language, codec) pair — audio is source-derived and
-    /// two presets both wanting "eng AAC 2.0" describe the SAME rendition,
-    /// not two. A preset that resolves a codec the others don't (e.g. one
-    /// preset copies the source EAC3 while another transcodes to AAC) keeps
-    /// both, since the pair differs.
+    /// Unions audio renditions across presets, keeping the first occurrence of
+    /// each distinct (source stream, language, codec) triple. Two presets both
+    /// wanting "eng AAC 2.0" from the SAME source stream describe one rendition,
+    /// not two — those dedup. But two DISTINCT source tracks that happen to share
+    /// a language + codec (e.g. a movie with a 768k and a 960k English E-AC-3
+    /// track) are separate renditions and MUST both survive: keying on
+    /// (language, codec) alone silently dropped the second track (the reported
+    /// missing-audio defect). The source stream index disambiguates them.
     /// </summary>
     private static List<AudioOutputPlan> DeduplicateAudio(IEnumerable<AudioOutputPlan> audios)
     {
-        Dictionary<(string Language, string Codec), AudioOutputPlan> seen = [];
+        Dictionary<(int SourceStreamIndex, string Language, string Codec), AudioOutputPlan> seen =
+        [];
 
         foreach (AudioOutputPlan audio in audios)
         {
-            (string, string) key = (audio.Language ?? "und", audio.CodecToken);
+            (int, string, string) key = (
+                audio.SourceStreamIndex,
+                audio.Language ?? "und",
+                audio.CodecToken
+            );
             seen.TryAdd(key, audio);
         }
 
