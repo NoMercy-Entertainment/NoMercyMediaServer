@@ -319,6 +319,17 @@ public partial class FileManager
         if (masterTitle.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase))
             masterTitle = masterTitle[..^".m3u8".Length];
 
+        // The rebuild ffprobes every video rendition over the network (a remote
+        // backend copies each probe segment off first) and rewrites the master —
+        // encode-finalize cost re-paid on every catalog scan. When the on-disk
+        // master already advertises every rendition present on disk, that whole
+        // pass reproduces the same master byte-for-byte, so skip it. Only a
+        // genuinely incomplete master — the multi-bundle ladder split this exists
+        // for, where a later bundle publishes a rung the current master never
+        // listed — falls through to the full reconstruction.
+        if (MasterCoversDiskOutput(storage, hostFolder, masterTitle, video))
+            return;
+
         try
         {
             HlsOnDiskPlanReconstructor reconstructor = new(mediaAnalyzer);
@@ -346,5 +357,95 @@ public partial class FileManager
                 LogEventLevel.Warning
             );
         }
+    }
+
+    /// <summary>
+    /// True when the on-disk master <c>{masterTitle}.m3u8</c> already advertises
+    /// every rendition present under <paramref name="hostFolder"/> — every
+    /// <paramref name="video"/> and <c>audio_*/</c> playlist, and every
+    /// <c>subtitles/{lang}/{variant}.{m3u8|ass|srt}</c> language-subdir track the
+    /// master references (never the raw root sidecar the OCR pass drops; that
+    /// surfaces through <see cref="GetSubtitles"/> on the VideoFile, not the
+    /// master). In that state a rebuild reproduces the same master byte-for-byte,
+    /// so the caller skips the per-rendition ffprobe + master rewrite. A missing
+    /// master or any on-disk rendition the master does not list returns false so
+    /// the rebuild runs — the multi-bundle self-heal, where a later bundle
+    /// publishes a rung the current master never advertised. Only checks disk ⊆
+    /// master: a rendition deleted after finalize leaves a stale over-reference the
+    /// next real finalize prunes — not a scan concern.
+    /// </summary>
+    internal static bool MasterCoversDiskOutput(
+        IStorage storage,
+        string hostFolder,
+        string masterTitle,
+        List<IVideo> video
+    )
+    {
+        string masterPath = storage.CombinePath(hostFolder, masterTitle + ".m3u8");
+        if (!storage.Exists(masterPath))
+            return false;
+
+        string master;
+        try
+        {
+            master = storage
+                .ReadAllTextAsync(masterPath, CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+        }
+        catch
+        {
+            return false;
+        }
+
+        foreach (IVideo entry in video)
+        {
+            string renditionDir = entry.FileName.TrimStart('/').Split('/')[0];
+            if (!master.Contains(renditionDir + "/", StringComparison.OrdinalIgnoreCase))
+                return false;
+        }
+
+        foreach (
+            StorageEntry dir in storage
+                .List(hostFolder, "audio_*", recursive: false)
+                .Where(entry => entry.IsDirectory)
+        )
+        {
+            string renditionDir = storage.GetName(dir.Path);
+            if (!master.Contains(renditionDir + "/", StringComparison.OrdinalIgnoreCase))
+                return false;
+        }
+
+        string subtitleFolder = storage.CombinePath(hostFolder, "subtitles");
+        if (!storage.Exists(subtitleFolder))
+            return true;
+
+        foreach (
+            StorageEntry languageDir in storage
+                .List(subtitleFolder, "*", recursive: false)
+                .Where(entry => entry.IsDirectory)
+        )
+        {
+            string language = storage.GetName(languageDir.Path);
+            foreach (
+                StorageEntry track in storage
+                    .List(languageDir.Path, "*", recursive: false)
+                    .Where(entry => !entry.IsDirectory)
+            )
+            {
+                string trackName = storage.GetName(track.Path);
+                bool isAdvertised =
+                    trackName.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase)
+                    || trackName.EndsWith(".ass", StringComparison.OrdinalIgnoreCase)
+                    || trackName.EndsWith(".srt", StringComparison.OrdinalIgnoreCase);
+                if (!isAdvertised)
+                    continue;
+
+                if (!master.Contains($"{language}/{trackName}", StringComparison.OrdinalIgnoreCase))
+                    return false;
+            }
+        }
+
+        return true;
     }
 }

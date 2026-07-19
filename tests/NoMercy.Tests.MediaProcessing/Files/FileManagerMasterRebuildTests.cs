@@ -143,6 +143,89 @@ public sealed class FileManagerMasterRebuildTests : IDisposable
     }
 
     [Fact]
+    public async Task Scan_SecondPass_MasterAlreadyComplete_SkipsReprobeAndKeepsMaster()
+    {
+        string hostDir = Path.Combine(_tempRoot, "Repeat.Run.(2024).NoMercy");
+        Directory.CreateDirectory(hostDir);
+        WriteVariant(hostDir, "video_1920x1080_SDR", segmentBytes: 300_000, extension: ".m4s");
+        WriteInitMp4(hostDir, "video_1920x1080_SDR");
+        WriteVariant(hostDir, "audio_eng_eac3", segmentBytes: 60_000, extension: ".m4s");
+        SetupProbe("video_1920x1080_SDR", "hevc", 1920, 1080, bitDepth: 8, colorTransfer: "bt709");
+
+        LocalStorageDriver driver = new();
+        LocalStorage storage = new(driver, new StoragePathGuard([], driver));
+        FileManager manager = BuildFileManager();
+        string fileName = "/Repeat.Run.(2024).NoMercy.m3u8";
+        string masterPath = Path.Combine(hostDir, "Repeat.Run.(2024).NoMercy.m3u8");
+
+        List<IVideo> firstVideo = InvokeGetVideoHashList(manager, storage, hostDir);
+        await InvokeRebuildHlsMasterFromDiskAsync(manager, storage, hostDir, fileName, firstVideo);
+
+        _mediaAnalyzer
+            .Invocations.Count.Should()
+            .BeGreaterThan(
+                0,
+                "the first pass has no master on disk and must probe every rendition"
+            );
+        string firstMaster = await File.ReadAllTextAsync(masterPath);
+
+        // A second scan of the same, already-complete output must be a pure read:
+        // no rendition probe, no master rewrite — this is the per-file cost that
+        // made a rescan crawl.
+        _mediaAnalyzer.Invocations.Clear();
+        List<IVideo> secondVideo = InvokeGetVideoHashList(manager, storage, hostDir);
+        await InvokeRebuildHlsMasterFromDiskAsync(manager, storage, hostDir, fileName, secondVideo);
+
+        _mediaAnalyzer
+            .Invocations.Should()
+            .BeEmpty("a master already advertising every on-disk rendition must not be reprobed");
+        (await File.ReadAllTextAsync(masterPath))
+            .Should()
+            .Be(firstMaster, "the skipped rebuild must leave the master untouched");
+    }
+
+    [Fact]
+    public async Task Scan_SecondPass_NewLadderRungPublished_RecreatesMasterWithEveryRung()
+    {
+        string hostDir = Path.Combine(_tempRoot, "Cascade.Grows.(2025).NoMercy");
+        Directory.CreateDirectory(hostDir);
+        WriteVariant(hostDir, "video_1920x1080_SDR", segmentBytes: 300_000, extension: ".m4s");
+        WriteInitMp4(hostDir, "video_1920x1080_SDR");
+        WriteVariant(hostDir, "audio_eng_eac3", segmentBytes: 60_000, extension: ".m4s");
+        SetupProbe("video_1920x1080_SDR", "hevc", 1920, 1080, bitDepth: 8, colorTransfer: "bt709");
+
+        LocalStorageDriver driver = new();
+        LocalStorage storage = new(driver, new StoragePathGuard([], driver));
+        FileManager manager = BuildFileManager();
+        string fileName = "/Cascade.Grows.(2025).NoMercy.m3u8";
+        string masterPath = Path.Combine(hostDir, "Cascade.Grows.(2025).NoMercy.m3u8");
+
+        List<IVideo> firstVideo = InvokeGetVideoHashList(manager, storage, hostDir);
+        await InvokeRebuildHlsMasterFromDiskAsync(manager, storage, hostDir, fileName, firstVideo);
+        CountStreamInf(await File.ReadAllTextAsync(masterPath))
+            .Should()
+            .Be(1, "the first bundle published only the 1080p rung");
+
+        // A later self-finalizing bundle publishes the 4K rung into the SAME output
+        // folder — the exact multi-run case the disk-truth rebuild exists for. The
+        // skip guard must NOT treat the now-stale master as complete.
+        WriteVariant(hostDir, "video_3840x2160", segmentBytes: 900_000, extension: ".m4s");
+        WriteInitMp4(hostDir, "video_3840x2160");
+        SetupProbe("video_3840x2160", "hevc", 3840, 2160, bitDepth: 10, colorTransfer: "smpte2084");
+
+        List<IVideo> secondVideo = InvokeGetVideoHashList(manager, storage, hostDir);
+        secondVideo.Should().HaveCount(2, "the scan sees both published rungs on disk");
+        await InvokeRebuildHlsMasterFromDiskAsync(manager, storage, hostDir, fileName, secondVideo);
+
+        string secondMaster = await File.ReadAllTextAsync(masterPath);
+        CountStreamInf(secondMaster)
+            .Should()
+            .Be(2, "a master missing an on-disk rung must be recreated to list every rung");
+        secondMaster.Should().Contain("RESOLUTION=3840x2160");
+        secondMaster.Should().Contain("RESOLUTION=1920x1080");
+    }
+
+    [Fact]
     public async Task Scan_NonHlsItem_NoVideoRenditions_DoesNotWriteAMaster()
     {
         string hostDir = Path.Combine(_tempRoot, "Some.Raw.File.(2020).NoMercy");
@@ -242,6 +325,11 @@ public sealed class FileManagerMasterRebuildTests : IDisposable
             )
             .ReturnsAsync(info);
     }
+
+    private static int CountStreamInf(string master) =>
+        master
+            .Split('\n')
+            .Count(line => line.StartsWith("#EXT-X-STREAM-INF:", StringComparison.Ordinal));
 
     private static int ExtractInt(string streamInfLine, string attribute)
     {
