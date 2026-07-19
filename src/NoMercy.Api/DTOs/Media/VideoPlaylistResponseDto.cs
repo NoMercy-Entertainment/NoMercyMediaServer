@@ -80,26 +80,11 @@ public class VideoPlaylistResponseDto
     [JsonProperty("sources")]
     public SourceDto[] Sources { get; set; } = [];
 
-    [JsonProperty("fonts")]
-    public List<IFont> Fonts { get; set; } = [];
-
-    [JsonProperty("chapters")]
-    public List<IChapter> Chapters { get; set; } = [];
-
     [JsonProperty("tracks")]
     public List<VideoTrack> Tracks { get; set; } = [];
 
     [JsonProperty("rating")]
     public RatingClass? ContentRating { get; set; }
-
-    [JsonProperty("audio")]
-    public List<IAudio> Audio { get; set; } = [];
-
-    [JsonProperty("captions")]
-    public List<ISubtitle> Captions { get; set; } = [];
-
-    [JsonProperty("qualities")]
-    public List<IVideo> Qualities { get; set; } = [];
 
     [JsonProperty("season")]
     public int? Season { get; set; }
@@ -187,15 +172,6 @@ public class VideoPlaylistResponseDto
             },
         ];
 
-        List<VideoTrack> fontsTrack = videoFile.Metadata?.Fonts is { Count: > 0 }
-            ? [new() { File = $"{baseFolder}/fonts.json", Kind = "fonts" }]
-            : [];
-
-        List<VideoTrack> chaptersTrack = videoFile.Metadata?.ChapterFile
-            is { FileSize: > 0 } chaptersFile
-            ? [new() { File = $"{baseFolder}{chaptersFile.FileName}", Kind = "chapters" }]
-            : [];
-
         Tracks = videoFile
             .Tracks.Select(t => new VideoTrack
             {
@@ -205,8 +181,6 @@ public class VideoPlaylistResponseDto
                 Kind = t.Kind,
             })
             .Concat(subs.TextTracks)
-            .Concat(fontsTrack)
-            .Concat(chaptersTrack)
             .OrderBy(track => track.Language)
             .ToList();
 
@@ -214,21 +188,6 @@ public class VideoPlaylistResponseDto
         Episode = index ?? episode.EpisodeNumber;
         SeasonName = episode.Season.Title;
         EpisodeId = episode.Id;
-        Chapters = videoFile.Metadata?.Chapters ?? [];
-        Fonts =
-            videoFile
-                .Metadata?.Fonts?.Select(font => new IFont
-                {
-                    FileName = $"{baseFolder}{font.FileName}",
-                    FileHash = font.FileHash,
-                    FileSize = font.FileSize,
-                })
-                .ToList()
-            ?? [];
-
-        Audio = videoFile.Metadata?.Audio ?? [];
-        Captions = videoFile.Metadata?.Subtitles ?? [];
-        Qualities = videoFile.Metadata?.Video ?? [];
 
         ContentRating = episode
             .Tv.CertificationTvs.Where(certificationMovie =>
@@ -308,15 +267,6 @@ public class VideoPlaylistResponseDto
             },
         ];
 
-        List<VideoTrack> fontsTrack = videoFile.Metadata?.Fonts is { Count: > 0 }
-            ? [new() { File = $"{baseFolder}/fonts.json", Kind = "fonts" }]
-            : [];
-
-        List<VideoTrack> chaptersTrack = videoFile.Metadata?.ChapterFile
-            is { FileSize: > 0 } chaptersFile
-            ? [new() { File = $"{baseFolder}{chaptersFile.FileName}", Kind = "chapters" }]
-            : [];
-
         Tracks = videoFile
             .Tracks.Select(t => new VideoTrack
             {
@@ -326,26 +276,8 @@ public class VideoPlaylistResponseDto
                 Kind = t.Kind,
             })
             .Concat(subs.TextTracks)
-            .Concat(fontsTrack)
-            .Concat(chaptersTrack)
             .OrderBy(track => track.Language)
             .ToList();
-
-        Chapters = videoFile.Metadata?.Chapters ?? [];
-        Fonts =
-            videoFile
-                .Metadata?.Fonts?.Select(font => new IFont
-                {
-                    FileName = $"{baseFolder}{font.FileName}",
-                    FileHash = font.FileHash,
-                    FileSize = font.FileSize,
-                })
-                .ToList()
-            ?? [];
-
-        Audio = videoFile.Metadata?.Audio ?? [];
-        Captions = videoFile.Metadata?.Subtitles ?? [];
-        Qualities = videoFile.Metadata?.Video ?? [];
 
         ContentRating = movie
             .CertificationMovies.Where(certificationMovie =>

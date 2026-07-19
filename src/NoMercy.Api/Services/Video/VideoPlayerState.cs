@@ -62,4 +62,20 @@ public class VideoPlayerState
 
     [JsonProperty("current_quality")]
     public IVideo? CurrentQuality { get; set; }
+
+    // Server-internal cast/remote-control lists (chapter skip, cycle audio/
+    // caption/quality). Sourced from the current item's Metadata at build time;
+    // never serialized — clients read the equivalents from tracks[] / the HLS
+    // manifest.
+    [JsonIgnore]
+    public List<IChapter> Chapters { get; set; } = [];
+
+    [JsonIgnore]
+    public List<IAudio> Audio { get; set; } = [];
+
+    [JsonIgnore]
+    public List<ISubtitle> Captions { get; set; } = [];
+
+    [JsonIgnore]
+    public List<IVideo> Qualities { get; set; } = [];
 }

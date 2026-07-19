@@ -297,7 +297,7 @@ public class VideoPlaybackCommandHandler(
     {
         if (state.CurrentItem is null)
             return;
-        IChapter? currentChapter = state.CurrentItem.Chapters.FirstOrDefault(c =>
+        IChapter? currentChapter = state.Chapters.FirstOrDefault(c =>
             state.Time >= c.StartTime && state.Time <= c.EndTime
         );
         if (currentChapter is null)
@@ -309,10 +309,10 @@ public class VideoPlaybackCommandHandler(
             return;
         }
 
-        int index = state.CurrentItem.Chapters.IndexOf(currentChapter);
+        int index = state.Chapters.IndexOf(currentChapter);
         if (index > 0)
         {
-            IChapter previousChapter = state.CurrentItem.Chapters[index - 1];
+            IChapter previousChapter = state.Chapters[index - 1];
             state.Time = previousChapter.StartTime;
         }
     }
@@ -322,16 +322,16 @@ public class VideoPlaybackCommandHandler(
         if (state.CurrentItem is null)
             return;
 
-        IChapter? currentChapter = state.CurrentItem.Chapters.FirstOrDefault(c =>
+        IChapter? currentChapter = state.Chapters.FirstOrDefault(c =>
             state.Time >= c.StartTime && state.Time <= c.EndTime
         );
         if (currentChapter is null)
             return;
 
-        int index = state.CurrentItem.Chapters.IndexOf(currentChapter);
-        if (index + 1 <= state.CurrentItem.Chapters.Count - 1)
+        int index = state.Chapters.IndexOf(currentChapter);
+        if (index + 1 <= state.Chapters.Count - 1)
         {
-            IChapter nextChapter = state.CurrentItem.Chapters[index + 1];
+            IChapter nextChapter = state.Chapters[index + 1];
             state.Time = nextChapter.StartTime;
         }
     }
@@ -357,7 +357,7 @@ public class VideoPlaybackCommandHandler(
             return;
         }
 
-        IAudio? audio = state.CurrentItem.Audio.ElementAtOrDefault(index);
+        IAudio? audio = state.Audio.ElementAtOrDefault(index);
         if (audio is not null)
         {
             state.CurrentAudio = audio;
@@ -378,11 +378,11 @@ public class VideoPlaybackCommandHandler(
             return;
 
         int currentIndex = state.CurrentAudio is not null
-            ? state.CurrentItem.Audio.IndexOf(state.CurrentAudio)
+            ? state.Audio.IndexOf(state.CurrentAudio)
             : -1;
-        if (currentIndex >= state.CurrentItem.Audio.Count - 1)
+        if (currentIndex >= state.Audio.Count - 1)
         {
-            state.CurrentAudio = state.CurrentItem.Audio.First();
+            state.CurrentAudio = state.Audio.First();
             await SetPlaybackPreference(
                 user,
                 state,
@@ -393,7 +393,7 @@ public class VideoPlaybackCommandHandler(
             return;
         }
 
-        IAudio nextAudio = state.CurrentItem.Audio[currentIndex + 1];
+        IAudio nextAudio = state.Audio[currentIndex + 1];
         state.CurrentAudio = nextAudio;
 
         await SetPlaybackPreference(
@@ -426,7 +426,7 @@ public class VideoPlaybackCommandHandler(
             return;
         }
 
-        ISubtitle? track = state.CurrentItem?.Captions.ElementAtOrDefault(index);
+        ISubtitle? track = state.Captions.ElementAtOrDefault(index);
         if (track is not null)
         {
             state.CurrentCaption = track;
@@ -447,9 +447,9 @@ public class VideoPlaybackCommandHandler(
             return;
 
         int currentIndex = state.CurrentCaption is not null
-            ? state.CurrentItem.Captions.IndexOf(state.CurrentCaption)
+            ? state.Captions.IndexOf(state.CurrentCaption)
             : -1;
-        if (currentIndex >= state.CurrentItem.Captions.Count - 1)
+        if (currentIndex >= state.Captions.Count - 1)
         {
             state.CurrentCaption = null;
             await SetPlaybackPreference(
@@ -463,7 +463,7 @@ public class VideoPlaybackCommandHandler(
         }
         if (currentIndex < 0)
         {
-            state.CurrentCaption = state.CurrentItem.Captions.First();
+            state.CurrentCaption = state.Captions.First();
             await SetPlaybackPreference(
                 user,
                 state,
@@ -474,7 +474,7 @@ public class VideoPlaybackCommandHandler(
             return;
         }
 
-        ISubtitle nextCaption = state.CurrentItem.Captions[currentIndex + 1];
+        ISubtitle nextCaption = state.Captions[currentIndex + 1];
         state.CurrentCaption = nextCaption;
 
         await SetPlaybackPreference(
@@ -507,7 +507,7 @@ public class VideoPlaybackCommandHandler(
             return;
         }
 
-        IVideo? video = state.CurrentItem?.Qualities.ElementAtOrDefault(index);
+        IVideo? video = state.Qualities.ElementAtOrDefault(index);
         if (video is not null)
         {
             state.CurrentQuality = video;
