@@ -206,7 +206,7 @@ public class LibraryManager(
     // through it. Using the driver for LOCAL would canonicalize against the
     // process CWD (the local driver is a shared, root-less singleton) and scan a
     // path that does not exist — the "0 subfolders" discovery bug.
-    private static string ResolveScanRoot(IStorage storage, string folderPath)
+    internal static string ResolveScanRoot(IStorage storage, string folderPath)
     {
         try
         {
