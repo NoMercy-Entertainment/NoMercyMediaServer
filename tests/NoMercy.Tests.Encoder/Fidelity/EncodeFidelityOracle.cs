@@ -161,12 +161,48 @@ public static partial class EncodeFidelityOracle
                 violations.Add(
                     $"HLS-missing-video-range: variant has no VIDEO-RANGE → {Trim(line)}"
                 );
+
+            CheckHevcCodecsLevelForResolution(line, violations);
         }
 
         if (bandwidths.Count > 1 && bandwidths.Distinct().Count() == 1)
             violations.Add(
                 $"HLS-identical-bandwidth: all {bandwidths.Count} variants advertise the same "
                     + $"BANDWIDTH={bandwidths[0]} — ABR cannot pick by bitrate (the MapLabel-collision bug)."
+            );
+    }
+
+    /// <summary>
+    /// A variant's advertised HEVC level must be able to carry its RESOLUTION.
+    /// The Punisher 4K rung shipped CODECS="hvc1.2.4.L120.B0" — level 4.0, whose
+    /// MaxLumaPs (2,228,224 samples) cannot hold 3840×2160 (8,294,400). Players
+    /// that validate the codec string against the stream reject the variant.
+    /// Parses RESOLUTION=WxH and the hvc1 …L&lt;idc&gt;… token and flags any level
+    /// below the picture-size floor for that resolution.
+    /// </summary>
+    private static void CheckHevcCodecsLevelForResolution(string streamInf, List<string> violations)
+    {
+        Match res = Regex.Match(streamInf, @"RESOLUTION=(\d+)x(\d+)");
+        Match hevc = Regex.Match(streamInf, @"hvc1\.\d+\.[0-9A-Fa-f]+\.L(\d+)");
+        if (!res.Success || !hevc.Success)
+            return;
+
+        long lumaPs = long.Parse(res.Groups[1].Value) * long.Parse(res.Groups[2].Value);
+        int levelIdc = int.Parse(hevc.Groups[1].Value);
+
+        // HEVC Annex A MaxLumaPs → the lowest level_idc that can hold lumaPs.
+        int floorIdc = lumaPs switch
+        {
+            <= 983_040 => 93, // ≤ L3.1
+            <= 2_228_224 => 120, // ≤ L4.x (1080p)
+            <= 8_912_896 => 150, // ≤ L5.x (4K)
+            _ => 180, // L6.x (8K)
+        };
+
+        if (levelIdc < floorIdc)
+            violations.Add(
+                $"HLS-codecs-level-too-low: {res.Groups[1].Value}x{res.Groups[2].Value} variant "
+                    + $"advertises HEVC L{levelIdc} but needs ≥ L{floorIdc} for that resolution → {Trim(streamInf)}"
             );
     }
 

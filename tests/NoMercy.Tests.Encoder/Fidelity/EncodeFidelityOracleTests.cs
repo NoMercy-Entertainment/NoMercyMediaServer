@@ -199,13 +199,43 @@ public class EncodeFidelityOracleTests
     {
         string master =
             "#EXTM3U\n"
-            + "#EXT-X-STREAM-INF:BANDWIDTH=11084402,RESOLUTION=3840x2160,CODECS=\"hvc1.2.4.L120.B0\",VIDEO-RANGE=PQ\nv4k.m3u8\n"
+            + "#EXT-X-STREAM-INF:BANDWIDTH=11084402,RESOLUTION=3840x2160,CODECS=\"hvc1.2.4.L150.B0\",VIDEO-RANGE=PQ\nv4k.m3u8\n"
             + "#EXT-X-STREAM-INF:BANDWIDTH=4192000,RESOLUTION=1920x1080,CODECS=\"hvc1.2.4.L120.B0\",VIDEO-RANGE=SDR\nv1080.m3u8\n";
 
         List<string> violations = [];
         EncodeFidelityOracle.CheckMasterPlaylist(master, violations);
 
         violations.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Master_HevcLevelTooLowForResolution_IsFlagged()
+    {
+        // The exact Punisher master: a 4K variant advertising HEVC level 4.0
+        // (L120), which cannot legally carry 3840×2160.
+        string master =
+            "#EXTM3U\n"
+            + "#EXT-X-STREAM-INF:BANDWIDTH=11084402,RESOLUTION=3840x2160,CODECS=\"hvc1.2.4.L120.B0\",VIDEO-RANGE=PQ\nv4k.m3u8\n";
+
+        List<string> violations = [];
+        EncodeFidelityOracle.CheckMasterPlaylist(master, violations);
+
+        violations.Should().Contain(v => v.Contains("HLS-codecs-level-too-low"));
+    }
+
+    [Fact]
+    public void Master_HevcLevelCorrectForResolution_IsClean()
+    {
+        // 4K at L150 and 1080p at L120 are both legal — no level violation.
+        string master =
+            "#EXTM3U\n"
+            + "#EXT-X-STREAM-INF:BANDWIDTH=11084402,RESOLUTION=3840x2160,CODECS=\"hvc1.2.4.L150.B0\",VIDEO-RANGE=PQ\nv4k.m3u8\n"
+            + "#EXT-X-STREAM-INF:BANDWIDTH=4192000,RESOLUTION=1920x1080,CODECS=\"hvc1.2.4.L120.B0\",VIDEO-RANGE=SDR\nv1080.m3u8\n";
+
+        List<string> violations = [];
+        EncodeFidelityOracle.CheckMasterPlaylist(master, violations);
+
+        violations.Should().NotContain(v => v.Contains("HLS-codecs-level-too-low"));
     }
 
     [Fact]
