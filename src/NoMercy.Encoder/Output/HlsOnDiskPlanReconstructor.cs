@@ -69,11 +69,14 @@ public partial class HlsOnDiskPlanReconstructor(IMediaAnalyzer mediaAnalyzer)
             SubtitleOutputs: ReconstructSubtitles(storage, outputDirectory),
             Thumbnails: null,
             HlsOptions: new HlsPlanOptions(SegmentType: anyFmp4 ? "fmp4" : "mpegts"),
-            // The subtitle sidecars this reconstructs already exist on disk —
-            // they are what an EARLIER bundle produced, not a raw WebVTT
-            // extract waiting to be chunked. Re-running the chunker here would
-            // be redundant at best; disabling it keeps this a pure read.
-            EmitSubtitleWebVttChunks: false
+            // Advertise the WebVTT subtitle renditions in the master. The master
+            // generator drops WebVTT subs entirely unless this is true (they are
+            // assumed un-chunked and unadvertisable otherwise), which silently
+            // stripped every subtitle from a reconstructed master. The chunks
+            // already exist on disk, so WriteSubtitleSidecarsAsync no-ops on each
+            // one whose playlist is already present (idempotent) — this stays a
+            // pure read while still surfacing the subtitles.
+            EmitSubtitleWebVttChunks: true
         );
     }
 

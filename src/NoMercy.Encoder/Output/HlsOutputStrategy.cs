@@ -395,6 +395,17 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
             string lang = sub.Language ?? "und";
             string variant = string.IsNullOrEmpty(sub.Variant) ? "full" : sub.Variant;
 
+            // Idempotent: when a rescan reconstructs an already-published output
+            // the chunk playlist + segments are already on disk. Re-slicing would
+            // redo work (and needlessly hammer the NAS for every track); skip it
+            // and let the master keep advertising the existing playlist.
+            string existingPlaylistPath = storage.CombinePath(
+                storage.CombinePath(subtitlesDir, lang),
+                $"{variant}.m3u8"
+            );
+            if (storage.Exists(existingPlaylistPath))
+                continue;
+
             // Match the source .vtt the extractor produced.
             string? sourceVttPath = vttFiles.FirstOrDefault(f =>
                 storage
