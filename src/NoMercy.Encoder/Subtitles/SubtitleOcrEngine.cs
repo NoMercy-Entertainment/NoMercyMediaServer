@@ -66,7 +66,12 @@ public partial class SubtitleOcrEngine(
         // concurrent OCR jobs can't collide.
         string tempDirectory = Path.Combine(Path.GetTempPath(), "nm-ocr");
         storage.CreateDirectory(tempDirectory);
-        string ocrOutput = Path.Combine(tempDirectory, $"ocr-{Guid.NewGuid():N}.txt");
+        // The metadata filter's file= value is a bare name written into the
+        // process working directory, never an absolute path: a Windows drive
+        // colon inside a filtergraph value is unescapable and aborts the whole
+        // ocr filter parse (the recurring "bitmap subs never became vtt" bug).
+        string ocrFileName = $"ocr-{Guid.NewGuid():N}.txt";
+        string ocrOutput = Path.Combine(tempDirectory, ocrFileName);
 
         string jobId = Guid.NewGuid().ToString("N");
         IAnalysisProgressObserver observer = progress ?? NullAnalysisProgressObserver.Instance;
@@ -77,26 +82,27 @@ public partial class SubtitleOcrEngine(
 
         try
         {
-            // Lease every path handed to ffmpeg so future remote drivers can
-            // stage them locally and clean up on dispose.
+            // Lease the input so future remote drivers can stage it locally and
+            // clean up on dispose. The input is a plain -i argument (not part of
+            // the filtergraph), so its absolute Windows path is fine.
             await using LocalPathLease inputLease = inputStorage.AcquireLocalPath(inputPath);
-            await using LocalPathLease ocrLease = storage.AcquireLocalPath(ocrOutput);
 
             string? outputParentDirectory = Path.GetDirectoryName(outputPath);
             if (!string.IsNullOrEmpty(outputParentDirectory))
                 sidecarStorage.CreateDirectory(outputParentDirectory);
 
+            // Tesseract's data directory rides in on TESSDATA_PREFIX instead of the
+            // filter's datapath= option: a datapath with a drive colon cannot be
+            // escaped inside a filtergraph and aborts the parse. The metadata file
+            // is a bare name resolved against the working directory for the same
+            // reason.
             string[] args =
             [
                 "-hide_banner",
                 "-i",
                 inputLease.Path,
-                "-f",
-                "lavfi",
-                "-i",
-                "color=black:s=hd720",
                 "-filter_complex",
-                $"[0:s:{streamIndex}]ocr=language={language}:datapath={EscapeFilterPath(modelDirectory)},metadata=print:key=lavfi.ocr.text:file={EscapeFilterPath(ocrLease.Path)}",
+                $"[0:s:{streamIndex}]ocr=language={language},metadata=print:key=lavfi.ocr.text:file={ocrFileName}",
                 "-an",
                 "-f",
                 "null",
@@ -106,9 +112,8 @@ public partial class SubtitleOcrEngine(
             ProcessResult result = await processRunner.RunAsync(
                 options.FfmpegPath,
                 args,
-                onStdOut: null,
-                onStdErr: null,
-                workingDirectory: null,
+                new Dictionary<string, string> { ["TESSDATA_PREFIX"] = modelDirectory },
+                workingDirectory: tempDirectory,
                 cancellationToken: ct
             );
 
@@ -344,16 +349,6 @@ public partial class SubtitleOcrEngine(
             ts.Seconds,
             ts.Milliseconds
         );
-    }
-
-    private static string EscapeFilterPath(string path)
-    {
-        // FFmpeg filtergraph has two escaping layers (filterchain + filter-option).
-        // A single \: is consumed at the filterchain level, leaving bare : which
-        // then terminates the file= option.  Double-escape so each layer strips one
-        // backslash: C# "\\\\:" → emitted "\\:" → after filterchain → "\:" → after
-        // filter-option → literal ":".
-        return path.Replace('\\', '/').Replace(":", @"\\:");
     }
 
     private static string TrimErr(string stdErr)
