@@ -9,12 +9,12 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.NmSystem.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
+using NoMercy.NmSystem.Security;
 
 namespace NoMercy.Tests.Database;
 

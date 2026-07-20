@@ -10,9 +10,9 @@
 // -----------------------------------------------------------------------------
 
 using System.Reflection;
+using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
-using NoMercy.Authorization;
 using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;

@@ -11,12 +11,12 @@
 
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Tests.Repositories.Infrastructure;
 
-using Microsoft.Extensions.Logging.Abstractions;
 namespace NoMercy.Tests.Repositories;
 
 [Trait("Category", "Characterization")]
