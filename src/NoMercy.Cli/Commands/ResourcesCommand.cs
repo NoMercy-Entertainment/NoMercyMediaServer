@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.CommandLine;
+using System.Globalization;
 using NoMercy.Cli.Models;
 
 namespace NoMercy.Cli.Commands;
@@ -37,11 +38,11 @@ internal static class ResourcesCommand
                 }
 
                 Console.WriteLine(
-                    $"CPU:          {resources.Cpu.Total:F1}% (max {resources.Cpu.Max:F1}%)"
+                    $"CPU:          {F1(resources.Cpu.Total)}% (max {F1(resources.Cpu.Max)}%)"
                 );
 
                 Console.WriteLine(
-                    $"Memory:       {resources.Memory.Use:F1} / {resources.Memory.Total:F1} GB ({resources.Memory.Percentage:F1}%)"
+                    $"Memory:       {F1(resources.Memory.Use)} / {F1(resources.Memory.Total)} GB ({F1(resources.Memory.Percentage)}%)"
                 );
 
                 if (resources.Gpu.Count > 0)
@@ -49,7 +50,7 @@ internal static class ResourcesCommand
                     foreach (GpuInfo gpu in resources.Gpu)
                     {
                         Console.WriteLine(
-                            $"GPU {gpu.Index}:        {gpu.Core:F1}% core, {gpu.Memory:F1}% memory, {gpu.Encode:F1}% encode, {gpu.Decode:F1}% decode"
+                            $"GPU {gpu.Index}:        {F1(gpu.Core)}% core, {F1(gpu.Memory)}% memory, {F1(gpu.Encode)}% encode, {F1(gpu.Decode)}% decode"
                         );
                     }
                 }
@@ -62,7 +63,7 @@ internal static class ResourcesCommand
                     {
                         double used = drive.Total - drive.Available;
                         Console.WriteLine(
-                            $"  {drive.Name, -12} {used:F1} / {drive.Total:F1} GB ({drive.Percentage:F1}% free)"
+                            $"  {drive.Name, -12} {F1(used)} / {F1(drive.Total)} GB ({F1(drive.Percentage)}% free)"
                         );
                     }
                 }
@@ -73,4 +74,11 @@ internal static class ResourcesCommand
 
         return command;
     }
+
+    // Bare ":F1" in an interpolated string formats with the current thread's
+    // culture, so on any non-US-decimal locale (e.g. nl-NL) the CLI would print
+    // "12,5%" instead of "12.5%" — inconsistent with the docs/scripts that
+    // assume a dot, and a regression trap for a self-hosted tool with a global
+    // audience. Force invariant formatting explicitly.
+    private static string F1(double value) => value.ToString("F1", CultureInfo.InvariantCulture);
 }

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  Task-scoped coverage settings for NoMercy.Cli only. Unlike the shared
+  tests/coverletArgs.runsettings, this does NOT exclude CompilerGeneratedAttribute
+  — that exclusion hides async state-machine bodies, which would silently drop
+  every `async` command action in NoMercy.Cli from the report. Scoped via
+  <Include> to the compiled assembly name — "nomercy", not the project name
+  "NoMercy.Cli" (see <AssemblyName> in NoMercy.Cli.csproj) — so coverage
+  numbers reflect only the assembly under test, not its dependencies pulled in
+  by the test host.
+-->
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Include>[nomercy]*</Include>
+          <Exclude>[coverlet.*.tests?]*,[*]Coverlet.Core*,[*]Moq*</Exclude>
+          <ExcludeByAttribute>Obsolete,GeneratedCodeAttribute</ExcludeByAttribute>
+          <SingleHit>false</SingleHit>
+          <UseSourceLink>false</UseSourceLink>
+          <IncludeTestAssembly>false</IncludeTestAssembly>
+          <SkipAutoProps>true</SkipAutoProps>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

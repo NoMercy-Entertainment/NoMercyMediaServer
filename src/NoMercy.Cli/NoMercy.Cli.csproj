@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="NoMercy.Tests.Cli" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
   </ItemGroup>
 
   <ItemGroup>
