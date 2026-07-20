@@ -512,7 +512,6 @@ public static class ServiceCollectionExtensions
         // per-library. Each subscriber here has its own opt-out flag on
         // EncoderOptions for hard disable.
         services.AddSingleton<IntroDetectSubscriber>();
-        services.AddSingleton<OcrPostEncodeSubscriber>();
         services.AddSingleton<CropDetectSubscriber>();
         services.AddHostedService<V3SubscriberActivator>();
 

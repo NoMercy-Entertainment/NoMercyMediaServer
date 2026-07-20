@@ -200,13 +200,6 @@ public class EncoderOptions
     public bool EnableGpuResident { get; set; }
 
     /// <summary>
-    /// When true (default), <c>OcrPostEncodeSubscriber</c> dispatches an OCR
-    /// follow-up job when an encode that contains bitmap subtitle streams
-    /// (PGS / VOBSUB) targeting HLS or DASH finishes.
-    /// </summary>
-    public bool EnableOcrPostEncodeSubscriber { get; set; } = true;
-
-    /// <summary>
     /// When true (default), crop detection runs as part of the PlanStage
     /// (see <c>CropDetectSubscriber</c> for details — the live wiring lives
     /// inside the pipeline, not as a separate post-process event).

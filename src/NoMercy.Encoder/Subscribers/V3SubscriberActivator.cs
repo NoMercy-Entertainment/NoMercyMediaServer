@@ -33,7 +33,6 @@ internal sealed class V3SubscriberActivator(
 ) : IHostedService, IDisposable
 {
     private IntroDetectSubscriber? _introDetect;
-    private OcrPostEncodeSubscriber? _ocrPostEncode;
     private CropDetectSubscriber? _cropDetect;
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -41,12 +40,9 @@ internal sealed class V3SubscriberActivator(
         try
         {
             _introDetect = services.GetRequiredService<IntroDetectSubscriber>();
-            _ocrPostEncode = services.GetRequiredService<OcrPostEncodeSubscriber>();
             _cropDetect = services.GetRequiredService<CropDetectSubscriber>();
 
-            logger.LogInformation(
-                "V3 encoder subscribers activated (intro_detect, ocr_post_encode, crop_detect)"
-            );
+            logger.LogInformation("V3 encoder subscribers activated (intro_detect, crop_detect)");
         }
         catch (Exception ex)
         {
@@ -72,9 +68,7 @@ internal sealed class V3SubscriberActivator(
     public void Dispose()
     {
         _introDetect?.Dispose();
-        _ocrPostEncode?.Dispose();
         _introDetect = null;
-        _ocrPostEncode = null;
         _cropDetect = null;
     }
 }

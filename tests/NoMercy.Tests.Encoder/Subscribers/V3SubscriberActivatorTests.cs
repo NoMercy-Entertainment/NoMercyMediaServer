@@ -56,10 +56,6 @@ public class V3SubscriberActivatorTests
         IntroDetectSubscriber intro2 = provider.GetRequiredService<IntroDetectSubscriber>();
         intro1.Should().BeSameAs(intro2);
 
-        OcrPostEncodeSubscriber ocr1 = provider.GetRequiredService<OcrPostEncodeSubscriber>();
-        OcrPostEncodeSubscriber ocr2 = provider.GetRequiredService<OcrPostEncodeSubscriber>();
-        ocr1.Should().BeSameAs(ocr2);
-
         CropDetectSubscriber crop1 = provider.GetRequiredService<CropDetectSubscriber>();
         CropDetectSubscriber crop2 = provider.GetRequiredService<CropDetectSubscriber>();
         crop1.Should().BeSameAs(crop2);
@@ -86,7 +82,6 @@ public class V3SubscriberActivatorTests
         // Subscribers should be alive — resolving them after start returns the
         // same instance the activator pulled.
         provider.GetRequiredService<IntroDetectSubscriber>().Should().NotBeNull();
-        provider.GetRequiredService<OcrPostEncodeSubscriber>().Should().NotBeNull();
         provider.GetRequiredService<CropDetectSubscriber>().Should().NotBeNull();
     }
 
