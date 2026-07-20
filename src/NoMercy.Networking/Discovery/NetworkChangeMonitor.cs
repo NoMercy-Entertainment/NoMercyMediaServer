@@ -58,7 +58,12 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
         return Task.CompletedTask;
     }
 
-    private async void OnNetworkAddressChanged(object? sender, EventArgs e)
+    // Internal (not private) so the OS NetworkChange event handlers — which
+    // this class can only otherwise reach by actually triggering a real NIC
+    // address/availability change on the test machine — are directly
+    // unit-testable against fake INetworkDiscovery/IConnectivityManager
+    // collaborators.
+    internal async void OnNetworkAddressChanged(object? sender, EventArgs e)
     {
         if (!await _reevaluationLock.WaitAsync(0))
             return;
@@ -94,7 +99,7 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
         }
     }
 
-    private async void OnNetworkAvailabilityChanged(object? sender, NetworkAvailabilityEventArgs e)
+    internal async void OnNetworkAvailabilityChanged(object? sender, NetworkAvailabilityEventArgs e)
     {
         if (!e.IsAvailable)
             return;
@@ -124,7 +129,9 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
         }
     }
 
-    private static string GetCurrentInternalIp()
+    // Internal so the real socket-trick + NIC-enumeration resolution can be
+    // asserted against this machine's actual network stack directly.
+    internal static string GetCurrentInternalIp()
     {
         // UDP socket trick: OS picks the outbound source address — always the real LAN IP.
         try
@@ -187,7 +194,9 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
         return "127.0.0.1";
     }
 
-    private async Task SendUpdate()
+    // Internal so the no-auth-token early-out (the only branch reachable
+    // without a live POST to the NoMercy API) is directly unit-testable.
+    internal async Task SendUpdate()
     {
         try
         {

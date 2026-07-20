@@ -26,11 +26,7 @@ public sealed class CloudflareTunnelStrategyTests
         Func<Task>? checkAvailability = null
     )
     {
-        return new(
-            NullLogger<CloudflareTunnelStrategy>.Instance,
-            status,
-            checkAvailability
-        );
+        return new(NullLogger<CloudflareTunnelStrategy>.Instance, status, checkAvailability);
     }
 
     [Fact]
@@ -140,5 +136,61 @@ public sealed class CloudflareTunnelStrategyTests
         Exception? ex = Record.Exception(() => strategy.TeardownAsync().GetAwaiter().GetResult());
 
         Assert.Null(ex);
+    }
+
+    [Fact]
+    public void Dispose_WhenNothingStarted_DoesNotThrow()
+    {
+        CloudflareTunnelStrategy strategy = BuildStrategy(new());
+
+        Exception? ex = Record.Exception(strategy.Dispose);
+
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public void Dispose_CalledTwice_OnlyTearsDownOnce_AndDoesNotThrow()
+    {
+        // The _disposed guard must make the second Dispose() a no-op — this
+        // proves the guard exists (a regression here would double-run
+        // StopTunnel/dispose the already-disposed Process on the second call).
+        CloudflareTunnelStrategy strategy = BuildStrategy(new());
+
+        Exception? ex = Record.Exception(() =>
+        {
+            strategy.Dispose();
+            strategy.Dispose();
+        });
+
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public async Task TeardownAsync_AfterDispose_DoesNotThrow()
+    {
+        CloudflareTunnelStrategy strategy = BuildStrategy(new());
+        strategy.Dispose();
+
+        Exception? ex = await Record.ExceptionAsync(strategy.TeardownAsync);
+
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public async Task TryEstablishAsync_CheckAvailabilityThrows_PropagatesBeforeTokenCheck()
+    {
+        // The availability callback runs unconditionally before the token
+        // gate — if it throws, TryEstablishAsync must not swallow it (no
+        // try/catch wraps that call), matching the paid-feature-gate contract
+        // the connectivity manager relies on to log the real cause.
+        ConnectivityStatus status = new() { CloudflareTunnelToken = "token" };
+        CloudflareTunnelStrategy strategy = BuildStrategy(
+            status,
+            checkAvailability: () => throw new InvalidOperationException("gate check failed")
+        );
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            strategy.TryEstablishAsync(CancellationToken.None)
+        );
     }
 }
