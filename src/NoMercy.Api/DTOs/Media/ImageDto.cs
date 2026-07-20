@@ -91,14 +91,30 @@ public record ImageDto
 
     /// <summary>
     /// Stable surrogate id for an image without a TMDB-issued primary key.
-    /// Derives a long from the file path's hash. The original implementation
-    /// chained '.Replace("-", "1").TrimStart(\'0\')' which crashes when the
-    /// hash is exactly 0 (TrimStart returns empty → long.Parse throws). Use
-    /// math instead so 0 stays 0 and negatives flip cleanly.
+    /// Derives a long from a hash of the file path. Must not use
+    /// string.GetHashCode() — .NET randomizes it per process for DoS
+    /// hardening, so the same path would mint a different id after every
+    /// server restart. FNV-1a is process-stable so the id survives restarts.
     /// </summary>
     private static long HashToId(string? filePath)
     {
-        int hash = (filePath ?? string.Empty).GetHashCode();
+        int hash = Fnv1AHash(filePath ?? string.Empty);
         return hash < 0 ? -(long)hash + 1_000_000_000L : hash;
+    }
+
+    private static int Fnv1AHash(string value)
+    {
+        unchecked
+        {
+            const uint fnvOffsetBasis = 2166136261;
+            const uint fnvPrime = 16777619;
+            uint hash = fnvOffsetBasis;
+            foreach (char c in value)
+            {
+                hash ^= c;
+                hash *= fnvPrime;
+            }
+            return (int)hash;
+        }
     }
 }

@@ -28,7 +28,7 @@ public static class ComponentExtensions
     /// </summary>
     public static ComponentEnvelope ToCard(this Movie movie, string country, bool watch = false)
     {
-        return Component.Card(new(movie, country)).WithWatch(watch);
+        return Component.Card(new(movie, country, watch)).WithWatch(watch);
     }
 
     /// <summary>
@@ -60,7 +60,7 @@ public static class ComponentExtensions
     /// </summary>
     public static ComponentEnvelope ToCard(this Tv tv, string country, bool watch = false)
     {
-        return Component.Card(new(tv, country)).WithWatch(watch);
+        return Component.Card(new(tv, country, watch)).WithWatch(watch);
     }
 
     /// <summary>
@@ -96,7 +96,7 @@ public static class ComponentExtensions
         bool watch = false
     )
     {
-        return Component.Card(new(collection, country)).WithWatch(watch);
+        return Component.Card(new(collection, country, watch)).WithWatch(watch);
     }
 
     /// <summary>
@@ -120,7 +120,7 @@ public static class ComponentExtensions
     /// </summary>
     public static ComponentEnvelope ToCard(this Special special, string country, bool watch = false)
     {
-        return Component.Card(new(special, country)).WithWatch(watch);
+        return Component.Card(new(special, country, watch)).WithWatch(watch);
     }
 
     #endregion

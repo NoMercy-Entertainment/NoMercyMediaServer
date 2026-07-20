@@ -68,9 +68,6 @@ public class ArtistDto
             : null;
         Link = new($"/music/artists/{Id}", UriKind.Relative);
         Type = "artist";
-        Description = !string.IsNullOrEmpty(description)
-            ? description
-            : albumArtist.Album.Description;
 
         ColorPalette = albumArtist.Artist._colorPalette.ToRaw();
     }
