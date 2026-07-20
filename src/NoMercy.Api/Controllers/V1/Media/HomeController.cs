@@ -102,6 +102,11 @@ public partial class HomeController : BaseController
         if (request.Page != 0)
             return Ok(response);
 
+        // "Latest in {library}" carousels belong to the non-lolomo home only;
+        // the lolomo (mobile/TV) variant lays those library rows out itself.
+        if (request.Version == "lolomo")
+            return Ok(response);
+
         LibraryRepository libraryRepository = new(_contextFactory);
         List<Library> libraries = await libraryRepository.GetLibrariesLite(userId, ct);
 
