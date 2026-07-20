@@ -41,6 +41,15 @@ public sealed class SetupTerminalUi : IDisposable
     // ── Public API ──────────────────────────────────────────────────────────
 
     /// <summary>
+    /// Test-only override for <see cref="IsInteractiveTerminal"/>. The real property
+    /// inspects ambient process/Console state that a test host cannot control (a CI
+    /// runner's stdout is typically redirected regardless of what the test wants to
+    /// exercise) — this lets NoMercy.Tests.Setup force either branch deterministically.
+    /// Left null in production; never read outside this property.
+    /// </summary>
+    internal static bool? ForceInteractiveForTests { get; set; }
+
+    /// <summary>
     /// Returns true when the terminal is interactive and large enough to draw
     /// the UI. Gates all Console.WindowWidth / WindowHeight calls.
     /// </summary>
@@ -48,6 +57,9 @@ public sealed class SetupTerminalUi : IDisposable
     {
         get
         {
+            if (ForceInteractiveForTests.HasValue)
+                return ForceInteractiveForTests.Value;
+
             if (!Environment.UserInteractive)
                 return false;
             if (Console.IsOutputRedirected)
@@ -250,7 +262,10 @@ public sealed class SetupTerminalUi : IDisposable
 
     // ── QR generation ───────────────────────────────────────────────────────
 
-    private static string[] GenerateAsciiQr(string text, int terminalWidth)
+    // Internal (not private): pure QR-rendering logic with no Console dependency —
+    // NoMercy.Tests.Setup exercises the "fits" / "doesn't fit" / generation-failure
+    // branches directly rather than through the Console-gated Draw() call chain.
+    internal static string[] GenerateAsciiQr(string text, int terminalWidth)
     {
         try
         {

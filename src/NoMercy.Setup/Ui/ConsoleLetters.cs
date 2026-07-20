@@ -1420,7 +1420,6 @@ public class ConsoleLetters
             "   ❄️         ",
             "              ",
             "        🎄    ",
-            "              ",
         ],
         ["N"] =
         [
@@ -1616,6 +1615,7 @@ public class ConsoleLetters
             " \"Y888888",
             "   🎄️   ",
             "          ",
+            "         ",
         ],
         ["b"] =
         [
@@ -1671,6 +1671,7 @@ public class ConsoleLetters
             "  \"Y8888 ",
             "         ",
             " ⛄      ",
+            "         ",
         ],
         ["f"] =
         [
