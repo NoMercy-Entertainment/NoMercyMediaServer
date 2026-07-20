@@ -54,12 +54,13 @@ public sealed class PathCombineAnalyzer : DiagnosticAnalyzer
     {
         InvocationExpressionSyntax invocation = (InvocationExpressionSyntax)context.Node;
 
-        if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
+        SimpleNameSyntax? invokedName = AnalyzerSyntaxHelpers.GetInvokedName(invocation);
+        if (invokedName is null)
         {
             return;
         }
 
-        if (!string.Equals(memberAccess.Name.Identifier.Text, "Combine", StringComparison.Ordinal))
+        if (!string.Equals(invokedName.Identifier.Text, "Combine", StringComparison.Ordinal))
         {
             return;
         }
@@ -86,7 +87,12 @@ public sealed class PathCombineAnalyzer : DiagnosticAnalyzer
         {
             string typeNamespace =
                 containingType.ContainingNamespace?.ToDisplayString() ?? string.Empty;
-            if (typeNamespace.StartsWith("NoMercy.Storage.Drivers", StringComparison.Ordinal))
+            if (
+                AnalyzerSyntaxHelpers.IsNamespaceOrDescendant(
+                    typeNamespace,
+                    "NoMercy.Storage.Drivers"
+                )
+            )
             {
                 return;
             }
@@ -135,7 +141,7 @@ public sealed class PathCombineAnalyzer : DiagnosticAnalyzer
             if (descendant is UsingDirectiveSyntax usingDirective)
             {
                 string usingName = usingDirective.Name?.ToString() ?? string.Empty;
-                if (usingName.StartsWith("NoMercy.Storage", StringComparison.Ordinal))
+                if (AnalyzerSyntaxHelpers.IsNamespaceOrDescendant(usingName, "NoMercy.Storage"))
                 {
                     return true;
                 }
@@ -158,7 +164,7 @@ public sealed class PathCombineAnalyzer : DiagnosticAnalyzer
                     if (sym is not null)
                     {
                         string ns = sym.ContainingNamespace?.ToDisplayString() ?? string.Empty;
-                        if (ns.StartsWith("NoMercy.Storage", StringComparison.Ordinal))
+                        if (AnalyzerSyntaxHelpers.IsNamespaceOrDescendant(ns, "NoMercy.Storage"))
                         {
                             return true;
                         }
