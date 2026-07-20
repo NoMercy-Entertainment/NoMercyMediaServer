@@ -287,7 +287,7 @@ public record LibraryResponseItemDto
         Type = "person";
         Link = new($"/person/{Id}", UriKind.Relative);
 
-        TitleSort = person.Name;
+        TitleSort = person.Name.TitleSort();
         ColorPalette = person.ColorPalette;
         Poster = person.Profile;
     }

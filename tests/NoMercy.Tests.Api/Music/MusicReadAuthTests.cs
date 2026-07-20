@@ -43,9 +43,7 @@ public class MusicReadAuthTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task AlbumsIndex_SecondaryUser_PassesMediaAccess_ReturnsOk()
     {
-        HttpResponseMessage response = await _secondary.GetAsync(
-            "/api/v1/music/albums/letter/_"
-        );
+        HttpResponseMessage response = await _secondary.GetAsync("/api/v1/music/albums/letter/_");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
@@ -53,9 +51,7 @@ public class MusicReadAuthTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task AlbumsIndex_ReturnsUnauthorized_WhenAnonymous()
     {
-        HttpResponseMessage response = await _anonymous.GetAsync(
-            "/api/v1/music/albums/letter/_"
-        );
+        HttpResponseMessage response = await _anonymous.GetAsync("/api/v1/music/albums/letter/_");
 
         response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
     }
@@ -63,9 +59,7 @@ public class MusicReadAuthTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task ArtistsIndex_SecondaryUser_PassesMediaAccess_ReturnsOk()
     {
-        HttpResponseMessage response = await _secondary.GetAsync(
-            "/api/v1/music/artists/letter/_"
-        );
+        HttpResponseMessage response = await _secondary.GetAsync("/api/v1/music/artists/letter/_");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
@@ -73,9 +67,7 @@ public class MusicReadAuthTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task ArtistsIndex_ReturnsUnauthorized_WhenAnonymous()
     {
-        HttpResponseMessage response = await _anonymous.GetAsync(
-            "/api/v1/music/artists/letter/_"
-        );
+        HttpResponseMessage response = await _anonymous.GetAsync("/api/v1/music/artists/letter/_");
 
         response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
     }

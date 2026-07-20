@@ -28,7 +28,15 @@ public class CollectionResponseItemDtoTests
             Id = 10,
             Name = "The Matrix Collection",
             Overview = "English overview.",
-            Parts = [new() { Id = 1, Title = "The Matrix", VoteAverage = 8.7 }],
+            Parts =
+            [
+                new()
+                {
+                    Id = 1,
+                    Title = "The Matrix",
+                    VoteAverage = 8.7,
+                },
+            ],
             Translations = new()
             {
                 Translations =
@@ -60,7 +68,15 @@ public class CollectionResponseItemDtoTests
             Id = 11,
             Name = "The Matrix Collection",
             Overview = "English overview.",
-            Parts = [new() { Id = 1, Title = "The Matrix", VoteAverage = 8.7 }],
+            Parts =
+            [
+                new()
+                {
+                    Id = 1,
+                    Title = "The Matrix",
+                    VoteAverage = 8.7,
+                },
+            ],
             Translations = new() { Translations = [] },
         };
 

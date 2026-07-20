@@ -467,10 +467,7 @@ public class MusicMutationAuthTests : IClassFixture<NoMercyApiFactory>
         create.StatusCode.Should().Be(HttpStatusCode.OK);
 
         using JsonDocument createDoc = JsonDocument.Parse(await create.Content.ReadAsStringAsync());
-        Guid createdId = createDoc
-            .RootElement.GetProperty("data")
-            .GetProperty("id")
-            .GetGuid();
+        Guid createdId = createDoc.RootElement.GetProperty("data").GetProperty("id").GetGuid();
 
         HttpResponseMessage delete = await _secondary.DeleteAsync(
             $"/api/v1/music/playlists/{createdId}"
@@ -478,9 +475,11 @@ public class MusicMutationAuthTests : IClassFixture<NoMercyApiFactory>
         delete.StatusCode.Should().Be(HttpStatusCode.OK);
 
         using JsonDocument deleteDoc = JsonDocument.Parse(await delete.Content.ReadAsStringAsync());
-        deleteDoc.RootElement.GetProperty("data").GetString().Should().Be(
-            "Playlist deleted successfully"
-        );
+        deleteDoc
+            .RootElement.GetProperty("data")
+            .GetString()
+            .Should()
+            .Be("Playlist deleted successfully");
     }
 
     [Fact]
