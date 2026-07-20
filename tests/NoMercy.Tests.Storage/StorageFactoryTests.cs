@@ -39,12 +39,7 @@ public class StorageFactoryTests
     )
     {
         Mock<IStorageDriver> b = driver ?? BackendMock();
-        return new(
-            b.Object,
-            NullLogger<StorageFactory>.Instance,
-            resolver,
-            credentialResolver
-        );
+        return new(b.Object, NullLogger<StorageFactory>.Instance, resolver, credentialResolver);
     }
 
     [Fact]

@@ -131,10 +131,7 @@ public sealed class WebDavStorageContractTests(StorageBackendsFixture fixture)
 
             // Enumerate top-level resources and DELETE each. Recursive deletes
             // on collections take the whole subtree.
-            using HttpRequestMessage propfind = new(
-                new("PROPFIND"),
-                fixture.WebDavBaseUrl
-            );
+            using HttpRequestMessage propfind = new(new("PROPFIND"), fixture.WebDavBaseUrl);
             propfind.Headers.Add("Depth", "1");
             HttpResponseMessage list = await rawHttp.SendAsync(propfind);
             if (list.StatusCode != HttpStatusCode.MultiStatus)

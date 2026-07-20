@@ -224,11 +224,7 @@ public class StorageDriverGrouperTests
         Ulid movieId = Ulid.NewUlid();
         Ulid tvId = Ulid.NewUlid();
 
-        FolderRootInput[] inputs =
-        [
-            new(movieId, @"C:\Media\Movies"),
-            new(tvId, @"D:\Media\TV"),
-        ];
+        FolderRootInput[] inputs = [new(movieId, @"C:\Media\Movies"), new(tvId, @"D:\Media\TV")];
 
         IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs);
 
@@ -289,11 +285,7 @@ public class StorageDriverGrouperTests
         Ulid aId = Ulid.NewUlid();
         Ulid bId = Ulid.NewUlid();
 
-        FolderRootInput[] inputs =
-        [
-            new(aId, @"C:\Alpha\Movies"),
-            new(bId, @"C:\Beta\TV"),
-        ];
+        FolderRootInput[] inputs = [new(aId, @"C:\Alpha\Movies"), new(bId, @"C:\Beta\TV")];
 
         IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs);
 
