@@ -138,6 +138,61 @@ public class PortManagerTests
         Assert.Equal(-1, PortManager.ParsePidFromLsof(lsof));
     }
 
+    [Fact]
+    public async Task EnsurePortAvailable_PortAlreadyFree_ReturnsImmediatelyWithoutConsultingCertService()
+    {
+        int port = GetFreePort();
+        Mock<ICertificateService> certificateService = new(MockBehavior.Strict);
+        PortManager manager = new(NullLogger<PortManager>.Instance, certificateService.Object);
+
+        await manager.EnsurePortAvailable(port);
+
+        // Strict mock: any unexpected call (e.g. HasValidCertificate) would have
+        // thrown above. Reaching here proves the early-return path never
+        // touches the certificate service at all.
+        certificateService.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task HandlePortInUse_InnerExceptionIsNotSocketException_ReturnsFalseWithoutRecovering()
+    {
+        PortManager manager = BuildManager();
+        IOException ex = new("disk full", new InvalidOperationException("not a socket error"));
+
+        bool shouldRetry = await manager.HandlePortInUse(7626, ex);
+
+        Assert.False(shouldRetry);
+    }
+
+    [Fact]
+    public async Task HandlePortInUse_SocketErrorIsNotAddressInUse_ReturnsFalseWithoutRecovering()
+    {
+        PortManager manager = BuildManager();
+        SocketException socketEx = new((int)SocketError.ConnectionRefused);
+        IOException ex = new("connection refused", socketEx);
+
+        bool shouldRetry = await manager.HandlePortInUse(7626, ex);
+
+        Assert.False(shouldRetry);
+    }
+
+    [Fact]
+    public async Task HandlePortInUse_AddressAlreadyInUseOnAFreePort_RecoversAndReturnsTrue()
+    {
+        // The exception CLAIMS the port collided, but the port is actually free
+        // (a transient bind race) — EnsurePortAvailable's happy path resolves it
+        // without touching the certificate service, and HandlePortInUse reports
+        // the caller may safely retry.
+        int port = GetFreePort();
+        PortManager manager = BuildManager();
+        SocketException socketEx = new((int)SocketError.AddressAlreadyInUse);
+        IOException ex = new("address already in use", socketEx);
+
+        bool shouldRetry = await manager.HandlePortInUse(port, ex);
+
+        Assert.True(shouldRetry);
+    }
+
     private sealed class StubCertificateService : ICertificateService
     {
         public void LoadFromDb() { }
