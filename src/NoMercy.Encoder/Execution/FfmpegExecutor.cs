@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Diagnostics;
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Errors;
@@ -112,9 +113,12 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
                     )
                     : null;
 
-            // Parse the raw bitrate string from FFmpeg (e.g. "1234.5kbits/s")
+            // Parse the raw bitrate string from FFmpeg (e.g. "1234.5kbits/s"). This
+            // string rides EncodingProgress.Bitrate straight into the dashboard's
+            // SignalR payload (EventBusProgressObserver), so it must stay
+            // period-decimal regardless of the host's locale.
             string bitrateStr = snapshot.BitrateKbps.HasValue
-                ? $"{snapshot.BitrateKbps.Value:F1}kbits/s"
+                ? $"{snapshot.BitrateKbps.Value.ToString("F1", CultureInfo.InvariantCulture)}kbits/s"
                 : "N/A";
 
             EncodingProgress progress = new(

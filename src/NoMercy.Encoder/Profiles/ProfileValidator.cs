@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Globalization;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 
@@ -173,7 +174,8 @@ public static class ProfileValidator
         {
             if (config.SourcePercentage <= 0 || config.SourcePercentage > 200)
                 errors.Add(
-                    $"AutoLadder.SourcePercentage must be in (0, 200] (got {config.SourcePercentage})."
+                    "AutoLadder.SourcePercentage must be in (0, 200] "
+                        + $"(got {config.SourcePercentage.ToString(CultureInfo.InvariantCulture)})."
                 );
         }
 
@@ -189,7 +191,8 @@ public static class ProfileValidator
         // Rule 7 — LowTierFramerateMultiplier out of (0, 1.0]
         if (config.LowTierFramerateMultiplier <= 0 || config.LowTierFramerateMultiplier > 1.0)
             errors.Add(
-                $"AutoLadder.LowTierFramerateMultiplier must be in (0, 1.0] (got {config.LowTierFramerateMultiplier})."
+                "AutoLadder.LowTierFramerateMultiplier must be in (0, 1.0] "
+                    + $"(got {config.LowTierFramerateMultiplier.ToString(CultureInfo.InvariantCulture)})."
             );
     }
 
@@ -343,12 +346,15 @@ public static class ProfileValidator
         );
 
         string fix = nextFit is not null
-            ? $"Raise level to {nextFit.Level} (supports up to {nextFit.MaxLumaSamplesPerSec:N0} luma samples/sec)."
+            ? $"Raise level to {nextFit.Level} (supports up to "
+                + $"{nextFit.MaxLumaSamplesPerSec.ToString("N0", CultureInfo.InvariantCulture)} luma samples/sec)."
             : "No standard level supports this resolution × frame-rate combination.";
 
         errors.Add(
-            $"Level {video.Level} cap exceeded: {lumaSamplesPerSec:N0} luma samples/sec required "
-                + $"but level {video.Level} allows {cap.MaxLumaSamplesPerSec:N0}. {fix}"
+            $"Level {video.Level} cap exceeded: "
+                + $"{lumaSamplesPerSec.ToString("N0", CultureInfo.InvariantCulture)} luma samples/sec required "
+                + $"but level {video.Level} allows "
+                + $"{cap.MaxLumaSamplesPerSec.ToString("N0", CultureInfo.InvariantCulture)}. {fix}"
         );
     }
 
