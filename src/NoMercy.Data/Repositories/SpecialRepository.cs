@@ -421,7 +421,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
         )
             .GroupBy(x => x.MovieId)
             .SelectMany(
-                g => g.Take(15),
+                g => g.OrderBy(x => x.Order).Take(15),
                 (g, x) =>
                     new
                     {
@@ -696,7 +696,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
         )
             .GroupBy(x => x.TvId)
             .SelectMany(
-                g => g.Take(15),
+                g => g.OrderBy(x => x.Order).Take(15),
                 (g, x) =>
                     new
                     {
