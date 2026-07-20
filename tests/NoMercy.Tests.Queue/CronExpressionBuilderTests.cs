@@ -712,6 +712,134 @@ public class CronExpressionBuilderTests
         Assert.Equal(expected, result);
     }
 
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(60)]
+    public void Hourly_InvalidMinute_ThrowsArgumentOutOfRangeException(int minute)
+    {
+        CronExpressionBuilder builder = new();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.Hourly(minute));
+    }
+
+    [Theory]
+    [InlineData(-1, 0)]
+    [InlineData(24, 0)]
+    public void Weekly_InvalidHour_ThrowsArgumentOutOfRangeException(int hour, int minute)
+    {
+        CronExpressionBuilder builder = new();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            builder.Weekly(DayOfWeek.Monday, hour, minute)
+        );
+    }
+
+    [Theory]
+    [InlineData(0, -1)]
+    [InlineData(0, 60)]
+    public void Weekly_InvalidMinute_ThrowsArgumentOutOfRangeException(int hour, int minute)
+    {
+        CronExpressionBuilder builder = new();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            builder.Weekly(DayOfWeek.Monday, hour, minute)
+        );
+    }
+
+    [Theory]
+    [InlineData(0, 0, 0)]
+    [InlineData(32, 0, 0)]
+    public void Monthly_InvalidDay_ThrowsArgumentOutOfRangeException(int day, int hour, int minute)
+    {
+        CronExpressionBuilder builder = new();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.Monthly(day, hour, minute));
+    }
+
+    [Theory]
+    [InlineData(1, -1, 0)]
+    [InlineData(1, 24, 0)]
+    public void Monthly_InvalidHour_ThrowsArgumentOutOfRangeException(int day, int hour, int minute)
+    {
+        CronExpressionBuilder builder = new();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.Monthly(day, hour, minute));
+    }
+
+    [Theory]
+    [InlineData(1, 0, -1)]
+    [InlineData(1, 0, 60)]
+    public void Monthly_InvalidMinute_ThrowsArgumentOutOfRangeException(
+        int day,
+        int hour,
+        int minute
+    )
+    {
+        CronExpressionBuilder builder = new();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.Monthly(day, hour, minute));
+    }
+
+    [Theory]
+    [InlineData(0, 1, 0, 0)]
+    [InlineData(13, 1, 0, 0)]
+    public void Yearly_InvalidMonth_ThrowsArgumentOutOfRangeException(
+        int month,
+        int day,
+        int hour,
+        int minute
+    )
+    {
+        CronExpressionBuilder builder = new();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.Yearly(month, day, hour, minute));
+    }
+
+    [Theory]
+    [InlineData(1, 0, 0, 0)]
+    [InlineData(1, 32, 0, 0)]
+    public void Yearly_InvalidDay_ThrowsArgumentOutOfRangeException(
+        int month,
+        int day,
+        int hour,
+        int minute
+    )
+    {
+        CronExpressionBuilder builder = new();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.Yearly(month, day, hour, minute));
+    }
+
+    [Theory]
+    [InlineData(1, 1, -1, 0)]
+    [InlineData(1, 1, 24, 0)]
+    public void Yearly_InvalidHour_ThrowsArgumentOutOfRangeException(
+        int month,
+        int day,
+        int hour,
+        int minute
+    )
+    {
+        CronExpressionBuilder builder = new();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.Yearly(month, day, hour, minute));
+    }
+
+    [Theory]
+    [InlineData(1, 1, 0, -1)]
+    [InlineData(1, 1, 0, 60)]
+    public void Yearly_InvalidMinute_ThrowsArgumentOutOfRangeException(
+        int month,
+        int day,
+        int hour,
+        int minute
+    )
+    {
+        CronExpressionBuilder builder = new();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.Yearly(month, day, hour, minute));
+    }
+
     #endregion
 
     #region Builder Pattern Tests
