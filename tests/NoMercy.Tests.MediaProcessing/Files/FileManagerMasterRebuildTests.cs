@@ -12,8 +12,10 @@
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Moq;
+using Newtonsoft.Json;
 using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Analysis;
+using NoMercy.Encoder.Bundle;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
@@ -244,6 +246,199 @@ public sealed class FileManagerMasterRebuildTests : IDisposable
         );
 
         Directory.GetFiles(hostDir, "*.m3u8").Should().BeEmpty();
+    }
+
+    // -----------------------------------------------------------------------
+    // Regression: the audio-loss bug (ebc82df9's rebuild dropping the audio
+    // group for older-encoded titles) and its blueprint-primary fix.
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task Scan_OldNamingAudioDirsNoCodecSuffix_NoBlueprint_RebuildsMasterWithAudioGroup()
+    {
+        string hostDir = Path.Combine(_tempRoot, "Chainsaw.Man.S01E01.(2022).NoMercy");
+        Directory.CreateDirectory(hostDir);
+
+        WriteVariant(hostDir, "video_1920x1080_SDR", segmentBytes: 300_000, extension: ".m4s");
+        WriteInitMp4(hostDir, "video_1920x1080_SDR");
+        // Pre-codec-suffix encoder naming: no `_<codec>` token on the dir at
+        // all — the exact on-disk shape that regressed audio to silent.
+        WriteVariant(hostDir, "audio_jpn", segmentBytes: 60_000, extension: ".m4s");
+        WriteVariant(hostDir, "audio_eng", segmentBytes: 60_000, extension: ".m4s");
+
+        SetupProbe("video_1920x1080_SDR", "hevc", 1920, 1080, bitDepth: 8, colorTransfer: "bt709");
+
+        LocalStorageDriver driver = new();
+        LocalStorage storage = new(driver, new StoragePathGuard([], driver));
+        FileManager manager = BuildFileManager();
+        string fileName = "/Chainsaw.Man.S01E01.(2022).NoMercy.m3u8";
+        string masterPath = Path.Combine(hostDir, "Chainsaw.Man.S01E01.(2022).NoMercy.m3u8");
+
+        List<IVideo> video = InvokeGetVideoHashList(manager, storage, hostDir);
+        await InvokeRebuildHlsMasterFromDiskAsync(manager, storage, hostDir, fileName, video);
+
+        File.Exists(masterPath).Should().BeTrue();
+        string master = await File.ReadAllTextAsync(masterPath);
+
+        Regex
+            .Matches(master, "#EXT-X-MEDIA:TYPE=AUDIO")
+            .Count.Should()
+            .Be(2, "both old-naming audio dirs must surface as a group, not be silently skipped");
+        master.Should().Contain("LANGUAGE=\"jpn\"");
+        master.Should().Contain("LANGUAGE=\"eng\"");
+
+        string streamInfLine = master
+            .Split('\n')
+            .First(line => line.StartsWith("#EXT-X-STREAM-INF:", StringComparison.Ordinal));
+        System.Text.RegularExpressions.Match audioAttr = Regex.Match(
+            streamInfLine,
+            "AUDIO=\"(?<id>[^\"]+)\""
+        );
+        audioAttr
+            .Success.Should()
+            .BeTrue(
+                "the video variant must reference the audio group the rebuild actually emitted"
+            );
+        master.Should().Contain($"GROUP-ID=\"{audioAttr.Groups["id"].Value}\"");
+    }
+
+    [Fact]
+    public async Task Scan_BlueprintPresent_CustomAudioRenditionPath_MasterBuiltFromBlueprintFiles()
+    {
+        string hostDir = Path.Combine(_tempRoot, "Custom.Naming.Title.(2025).NoMercy");
+        Directory.CreateDirectory(hostDir);
+
+        WriteVariant(hostDir, "video_1920x1080_SDR", segmentBytes: 300_000, extension: ".m4s");
+        WriteInitMp4(hostDir, "video_1920x1080_SDR");
+        SetupProbe("video_1920x1080_SDR", "hevc", 1920, 1080, bitDepth: 8, colorTransfer: "bt709");
+
+        // A custom PlaylistNameTemplate produced this — no "audio_" prefix at
+        // all. A directory-name parse (even a lenient one) can never resolve
+        // this; only the blueprint's recorded Files[] can.
+        string customAudioDir = Path.Combine(hostDir, "sound", "japanese-track");
+        Directory.CreateDirectory(customAudioDir);
+        File.WriteAllBytes(Path.Combine(customAudioDir, "stream_00000.m4s"), new byte[60_000]);
+        File.WriteAllText(
+            Path.Combine(customAudioDir, "stream.m3u8"),
+            "#EXTM3U\n#EXTINF:6.000000,\nstream_00000.m4s\n#EXT-X-ENDLIST\n"
+        );
+
+        WriteAudioBlueprint(
+            hostDir,
+            [
+                new BlueprintTrack(
+                    SourceStreamIndex: 1,
+                    Kind: "audio",
+                    SourceCodec: "aac",
+                    SourceLanguage: "jpn",
+                    Policy: "copy",
+                    Fidelity: "lossless",
+                    Reconstructable: true,
+                    OriginalParams: null,
+                    Container: "hls",
+                    Files:
+                    [
+                        "sound/japanese-track/stream.m3u8",
+                        "sound/japanese-track/stream_00000.m4s",
+                    ],
+                    Sha256: null
+                ),
+            ]
+        );
+
+        LocalStorageDriver driver = new();
+        LocalStorage storage = new(driver, new StoragePathGuard([], driver));
+        FileManager manager = BuildFileManager();
+        string fileName = "/Custom.Naming.Title.(2025).NoMercy.m3u8";
+        string masterPath = Path.Combine(hostDir, "Custom.Naming.Title.(2025).NoMercy.m3u8");
+
+        List<IVideo> video = InvokeGetVideoHashList(manager, storage, hostDir);
+        await InvokeRebuildHlsMasterFromDiskAsync(manager, storage, hostDir, fileName, video);
+
+        string master = await File.ReadAllTextAsync(masterPath);
+
+        master.Should().Contain("#EXT-X-MEDIA:TYPE=AUDIO");
+        master.Should().Contain("LANGUAGE=\"jpn\"");
+        master
+            .Should()
+            .Contain(
+                "URI=\"sound/japanese-track/stream.m3u8\"",
+                "the master must reference the blueprint's resolved output path, not a guessed directory name"
+            );
+    }
+
+    [Fact]
+    public async Task Scan_ZeroAudioRenditions_MasterHasNoAudioGroupAndNoDanglingReference()
+    {
+        string hostDir = Path.Combine(_tempRoot, "Silent.Documentary.(2019).NoMercy");
+        Directory.CreateDirectory(hostDir);
+
+        WriteVariant(hostDir, "video_1920x1080_SDR", segmentBytes: 300_000, extension: ".m4s");
+        WriteInitMp4(hostDir, "video_1920x1080_SDR");
+        SetupProbe("video_1920x1080_SDR", "hevc", 1920, 1080, bitDepth: 8, colorTransfer: "bt709");
+
+        LocalStorageDriver driver = new();
+        LocalStorage storage = new(driver, new StoragePathGuard([], driver));
+        FileManager manager = BuildFileManager();
+        string fileName = "/Silent.Documentary.(2019).NoMercy.m3u8";
+        string masterPath = Path.Combine(hostDir, "Silent.Documentary.(2019).NoMercy.m3u8");
+
+        List<IVideo> video = InvokeGetVideoHashList(manager, storage, hostDir);
+        await InvokeRebuildHlsMasterFromDiskAsync(manager, storage, hostDir, fileName, video);
+
+        string master = await File.ReadAllTextAsync(masterPath);
+
+        master.Should().NotContain("#EXT-X-MEDIA:TYPE=AUDIO");
+        master
+            .Should()
+            .NotContain(
+                "AUDIO=\"",
+                "a title with zero audio renditions must not reference an audio group that was never emitted"
+            );
+    }
+
+    private static void WriteAudioBlueprint(string hostDir, IReadOnlyList<BlueprintTrack> tracks)
+    {
+        MediaBlueprint blueprint = new(
+            Version: 1,
+            Identity: new BlueprintIdentity(
+                Type: "movie",
+                TmdbId: 1,
+                Show: null,
+                Season: null,
+                Episode: null,
+                Title: "Fixture",
+                Year: 2025
+            ),
+            Source: new BlueprintSource(
+                Path: "/source/fixture.mkv",
+                Filename: "fixture.mkv",
+                Container: "matroska",
+                SizeBytes: 0,
+                DurationSeconds: 0,
+                Sha256: null,
+                Ffprobe: null
+            ),
+            Encodes:
+            [
+                new BlueprintEncode(
+                    PresetSlug: "fixture-preset",
+                    PresetId: "1",
+                    ProfileFingerprint: null,
+                    EncoderVersion: "test",
+                    TargetContainer: "hls",
+                    OutputLocation: hostDir,
+                    CreatedAt: DateTime.UtcNow,
+                    CompletedAt: DateTime.UtcNow,
+                    Tracks: tracks,
+                    ReconstructionCommandTemplate: null,
+                    LossyWarnings: []
+                ),
+            ]
+        );
+
+        string json = JsonConvert.SerializeObject(blueprint, Formatting.Indented);
+        File.WriteAllText(Path.Combine(hostDir, MediaBlueprintWriter.FileName), json);
     }
 
     // -----------------------------------------------------------------------

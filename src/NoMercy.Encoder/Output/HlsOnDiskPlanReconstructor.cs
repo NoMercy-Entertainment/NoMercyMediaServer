@@ -11,6 +11,7 @@
 
 using System.Text.RegularExpressions;
 using NoMercy.Encoder.Analysis;
+using NoMercy.Encoder.Bundle;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Storage;
@@ -34,12 +35,32 @@ namespace NoMercy.Encoder.Output;
 /// of on-disk reality, regardless of how many bundles contributed to it or
 /// how many presets were involved.
 /// </summary>
-public partial class HlsOnDiskPlanReconstructor(IMediaAnalyzer mediaAnalyzer)
+public partial class HlsOnDiskPlanReconstructor(
+    IMediaAnalyzer mediaAnalyzer,
+    IMediaBlueprintWriter? blueprintReader = null
+)
 {
+    // MediaBlueprintWriter.ReadAsync has no dependency on the IMediaBlueprintBuilder
+    // ctor param it carries (that's only used by WriteAsync) — building one locally
+    // keeps this reconstructor self-contained instead of forcing every construction
+    // site (this class is `new()`'d directly, never resolved through DI) to also
+    // wire up the blueprint writer's dependency chain.
+    private static readonly IMediaBlueprintWriter FallbackBlueprintReader =
+        new MediaBlueprintWriter(new MediaBlueprintBuilder());
+
+    private IMediaBlueprintWriter BlueprintReader => blueprintReader ?? FallbackBlueprintReader;
+
     [GeneratedRegex(@"^video_(?<width>\d+)x(?<height>\d+)(?<sdr>_SDR)?$")]
     private static partial Regex VideoRenditionDirRegex();
 
-    [GeneratedRegex(@"^audio_(?<lang>[a-zA-Z]{2,3})_(?<codec>[a-zA-Z0-9]+)(_\d+)?$")]
+    // The codec suffix is optional: older encodes published `audio_<lang>/`
+    // with no codec token at all (the profile's naming template gained the
+    // `_<codec>` suffix later), and this is the FALLBACK tier only reached
+    // when no blueprint exists to read the resolved output paths from — see
+    // ReconstructAudio. Requiring the suffix here silently dropped every
+    // old-naming rendition from the rebuilt master, which is what shipped a
+    // title with a missing audio group (plays silent).
+    [GeneratedRegex(@"^audio_(?<lang>[a-zA-Z]{2,3})(?:_(?<codec>[a-zA-Z0-9]+))?(_\d+)?$")]
     private static partial Regex AudioRenditionDirRegex();
 
     private static readonly HashSet<string> HdrColorTransfers = new(
@@ -62,10 +83,28 @@ public partial class HlsOnDiskPlanReconstructor(IMediaAnalyzer mediaAnalyzer)
             ct
         );
 
+        // The blueprint is read once and shared: it is the naming-independent
+        // source of truth for rendition discovery (the profile's naming
+        // templates — PlaylistNameTemplate, TemplateResolver — are
+        // user-customizable, so parsing a directory name is fundamentally
+        // fragile). Video stays disk/probe-based even when a blueprint
+        // exists: a stream-copied video BlueprintTrack carries no
+        // width/height (only a transcoded track's OriginalParams does), so
+        // the actual pixel dimensions still have to come from either the
+        // `video_<w>x<h>` directory name or probing the file — this
+        // reconstructor already does the latter as the authoritative
+        // source and only falls back to the name for a failed probe.
+        // Subtitles are matched purely by file extension under
+        // `subtitles/{lang}/` (never a codec-suffixed name), so they were
+        // never exposed to this bug class either.
+        MediaBlueprint? blueprint = await BlueprintReader.ReadAsync(storage, outputDirectory, ct);
+        IReadOnlyList<BlueprintTrack> blueprintTracks =
+            blueprint?.Encodes.SelectMany(encode => encode.Tracks).ToList() ?? [];
+
         return new OutputPlan(
             Format: OutputFormat.Hls,
             VideoOutputs: videoOutputs,
-            AudioOutputs: ReconstructAudio(storage, outputDirectory),
+            AudioOutputs: ReconstructAudio(storage, outputDirectory, blueprintTracks),
             SubtitleOutputs: ReconstructSubtitles(storage, outputDirectory),
             Thumbnails: null,
             HlsOptions: new HlsPlanOptions(SegmentType: anyFmp4 ? "fmp4" : "mpegts"),
@@ -152,7 +191,99 @@ public partial class HlsOnDiskPlanReconstructor(IMediaAnalyzer mediaAnalyzer)
         return (outputs.ToArray(), anyFmp4);
     }
 
-    private AudioOutputPlan[] ReconstructAudio(IStorage storage, string outputDirectory)
+    /// <summary>
+    /// PRIMARY: the encoder's own per-item <see cref="MediaBlueprint"/> when one
+    /// is present. FALLBACK: a lenient parse of the on-disk <c>audio_*/</c>
+    /// directory names, for encodes that predate the blueprint. The blueprint
+    /// is authoritative because <see cref="BlueprintTrack.Files"/> are the
+    /// RESOLVED output paths the encoder actually wrote — correct regardless
+    /// of what naming template produced them — where a directory-name parse
+    /// has to assume the template's shape and breaks the moment a custom
+    /// profile (or an older encoder version) names things differently.
+    /// </summary>
+    private AudioOutputPlan[] ReconstructAudio(
+        IStorage storage,
+        string outputDirectory,
+        IReadOnlyList<BlueprintTrack> blueprintTracks
+    )
+    {
+        AudioOutputPlan[] fromBlueprint = ReconstructAudioFromBlueprint(blueprintTracks);
+        return fromBlueprint.Length > 0
+            ? fromBlueprint
+            : ReconstructAudioFromDisk(storage, outputDirectory);
+    }
+
+    private static AudioOutputPlan[] ReconstructAudioFromBlueprint(
+        IReadOnlyList<BlueprintTrack> blueprintTracks
+    )
+    {
+        List<AudioOutputPlan> outputs = [];
+
+        // Files.Count == 0 is a track the blueprint recorded but that never
+        // produced a live artifact (dropped / superseded by a later preset
+        // run) — correctly contributes nothing to the master.
+        foreach (
+            BlueprintTrack track in blueprintTracks.Where(track =>
+                track.Kind == "audio" && track.Files.Count > 0
+            )
+        )
+        {
+            string? playlistFile = track.Files.FirstOrDefault(file =>
+                file.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase)
+            );
+            if (playlistFile is null)
+                continue;
+
+            string playlistTemplate = playlistFile[..^".m3u8".Length];
+            string language = string.IsNullOrWhiteSpace(track.SourceLanguage)
+                ? "und"
+                : track.SourceLanguage;
+            string codec = ResolveAudioCodecToken(track, playlistFile);
+
+            outputs.Add(
+                new AudioOutputPlan(
+                    EncoderName: codec,
+                    BitrateKbps: 0,
+                    Channels: 2,
+                    SampleRate: 48000,
+                    Action: StreamAction.Copy,
+                    Language: language,
+                    MapLabel: "0:a:0",
+                    SegmentNameTemplate: playlistTemplate,
+                    PlaylistNameTemplate: playlistTemplate,
+                    SourceCodecName: codec
+                )
+            );
+        }
+
+        return outputs.ToArray();
+    }
+
+    /// <summary>
+    /// The GROUP-ID naming token — purely a label distinguishing renditions in
+    /// the master; playback always resolves through <see cref="BlueprintTrack.Files"/>,
+    /// never this value. Parsed from the resolved rendition directory when it
+    /// still follows the conventional <c>audio_&lt;lang&gt;_&lt;codec&gt;</c>
+    /// shape, falling back to the blueprint's recorded source codec, then "aac".
+    /// </summary>
+    private static string ResolveAudioCodecToken(BlueprintTrack track, string playlistFile)
+    {
+        string? renditionDir = StoragePathHelpers.GetParent(playlistFile);
+        string dirName = string.IsNullOrEmpty(renditionDir)
+            ? string.Empty
+            : StoragePathHelpers.GetName(renditionDir);
+
+        Match match = AudioRenditionDirRegex().Match(dirName);
+        if (match.Success && match.Groups["codec"].Success)
+            return match.Groups["codec"].Value;
+
+        return string.IsNullOrWhiteSpace(track.SourceCodec) ? "aac" : track.SourceCodec;
+    }
+
+    private static AudioOutputPlan[] ReconstructAudioFromDisk(
+        IStorage storage,
+        string outputDirectory
+    )
     {
         List<AudioOutputPlan> outputs = [];
 
@@ -163,7 +294,10 @@ public partial class HlsOnDiskPlanReconstructor(IMediaAnalyzer mediaAnalyzer)
                 continue;
 
             string language = match.Groups["lang"].Value;
-            string codec = match.Groups["codec"].Value;
+            // Old-naming dirs (`audio_jpn`) carry no codec token — default to
+            // aac, the group the master's video stream references by default
+            // (PlaylistGenerator.GenerateMasterPlaylist's AUDIO="audio_aac").
+            string codec = match.Groups["codec"].Success ? match.Groups["codec"].Value : "aac";
 
             outputs.Add(
                 new AudioOutputPlan(
@@ -175,7 +309,8 @@ public partial class HlsOnDiskPlanReconstructor(IMediaAnalyzer mediaAnalyzer)
                     Language: language,
                     MapLabel: "0:a:0",
                     SegmentNameTemplate: $"{dirName}/{dirName}",
-                    PlaylistNameTemplate: $"{dirName}/{dirName}"
+                    PlaylistNameTemplate: $"{dirName}/{dirName}",
+                    SourceCodecName: codec
                 )
             );
         }

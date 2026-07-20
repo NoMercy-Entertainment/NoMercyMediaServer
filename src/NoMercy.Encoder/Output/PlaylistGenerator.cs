@@ -112,6 +112,12 @@ public class PlaylistGenerator : IPlaylistGenerator
         }
 
         bool defaultAudioEmitted = false;
+        // Tracks whether any EXT-X-MEDIA:TYPE=AUDIO line was actually written —
+        // NOT just whether plan.AudioOutputs is non-empty. A rendition can be
+        // planned but never materialise (missing segments, zero bandwidth) and
+        // gets skipped below; the STREAM-INF AUDIO="..." attribute must follow
+        // that same fate so it never references a group with zero members.
+        bool audioGroupEmitted = false;
         foreach (AudioOutputPlan audio in plan.AudioOutputs)
         {
             if (audio.Action is not (StreamAction.Copy or StreamAction.Transcode))
@@ -144,6 +150,7 @@ public class PlaylistGenerator : IPlaylistGenerator
             string displayName = GetAudioDisplayName(language);
             bool isDefault = !defaultAudioEmitted;
             defaultAudioEmitted = true;
+            audioGroupEmitted = true;
 
             sb.AppendLine(
                 $"#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"{audioGroupId}\",LANGUAGE=\"{language}\",AUTOSELECT=YES,DEFAULT={YesNo(isDefault)},URI=\"{uri}\",NAME=\"{displayName}\""
@@ -248,8 +255,13 @@ public class PlaylistGenerator : IPlaylistGenerator
             string subsAttr =
                 activeSubs.Length > 0 ? ",SUBTITLES=\"subs\"" : ",CLOSED-CAPTIONS=NONE";
 
+            // Never point AUDIO="..." at a group with zero EXT-X-MEDIA members —
+            // a title with genuinely no audio must emit neither the group nor
+            // this reference, not a dangling one a player fails to resolve.
+            string audioAttr = audioGroupEmitted ? $",AUDIO=\"{audioGroupId}\"" : string.Empty;
+
             sb.AppendLine(
-                $"#EXT-X-STREAM-INF:BANDWIDTH={peakBandwidth},AVERAGE-BANDWIDTH={avgBandwidth},RESOLUTION={video.Width}x{video.Height},FRAME-RATE={frameRate}{codecsAttr},VIDEO-RANGE={videoRange},AUDIO=\"{audioGroupId}\"{subsAttr}"
+                $"#EXT-X-STREAM-INF:BANDWIDTH={peakBandwidth},AVERAGE-BANDWIDTH={avgBandwidth},RESOLUTION={video.Width}x{video.Height},FRAME-RATE={frameRate}{codecsAttr},VIDEO-RANGE={videoRange}{audioAttr}{subsAttr}"
             );
             sb.AppendLine($"{subDir}/{playlistFile}.m3u8");
         }

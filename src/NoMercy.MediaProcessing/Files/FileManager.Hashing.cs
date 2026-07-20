@@ -97,7 +97,9 @@ public partial class FileManager
                 continue;
 
             string language = match.Groups["lang"].Value;
-            string codec = match.Groups["codec"].Value;
+            // Old-naming dirs (`audio_jpn`) carry no codec token — default to aac,
+            // the group the master's video stream references (AUDIO="audio_aac").
+            string codec = match.Groups["codec"].Success ? match.Groups["codec"].Value : "aac";
 
             // Single listing for playlist lookup and size sum — see GetVideoHashList.
             IReadOnlyList<StorageEntry> dirEntries = storage.List(dir.Path, null, recursive: false);
