@@ -15,6 +15,8 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Music;
+using NoMercy.Database.Models.Playlists;
 using NoMercy.Database.Models.Users;
 using NoMercy.Tests.Repositories.Infrastructure;
 
@@ -254,17 +256,20 @@ public class UserRepositoryUncoveredTests : IDisposable
         (await verifyCtx.Users.AnyAsync(u => u.Id == keep)).Should().BeTrue();
     }
 
-    // Reproduces a real production 500: LibraryUser.UserId (and every sibling
-    // access-grant/preference join table on User) is a required FK whose delete
-    // behavior defaults to Restrict, so removing the User row while any of those still
-    // reference it throws "association ... has been severed" instead of deleting.
-    // Deleting a self-hosted family member who has ever been granted library access is
-    // an everyday admin action, not an edge case.
+    // Reproduces a real production 500: LibraryUser.UserId (and every sibling table that
+    // references User — access-grant/preference join tables, plus the user's playback and
+    // activity history) is a required FK whose delete behavior defaults to Restrict, so
+    // removing the User row while any of those still reference it throws instead of
+    // deleting. Deleting a self-hosted family member who has ever been granted library
+    // access, saved a playlist, or played a track is an everyday admin action, not an edge
+    // case — so this seeds a row in every User-owned table (including the transitive
+    // PlaylistTrack -> Playlist edge, itself Restrict) and demands they are all gone.
     [Fact]
-    public async Task DeleteAsync_KnownId_RemovesTheUserAndEveryOwnedJoinRow()
+    public async Task DeleteAsync_KnownId_RemovesTheUserAndEveryOwnedRow()
     {
         Guid userId = Guid.NewGuid();
         Ulid libraryId = Ulid.NewUlid();
+        Guid playlistId = Guid.NewGuid();
 
         await using MediaContext seedCtx = OpenContext();
         seedCtx.Users.Add(MakeUser(userId, "todelete@example.com"));
@@ -288,6 +293,42 @@ public class UserRepositoryUncoveredTests : IDisposable
         );
         seedCtx.LibraryUser.Add(new(libraryId, userId));
         seedCtx.MovieUser.Add(new(900, userId));
+        seedCtx.Playlists.Add(
+            new()
+            {
+                Id = playlistId,
+                Name = "Owned Playlist",
+                UserId = userId,
+            }
+        );
+        seedCtx.PlaylistTrack.Add(new(playlistId, Guid.NewGuid()));
+        seedCtx.UserPlaylists.Add(new() { Name = "Owned UserPlaylist", UserId = userId });
+        seedCtx.MusicPlays.Add(new(userId, Guid.NewGuid()));
+        seedCtx.UserData.Add(
+            new()
+            {
+                Type = "movie",
+                UserId = userId,
+                VideoFileId = Ulid.NewUlid(),
+            }
+        );
+        seedCtx.ActivityLogs.Add(
+            new()
+            {
+                Category = ActivityCategory.Connection,
+                Time = DateTime.UtcNow,
+                DeviceId = Ulid.NewUlid(),
+                UserId = userId,
+            }
+        );
+        seedCtx.DeviceDropNotices.Add(
+            new()
+            {
+                UserId = userId,
+                DeviceName = "Old TV",
+                Reason = "manual",
+            }
+        );
         await seedCtx.SaveChangesAsync();
 
         TestDbContextFactory factory = new(_options);
@@ -299,6 +340,15 @@ public class UserRepositoryUncoveredTests : IDisposable
         (await verifyCtx.Users.AnyAsync(u => u.Id == userId)).Should().BeFalse();
         (await verifyCtx.LibraryUser.AnyAsync(lu => lu.UserId == userId)).Should().BeFalse();
         (await verifyCtx.MovieUser.AnyAsync(mu => mu.UserId == userId)).Should().BeFalse();
+        (await verifyCtx.Playlists.AnyAsync(p => p.UserId == userId)).Should().BeFalse();
+        (await verifyCtx.PlaylistTrack.AnyAsync(pt => pt.PlaylistId == playlistId))
+            .Should()
+            .BeFalse();
+        (await verifyCtx.UserPlaylists.AnyAsync(up => up.UserId == userId)).Should().BeFalse();
+        (await verifyCtx.MusicPlays.AnyAsync(mp => mp.UserId == userId)).Should().BeFalse();
+        (await verifyCtx.UserData.AnyAsync(ud => ud.UserId == userId)).Should().BeFalse();
+        (await verifyCtx.ActivityLogs.AnyAsync(al => al.UserId == userId)).Should().BeFalse();
+        (await verifyCtx.DeviceDropNotices.AnyAsync(dn => dn.UserId == userId)).Should().BeFalse();
         // The movie itself, owned by nobody in particular, must survive the user delete.
         (await verifyCtx.Movies.AnyAsync(m => m.Id == 900))
             .Should()
