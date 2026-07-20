@@ -216,6 +216,25 @@ public class QueueWorker(
                     );
                     break;
                 }
+                catch (ObjectDisposedException) when (stopToken.IsCancellationRequested)
+                {
+                    // The host disposed the root service provider as it stopped,
+                    // while this job was being scoped (ExecuteWithTransientRetry →
+                    // IServiceScopeFactory.CreateScope). Same as the cancellation
+                    // case: this is shutdown, not a job fault — release the
+                    // reservation for a clean retry on next boot instead of
+                    // dead-lettering a job that never got to run.
+                    queue.ReleaseReservation(job, TimeSpan.Zero);
+                    _currentJobId = null;
+
+                    logger?.LogInformation(
+                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} scope disposed by shutdown — released for retry",
+                        name,
+                        CurrentIndex,
+                        job.Id
+                    );
+                    break;
+                }
                 catch (Exception ex)
                 {
                     queue.FailJob(job, ex);
