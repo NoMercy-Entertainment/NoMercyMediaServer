@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.Versioning;
 
 namespace NoMercy.Monitoring;
@@ -281,7 +282,7 @@ internal sealed class LinuxResourceProvider : IResourceProvider
                     continue;
 
                 string content = File.ReadAllText(busyFile).Trim();
-                if (!double.TryParse(content, out double utilization))
+                if (!double.TryParse(content, CultureInfo.InvariantCulture, out double utilization))
                     continue;
 
                 string key = $"gpu/{index}";
@@ -323,6 +324,10 @@ internal sealed class LinuxResourceProvider : IResourceProvider
         return $"GPU {fallbackIndex}";
     }
 
+    // nvidia-smi's CSV output is always period-decimal regardless of the host OS
+    // locale — parsing with the current culture would misread e.g. "55.55" as
+    // 5555 on a comma-decimal locale (nl-NL, de-DE, ...), corrupting every GPU
+    // utilization/power reading on a non-en-US server.
     private static double ParseDouble(string s) =>
-        double.TryParse(s, out double v) ? Math.Round(v, 1) : 0;
+        double.TryParse(s, CultureInfo.InvariantCulture, out double v) ? Math.Round(v, 1) : 0;
 }

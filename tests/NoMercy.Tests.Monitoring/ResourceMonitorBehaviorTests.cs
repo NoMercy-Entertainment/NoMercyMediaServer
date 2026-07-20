@@ -121,4 +121,62 @@ public class ResourceMonitorBehaviorTests
 
         monitor.Dispose();
     }
+
+    [Fact]
+    public void ResourceMonitor_WhenProviderThrows_MonitorReturnsEmptyResource_NotAnException()
+    {
+        ResourceMonitor monitor = new(NullLogger<ResourceMonitor>.Instance);
+        ReflectionHelpers.SetField(monitor, "_provider", new ThrowingResourceProvider());
+
+        Resource result = monitor.Monitor();
+
+        result
+            .Cpu.Total.Should()
+            .Be(0.0, "a throwing provider must degrade to an empty Resource, not propagate");
+        result.Memory.Total.Should().Be(0.0);
+        result.Gpu.Should().BeEmpty();
+
+        monitor.Dispose();
+    }
+
+    [Fact]
+    public void ResourceMonitor_Start_WhenAlreadyStarted_IsANoOp()
+    {
+        ResourceMonitor monitor = new(NullLogger<ResourceMonitor>.Instance);
+        object? providerBeforeSecondStart = ReflectionHelpers.GetField<object?>(
+            monitor,
+            "_provider"
+        );
+
+        monitor.Start();
+
+        ReflectionHelpers
+            .GetField<object?>(monitor, "_provider")
+            .Should()
+            .BeSameAs(
+                providerBeforeSecondStart,
+                "Start() must not replace an already-running provider"
+            );
+
+        monitor.Dispose();
+    }
+
+    [Fact]
+    public void CreateLinuxProvider_ReturnsAWorkingLinuxProvider_RegardlessOfHostOs()
+    {
+        // Reflects directly into the private factory method so the Linux branch of
+        // ResourceMonitor's OS dispatch is demanded even on a Windows test host —
+        // OperatingSystem.IsLinux() itself can only ever be true on a genuine Linux
+        // host, which is why Start()'s "else if (OperatingSystem.IsLinux())" branch
+        // is itemized rather than covered here (see coverage report notes).
+        object provider = ReflectionHelpers.InvokeStatic(
+            typeof(ResourceMonitor),
+            "CreateLinuxProvider"
+        )!;
+
+        provider.Should().BeAssignableTo<IResourceProvider>();
+
+        Action act = () => ((IResourceProvider)provider).Collect();
+        act.Should().NotThrow();
+    }
 }
