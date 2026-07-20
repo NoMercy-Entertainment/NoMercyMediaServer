@@ -19,10 +19,11 @@ using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
 
-// GetHomeData used to emit "Latest in {library}" carousels alongside genre
-// carousels. Those library rows were removed so /home matches /home/tv; these
-// tests pin down that the rows are gone AND that the circular nav chain
-// (continue <-> genres) no longer references the removed ids.
+// GetHomeData emits the per-library "Latest in {library}" carousels (a desktop
+// home surface) between continue-watching and the genre carousels. These pin
+// that the rows are present AND that the circular nav chain
+// (continue <-> library_* <-> genre_* <-> continue) only ever points at ids
+// that actually exist in the response.
 public class HomeServiceCarouselTests : IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -49,16 +50,18 @@ public class HomeServiceCarouselTests : IDisposable
     }
 
     [Fact]
-    public async Task GetHomeData_DoesNotEmitLibraryCarousels()
+    public async Task GetHomeData_EmitsLibraryCarousels()
     {
         List<ComponentEnvelope> components = await GetHomeComponentsAsync();
 
-        Assert.DoesNotContain(
+        Assert.Contains(
             components,
-            envelope => GetComponentId(envelope)?.StartsWith("library_") == true
+            envelope =>
+                envelope.Component == ComponentTypes.Carousel
+                && GetComponentId(envelope)?.StartsWith("library_") == true
         );
 
-        Assert.DoesNotContain(
+        Assert.Contains(
             components,
             envelope => GetComponentTitle(envelope)?.StartsWith("Latest in") == true
         );
@@ -108,22 +111,10 @@ public class HomeServiceCarouselTests : IDisposable
                 continue;
 
             if (containerProps.PreviousId is string previousId)
-            {
-                Assert.False(
-                    previousId.StartsWith("library_"),
-                    $"Component '{GetComponentId(envelope)}' still points prev at removed carousel '{previousId}'"
-                );
                 Assert.Contains(previousId, existingCarouselIds);
-            }
 
             if (containerProps.NextId is string nextId)
-            {
-                Assert.False(
-                    nextId.StartsWith("library_"),
-                    $"Component '{GetComponentId(envelope)}' still points next at removed carousel '{nextId}'"
-                );
                 Assert.Contains(nextId, existingCarouselIds);
-            }
         }
     }
 

@@ -213,13 +213,44 @@ public class HomeService(IHomeRepository homeRepository, ILibraryRepository libr
             );
         }
 
-        // Phase 3: Fetch genre media data
-        HomeTvsAndMoviesData tvsAndMovies = await homeRepository.GetHomeTvsAndMoviesAsync(
+        // Phase 3: Fetch genre media data and, in parallel, the per-library
+        // "Latest in {library}" cards. Each repository call owns its own context,
+        // so the fan-out stays concurrency-safe without the service touching a
+        // DbContext.
+        Task<HomeTvsAndMoviesData> tvsAndMoviesTask = homeRepository.GetHomeTvsAndMoviesAsync(
             tvIds,
             movieIds,
             language,
             country
         );
+
+        List<
+            Task<(Library Library, List<MovieCardDto> Movies, List<TvCardDto> Shows)>
+        > libraryTasks = libraries
+            .Select(async library =>
+            {
+                List<MovieCardDto> libraryMovies =
+                    await libraryRepository.GetLibraryMovieCardsAsync(
+                        userId,
+                        library.Id,
+                        country,
+                        UiLimits.MaximumCardsInCarousel,
+                        0
+                    );
+                List<TvCardDto> libraryShows = await libraryRepository.GetLibraryTvCardsAsync(
+                    userId,
+                    library.Id,
+                    country,
+                    UiLimits.MaximumCardsInCarousel,
+                    0
+                );
+                return (library, libraryMovies, libraryShows);
+            })
+            .ToList();
+
+        await Task.WhenAll(tvsAndMoviesTask, Task.WhenAll(libraryTasks));
+
+        HomeTvsAndMoviesData tvsAndMovies = tvsAndMoviesTask.Result;
         List<HomeTvCardDto> tvData = tvsAndMovies.TvData;
         List<HomeMovieCardDto> movieData = tvsAndMovies.MovieData;
 
@@ -244,6 +275,47 @@ public class HomeService(IHomeRepository homeRepository, ILibraryRepository libr
             .Where(c => !string.IsNullOrWhiteSpace(c.Title))
             .Randomize()
             .FirstOrDefault();
+
+        // Build library carousels from projection results (empty unless the
+        // desktop surface asked for them).
+        List<GenreCarouselData> libraryCarousels = [];
+
+        foreach (
+            (
+                Library library,
+                List<MovieCardDto> libraryMovies,
+                List<TvCardDto> libraryShows
+            ) in libraryTasks.Select(t => t.Result)
+        )
+        {
+            bool shouldPaginate =
+                (
+                    library.Type == MediaTypes.MovieMediaType
+                    && movieCount > UiLimits.MaximumItemsPerPage
+                )
+                || (
+                    library.Type == MediaTypes.TvMediaType && tvCount > UiLimits.MaximumItemsPerPage
+                )
+                || (
+                    library.Type == MediaTypes.AnimeMediaType
+                    && animeCount > UiLimits.MaximumItemsPerPage
+                );
+
+            List<CardData> items = libraryMovies
+                .Select(m => new CardData(m, country))
+                .Concat(libraryShows.Select(t => new CardData(t, country)))
+                .OrderByDescending(c => c.CreatedAt)
+                .ToList();
+
+            if (items.Count > 0)
+            {
+                Uri moreLink = shouldPaginate
+                    ? new($"/libraries/{library.Id}/letter/A", UriKind.Relative)
+                    : new Uri($"/libraries/{library.Id}", UriKind.Relative);
+
+                libraryCarousels.Add(new(library.Id.ToString(), library.Title, moreLink, items));
+            }
+        }
 
         // Build components
         List<ComponentEnvelope> components = [];
@@ -277,9 +349,15 @@ public class HomeService(IHomeRepository homeRepository, ILibraryRepository libr
         bool hasContinueWatching = continueWatching.Count > 0;
         string? continueId = hasContinueWatching ? "continue" : null;
 
-        string? lastCarouselId = genreCarousels.Count > 0 ? $"genre_{genreCarousels[^1].Id}" : null;
+        string? lastCarouselId =
+            genreCarousels.Count > 0 ? $"genre_{genreCarousels[^1].Id}"
+            : libraryCarousels.Count > 0 ? $"library_{libraryCarousels[^1].Id}"
+            : null;
 
-        string? afterContinueId = genreCarousels.Count > 0 ? $"genre_{genreCarousels[0].Id}" : null;
+        string? afterContinueId =
+            libraryCarousels.Count > 0 ? $"library_{libraryCarousels[0].Id}"
+            : genreCarousels.Count > 0 ? $"genre_{genreCarousels[0].Id}"
+            : null;
 
         // Continue watching carousel (only when there are items to show)
         if (hasContinueWatching)
@@ -296,12 +374,42 @@ public class HomeService(IHomeRepository homeRepository, ILibraryRepository libr
             );
         }
 
+        // Library "Latest in {library}" carousels (between continue and genres)
+        for (int i = 0; i < libraryCarousels.Count; i++)
+        {
+            GenreCarouselData lib = libraryCarousels[i];
+
+            string? prevId = i == 0 ? continueId : $"library_{libraryCarousels[i - 1].Id}";
+            string? nextId =
+                i == libraryCarousels.Count - 1
+                    ? genreCarousels.Count > 0
+                        ? $"genre_{genreCarousels[0].Id}"
+                        : continueId
+                    : $"library_{libraryCarousels[i + 1].Id}";
+
+            components.Add(
+                Component
+                    .Carousel()
+                    .WithId($"library_{lib.Id}")
+                    .WithNavigation(prevId, nextId)
+                    .WithTitle($"Latest in {lib.Title}")
+                    .WithMoreLink(lib.MoreLink)
+                    .WithItems(lib.Items.Select(item => Component.Card(item).Build()))
+                    .Build()
+            );
+        }
+
         // Genre carousels
         for (int i = 0; i < genreCarousels.Count; i++)
         {
             GenreCarouselData genre = genreCarousels[i];
 
-            string? prevId = i == 0 ? continueId : $"genre_{genreCarousels[i - 1].Id}";
+            string? prevId =
+                i == 0
+                    ? libraryCarousels.Count > 0
+                        ? $"library_{libraryCarousels[^1].Id}"
+                        : continueId
+                    : $"genre_{genreCarousels[i - 1].Id}";
             string? nextId =
                 i == genreCarousels.Count - 1 ? continueId : $"genre_{genreCarousels[i + 1].Id}";
 
