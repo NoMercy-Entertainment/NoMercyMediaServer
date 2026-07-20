@@ -73,4 +73,72 @@ public class DateTests
         DateTime? value = null;
         value.ParseYear().Should().Be(0);
     }
+
+    [Fact]
+    public void ToHms_FormatsSecondsAsTimespan()
+    {
+        string result = (3661).ToHms();
+        result.Should().Contain(":");
+        result.Should().Contain("01:01:01");
+    }
+
+    [Theory]
+    [InlineData(0d)]
+    [InlineData(3661.5d)]
+    public void ToHis_Double_FormatsSecondsWithMilliseconds(double seconds)
+    {
+        string result = seconds.ToHis();
+        result.Should().Contain(":");
+    }
+
+    [Theory]
+    [InlineData(0L)]
+    [InlineData(3661L)]
+    public void ToHis_Long_FormatsSecondsWithMilliseconds(long seconds)
+    {
+        string result = seconds.ToHis();
+        result.Should().Contain(":");
+    }
+
+    [Fact]
+    public void ToHumanTime_Int_FormatsSecondsLessThanHour()
+    {
+        string result = (45).ToHumanTime();
+        result.Should().Be("00:45");
+    }
+
+    [Fact]
+    public void ToHumanTime_Int_FormatsSecondsGreaterThanHour()
+    {
+        string result = (3661).ToHumanTime();
+        result.Should().Contain(":");
+    }
+
+    [Fact]
+    public void ToHumanTime_Double_FormatsSecondsLessThanHour()
+    {
+        string result = (45d).ToHumanTime();
+        result.Should().Be("00:45");
+    }
+
+    [Fact]
+    public void ToHumanTime_Double_FormatsSecondsGreaterThanHour()
+    {
+        string result = (3661d).ToHumanTime();
+        result.Should().Contain(":");
+    }
+
+    [Fact]
+    public void ToHumanTime_Long_FormatsSecondsLessThanHour()
+    {
+        string result = (45L).ToHumanTime();
+        result.Should().Be("00:45");
+    }
+
+    [Fact]
+    public void ToHumanTime_Long_FormatsSecondsGreaterThanHour()
+    {
+        string result = (3661L).ToHumanTime();
+        result.Should().Contain(":");
+    }
 }

@@ -270,4 +270,330 @@ public class StringExtensionsAdvancedTests
         result.Should().NotBeEmpty();
         result.Length.Should().BeGreaterThanOrEqualTo(input.Length);
     }
+
+    [Fact]
+    public void RemoveAccents_EncodesStringToIso88591()
+    {
+        string input = "hello";
+        string result = input.RemoveAccents();
+        result.Should().Be("hello");
+    }
+
+    [Fact]
+    public void PathName_NormalizesForwardSlashes()
+    {
+        string result = "path/to/file".PathName();
+        result.Should().NotContain("/");
+    }
+
+    [Theory]
+    [InlineData("123.45", 123)]
+    [InlineData("", 0)]
+    [InlineData("invalid", 0)]
+    [InlineData("0", 0)]
+    [InlineData("-50.5", -50)]
+    public void ToInt_String_ParsesIntegerValue(string input, int expected)
+    {
+        int result = input.ToInt();
+        result.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(123.7, 124)]
+    [InlineData(123.4, 123)]
+    public void ToInt_Double_ConvertsWithRounding(double input, int expected)
+    {
+        int result = input.ToInt();
+        result.Should().Be(expected);
+    }
+
+    [Fact]
+    public void ToInt_UInt_ConvertsUnsignedInteger()
+    {
+        uint input = 100;
+        int result = input.ToInt();
+        result.Should().Be(100);
+    }
+
+    [Theory]
+    [InlineData("456.78", 456.78)]
+    [InlineData("", 0d)]
+    [InlineData("invalid", 0d)]
+    public void ToDouble_String_ParsesDoubleValue(string input, double expected)
+    {
+        double result = input.ToDouble();
+        result.Should().Be(expected);
+    }
+
+    [Fact]
+    public void ToDouble_Int_ConvertsToDouble()
+    {
+        int input = 100;
+        double result = input.ToDouble();
+        result.Should().Be(100d);
+    }
+
+    [Theory]
+    [InlineData("789", 789L)]
+    [InlineData("", 0L)]
+    [InlineData("invalid", 0L)]
+    public void ToLong_String_ParsesLongValue(string input, long expected)
+    {
+        long result = input.ToLong();
+        result.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("true", true)]
+    [InlineData("True", true)]
+    [InlineData("false", false)]
+    [InlineData("", false)]
+    [InlineData("invalid", false)]
+    public void ToBoolean_String_ParsesBooleanValue(string input, bool expected)
+    {
+        bool result = input.ToBoolean();
+        result.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("text", 10, false, "text      ")]
+    [InlineData("hi", 5, false, "hi   ")]
+    [InlineData("text", 10, true, "      text")]
+    [InlineData("hi", 5, true, "   hi")]
+    public void Spacer_PadsTextWithSpaces(string text, int padding, bool begin, string expected)
+    {
+        string result = StringExtensions.Spacer(text, padding, begin);
+        result.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("550e8400-e29b-41d4-a716-446655440000", "550e8400-e29b-41d4-a716-446655440000")]
+    [InlineData("invalid-guid", "00000000-0000-0000-0000-000000000000")]
+    [InlineData("", "00000000-0000-0000-0000-000000000000")]
+    [InlineData(null, "00000000-0000-0000-0000-000000000000")]
+    public void ToGuid_String_ParsesOrReturnsEmpty(string? input, string expected)
+    {
+        Guid result = input.ToGuid();
+        result.Should().Be(Guid.Parse(expected));
+    }
+
+    [Fact]
+    public void SplitPascalCase_SplitsCamelCaseWords()
+    {
+        string result = "CamelCase".SplitPascalCase();
+        result.Should().NotBeEmpty();
+    }
+
+    [Theory]
+    [InlineData("00:30:45", 1845)]
+    [InlineData("1:15:30", 4530)]
+    [InlineData("45", 45)]
+    [InlineData("", 0)]
+    [InlineData(null, 0)]
+    public void ToSeconds_String_ParsesTimeFormatToSeconds(string? input, int expected)
+    {
+        int result = input.ToSeconds();
+        result.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(45.6, 46)]
+    [InlineData(0d, 0)]
+    [InlineData(123.4, 123)]
+    public void ToSeconds_Double_RoundsToIntSeconds(double input, int expected)
+    {
+        int result = input.ToSeconds();
+        result.Should().Be(expected);
+    }
+
+    [Fact]
+    public void ToMilliSeconds_String_ConvertsToMilliseconds()
+    {
+        int result = "00:00:10".ToMilliSeconds();
+        result.Should().Be(10000);
+    }
+
+    [Fact]
+    public void SplitPascalCase_SplitsConsecutiveUppercase()
+    {
+        string result = "CamelCase".SplitPascalCase();
+        result.Should().Contain("C");
+    }
+
+
+    [Theory]
+    [InlineData("café naïve", "cafe naive")]
+    [InlineData("résumé", "resume")]
+    [InlineData("hello", "hello")]
+    public void Sanitize_RemovesDiacriticsAndNonAlphanumeric(string input, string expected)
+    {
+        string result = input.Sanitize();
+        result.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("Café", "café", true)]
+    [InlineData("HELLO World", "hello world", true)]
+    [InlineData("one", "two", false)]
+    public void ContainsSanitized_ComparesNormalizedStrings(string haystack, string needle, bool expected)
+    {
+        bool result = haystack.ContainsSanitized(needle);
+        result.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("Café", "CAFÉ", true)]
+    [InlineData("hello", "HELLO", true)]
+    [InlineData("one", "two", false)]
+    public void EqualsSanitized_ComparesNormalizedEquality(string a, string b, bool expected)
+    {
+        bool result = a.EqualsSanitized(b);
+        result.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("hello world", "hello world")]
+    [InlineData("hello%20world", "hello world")]
+    public void UrlDecode_DecodesUrlEncodedString(string input, string expected)
+    {
+        string result = input.UrlDecode();
+        result.Should().Be(expected);
+    }
+
+    [Fact]
+    public void UrlEncode_EncodesSpaces()
+    {
+        string result = "hello world".UrlEncode();
+        result.Should().NotBe("hello world");
+    }
+
+    [Fact]
+    public void UrlEncode_PreservesNormalText()
+    {
+        string result = "test".UrlEncode();
+        result.Should().Be("test");
+    }
+
+    [Fact]
+    public void ToQueryUri_AppendsQueryParameters()
+    {
+        string result = "http://example.com".ToQueryUri(new Dictionary<string, string>
+        {
+            ["key1"] = "value1",
+            ["key2"] = "value2"
+        });
+        result.Should().Contain("?");
+        result.Should().Contain("key1=value1");
+    }
+
+    [Fact]
+    public void ToQueryUri_WithNullParameters_ReturnsBaseUri()
+    {
+        string result = "http://example.com".ToQueryUri(null);
+        result.Should().Be("http://example.com");
+    }
+
+    [Theory]
+    [InlineData("hello\"world", "hello'world")]
+    [InlineData("\"test\"", "'test'")]
+    public void EscapeQuotes_ReplacesDoubleQuotesWithSingle(string input, string expected)
+    {
+        string result = input.EscapeQuotes();
+        result.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("hello", "Hello")]
+    [InlineData("world", "World")]
+    [InlineData("", "")]
+    public void Capitalize_CapitalizesFirstCharacter(string input, string expected)
+    {
+        string result = input.Capitalize();
+        result.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("hello world", "Hello World")]
+    [InlineData("test", "Test")]
+    public void ToTitleCase_CapitalizesEachWord(string input, string expectedStart)
+    {
+        string result = input.ToTitleCase();
+        result.Should().StartWith(expectedStart[0].ToString().ToUpper());
+    }
+
+    [Theory]
+    [InlineData("hello world", "Hello_World")]
+    [InlineData("test", "Test")]
+    public void ToPascalCase_ConvertsToPascalCase(string input, string expected)
+    {
+        string result = input.ToPascalCase();
+        result.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("HelloWorld", "hello_world")]
+    [InlineData("HTTPServer", "h_t_t_p_server")]
+    public void ToSnakeCase_ConvertsToSnakeCase(string input, string expected)
+    {
+        string result = input.ToSnakeCase();
+        result.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("hello", "Hello")]
+    [InlineData("WORLD", "World")]
+    public void ToUcFirst_UppercasesFirstCharacter(string input, string expected)
+    {
+        string result = input.ToUcFirst();
+        result.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("hello world")]
+    [InlineData("test string")]
+    public void ToUtf8_ConvertedToUtf8(string input)
+    {
+        string result = input.ToUtf8();
+        result.Should().NotBeNullOrEmpty();
+    }
+
+    [Theory]
+    [InlineData("hello world")]
+    [InlineData("SHOUT")]
+    public void NormalizeSearch_NormalizesSearchString(string input)
+    {
+        string result = input.NormalizeSearch();
+        result.Should().NotBeNullOrEmpty();
+    }
+
+    [Theory]
+    [InlineData("Hello שלום", StringExtensions.TextDirection.RTL)]
+    [InlineData("مرحبا Hello", StringExtensions.TextDirection.RTL)]
+    [InlineData("Hello World", StringExtensions.TextDirection.LTR)]
+    public void GetTextDirection_IdentifiesTextDirection(string input, StringExtensions.TextDirection expected)
+    {
+        StringExtensions.TextDirection result = input.GetTextDirection();
+        result.Should().Be(expected);
+    }
+
+    [Fact]
+    public void TryGetTmdbHint_ExtractsTmdbId()
+    {
+        int? result = "Movie Title [tmdb-12345]".TryGetTmdbHint();
+        result.Should().Be(12345);
+    }
+
+    [Fact]
+    public void TryGetTmdbHint_WithoutHint_ReturnsNull()
+    {
+        int? result = "Movie Title".TryGetTmdbHint();
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public void TryGetTmdbHint_CaseInsensitive()
+    {
+        int? result = "Movie Title [TMDB-999]".TryGetTmdbHint();
+        result.Should().Be(999);
+    }
 }

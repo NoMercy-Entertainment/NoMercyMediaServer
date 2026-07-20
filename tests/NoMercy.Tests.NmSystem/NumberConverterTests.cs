@@ -77,4 +77,53 @@ public class NumberConverterTests
     {
         "no numbers here".ToName().Should().Be("no numbers here");
     }
+
+    [Theory]
+    [InlineData("999", "nine hundred ninety nine")]
+    [InlineData("1000", "one thousand")]
+    [InlineData("10000", "ten thousand")]
+    [InlineData("999999", "nine hundred ninety nine thousand nine hundred ninety nine")]
+    [InlineData("1000000000", "one billion")]
+    [InlineData("999999999", "nine hundred ninety nine million nine hundred ninety nine thousand nine hundred ninety nine")]
+    [InlineData("1000000001", "one billion one")]
+    public void ToName_ConvertesNumbersToWordsForLargeNumbers(string input, string expected)
+    {
+        input.ToName().Should().Be(expected);
+    }
+
+    [Fact]
+    public void NormalizeAspectRatio_WithNegativeHeight_ReturnsOne1()
+    {
+        NumberConverter.NormalizeAspectRatio(1920, -1080).Should().Be("1:1");
+    }
+
+    [Fact]
+    public void NormalizeAspectRatio_5To4Ratio()
+    {
+        NumberConverter.NormalizeAspectRatio(500, 400).Should().Be("5:4");
+    }
+
+    [Fact]
+    public void NormalizeAspectRatio_21To9Ratio()
+    {
+        NumberConverter.NormalizeAspectRatio(2520, 1080).Should().Be("21:9");
+    }
+
+    [Fact]
+    public void NormalizeAspectRatio_32To9Ratio()
+    {
+        NumberConverter.NormalizeAspectRatio(1920, 540).Should().Be("32:9");
+    }
+
+    [Fact]
+    public void NormalizeAspectRatio_3To2Ratio()
+    {
+        NumberConverter.NormalizeAspectRatio(900, 600).Should().Be("3:2");
+    }
+
+    [Fact]
+    public void NormalizeAspectRatio_ArbitraryRatio()
+    {
+        NumberConverter.NormalizeAspectRatio(1024, 768).Should().Be("4:3");
+    }
 }

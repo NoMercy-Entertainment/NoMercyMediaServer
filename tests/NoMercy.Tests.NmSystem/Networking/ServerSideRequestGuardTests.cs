@@ -79,4 +79,67 @@ public class ServerSideRequestGuardTests
     {
         Assert.False(await ServerSideRequestGuard.IsSafePublicHttpUrlAsync(null));
     }
+
+    [Theory]
+    [InlineData("   ")]
+    [InlineData("\t")]
+    [InlineData("\n")]
+    public async Task IsSafePublicHttpUrlAsync_WhitespaceOnly_IsRejected(string url)
+    {
+        Assert.False(await ServerSideRequestGuard.IsSafePublicHttpUrlAsync(url));
+    }
+
+    [Theory]
+    [InlineData("172.20.0.1")]
+    [InlineData("172.31.0.1")]
+    public void IsPubliclyRoutable_172RangePrivate_IsRejected(string ip)
+    {
+        Assert.False(ServerSideRequestGuard.IsPubliclyRoutable(IPAddress.Parse(ip)));
+    }
+
+    [Theory]
+    [InlineData("100.127.255.255")]
+    [InlineData("100.64.0.0")]
+    public void IsPubliclyRoutable_CGNATRange_IsRejected(string ip)
+    {
+        Assert.False(ServerSideRequestGuard.IsPubliclyRoutable(IPAddress.Parse(ip)));
+    }
+
+    [Theory]
+    [InlineData("ff00::1")]
+    [InlineData("ff02::1")]
+    public void IsPubliclyRoutable_IPv6Multicast_IsRejected(string ip)
+    {
+        Assert.False(ServerSideRequestGuard.IsPubliclyRoutable(IPAddress.Parse(ip)));
+    }
+
+    [Fact]
+    public void IsPubliclyRoutable_IPv6Any_IsRejected()
+    {
+        Assert.False(ServerSideRequestGuard.IsPubliclyRoutable(IPAddress.IPv6Any));
+    }
+
+    [Fact]
+    public void IsPubliclyRoutable_IPv6None_IsRejected()
+    {
+        Assert.False(ServerSideRequestGuard.IsPubliclyRoutable(IPAddress.IPv6None));
+    }
+
+    [Fact]
+    public async Task IsSafePublicHttpUrlAsync_MixedCaseScheme_Accepted()
+    {
+        Assert.True(await ServerSideRequestGuard.IsSafePublicHttpUrlAsync("HTTPS://8.8.8.8/"));
+    }
+
+    [Fact]
+    public async Task IsSafePublicHttpUrlAsync_WithPort_Accepted()
+    {
+        Assert.True(await ServerSideRequestGuard.IsSafePublicHttpUrlAsync("https://1.1.1.1:443/path"));
+    }
+
+    [Fact]
+    public void IsPubliclyRoutable_PublicIpv6_Accepted()
+    {
+        Assert.True(ServerSideRequestGuard.IsPubliclyRoutable(IPAddress.Parse("2001:4860:4860::8888")));
+    }
 }

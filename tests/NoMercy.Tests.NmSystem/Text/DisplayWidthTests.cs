@@ -94,4 +94,152 @@ public class DisplayWidthTests
         IReadOnlyList<string> lines = DisplayWidth.Wrap("the quick brown fox jumps", 9);
         lines.Should().OnlyContain(line => DisplayWidth.Of(line) <= 9);
     }
+
+    [Fact]
+    public void Truncate_WithEmptyString_ReturnsEmpty()
+    {
+        string result = DisplayWidth.Truncate("", 10);
+        result.Should().Be("");
+    }
+
+    [Fact]
+    public void Truncate_WithNullString_ReturnsEmpty()
+    {
+        string result = DisplayWidth.Truncate(null, 10);
+        result.Should().Be("");
+    }
+
+    [Fact]
+    public void Truncate_WithZeroWidth_ReturnsEmpty()
+    {
+        string result = DisplayWidth.Truncate("hello", 0);
+        result.Should().Be("");
+    }
+
+    [Fact]
+    public void Truncate_WithShortString_ReturnsUnchanged()
+    {
+        string result = DisplayWidth.Truncate("hi", 10);
+        result.Should().Be("hi");
+    }
+
+    [Fact]
+    public void Truncate_WithLongString_AddsEllipsis()
+    {
+        string result = DisplayWidth.Truncate("hello world test", 10);
+        result.Should().EndWith("…");
+    }
+
+    [Fact]
+    public void Truncate_WithCustomEllipsis()
+    {
+        string result = DisplayWidth.Truncate("hello world test", 10, "...");
+        result.Should().EndWith("...");
+    }
+
+    [Fact]
+    public void Truncate_WithAnsiEscapesPreserved()
+    {
+        string colored = "a\x1b[31mred\x1b[0m";
+        string result = DisplayWidth.Truncate(colored, 4);
+        result.Should().NotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public void Truncate_WithWideCharacters()
+    {
+        string result = DisplayWidth.Truncate("日本語test", 5);
+        DisplayWidth.Of(result).Should().BeLessThanOrEqualTo(5);
+    }
+
+    [Fact]
+    public void Wrap_WithEmptyString_ReturnsEmptyLine()
+    {
+        IReadOnlyList<string> lines = DisplayWidth.Wrap("", 10);
+        lines.Should().HaveCount(1);
+        lines[0].Should().Be("");
+    }
+
+    [Fact]
+    public void Wrap_WithNullString_ReturnsEmptyLine()
+    {
+        IReadOnlyList<string> lines = DisplayWidth.Wrap(null, 10);
+        lines.Should().HaveCount(1);
+        lines[0].Should().Be("");
+    }
+
+    [Fact]
+    public void Wrap_WithZeroWidth_ReturnsWholeLine()
+    {
+        IReadOnlyList<string> lines = DisplayWidth.Wrap("hello", 0);
+        lines.Should().HaveCountGreaterThanOrEqualTo(1);
+    }
+
+    [Fact]
+    public void Wrap_WithSingleLongWord()
+    {
+        IReadOnlyList<string> lines = DisplayWidth.Wrap("supercalifragilisticexpialidocious", 10);
+        lines.Should().HaveCountGreaterThan(1);
+    }
+
+    [Fact]
+    public void Wrap_WithWideCharacters()
+    {
+        IReadOnlyList<string> lines = DisplayWidth.Wrap("日本語 テスト", 6);
+        lines.Should().OnlyContain(line => DisplayWidth.Of(line) <= 6);
+    }
+
+    [Fact]
+    public void PadRight_WithNull_ReturnsSpaces()
+    {
+        string result = DisplayWidth.PadRight(null, 5);
+        result.Should().Be("     ");
+    }
+
+    [Fact]
+    public void PadRight_WithNegativePadding_ReturnsText()
+    {
+        string result = DisplayWidth.PadRight("hello", -5);
+        result.Should().Be("hello");
+    }
+
+    [Fact]
+    public void PadRight_WithWideCharacters()
+    {
+        string result = DisplayWidth.PadRight("日", 4);
+        DisplayWidth.Of(result).Should().Be(4);
+    }
+
+    [Fact]
+    public void PadLeft_WithNull_ReturnsSpaces()
+    {
+        string result = DisplayWidth.PadLeft(null, 5);
+        result.Should().Be("     ");
+    }
+
+    [Fact]
+    public void PadLeft_WithNegativePadding_ReturnsText()
+    {
+        string result = DisplayWidth.PadLeft("hello", -5);
+        result.Should().Be("hello");
+    }
+
+    [Fact]
+    public void PadLeft_WithWideCharacters()
+    {
+        string result = DisplayWidth.PadLeft("日", 4);
+        DisplayWidth.Of(result).Should().Be(4);
+    }
+
+    [Fact]
+    public void Of_WithControlCharacters_IsZeroWidth()
+    {
+        DisplayWidth.Of("\x00\x01\x02").Should().Be(0);
+    }
+
+    [Fact]
+    public void Of_WithMixedContent()
+    {
+        DisplayWidth.Of("a日b").Should().Be(4);
+    }
 }
