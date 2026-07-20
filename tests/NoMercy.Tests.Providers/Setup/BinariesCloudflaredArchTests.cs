@@ -40,7 +40,7 @@ public class BinariesCloudflaredArchTests
     private static string ExtractDownloadCloudflaredMethod(string source)
     {
         int start = source.IndexOf(
-            "private async Task DownloadCloudflared()",
+            "internal async Task DownloadCloudflared()",
             StringComparison.Ordinal
         );
         Assert.True(start >= 0, "Could not find DownloadCloudflared method in source");
