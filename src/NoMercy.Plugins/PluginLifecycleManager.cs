@@ -95,7 +95,16 @@ internal sealed class PluginLifecycleManager(
             }
             catch (Exception ex)
             {
-                PluginLifecycle.Transition(loaded.Info, PluginStatus.Malfunctioned);
+                // Not PluginLifecycle.Transition: this recovery path runs from
+                // whatever pre-Active status let us reach the Instance-not-null
+                // branch above (Disabled or Malfunctioned — Active already
+                // short-circuited at the top of this method), and neither of
+                // those has Malfunctioned in its allowed-transitions set, so
+                // routing through Transition here throws and replaces this
+                // graceful failure record with an unhandled exception. Setting
+                // Status directly matches how PluginLoader already records a
+                // malfunction on a freshly built PluginInfo.
+                loaded.Info.Status = PluginStatus.Malfunctioned;
 
                 await _eventBus.PublishAsync(
                     new PluginErrorOccurredEvent
@@ -149,8 +158,17 @@ internal sealed class PluginLifecycleManager(
                 {
                     _storage.DeleteDirectory(pluginDir, recursive: true);
                 }
-                catch (IOException)
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
+                    // The plugin's own assembly was just Unload()ed a few lines
+                    // above, but AssemblyLoadContext.Unload() is asynchronous —
+                    // the file can still be resident until the GC actually
+                    // collects it. Windows reports that exact "still resident"
+                    // condition as UnauthorizedAccessException, not IOException,
+                    // for a directory delete — catching only IOException let a
+                    // routine, expected race during uninstall crash the caller
+                    // instead of logging the same "files may be locked" warning
+                    // this catch already exists to produce.
                     _logger.LogWarning(
                         "Could not delete plugin directory {PluginDir}. Files may be locked.",
                         pluginDir

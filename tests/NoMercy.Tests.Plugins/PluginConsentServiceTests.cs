@@ -54,4 +54,17 @@ public class PluginConsentServiceTests
         service.GrantConsent(id);
         Assert.True(service.HasConsent(id));
     }
+
+    [Fact]
+    public void RevokeConsent_RemovesGrantedConsent()
+    {
+        PluginConsentService service = new(new InMemoryConsentStore());
+        Guid id = Guid.NewGuid();
+        service.GrantConsent(id);
+        Assert.True(service.HasConsent(id));
+
+        service.RevokeConsent(id);
+
+        Assert.False(service.HasConsent(id));
+    }
 }

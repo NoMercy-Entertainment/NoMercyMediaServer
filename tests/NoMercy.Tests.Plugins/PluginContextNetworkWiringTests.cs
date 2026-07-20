@@ -89,6 +89,22 @@ public class PluginContextNetworkWiringTests
         );
     }
 
+    [Fact]
+    public async Task NonNullCapabilities_WithoutNetworkSection_DenyAllHosts()
+    {
+        // Distinct from NullCapabilities_DenyAllHosts above: capabilities is a
+        // real, non-null object here, but its Network property was never set —
+        // PluginHttpClientFactory.Create's `capabilities?.Network?.Hosts` chain
+        // must fall back to an empty allowlist for this combination too, not
+        // just when capabilities itself is null.
+        string tempDir = Directory.CreateTempSubdirectory("plugin-ctx-net-").FullName;
+        PluginContext context = BuildContext(tempDir, new PluginCapabilities());
+
+        await Assert.ThrowsAsync<PluginNetworkDeniedException>(() =>
+            context.HttpClient.GetAsync("https://ice1.somafm.com/x")
+        );
+    }
+
     private sealed class MinimalServiceProvider : IServiceProvider
     {
         public object? GetService(Type serviceType) => null;

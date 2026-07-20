@@ -327,6 +327,68 @@ public class PluginAbstractionsTests
     }
 
     [Fact]
+    public async Task IEncoderPlugin_GetProfileAsync_DefaultImplementation_WrapsGetProfile()
+    {
+        // TestEncoderPlugin never overrides GetProfileAsync — calling it through
+        // the interface must dispatch to IEncoderPlugin's default implementation,
+        // which wraps the synchronous GetProfile in Task.FromResult.
+        using TestEncoderPlugin plugin = new();
+        IEncoderPlugin encoderPlugin = plugin;
+        MediaInfo info = new() { FilePath = "/test.mkv" };
+
+        EncodingProfile? profile = await encoderPlugin.GetProfileAsync(info);
+
+        profile.Should().NotBeNull();
+        profile!.Name.Should().Be("test-profile");
+    }
+
+    [Fact]
+    public async Task IPluginManager_InstallPluginAsyncWithChecksum_DefaultImplementation_ForwardsToTwoArgOverload()
+    {
+        // MinimalPluginManager never overrides the 3-arg InstallPluginAsync — calling
+        // it through the interface must dispatch to IPluginManager's default
+        // implementation, which forwards to the 2-arg (no-checksum) overload.
+        MinimalPluginManager manager = new();
+        IPluginManager pluginManager = manager;
+
+        await pluginManager.InstallPluginAsync("https://example.com/plugin.zip", "deadbeef");
+
+        manager
+            .ReceivedPackageUrls.Should()
+            .ContainSingle()
+            .Which.Should()
+            .Be("https://example.com/plugin.zip");
+    }
+
+    private sealed class MinimalPluginManager : IPluginManager
+    {
+        public List<string> ReceivedPackageUrls { get; } = [];
+
+        public IReadOnlyList<PluginInfo> GetInstalledPlugins() => [];
+
+        public Task InstallPluginAsync(string packageUrl, CancellationToken ct = default)
+        {
+            ReceivedPackageUrls.Add(packageUrl);
+            return Task.CompletedTask;
+        }
+
+        public Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default) =>
+            Task.CompletedTask;
+
+        public Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default) =>
+            Task.CompletedTask;
+
+        public Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default) =>
+            Task.CompletedTask;
+
+        public Task<IReadOnlyList<PluginLoadResult>> LoadAllAsync(CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<PluginLoadResult>>([]);
+
+        public IEnumerable<T> GetPluginsOfType<T>()
+            where T : IPlugin => [];
+    }
+
+    [Fact]
     public void PluginInfo_HoldsPluginMetadata()
     {
         PluginInfo info = new()

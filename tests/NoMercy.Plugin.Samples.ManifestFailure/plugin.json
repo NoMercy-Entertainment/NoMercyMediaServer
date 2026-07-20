@@ -1,0 +1,8 @@
+{
+  "id": "77777777-8888-9999-aaaa-bbbbbbbbbbbb",
+  "name": "ManifestFailure",
+  "version": "0.1.0",
+  "description": "Sample plugin for testing the manifest-driven auto-enable Initialize() failure path",
+  "assembly": "NoMercy.Plugin.Samples.ManifestFailure.dll",
+  "autoEnabled": true
+}

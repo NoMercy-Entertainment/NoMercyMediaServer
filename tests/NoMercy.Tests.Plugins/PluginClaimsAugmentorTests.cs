@@ -90,6 +90,23 @@ public class PluginClaimsAugmentorTests
     }
 
     [Fact]
+    public async Task AuthPluginMissingFromInstalledList_IsIgnored()
+    {
+        // GetPluginsOfType and GetInstalledPlugins are two independent reads of
+        // the registry; if a plugin instance is returned by the former but has
+        // no matching entry in the latter, `installed.FirstOrDefault(...)`
+        // returns null and the null-conditional `?.Capabilities` must fall back
+        // to null capabilities (denies by default) rather than throw.
+        FakeAuthPlugin plugin = new("plan", "pro");
+        FakePluginManager manager = FakePluginManager.WithAuthPluginNotInInstalledList(plugin);
+        PluginClaimsAugmentor augmentor = new(manager, NullLogger<PluginClaimsAugmentor>.Instance);
+
+        IReadOnlyList<Claim> claims = await augmentor.CollectAdditionalClaimsAsync("tok", default);
+
+        Assert.Empty(claims);
+    }
+
+    [Fact]
     public async Task ReservedClaimTypes_AreStrippedFromPluginOutput()
     {
         MultiClaimAuthPlugin plugin = new();
@@ -115,10 +132,17 @@ public class PluginClaimsAugmentorTests
 
         public void Dispose() { }
 
-        public async Task<AuthResult> AuthenticateAsync(string token, CancellationToken ct = default)
+        public async Task<AuthResult> AuthenticateAsync(
+            string token,
+            CancellationToken ct = default
+        )
         {
             await Task.Delay(TimeSpan.FromSeconds(30), ct);
-            return new AuthResult { IsAuthenticated = true, Claims = new() { ["never"] = "reached" } };
+            return new AuthResult
+            {
+                IsAuthenticated = true,
+                Claims = new() { ["never"] = "reached" },
+            };
         }
     }
 
@@ -148,8 +172,11 @@ public class PluginClaimsAugmentorTests
             );
     }
 
-    private sealed class FakeAuthPlugin(string claimType, string claimValue, bool isAuthenticated = true)
-        : IAuthPlugin
+    private sealed class FakeAuthPlugin(
+        string claimType,
+        string claimValue,
+        bool isAuthenticated = true
+    ) : IAuthPlugin
     {
         public string Name => "fake-auth";
         public string Description => "d";
@@ -211,8 +238,20 @@ public class PluginClaimsAugmentorTests
             return manager;
         }
 
+        // Deliberately adds the plugin to _plugins (so GetPluginsOfType returns it)
+        // WITHOUT a corresponding _capabilities entry, so GetInstalledPlugins omits
+        // it entirely — reproducing a registry read that is out of sync with the
+        // live plugin list.
+        public static FakePluginManager WithAuthPluginNotInInstalledList(IAuthPlugin plugin)
+        {
+            FakePluginManager manager = new();
+            manager._plugins.Add(plugin);
+            return manager;
+        }
+
         public IReadOnlyList<PluginInfo> GetInstalledPlugins() =>
             _plugins
+                .Where(plugin => _capabilities.ContainsKey(plugin.Id))
                 .Select(plugin => new PluginInfo
                 {
                     Id = plugin.Id,
@@ -230,9 +269,11 @@ public class PluginClaimsAugmentorTests
         public Task InstallPluginAsync(string packageUrl, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default) =>
+            Task.CompletedTask;
 
-        public Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default) =>
+            Task.CompletedTask;
 
         public Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default) =>
             Task.CompletedTask;

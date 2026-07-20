@@ -225,6 +225,66 @@ public class PluginConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void SaveConfiguration_DirectoryDoesNotExistYet_CreatesItBeforeWriting()
+    {
+        // Unlike SaveConfiguration_CreatesDirectoryIfNeeded above, the target
+        // directory is NEVER pre-created here — this is the only way to reach
+        // the storage.CreateDirectory(directory) call itself rather than just
+        // the surrounding existence check.
+        string neverCreatedDir = Path.Combine(_tempDir, "missing", "nested");
+        PluginConfiguration config = new(
+            neverCreatedDir,
+            TestStorageHelper.CreateStorage(_tempDir)
+        );
+
+        config.SaveConfiguration(new TestConfig { ApiKey = "created-on-demand" });
+
+        Directory.Exists(neverCreatedDir).Should().BeTrue();
+        config.HasConfiguration().Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SaveConfigurationAsync_DirectoryDoesNotExistYet_CreatesItBeforeWriting()
+    {
+        string neverCreatedDir = Path.Combine(_tempDir, "missing-async", "nested");
+        PluginConfiguration config = new(
+            neverCreatedDir,
+            TestStorageHelper.CreateStorage(_tempDir)
+        );
+
+        await config.SaveConfigurationAsync(new TestConfig { ApiKey = "created-on-demand-async" });
+
+        Directory.Exists(neverCreatedDir).Should().BeTrue();
+        config.HasConfiguration().Should().BeTrue();
+    }
+
+    [Fact]
+    public void GetConfiguration_MalformedJsonOnDisk_ReturnsNullInsteadOfThrowing()
+    {
+        // Plugin config files can drift to malformed JSON across upgrades or
+        // crashes mid-write. TryDeserialize must treat that as "no config" so
+        // the plugin can re-initialise with defaults instead of taking the
+        // load path down with an unhandled JsonException.
+        string filePath = Path.Combine(_tempDir, "config.json");
+        File.WriteAllText(filePath, "{ not valid json ][");
+
+        TestConfig? result = _config.GetConfiguration<TestConfig>();
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetConfigurationAsync_MalformedJsonOnDisk_ReturnsNullInsteadOfThrowing()
+    {
+        string filePath = Path.Combine(_tempDir, "config.json");
+        await File.WriteAllTextAsync(filePath, "{ not valid json ][");
+
+        TestConfig? result = await _config.GetConfigurationAsync<TestConfig>();
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
     public void GetConfiguration_DifferentType_DeserializesCorrectly()
     {
         _config.SaveConfiguration(new OtherConfig { Name = "test", Score = 9.5 });

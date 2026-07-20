@@ -55,6 +55,40 @@ public class SafePluginIdentityTests
         identity.Version.Should().Be(new(0, 0, 0));
     }
 
+    [Fact]
+    public void Read_OpenGenericTypeParameter_FullNameIsNull_FallsBackToTypeName()
+    {
+        // Type.FullName is null for an open generic type parameter — the only
+        // real (not fabricated) way to reach the `pluginType.FullName ?? name`
+        // fallback, since every concrete, non-generic plugin type discovered
+        // via Assembly.GetTypes() always has a non-null FullName.
+        Type openGenericParameter = typeof(List<>).GetGenericArguments()[0];
+        openGenericParameter.FullName.Should().BeNull("this is exactly the edge case under test");
+
+        SafePluginIdentity identity = SafePluginIdentity.Read(null, openGenericParameter);
+
+        identity.Name.Should().Be(openGenericParameter.Name);
+    }
+
+    [Fact]
+    public void Read_GettersReturnNullWithoutThrowing_FallsBackToSafeDefaults()
+    {
+        // Distinct from ThrowingPlugin above: these getters succeed (no
+        // exception at all) but hand back null despite IPlugin's non-nullable
+        // signature — exercising the `instance.Description ?? string.Empty`
+        // and `instance.Version ?? UnknownVersion` right-hand sides, which a
+        // throwing getter can never reach (the throw happens before the `??`
+        // is ever evaluated).
+        NullReturningPlugin plugin = new();
+
+        SafePluginIdentity identity = SafePluginIdentity.Read(plugin, plugin.GetType());
+
+        identity.Id.Should().Be(NullReturningPlugin.FixedId);
+        identity.Name.Should().Be("Null Returning");
+        identity.Description.Should().BeEmpty();
+        identity.Version.Should().Be(new(0, 0, 0));
+    }
+
     private sealed class WellBehavedPlugin : IPlugin
     {
         public static readonly Guid FixedId = Guid.Parse("11111111-1111-1111-1111-111111111111");
@@ -80,5 +114,19 @@ public class SafePluginIdentityTests
             throw new InvalidOperationException("init boom");
 
         public void Dispose() => throw new InvalidOperationException("dispose boom");
+    }
+
+    private sealed class NullReturningPlugin : IPlugin
+    {
+        public static readonly Guid FixedId = Guid.Parse("44444444-4444-4444-4444-444444444444");
+
+        public string Name => "Null Returning";
+        public string Description => null!;
+        public Guid Id => FixedId;
+        public Version Version => null!;
+
+        public void Initialize(IPluginContext context) { }
+
+        public void Dispose() { }
     }
 }

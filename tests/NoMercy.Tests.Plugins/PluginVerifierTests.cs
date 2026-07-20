@@ -77,4 +77,100 @@ public class PluginVerifierTests
         Assert.True(result.Verified);
         Assert.False(result.Trusted);
     }
+
+    [Fact]
+    public void Verify_NonEnforcedStageFails_DoesNotFailOverallVerification()
+    {
+        // A stage that is NOT enforced (Enforced == false) must never contribute
+        // its failure to the verdict — the `stage.Enforced` half of the
+        // `outcome == Fail && stage.Enforced` guard exists specifically to keep
+        // an advisory-only stage from ever blocking a plugin load.
+        string dll = WriteTempDll([1, 2, 3]);
+        PluginVerifier verifier = new([new AdvisoryFailingStage()]);
+
+        PluginVerificationResult result = verifier.Verify(Manifest("10.0"), dll, null);
+
+        Assert.True(result.Verified);
+        Assert.Empty(result.Failures);
+    }
+
+    [Fact]
+    public void Verify_EnforcedStageFailsWithNullMessage_FallsBackToStageNameMessage()
+    {
+        // Every other failing-stage test (Abi, Checksum) supplies a real
+        // message — this is the only path that reaches the
+        // `message ?? $"{stage.Name} stage failed."` fallback on the right of
+        // the `??`.
+        string dll = WriteTempDll([9, 9, 9]);
+        PluginVerifier verifier = new([new EnforcedFailingStageWithNoMessage()]);
+
+        PluginVerificationResult result = verifier.Verify(Manifest("10.0"), dll, null);
+
+        Assert.False(result.Verified);
+        Assert.Equal("NoMessage stage failed.", Assert.Single(result.Failures));
+    }
+
+    [Fact]
+    public void AbiVerificationStage_ExposesNameAndEnforced()
+    {
+        AbiVerificationStage stage = new();
+
+        Assert.Equal("ABI", stage.Name);
+        Assert.True(stage.Enforced);
+    }
+
+    [Fact]
+    public void ChecksumVerificationStage_ExposesNameAndEnforced()
+    {
+        ChecksumVerificationStage stage = new();
+
+        Assert.Equal("Checksum", stage.Name);
+        Assert.True(stage.Enforced);
+    }
+
+    [Fact]
+    public void SignatureVerificationStage_ExposesNameAndIsNotEnforced()
+    {
+        SignatureVerificationStage stage = new();
+
+        Assert.Equal("Signature", stage.Name);
+        Assert.False(stage.Enforced);
+    }
+
+    [Fact]
+    public void SignatureVerificationStage_Evaluate_AlwaysPasses()
+    {
+        SignatureVerificationStage stage = new();
+        PluginVerificationContext context = new()
+        {
+            Manifest = Manifest("10.0"),
+            AssemblyPath = "irrelevant",
+            ExpectedChecksum = null,
+        };
+
+        (PluginStageOutcome outcome, string? message) = stage.Evaluate(context);
+
+        Assert.Equal(PluginStageOutcome.Pass, outcome);
+        Assert.Null(message);
+    }
+
+    private sealed class AdvisoryFailingStage : IPluginVerificationStage
+    {
+        public string Name => "Advisory";
+        public bool Enforced => false;
+
+        public (PluginStageOutcome Outcome, string? Message) Evaluate(
+            PluginVerificationContext context
+        ) => (PluginStageOutcome.Fail, "advisory failure, never enforced");
+    }
+
+    private sealed class EnforcedFailingStageWithNoMessage : IPluginVerificationStage
+    {
+        public string Name => "NoMessage";
+        public bool Enforced => true;
+
+        public (PluginStageOutcome Outcome, string? Message) Evaluate(
+            PluginVerificationContext context
+        ) => (PluginStageOutcome.Fail, null);
+    }
 }

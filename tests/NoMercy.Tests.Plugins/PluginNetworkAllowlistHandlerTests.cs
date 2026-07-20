@@ -45,4 +45,31 @@ public class PluginNetworkAllowlistHandlerTests
             client.GetAsync("https://anything.com/")
         );
     }
+
+    [Fact]
+    public async Task NullRequestUri_TreatedAsEmptyHost_Denied()
+    {
+        // HttpClient itself refuses to dispatch a request with a null RequestUri
+        // and no BaseAddress, so the only way to exercise the handler's own
+        // `request.RequestUri?.Host ?? string.Empty` null-conditional is to call
+        // SendAsync directly against a message with RequestUri explicitly unset.
+        ExposedAllowlistHandler handler = new(["*.somafm.com"])
+        {
+            InnerHandler = new AlwaysOkHandler(),
+        };
+        HttpRequestMessage request = new(HttpMethod.Get, (Uri?)null);
+
+        Func<Task> act = () => handler.InvokeSendAsync(request, CancellationToken.None);
+
+        await Assert.ThrowsAsync<PluginNetworkDeniedException>(act);
+    }
+
+    private sealed class ExposedAllowlistHandler(IReadOnlyList<string> allowedHosts)
+        : PluginNetworkAllowlistHandler(allowedHosts)
+    {
+        public Task<HttpResponseMessage> InvokeSendAsync(
+            HttpRequestMessage request,
+            CancellationToken ct
+        ) => SendAsync(request, ct);
+    }
 }

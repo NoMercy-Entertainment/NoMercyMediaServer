@@ -60,6 +60,21 @@ public class PluginLifecycleTests
     }
 
     [Fact]
+    public void CanTransition_FromStatusAbsentFromTheAllowedTransitionMap_ReturnsFalse()
+    {
+        // Every real PluginStatus value is a key in AllowedTransitions, so the
+        // TryGetValue-miss branch is otherwise unreachable through the public
+        // enum. An out-of-range cast is the only way to exercise it — proving
+        // CanTransition fails closed (denies) for a status the map has no entry
+        // for, rather than throwing or defaulting to permissive.
+        PluginStatus unknownStatus = (PluginStatus)999;
+
+        bool result = PluginLifecycle.CanTransition(unknownStatus, PluginStatus.Active);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
     public void Transition_ValidTransition_UpdatesStatus()
     {
         PluginInfo info = CreatePluginInfo(PluginStatus.Active);

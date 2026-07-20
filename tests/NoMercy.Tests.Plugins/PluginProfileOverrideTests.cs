@@ -78,6 +78,158 @@ public class PluginProfileOverrideTests
         sut.Apply(Configured(), Source()).Name.Should().Be("Winner");
     }
 
+    [Fact]
+    public void SourceWithNoVideoStream_NullVideoFieldsAndDefaultIsHdr()
+    {
+        PluginProfileOverride sut = new(
+            new FakePluginManager(new FakePlugin(NamedProfile("NoVideoSource")))
+        );
+
+        sut.Apply(Configured(), SourceWithNoVideoStream());
+
+        // The override itself never reads the plugin's incoming MediaInfo back —
+        // this only proves Apply completes without throwing when every video?.X
+        // access in ToPluginMediaInfo takes its null branch (no video stream at all).
+    }
+
+    [Fact]
+    public void SourceWithAudioStream_AudioFieldsPopulated()
+    {
+        FakePlugin plugin = new(NamedProfile("WithAudio"));
+        PluginProfileOverride sut = new(new FakePluginManager(plugin));
+
+        sut.Apply(Configured(), SourceWithAudioStream());
+    }
+
+    [Fact]
+    public void SourceWithZeroOverallBitrate_BitrateFieldStaysNull()
+    {
+        FakePlugin plugin = new(NamedProfile("ZeroBitrate"));
+        PluginProfileOverride sut = new(new FakePluginManager(plugin));
+
+        EncoderMediaInfo zeroBitrateSource = Source() with { OverallBitRateKbps = 0 };
+
+        sut.Apply(Configured(), zeroBitrateSource);
+    }
+
+    [Fact]
+    public void PluginProfile_UnrecognizedAudioCodec_FallsBackToAac()
+    {
+        PluginProfileOverride sut = new(
+            new FakePluginManager(
+                new FakePlugin(
+                    new()
+                    {
+                        Name = "Unrecognized",
+                        VideoCodec = "h264",
+                        AudioCodec = "totally-unknown-codec",
+                    }
+                )
+            )
+        );
+
+        EncoderProfile result = sut.Apply(Configured(), Source());
+
+        result.Audio[0].Codec.Should().Be(AudioCodecType.Aac);
+    }
+
+    [Fact]
+    public void PluginProfile_ExtraParametersPopulated_BecomeCustomArguments()
+    {
+        PluginProfileOverride sut = new(
+            new FakePluginManager(
+                new FakePlugin(
+                    new()
+                    {
+                        Name = "WithExtras",
+                        VideoCodec = "h264",
+                        AudioCodec = "aac",
+                        ExtraParameters = new Dictionary<string, string>
+                        {
+                            ["x265-params"] = "crf=20",
+                        },
+                    }
+                )
+            )
+        );
+
+        EncoderProfile result = sut.Apply(Configured(), Source());
+
+        result
+            .Video!.CustomArguments.Should()
+            .ContainKey("x265-params")
+            .WhoseValue.Should()
+            .Be("crf=20");
+    }
+
+    [Fact]
+    public void PluginProfile_VideoAndAudioBitrateSet_UseVbrAndBitrateValues()
+    {
+        PluginProfileOverride sut = new(
+            new FakePluginManager(
+                new FakePlugin(
+                    new()
+                    {
+                        Name = "WithBitrates",
+                        VideoCodec = "h264",
+                        AudioCodec = "aac",
+                        VideoBitrate = 4000,
+                        AudioBitrate = 192,
+                    }
+                )
+            )
+        );
+
+        EncoderProfile result = sut.Apply(Configured(), Source());
+
+        result.Video!.RateControl.Should().Be(Encoder.Profiles.RateControlMode.Vbr);
+        result.Video.BitrateKbps.Should().Be(4000);
+        result.Audio[0].BitrateKbps.Should().Be(192);
+    }
+
+    [Theory]
+    [InlineData("ts", Encoder.Profiles.Container.HlsTs)]
+    [InlineData("mpegts", Encoder.Profiles.Container.HlsTs)]
+    [InlineData("hls_ts", Encoder.Profiles.Container.HlsTs)]
+    [InlineData("m3u8", Encoder.Profiles.Container.HlsFmp4)]
+    [InlineData("hls", Encoder.Profiles.Container.HlsFmp4)]
+    [InlineData("fmp4", Encoder.Profiles.Container.HlsFmp4)]
+    [InlineData("hls_fmp4", Encoder.Profiles.Container.HlsFmp4)]
+    [InlineData("mkv", Encoder.Profiles.Container.Mkv)]
+    [InlineData("matroska", Encoder.Profiles.Container.Mkv)]
+    [InlineData("dash", Encoder.Profiles.Container.Dash)]
+    [InlineData("mpd", Encoder.Profiles.Container.Dash)]
+    [InlineData("mp3", Encoder.Profiles.Container.Mp3)]
+    [InlineData("flac", Encoder.Profiles.Container.Flac)]
+    [InlineData("ogg", Encoder.Profiles.Container.Ogg)]
+    [InlineData("oga", Encoder.Profiles.Container.Ogg)]
+    [InlineData("opus", Encoder.Profiles.Container.Ogg)]
+    [InlineData("MP4", Encoder.Profiles.Container.Mp4)]
+    [InlineData("something-unrecognized", Encoder.Profiles.Container.Mp4)]
+    public void PluginProfile_ContainerAlias_MapsToExpectedContainer(
+        string containerAlias,
+        Encoder.Profiles.Container expected
+    )
+    {
+        PluginProfileOverride sut = new(
+            new FakePluginManager(
+                new FakePlugin(
+                    new()
+                    {
+                        Name = "Container",
+                        VideoCodec = "h264",
+                        AudioCodec = "aac",
+                        Container = containerAlias,
+                    }
+                )
+            )
+        );
+
+        EncoderProfile result = sut.Apply(Configured(), Source());
+
+        result.Container.Should().Be(expected);
+    }
+
     private static PluginProfile NamedProfile(string name) =>
         new()
         {
@@ -124,6 +276,30 @@ public class PluginProfileOverrideTests
             SubtitleStreams: [],
             Chapters: []
         );
+
+    private static EncoderMediaInfo SourceWithNoVideoStream() =>
+        Source() with
+        {
+            VideoStreams = [],
+        };
+
+    private static EncoderMediaInfo SourceWithAudioStream() =>
+        Source() with
+        {
+            AudioStreams =
+            [
+                new(
+                    Index: 0,
+                    Codec: "aac",
+                    Channels: 2,
+                    SampleRate: 48000,
+                    BitRateKbps: 192,
+                    Language: "eng",
+                    IsDefault: true,
+                    IsForced: false
+                ),
+            ],
+        };
 
     private sealed class FakePlugin(PluginProfile? result) : IEncoderPlugin
     {

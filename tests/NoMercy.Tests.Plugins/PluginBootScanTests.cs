@@ -210,6 +210,69 @@ public class PluginBootScanTests : IDisposable
     }
 
     [Fact]
+    public async Task LoadAllAsync_DisabledPluginWithSurvivingInstance_IsExcludedFromResults()
+    {
+        // DisablePluginAsync disposes the instance but LoadedPlugin (and its
+        // Instance reference) is immutable — the record stays in the registry
+        // with a non-null Instance and a non-Active status. LoadAllAsync's own
+        // `Instance is not null && Status == Active` filter must still exclude
+        // it, isolating the `&& Status == Active` half of that guard.
+        //
+        // Loaded directly via LoadPluginAssemblyAsync (not staged under
+        // _tempPluginsDir) so the LoadAllAsync call below's own directory
+        // rescan does not reprocess and re-enable it.
+        string echoBinDir = GetEchoPluginBinDir();
+        string echoDllPath = Path.Combine(echoBinDir, "NoMercy.Plugin.Samples.Echo.dll");
+        await _manager.LoadPluginAssemblyAsync(echoDllPath);
+        PluginInfo activeBefore = _manager.GetInstalledPlugins().Should().ContainSingle().Subject;
+        await _manager.DisablePluginAsync(activeBefore.Id);
+
+        IReadOnlyList<PluginLoadResult> results = await _manager.LoadAllAsync();
+
+        results.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task LoadAllAsync_NonAutoEnabledPluginAlongsideActiveOne_OnlyReturnsTheActiveOne()
+    {
+        // A manifest-driven plugin with autoEnabled:false loads Disabled with
+        // Instance == null — the OTHER half of LoadAllAsync's filter (distinct
+        // from the "disposed-but-still-referenced" case above, which has a
+        // non-null Instance). Both plugins share the Echo assembly but use
+        // different manifest ids so they occupy separate registry entries.
+        StageEchoPlugin();
+        string disabledDir = Path.Combine(_tempPluginsDir, "EchoDisabled");
+        Directory.CreateDirectory(disabledDir);
+        string binDir = GetEchoPluginBinDir();
+        foreach (string file in Directory.EnumerateFiles(binDir, "*.dll"))
+            File.Copy(file, Path.Combine(disabledDir, Path.GetFileName(file)), overwrite: true);
+        foreach (string file in Directory.EnumerateFiles(binDir, "*.deps.json"))
+            File.Copy(file, Path.Combine(disabledDir, Path.GetFileName(file)), overwrite: true);
+        File.WriteAllText(
+            Path.Combine(disabledDir, "plugin.json"),
+            """
+            {
+              "id": "66666666-1111-2222-3333-444444444444",
+              "name": "EchoDisabled",
+              "version": "0.1.0",
+              "description": "same assembly, never auto-enabled",
+              "assembly": "NoMercy.Plugin.Samples.Echo.dll",
+              "autoEnabled": false
+            }
+            """
+        );
+
+        IReadOnlyList<PluginLoadResult> results = await _manager.LoadAllAsync();
+
+        results.Should().ContainSingle();
+        results[0].Name.Should().Be("Echo");
+        _manager
+            .GetInstalledPlugins()
+            .Should()
+            .Contain(p => p.Name == "EchoDisabled" && p.Status == PluginStatus.Disabled);
+    }
+
+    [Fact]
     public async Task LoadAllAsync_MalformedManifest_SkipsAndContinues()
     {
         // Bad manifest — should not throw; other plugins (if any) continue loading.
