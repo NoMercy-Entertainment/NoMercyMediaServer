@@ -225,4 +225,197 @@ public sealed class MediaAuthorizationPolicyTests
 
         result.Should().BeFalse();
     }
+
+    [Fact]
+    public void IsOwner_Denies_WhenPrincipalIsNull()
+    {
+        User owner = new()
+        {
+            Id = OwnerId,
+            Owner = true,
+            Name = "Owner",
+            Email = "o@nm.tv",
+        };
+        IMediaAuthorizationPolicy policy = BuildPolicy([owner]);
+
+        bool result = policy.IsOwner(null);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsModerator_Denies_WhenPrincipalIsNull()
+    {
+        User moderator = new()
+        {
+            Id = ModeratorId,
+            Manage = true,
+            Owner = false,
+            Name = "Mod",
+            Email = "m@nm.tv",
+        };
+        IMediaAuthorizationPolicy policy = BuildPolicy([moderator]);
+
+        bool result = policy.IsModerator(null);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsAllowed_Denies_WhenPrincipalIsNull()
+    {
+        User allowed = new()
+        {
+            Id = AllowedUserId,
+            Allowed = true,
+            Owner = false,
+            Name = "Allowed",
+            Email = "a@nm.tv",
+        };
+        IMediaAuthorizationPolicy policy = BuildPolicy([allowed]);
+
+        bool result = policy.IsAllowed(null);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsModerator_Denies_WhenCacheIsEmpty()
+    {
+        IMediaAuthorizationPolicy policy = BuildPolicy([]);
+
+        bool result = policy.IsModerator(PrincipalFor(ModeratorId));
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsAllowed_Denies_WhenCacheIsEmpty()
+    {
+        IMediaAuthorizationPolicy policy = BuildPolicy([]);
+
+        bool result = policy.IsAllowed(PrincipalFor(AllowedUserId));
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsOwner_WithMultipleUsers_IdentifiesOwner()
+    {
+        User owner = new()
+        {
+            Id = OwnerId,
+            Owner = true,
+            Name = "Owner",
+            Email = "o@nm.tv",
+        };
+        User moderator = new()
+        {
+            Id = ModeratorId,
+            Owner = false,
+            Manage = true,
+            Name = "Mod",
+            Email = "m@nm.tv",
+        };
+        User allowed = new()
+        {
+            Id = AllowedUserId,
+            Owner = false,
+            Allowed = true,
+            Name = "Allowed",
+            Email = "a@nm.tv",
+        };
+        IMediaAuthorizationPolicy policy = BuildPolicy([owner, moderator, allowed]);
+
+        bool result = policy.IsOwner(PrincipalFor(OwnerId));
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsModerator_WithMultipleUsers_IdentifiesModerator()
+    {
+        User owner = new()
+        {
+            Id = OwnerId,
+            Owner = true,
+            Name = "Owner",
+            Email = "o@nm.tv",
+        };
+        User moderator = new()
+        {
+            Id = ModeratorId,
+            Owner = false,
+            Manage = true,
+            Name = "Mod",
+            Email = "m@nm.tv",
+        };
+        User allowed = new()
+        {
+            Id = AllowedUserId,
+            Owner = false,
+            Allowed = true,
+            Name = "Allowed",
+            Email = "a@nm.tv",
+        };
+        IMediaAuthorizationPolicy policy = BuildPolicy([owner, moderator, allowed]);
+
+        bool result = policy.IsModerator(PrincipalFor(ModeratorId));
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsAllowed_WithMultipleUsers_IdentifiesAllowed()
+    {
+        User owner = new()
+        {
+            Id = OwnerId,
+            Owner = true,
+            Name = "Owner",
+            Email = "o@nm.tv",
+        };
+        User moderator = new()
+        {
+            Id = ModeratorId,
+            Owner = false,
+            Manage = true,
+            Name = "Mod",
+            Email = "m@nm.tv",
+        };
+        User allowed = new()
+        {
+            Id = AllowedUserId,
+            Owner = false,
+            Allowed = true,
+            Name = "Allowed",
+            Email = "a@nm.tv",
+        };
+        IMediaAuthorizationPolicy policy = BuildPolicy([owner, moderator, allowed]);
+
+        bool result = policy.IsAllowed(PrincipalFor(AllowedUserId));
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsAllowed_ImpliesModerator()
+    {
+        User moderator = new()
+        {
+            Id = ModeratorId,
+            Owner = false,
+            Manage = true,
+            Allowed = true,
+            Name = "Mod",
+            Email = "m@nm.tv",
+        };
+        IMediaAuthorizationPolicy policy = BuildPolicy([moderator]);
+
+        bool isAllowed = policy.IsAllowed(PrincipalFor(ModeratorId));
+        bool isModerator = policy.IsModerator(PrincipalFor(ModeratorId));
+
+        isAllowed.Should().BeTrue();
+        isModerator.Should().BeTrue();
+    }
 }
