@@ -11,6 +11,8 @@
 
   <ItemGroup>
     <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Moq" />
     <PackageReference Include="TagLibSharp" />
@@ -31,6 +33,7 @@
     <ProjectReference Include="..\..\src\NoMercy.Events\NoMercy.Events.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.MediaProcessing\NoMercy.MediaProcessing.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.OpticalMedia\NoMercy.OpticalMedia.csproj" />
+    <ProjectReference Include="..\..\src\NoMercy.Providers\NoMercy.Providers.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Storage\NoMercy.Storage.csproj" />
   </ItemGroup>
 </Project>
