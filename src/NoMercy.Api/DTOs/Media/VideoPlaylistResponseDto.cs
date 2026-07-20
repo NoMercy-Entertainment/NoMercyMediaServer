@@ -172,8 +172,8 @@ public class VideoPlaylistResponseDto
             },
         ];
 
-        Tracks = videoFile
-            .Tracks.Select(t => new VideoTrack
+        Tracks = NormalizePreviewTracks(videoFile.Tracks)
+            .Select(t => new VideoTrack
             {
                 Label = t.Label,
                 File = $"{baseFolder}{t.File}",
@@ -267,8 +267,8 @@ public class VideoPlaylistResponseDto
             },
         ];
 
-        Tracks = videoFile
-            .Tracks.Select(t => new VideoTrack
+        Tracks = NormalizePreviewTracks(videoFile.Tracks)
+            .Select(t => new VideoTrack
             {
                 Label = t.Label,
                 File = $"{baseFolder}{t.File}",
@@ -317,6 +317,42 @@ public class VideoPlaylistResponseDto
 
         [JsonProperty("ext")]
         public string Ext { get; set; } = "vtt";
+    }
+
+    // The scan writer registers the sprite sheet itself under kind "sprite"
+    // (webp) and, only when a matching vtt exists, a separate "thumbnails"
+    // entry; the player exclusively reads kind === "thumbnails". Relabel the
+    // "sprite" entry so items that never got a paired vtt at least surface a
+    // track the player recognizes, and drop it when a real vtt already has
+    // that kind — the webp itself isn't a parseable preview-thumbnails file.
+    private static List<VideoTrack> NormalizePreviewTracks(IEnumerable<VideoTrack> tracks)
+    {
+        List<VideoTrack> normalized = tracks
+            .Select(track =>
+                track.Kind == "sprite"
+                    ? new VideoTrack
+                    {
+                        File = track.File,
+                        Kind = "thumbnails",
+                        Label = track.Label,
+                        Language = track.Language,
+                    }
+                    : track
+            )
+            .ToList();
+
+        List<VideoTrack> thumbnailTracks = normalized
+            .Where(track => track.Kind == "thumbnails")
+            .ToList();
+        if (thumbnailTracks.Count < 2)
+            return normalized;
+
+        VideoTrack keep =
+            thumbnailTracks.FirstOrDefault(track =>
+                track.File.EndsWith(".vtt", StringComparison.OrdinalIgnoreCase)
+            ) ?? thumbnailTracks[0];
+
+        return normalized.Where(track => track.Kind != "thumbnails" || track == keep).ToList();
     }
 
     private static Subs Subtitles(VideoFile videoFile)
