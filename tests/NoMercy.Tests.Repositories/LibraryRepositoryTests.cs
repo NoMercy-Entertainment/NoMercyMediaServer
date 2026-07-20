@@ -219,6 +219,28 @@ public class LibraryRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task GetLibraryByIdAsync_Paginated_TakeIsOrderedByTitleSort_NotInsertionOrder()
+    {
+        // "Spirited Away" (Id 129) is seeded before "Pulp Fiction" (Id 680), so a Take(1)
+        // without an explicit OrderBy would return whatever the database's unordered scan
+        // happens to yield first (observed: insertion order) instead of the alphabetically
+        // first title. EF Core's Include(...).Take(n) requires its own OrderBy inside that
+        // navigation lambda — an outer OrderBy on the root query does not cover it.
+        Library? library = await _repository.GetLibraryByIdAsync(
+            SeedConstants.MovieLibraryId,
+            SeedConstants.UserId,
+            "en",
+            "US",
+            1,
+            0
+        );
+
+        Assert.NotNull(library);
+        Assert.Single(library.LibraryMovies);
+        Assert.Equal("Pulp Fiction", library.LibraryMovies.Single().Movie.Title);
+    }
+
+    [Fact]
     public async Task GetLibraryByIdAsync_Paginated_TakeReturnsAllWhenHigherThanCount()
     {
         Library? library = await _repository.GetLibraryByIdAsync(

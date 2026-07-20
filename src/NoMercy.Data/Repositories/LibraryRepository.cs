@@ -163,6 +163,8 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory) :
             .Include(library =>
                 library
                     .LibraryMovies.Where(lm => lm.Movie.VideoFiles.Any(v => v.Folder != null))
+                    .OrderBy(lm => lm.Movie.TitleSort)
+                    .ThenBy(lm => lm.MovieId)
                     .Take(take)
             )
                 .ThenInclude(lm => lm.Movie)
@@ -185,6 +187,7 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory) :
                                 c.Certification.Iso31661 == "US"
                                 || c.Certification.Iso31661 == country
                             )
+                            .OrderBy(c => c.CertificationId)
                             .Take(1)
                     )
                         .ThenInclude(c => c.Certification)
@@ -206,6 +209,8 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory) :
                             )
                         )
                     )
+                    .OrderBy(lt => lt.Tv.TitleSort)
+                    .ThenBy(lt => lt.TvId)
                     .Take(take)
             )
                 .ThenInclude(lt => lt.Tv)
@@ -245,6 +250,7 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory) :
                                 c.Certification.Iso31661 == "US"
                                 || c.Certification.Iso31661 == country
                             )
+                            .OrderBy(c => c.CertificationId)
                             .Take(1)
                     )
                         .ThenInclude(c => c.Certification)
