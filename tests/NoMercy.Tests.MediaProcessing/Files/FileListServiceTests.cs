@@ -8,6 +8,7 @@
 //
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using MovieFileLibrary;
 using NoMercy.MediaProcessing.Files;
@@ -15,7 +16,7 @@ using NoMercy.MediaProcessing.Files.Parsing;
 using NoMercy.MediaProcessing.Files.Parsing.Adapters;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Storage;
-using Microsoft.Extensions.Logging.Abstractions;
+
 namespace NoMercy.Tests.MediaProcessing.Files;
 
 /// <summary>
@@ -34,18 +35,8 @@ public class FileListServiceTests
 
         List<StorageEntry> entries =
         [
-            new(
-                "Movies/Inception.2010.1080p.BluRay.mkv",
-                false,
-                1000,
-                DateTimeOffset.UtcNow
-            ),
-            new(
-                "Movies/The.Matrix.1999.1080p.BluRay.mkv",
-                false,
-                2000,
-                DateTimeOffset.UtcNow
-            ),
+            new("Movies/Inception.2010.1080p.BluRay.mkv", false, 1000, DateTimeOffset.UtcNow),
+            new("Movies/The.Matrix.1999.1080p.BluRay.mkv", false, 2000, DateTimeOffset.UtcNow),
         ];
         storage
             .Setup(s => s.List(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<bool>()))
@@ -66,7 +57,20 @@ public class FileListServiceTests
             )
             .ReturnsAsync(((MovieOrEpisode match, string? imdbId)?)null);
 
-        FileListService service = new(driver.Object, identification.Object, new FilenameParserPipeline(new IFilenameParseAdapter[] { new EpisodePrefixAdapter(), new EpisodeWordAdapter(), new SeasonEpisodeAdapter(), new MovieDetectorAdapter() }), NullLogger<FileListService>.Instance);
+        FileListService service = new(
+            driver.Object,
+            identification.Object,
+            new FilenameParserPipeline(
+                new IFilenameParseAdapter[]
+                {
+                    new EpisodePrefixAdapter(),
+                    new EpisodeWordAdapter(),
+                    new SeasonEpisodeAdapter(),
+                    new MovieDetectorAdapter(),
+                }
+            ),
+            NullLogger<FileListService>.Instance
+        );
 
         List<FileItem> files = await service.GetFilesInDirectory("Movies", "movie", storage.Object);
 

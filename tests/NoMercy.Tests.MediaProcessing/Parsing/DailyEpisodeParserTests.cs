@@ -31,12 +31,12 @@ public class DailyEpisodeParserTests
     }
 
     [Theory]
-    [InlineData("Movie.2024.1080p.BluRay.x264.mkv")]   // year only
-    [InlineData("Show.S01E05.2024.mkv")]                // SxxExx + bare year
-    [InlineData("Film.1920x1080.mkv")]                   // resolution
-    [InlineData("Show.2024.13.45.mkv")]                  // invalid month/day
-    [InlineData("Show.2024.00.10.mkv")]                  // month 00
-    [InlineData("Apollo.13.mkv")]                         // unrelated number
+    [InlineData("Movie.2024.1080p.BluRay.x264.mkv")] // year only
+    [InlineData("Show.S01E05.2024.mkv")] // SxxExx + bare year
+    [InlineData("Film.1920x1080.mkv")] // resolution
+    [InlineData("Show.2024.13.45.mkv")] // invalid month/day
+    [InlineData("Show.2024.00.10.mkv")] // month 00
+    [InlineData("Apollo.13.mkv")] // unrelated number
     [InlineData("")]
     public void Rejects_non_dates(string name) =>
         DailyEpisodeParser.TryGetAirDate(name).Should().BeNull();

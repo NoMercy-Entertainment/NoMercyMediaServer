@@ -265,6 +265,86 @@ public class MoveFolderCrossBackendTests
         writeCount.Should().Be(3, "each of the three files is written to the destination");
     }
 
+    // -------------------------------------------------------------------
+    // sameBackend's ReferenceEquals(source, destination) short-circuit —
+    // the source and destination storage instance are literally the same
+    // object (e.g. moving within one library's own folder). Every other
+    // test above uses two distinct Mock<IStorage> instances of the same
+    // driver TYPE, which only exercises the second half of the `||`.
+    // -------------------------------------------------------------------
+    [Fact]
+    public async Task SameStorageInstanceForSourceAndDestination_UsesMoveDirectory()
+    {
+        DriverA driver = new();
+        int moveDirectoryCalls = 0;
+
+        Mock<IStorage> storage = new();
+        storage.Setup(s => s.Driver).Returns(driver);
+        storage.Setup(s => s.Exists("source/folder")).Returns(true);
+        storage
+            .Setup(s => s.MoveDirectory("source/folder", "dest/folder"))
+            .Callback(() => moveDirectoryCalls++);
+
+        MoveFolderAccessor accessor = new(storage.Object, storage.Object);
+        await accessor.InvokeMoveFolderAsync("source/folder", "dest/folder");
+
+        moveDirectoryCalls
+            .Should()
+            .Be(1, "ReferenceEquals(source, destination) alone must short-circuit to same-backend");
+    }
+
+    // -------------------------------------------------------------------
+    // relativePath's ternary false branch: an entry whose Path does NOT
+    // start with sourceFolder (a driver that returns entries in a
+    // different form than the scan root it was given) falls back to the
+    // raw entry.Path unchanged, rather than throwing on the substring slice.
+    // -------------------------------------------------------------------
+    [Fact]
+    public async Task DifferentBackendTypes_EntryPathNotPrefixedBySourceFolder_UsesRawEntryPath()
+    {
+        DriverA localDriver = new();
+        DriverB remoteDriver = new();
+
+        byte[] fileContent = [9, 9, 9];
+        // Deliberately NOT prefixed with "source/folder" — exercises the
+        // ternary's else branch (relativePath = entry.Path, unmodified).
+        StorageEntry fileEntry = new(
+            Path: "unrelated/track.flac",
+            IsDirectory: false,
+            SizeBytes: fileContent.Length,
+            LastModified: DateTimeOffset.UtcNow
+        );
+
+        Mock<IStorage> source = new();
+        source.Setup(s => s.Driver).Returns(localDriver);
+        source.Setup(s => s.Exists("source/folder")).Returns(true);
+        source.Setup(s => s.List("source/folder", null, true)).Returns([fileEntry]);
+        source
+            .Setup(s => s.OpenRead("unrelated/track.flac"))
+            .Returns(new MemoryStream(fileContent));
+        source.Setup(s => s.DeleteDirectory("source/folder", true));
+
+        string? capturedDestPath = null;
+        MemoryStream capturedWrite = new();
+        Mock<IStorage> dest = new();
+        dest.Setup(s => s.Driver).Returns(remoteDriver);
+        dest.Setup(s => s.GetParent(It.IsAny<string>())).Returns("dest/folder");
+        dest.Setup(s => s.CreateDirectory(It.IsAny<string>()));
+        dest.Setup(s => s.OpenWrite(It.IsAny<string>(), true))
+            .Callback<string, bool>((path, _) => capturedDestPath = path)
+            .Returns(capturedWrite);
+
+        MoveFolderAccessor accessor = new(source.Object, dest.Object);
+        await accessor.InvokeMoveFolderAsync("source/folder", "dest/folder");
+
+        capturedDestPath
+            .Should()
+            .Be(
+                "dest/folder/unrelated/track.flac",
+                "the raw entry.Path is joined onto the destination unchanged when it isn't prefixed by sourceFolder"
+            );
+    }
+
     private sealed class MoveFolderAccessor(IStorage sourceStorage, IStorage destStorage)
     {
         public Task InvokeMoveFolderAsync(string sourceFolder, string destFolder)

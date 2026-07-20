@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  Task-scoped coverage override for NoMercy.MediaProcessing only.
+
+  Differs from the shared tests/coverletArgs.runsettings in two ways, both
+  required to get an accurate line/branch number for THIS assembly without
+  destabilizing the shared file every test project uses:
+
+  1. <Include> is scoped to [NoMercy.MediaProcessing]* — the shared file has
+     no Include filter at all, so it instruments every transitively
+     referenced assembly (Database, Encoder, Providers, Storage, Events,
+     Queue...). Removing the CompilerGeneratedAttribute exclusion (below)
+     against that unscoped surface re-instruments every closure/iterator/
+     async-state-machine in ALL of those assemblies, not just this one —
+     confirmed by measurement: full-suite run time went from ~50s to a
+     5+ minute timeout, and one run silently produced zero recorded hits
+     for the larger assemblies. Scoping Include first keeps the added
+     instrumentation to the one assembly this task is measuring.
+
+  2. CompilerGeneratedAttribute is NOT excluded. The C# compiler marks every
+     async method's state machine (the type carrying the actual sequence
+     points for that method's body) with this attribute. The shared file's
+     ExcludeByAttribute list includes it, which silently strips EVERY async
+     method's body from coverage measurement solution-wide — verified by
+     re-running FileManagerMasterRebuildTests with it removed:
+     RebuildHlsMasterFromDiskAsync's lines went from zero recorded lines to
+     real hit counts matching its six existing tests. Left as-is in the
+     shared file (see git history for the tried-and-reverted fix); flagged
+     for the release-coordinator/testing-specialist to fix properly with
+     assembly-scoped Include filters across every test project before
+     touching the shared file.
+-->
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Include>[NoMercy.MediaProcessing]*</Include>
+          <Exclude>[coverlet.*.tests?]*,[*]Coverlet.Core*,[*]Moq*</Exclude>
+          <ExcludeByAttribute>Obsolete,GeneratedCodeAttribute</ExcludeByAttribute>
+          <SingleHit>false</SingleHit>
+          <UseSourceLink>false</UseSourceLink>
+          <IncludeTestAssembly>false</IncludeTestAssembly>
+          <SkipAutoProps>true</SkipAutoProps>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

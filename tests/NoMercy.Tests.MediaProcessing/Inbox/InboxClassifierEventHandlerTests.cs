@@ -116,10 +116,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
     private InboxClassifierEventHandler MakeHandler()
     {
         InboxClassifier classifier = new(_probeMock.Object, _tagReaderMock.Object);
-        InboxRoutingService routing = new(
-            _storageFactoryMock.Object,
-            new()
-        );
+        InboxRoutingService routing = new(_storageFactoryMock.Object, new());
 
         return new(
             NullLogger<InboxClassifierEventHandler>.Instance,
@@ -155,9 +152,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
             }
         );
 
-        _context.FolderLibrary.Add(
-            new() { LibraryId = libraryId, FolderId = folderId }
-        );
+        _context.FolderLibrary.Add(new() { LibraryId = libraryId, FolderId = folderId });
 
         _context.SaveChanges();
 
@@ -346,9 +341,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
                     DriverId = driverId,
                 }
             );
-            seedContext.FolderLibrary.Add(
-                new() { LibraryId = libraryId, FolderId = folderId }
-            );
+            seedContext.FolderLibrary.Add(new() { LibraryId = libraryId, FolderId = folderId });
             await seedContext.SaveChangesAsync();
 
             Mock<IEventBus> eventBusMock = new();
@@ -403,14 +396,8 @@ public class InboxClassifierEventHandlerTests : IDisposable
                 )
                 .ReturnsAsync((InboxAudioTags?)null);
 
-            InboxClassifier classifier = new(
-                probeMock.Object,
-                tagReaderMock.Object
-            );
-            InboxRoutingService routing = new(
-                realStorageFactory,
-                new()
-            );
+            InboxClassifier classifier = new(probeMock.Object, tagReaderMock.Object);
+            InboxRoutingService routing = new(realStorageFactory, new());
 
             MediaContext ContextFactory()
             {
@@ -486,9 +473,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
         Mock<IStorage> storageMock = new();
         storageMock
             .Setup(s => s.List("", null, false))
-            .Returns([
-                new("The Matrix (1999).mkv", false, 1024, DateTimeOffset.UtcNow),
-            ]);
+            .Returns([new("The Matrix (1999).mkv", false, 1024, DateTimeOffset.UtcNow)]);
         storageMock
             .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
             .Returns<string, string>((parent, child) => $"{parent}/{child}");

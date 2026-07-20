@@ -192,17 +192,19 @@ public class EpisodeRepositoryTests : IDisposable
         await repo.StoreEpisodes(episodes);
 
         using MediaContext verify = new(_options);
-        List<Episode> stored = await verify.Episodes
-            .Where(e => e.SeasonId == seasonId)
+        List<Episode> stored = await verify
+            .Episodes.Where(e => e.SeasonId == seasonId)
             .OrderBy(e => e.EpisodeNumber)
             .ToListAsync();
 
         stored.Should().HaveCount(3);
-        stored.Should().Satisfy(
-            e => e.EpisodeNumber == 1 && e.Title == "Episode 1",
-            e => e.EpisodeNumber == 2 && e.Title == "Episode 2",
-            e => e.EpisodeNumber == 3 && e.Title == "Episode 3"
-        );
+        stored
+            .Should()
+            .Satisfy(
+                e => e.EpisodeNumber == 1 && e.Title == "Episode 1",
+                e => e.EpisodeNumber == 2 && e.Title == "Episode 2",
+                e => e.EpisodeNumber == 3 && e.Title == "Episode 3"
+            );
     }
 
     [Fact]
@@ -256,8 +258,8 @@ public class EpisodeRepositoryTests : IDisposable
         await repo.StoreEpisodeTranslations(translations);
 
         using MediaContext verify = new(_options);
-        List<Translation> stored = await verify.Translations
-            .Where(t => t.EpisodeId == episodeId || t.EpisodeId == 999)
+        List<Translation> stored = await verify
+            .Translations.Where(t => t.EpisodeId == episodeId || t.EpisodeId == 999)
             .ToListAsync();
 
         stored.Should().HaveCount(1);
@@ -317,8 +319,8 @@ public class EpisodeRepositoryTests : IDisposable
         await repo.StoreEpisodeTranslations(translations);
 
         using MediaContext verify = new(_options);
-        Translation? stored = await verify.Translations.FirstOrDefaultAsync(
-            t => t.EpisodeId == episodeId && t.Iso6391 == "en"
+        Translation? stored = await verify.Translations.FirstOrDefaultAsync(t =>
+            t.EpisodeId == episodeId && t.Iso6391 == "en"
         );
 
         stored.Should().NotBeNull();
@@ -382,8 +384,8 @@ public class EpisodeRepositoryTests : IDisposable
         await repo.StoreEpisodeImages(images);
 
         using MediaContext verify = new(_options);
-        List<Image> stored = await verify.Images
-            .Where(i => i.EpisodeId == episodeId || i.EpisodeId == 999)
+        List<Image> stored = await verify
+            .Images.Where(i => i.EpisodeId == episodeId || i.EpisodeId == 999)
             .ToListAsync();
 
         stored.Should().HaveCount(1);
@@ -449,8 +451,8 @@ public class EpisodeRepositoryTests : IDisposable
         await repo.StoreEpisodeImages(images);
 
         using MediaContext verify = new(_options);
-        Image? stored = await verify.Images.FirstOrDefaultAsync(
-            i => i.FilePath == "/still.jpg" && i.EpisodeId == episodeId
+        Image? stored = await verify.Images.FirstOrDefaultAsync(i =>
+            i.FilePath == "/still.jpg" && i.EpisodeId == episodeId
         );
 
         stored.Should().NotBeNull();
@@ -529,15 +531,17 @@ public class EpisodeRepositoryTests : IDisposable
         await repo.StoreEpisodeImages(images);
 
         using MediaContext verify = new(_options);
-        List<Image> stored = await verify.Images
-            .Where(i => i.EpisodeId == episodeId)
+        List<Image> stored = await verify
+            .Images.Where(i => i.EpisodeId == episodeId)
             .OrderBy(i => i.FilePath)
             .ToListAsync();
 
         stored.Should().HaveCount(2);
-        stored.Should().Satisfy(
-            i => i.FilePath == "/still1.jpg" && i.VoteAverage == 8.0,
-            i => i.FilePath == "/still2.jpg" && i.VoteAverage == 7.5
-        );
+        stored
+            .Should()
+            .Satisfy(
+                i => i.FilePath == "/still1.jpg" && i.VoteAverage == 8.0,
+                i => i.FilePath == "/still2.jpg" && i.VoteAverage == 7.5
+            );
     }
 }

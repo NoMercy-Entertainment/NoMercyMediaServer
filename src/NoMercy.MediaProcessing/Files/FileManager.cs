@@ -294,12 +294,20 @@ public partial class FileManager(
             tv.Folder = folderName;
             tv.LibraryId = newFolderLibrary.LibraryId;
 
+            // LibraryTv.LibraryId is part of its composite primary key
+            // (LibraryId, TvId) — EF Core rejects mutating a PK column on a
+            // tracked entity ("part of a key and so cannot be modified").
+            // Repointing to the new library is a delete of the old link row
+            // plus an insert of the new one, never an in-place update.
             LibraryTv? libraryTv = await context.LibraryTv.FirstOrDefaultAsync(lt =>
                 lt.TvId == tv.Id
             );
 
             if (libraryTv is not null)
-                libraryTv.LibraryId = newFolderLibrary.LibraryId;
+            {
+                context.LibraryTv.Remove(libraryTv);
+                context.LibraryTv.Add(new(newFolderLibrary.LibraryId, tv.Id));
+            }
 
             await context.SaveChangesAsync();
         }
@@ -308,12 +316,17 @@ public partial class FileManager(
             movie.Folder = folderName;
             movie.LibraryId = newFolderLibrary.LibraryId;
 
+            // See the LibraryTv comment above — LibraryMovie.LibraryId is
+            // equally part of its composite primary key.
             LibraryMovie? libraryMovie = await context.LibraryMovie.FirstOrDefaultAsync(lm =>
                 lm.MovieId == movie.Id
             );
 
             if (libraryMovie is not null)
-                libraryMovie.LibraryId = newFolderLibrary.LibraryId;
+            {
+                context.LibraryMovie.Remove(libraryMovie);
+                context.LibraryMovie.Add(new(newFolderLibrary.LibraryId, movie.Id));
+            }
 
             await context.SaveChangesAsync();
         }
