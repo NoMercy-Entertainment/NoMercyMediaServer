@@ -47,6 +47,20 @@ public static class DatabaseBackupService
         if (pendingMigrationCount == 0)
             return false;
 
+        return BackupNow(dbPath, $"{pendingMigrationCount} pending migration(s)");
+    }
+
+    /// <summary>
+    /// Backs up <paramref name="dbPath"/> unconditionally — used by the periodic
+    /// <see cref="NoMercy.Queue.MediaServer.Jobs.DatabaseBackupCronJob"/> so a recent
+    /// recovery point exists even on installs that go a long time between migrations.
+    /// <paramref name="reason"/> is cosmetic, folded into the log line only.
+    ///
+    /// Returns <c>true</c> when a backup was written, <c>false</c> when the source file
+    /// doesn't exist or the backup attempt failed (failure is non-fatal — caller proceeds).
+    /// </summary>
+    public static bool BackupNow(string dbPath, string reason)
+    {
         if (!File.Exists(dbPath))
             return false;
 
@@ -85,9 +99,7 @@ public static class DatabaseBackupService
                 source.BackupDatabase(destination);
             }
 
-            Logger.Setup(
-                $"Database backup created: {backupFileName} ({pendingMigrationCount} pending migration(s))"
-            );
+            Logger.Setup($"Database backup created: {backupFileName} ({reason})");
 
             PruneOldBackups(dbName);
 
@@ -96,8 +108,8 @@ public static class DatabaseBackupService
         catch (Exception ex)
         {
             Logger.Setup(
-                $"WARNING: Could not back up database '{Path.GetFileName(dbPath)}' before migration — {ex.Message}. "
-                    + "Continuing with migration. If this upgrade is destructive, restore from a manual backup.",
+                $"WARNING: Could not back up database '{Path.GetFileName(dbPath)}' — {ex.Message}. "
+                    + "If this coincides with an upgrade, restore from a manual backup.",
                 LogEventLevel.Warning
             );
             return false;
